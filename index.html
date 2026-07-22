@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foundation</title>
+  <link rel="stylesheet" href="/styles/main.css">
+
+  <style>
+    .no-js-banner {
+      max-width: 600px;
+      margin: 4rem auto;
+      padding: 2rem;
+      border-radius: 8px;
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      font-family: system-ui, -apple-system, sans-serif;
+      text-align: center;
+    }
+  </style>
+
+  <script type="module" src="/index.js" onerror="handleScriptError()"></script>
+  <script>
+    function handleScriptError() {
+      const app = document.getElementById('app');
+      if (app) {
+        app.innerHTML = `
+          <div class="no-js-banner">
+            <h2>Connection or Compatibility Issue</h2>
+            <p>We couldn't load Foundation. Please check your internet connection, try disabling aggressive browser extensions, or refresh the page.</p>
+          </div>`;
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <noscript>
+    <div class="no-js-banner">
+      <h2>JavaScript Required</h2>
+      <p>Foundation relies on JavaScript to load pages dynamically. Please enable JavaScript in your browser settings to view this site.</p>
+    </div>
+  </noscript>
+
+  <header id="global-header"></header>
+  <main id="app" tabindex="-1" aria-live="polite"></main>
+  <footer id="global-footer"></footer>
+
+</body>
+</html>
