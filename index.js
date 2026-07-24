@@ -1,10 +1,22 @@
+// index.js
+
+// 1. Core Framework Imports (Imported ONLY ONCE at the top)
 import { errorHandler } from '/core/error-handler.js';
-import { validateSchema, Type } from '/core/validator.js';
-console.log('Foundation system guard initialized.');
-
+import { store } from '/core/store.js';
+import { authManager } from '/core/auth.js';
 import { Router } from '/router/router.js';
+import { runRouterTests } from '/router/test-router.js';
 
-// Route metadata manifest for quick SEO overrides
+// 2. Automated Test Suite Imports
+import { runAllSchemaTests } from '/schemas/test-runner.js';
+import { runStoreTests } from '/core/test-store.js';
+
+console.log('🚀 Foundation Core initialized.');
+
+// Expose globals to window for dev console testing
+window.store = store;
+
+// 3. SEO Route Metadata Manifest
 const routesManifest = {
   '/home': { 
     title: 'Home', 
@@ -20,59 +32,18 @@ const routesManifest = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Initialize Router
+// 4. Single Master Application Initialization (Marked ASYNC here)
+document.addEventListener('DOMContentLoaded', async () => {
+  // A. Run test suites automatically
+  runAllSchemaTests();
+  runStoreTests();
+  await runRouterTests();
+
+  // B. Initialize live SPA Router for actual user navigation
   window.router = new Router(routesManifest);
 });
 
-// View Lifecycle Listener
+// 5. View Lifecycle Event Listener
 window.addEventListener('pageLoaded', (e) => {
   console.log(`[Lifecycle]: Page loaded -> ${e.detail.path}`);
 });
-
-
-import { runAllSchemaTests } from '/schemas/test-runner.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Run test suite
-  runAllSchemaTests();
-});
-
-/* Error Handling Test
-import { errorHandler } from '/core/error-handler.js';
-import { validateSchema, Type } from '/core/validator.js';
-
-console.log('🚀 Foundation Core initialized.');
-
-// 1. Define a strict test schema
-const BlogPostSchema = {
-  title: Type.string,
-  views: Type.number,
-  published: Type.boolean
-};
-
-// --- TEST 1: Valid Data (Should pass silently) ---
-try {
-  const validData = { title: 'My First Post', views: 100, published: true };
-  validateSchema(BlogPostSchema, validData);
-  console.log('✅ Test 1 Passed: Valid schema approved.');
-} catch (err) {
-  console.error('❌ Test 1 Failed:', err);
-}
-
-// --- TEST 2: Schema Validation Error (Should trigger warning toast) ---
-setTimeout(() => {
-  console.log('🧪 Running Test 2: Invalid Schema...');
-  const invalidData = { title: 'My First Post', views: 'one hundred', published: true };
-  
-  // This will throw a ValidationError, caught automatically by errorHandler
-  validateSchema(BlogPostSchema, invalidData);
-}, 1500);
-
-// --- TEST 3: Async / Network Error (Should trigger error toast) ---
-setTimeout(() => {
-  console.log('🧪 Running Test 3: Unhandled Promise Rejection...');
-  // Simulating a failed API request
-  Promise.reject(new Error('Failed to fetch user settings from server.'));
-}, 3500);
-*/

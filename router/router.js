@@ -1,5 +1,6 @@
 // router/router.js
 import { validateSchema, Type } from '/core/validator.js';
+import { authManager } from '/core/auth.js';
 
 // Schema to ensure route metadata in routes.json or manual config is valid
 const RouteMetaSchema = {
@@ -75,12 +76,33 @@ export class Router {
         cleanPath = '/404';
         viewPath = '/pages/404.html';
         response = await fetch(viewPath);
+                // Add this check at the top of loadRoute(path):
+        if (cleanPath === '/admin' && !authManager.isAdminAuthenticated()) {
+        console.warn('[Router Guard]: Access denied to /admin. User is not authenticated as admin.');
         
+        // Render Login Prompt instead of Admin Panel
+        this.appContainer.innerHTML = `
+            <section class="admin-lock-screen" style="text-align: center; padding: 4rem 2rem;">
+            <h1>🔒 Admin Authorization Required</h1>
+            <p>Please log in with an authorized Google Admin account to access control settings.</p>
+            <button id="admin-login-btn" style="padding: 12px 24px; font-size: 16px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                Sign In with Google
+            </button>
+            </section>
+        `;
+
+        // Attach login event dynamically
+        document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
+            await authManager.loginWithGoogle();
+            this.loadRoute('/admin'); // Retry routing post-login
+        });
+
+        return;
+        }
         if (!response.ok) {
           throw new Error('Fallback 404.html view file is missing from /pages!');
         }
       }
-
       const htmlContent = await response.text();
       
       // Inject HTML into main target container
