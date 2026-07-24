@@ -133,12 +133,17 @@ const stateSchemas = {
     validateSchema(UserSchema, val, 'store.state.user');
     return true;
   }),
-  theme: Type.string
+  theme: Type.string,
+  devMode: Type.boolean // Dev Mode toggle schema property
 };
+
+// Check localStorage for saved preference, defaulting to false
+const initialDevMode = localStorage.getItem('foundation_dev_mode') === 'true';
 
 export const store = new Store({
   user: null,
-  theme: 'dark'
+  theme: 'dark',
+  devMode: initialDevMode
 }, stateSchemas);
 
 // Register Default Store Actions
@@ -153,4 +158,9 @@ store.registerAction('LOGOUT', (state) => {
 store.registerAction('TOGGLE_THEME', (state) => {
   const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
   return { ...state, theme: nextTheme };
+});
+
+store.registerAction('SET_DEV_MODE', (state, enabled) => {
+  localStorage.setItem('foundation_dev_mode', enabled ? 'true' : 'false');
+  return { ...state, devMode: Boolean(enabled) };
 });

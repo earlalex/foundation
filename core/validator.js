@@ -17,6 +17,9 @@ export const Type = {
   boolean: (val) => typeof val === 'boolean',
   object: (val) => typeof val === 'object' && val !== null && !Array.isArray(val),
   
+  // Literal matcher for exact value checking (e.g., Type.literal('event'))
+  literal: (expectedValue) => (val) => val === expectedValue,
+
   // Clean, strict-mode compatible smart array validator
   array: (itemCheckFn) => {
     // Allows uncalled usage like `Type.array` inside validateSchema

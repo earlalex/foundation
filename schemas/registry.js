@@ -7,6 +7,7 @@ import { HowToSchema } from '/schemas/howto.js';
 import { PodcastSchema } from '/schemas/podcast.js';
 import { PortfolioSchema } from '/schemas/portfolio.js';
 import { SponsorSchema } from '/schemas/sponsor.js';
+import { EventSchema } from '/schemas/event.js';
 
 class SchemaRegistry {
   #schemas = new Map();
@@ -20,6 +21,7 @@ class SchemaRegistry {
     this.register('podcast', PodcastSchema);
     this.register('portfolio', PortfolioSchema);
     this.register('sponsor', SponsorSchema);
+    this.register('event', EventSchema);
   }
 
   register(contentType, schemaDefinition) {

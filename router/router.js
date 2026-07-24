@@ -5,7 +5,8 @@ import { authManager } from '/core/auth.js';
 // Schema to ensure route metadata in routes.json or manual config is valid
 const RouteMetaSchema = {
   title: Type.string,
-  description: Type.optional(Type.string)
+  description: Type.optional(Type.string),
+  viewPath: Type.optional(Type.string)
 };
 
 export class Router {
@@ -23,7 +24,6 @@ export class Router {
       try {
         validateSchema(RouteMetaSchema, meta, `routesManifest['${path}']`);
       } catch (err) {
-        // Will automatically be caught and toasted by our global error-handler!
         throw err;
       }
     }
@@ -34,7 +34,6 @@ export class Router {
     document.body.addEventListener('click', (e) => {
       const anchor = e.target.closest('a');
       
-      // Only intercept internal links that don't have target="_blank" or data-native
       if (
         anchor && 
         anchor.origin === window.location.origin && 
@@ -63,49 +62,62 @@ export class Router {
   }
 
   async loadRoute(path) {
-    // Normalize path: '/' becomes '/home'
+    // 1. Normalize path
     let cleanPath = path === '/' ? '/home' : path;
-    let viewPath = `/pages${cleanPath}.html`;
+
+    // 2. ADMIN GUARD CHECK (Executes BEFORE fetching templates)
+    if (cleanPath === '/admin' && !authManager.isAdminAuthenticated()) {
+      console.warn('[Router Guard]: Access denied to /admin. User is not authenticated as admin.');
+      
+      this.appContainer.innerHTML = `
+        <section class="admin-lock-screen" style="text-align: center; padding: 4rem 2rem;">
+          <h1>🔒 Admin Authorization Required</h1>
+          <p>Please log in with an authorized Google Admin account to access control settings.</p>
+          <button id="admin-login-btn" style="padding: 12px 24px; font-size: 16px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Sign In with Google
+          </button>
+        </section>
+      `;
+
+      document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
+        await authManager.loginWithGoogle();
+        this.loadRoute('/admin');
+      });
+
+      return;
+    }
+
+    // 3. Determine view HTML template location
+    const manifestEntry = this.routesManifest[cleanPath];
+    let viewPath = manifestEntry?.viewPath;
+
+    if (!viewPath) {
+      if (cleanPath === '/admin') {
+        viewPath = '/pages/admin/admin.html';
+      } else if (cleanPath === '/home') {
+        viewPath = '/pages/home/home.html';
+      } else {
+        viewPath = `/pages${cleanPath}.html`;
+      }
+    }
 
     try {
       let response = await fetch(viewPath);
 
-      // Automatic fallback to 404 page if view file doesn't exist
+      // 4. Automatic fallback to 404 page if view template fails to fetch
       if (!response.ok) {
         console.warn(`[Router]: View path "${viewPath}" returned status ${response.status}. Fetching 404 fallback.`);
         cleanPath = '/404';
-        viewPath = '/pages/404.html';
-        response = await fetch(viewPath);
-                // Add this check at the top of loadRoute(path):
-        if (cleanPath === '/admin' && !authManager.isAdminAuthenticated()) {
-        console.warn('[Router Guard]: Access denied to /admin. User is not authenticated as admin.');
+        response = await fetch('/pages/404.html');
         
-        // Render Login Prompt instead of Admin Panel
-        this.appContainer.innerHTML = `
-            <section class="admin-lock-screen" style="text-align: center; padding: 4rem 2rem;">
-            <h1>🔒 Admin Authorization Required</h1>
-            <p>Please log in with an authorized Google Admin account to access control settings.</p>
-            <button id="admin-login-btn" style="padding: 12px 24px; font-size: 16px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                Sign In with Google
-            </button>
-            </section>
-        `;
-
-        // Attach login event dynamically
-        document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
-            await authManager.loginWithGoogle();
-            this.loadRoute('/admin'); // Retry routing post-login
-        });
-
-        return;
-        }
         if (!response.ok) {
           throw new Error('Fallback 404.html view file is missing from /pages!');
         }
       }
+
       const htmlContent = await response.text();
       
-      // Inject HTML into main target container
+      // Inject HTML into app container
       this.appContainer.innerHTML = htmlContent;
 
       // Update SEO Title & Meta Description dynamically
@@ -114,13 +126,12 @@ export class Router {
       // Accessibility: Shift focus to main app wrapper on transition
       this.appContainer.focus();
 
-      // Dispatch event so view-specific components know when to mount
+      // Dispatch event so page controllers (initAdminPage, initHomePage) know when to mount
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: path } 
       }));
 
     } catch (err) {
-      // Uncaught errors during routing will trigger global error handler toast
       throw new Error(`Routing Failed: ${err.message}`);
     }
   }
@@ -134,7 +145,6 @@ export class Router {
         this.setMetaDescription(routeInfo.description);
       }
     } else {
-      // Auto-generate title from path name if omitted (e.g. /blog/hello-world -> Hello World)
       const segments = path.split('/').filter(Boolean);
       const rawTitle = segments.pop() || 'Home';
       const formattedTitle = rawTitle.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

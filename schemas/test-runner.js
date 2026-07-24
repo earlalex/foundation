@@ -184,6 +184,42 @@ export function runAllSchemaTests() {
     });
   });
 
+  // --- I. EVENT SCHEMA (Live / Google Meet Events) ---
+  assertTest('Event Schema: Passes valid live event with Google Meet link', () => {
+    schemaRegistry.validate({
+      type: 'event',
+      id: 'live-qa-session',
+      title: 'Live Q&A: Zero-Build Frameworks',
+      description: 'Interactive Google Meet video session on no-build architecture.',
+      eventType: 'google-meet',
+      date: '2026-07-25',
+      startTime: '14:00',
+      endTime: '15:00',
+      meetUrl: 'https://meet.google.com/abc-defg-hij',
+      calendarEventId: 'cal_evt_12345',
+      access: validAccess,
+      preview: validPreview
+    });
+  });
+
+  assertTest('Event Schema: Catches invalid date/time format or missing eventType', () => {
+    try {
+      schemaRegistry.validate({
+        type: 'event',
+        id: 'bad-event',
+        title: 'Broken Event',
+        description: 'Missing eventType',
+        date: '2026-07-25',
+        startTime: '14:00',
+        endTime: '15:00',
+        access: validAccess
+      });
+      throw new Error('Should have failed due to missing eventType');
+    } catch (e) {
+      if (e.name !== 'ValidationError') throw e;
+    }
+  });
+
   console.groupEnd();
 
   // --- SUMMARY ---
