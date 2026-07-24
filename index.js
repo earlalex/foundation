@@ -3,6 +3,7 @@ import { errorHandler } from '/core/error-handler.js';
 import { store } from '/core/store.js';
 import { authManager } from '/core/auth.js';
 import { Router } from '/router/router.js';
+import { themeEngine } from '/core/theme.js';
 
 // Web Components
 import '/components/global/ContentCard.js';

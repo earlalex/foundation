@@ -1,0 +1,55 @@
+/* styles/main.css */
+:root {
+  /* Default Fallback Theme Variables */
+  --theme-color-primary: #2b6cb0;
+  --theme-color-primary-hover: #2c5282;
+  --theme-color-surface: #ffffff;
+  --theme-color-background: #f7fafc;
+  --theme-color-text-primary: #1a202c;
+  --theme-color-text-secondary: #4a5568;
+  --theme-color-border: #e2e8f0;
+  --theme-color-accent: #38a169;
+  --theme-color-danger: #e53e3e;
+
+  --theme-font-font-family: system-ui, -apple-system, sans-serif;
+  --theme-font-font-size-base: 16px;
+  --theme-font-heading-weight: 700;
+
+  --theme-layout-border-radius: 8px;
+  --theme-layout-container-max-width: 1000px;
+  --theme-layout-box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--theme-font-font-family);
+  font-size: var(--theme-font-font-size-base);
+  background-color: var(--theme-color-background);
+  color: var(--theme-color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Global Utility Classes using Theme Variables */
+.btn-primary {
+  background-color: var(--theme-color-primary);
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--theme-layout-border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--theme-color-primary-hover);
+}
+
+.card {
+  background-color: var(--theme-color-surface);
+  border: 1px solid var(--theme-color-border);
+  border-radius: var(--theme-layout-border-radius);
+  box-shadow: var(--theme-layout-box-shadow);
+  padding: 1.25rem;
+}

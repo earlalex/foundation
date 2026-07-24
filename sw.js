@@ -7,6 +7,7 @@ const PRECACHE_ASSETS = [
   '/styles/main.css',
   '/core/store.js',
   '/core/validator.js',
+  '/core/theme.js',
   '/router/router.js',
   '/components/global/ContentCard.js',
   '/pages/home/home.html',
@@ -48,11 +49,9 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(async () => {
-        // 1. Check local cache first
         const cachedResponse = await caches.match(event.request);
         if (cachedResponse) return cachedResponse;
 
-        // 2. SPA Navigation Fallback: If offline and hitting a subroute directly, serve index.html shell
         if (isNavigation) {
           return caches.match('/index.html');
         }
