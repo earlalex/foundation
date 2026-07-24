@@ -4,10 +4,15 @@ import { store } from '/core/store.js';
 import { authManager } from '/core/auth.js';
 import { Router } from '/router/router.js';
 
+// Web Components
+import '/components/global/ContentCard.js';
+
+// Automated Test Suites
 import { runAllSchemaTests } from '/schemas/test-runner.js';
 import { runStoreTests } from '/core/test-store.js';
 import { runRouterTests } from '/router/test-router.js';
 
+// Page Controllers
 import { initAdminPage } from '/pages/admin/admin.js';
 import { initHomePage } from '/pages/home/home.js';
 
@@ -26,7 +31,7 @@ const routesManifest = {
   },
   '/404': { 
     title: 'Page Not Found', 
-    description: 'The page you requested could not be found.',
+    description: 'The page you requested could not be found.', 
     viewPath: '/pages/404.html'
   }
 };

@@ -1,4 +1,4 @@
-// sw.js - Zero-Build Caching Engine
+// sw.js - Zero-Build Caching Engine with SPA Offline Fallback
 const CACHE_NAME = 'foundation-v1';
 const PRECACHE_ASSETS = [
   '/',
@@ -8,6 +8,7 @@ const PRECACHE_ASSETS = [
   '/core/store.js',
   '/core/validator.js',
   '/router/router.js',
+  '/components/global/ContentCard.js',
   '/pages/home/home.html',
   '/pages/404.html'
 ];
@@ -32,17 +33,31 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Network-first strategy for dynamic HTML/Modules with cache fallback
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const isNavigation = event.request.mode === 'navigate';
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        // 1. Check local cache first
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
+        // 2. SPA Navigation Fallback: If offline and hitting a subroute directly, serve index.html shell
+        if (isNavigation) {
+          return caches.match('/index.html');
+        }
+
+        return new Response('Offline resource unavailable.', { status: 503 });
+      })
   );
 });
