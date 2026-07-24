@@ -53,19 +53,24 @@ export function validateSchema(schema, data, parentPath = '') {
     const currentPath = parentPath ? `${parentPath}.${key}` : key;
     const value = data[key];
 
-    // Nested schema handling
-    if (Type.object(typeCheck)) {
-      if (value !== undefined && value !== null) {
-        validateSchema(typeCheck, value, currentPath);
-      }
-      continue;
-    }
-
-    // Type checking function evaluation
+    // 1. Function Validator Check (Primitives, Type.literal, Type.optional, etc.)
     if (typeof typeCheck === 'function') {
       if (!typeCheck(value)) {
-        throw new ValidationError(`Invalid or missing type for field "${key}". Received: ${typeof value}`, currentPath);
+        throw new ValidationError(
+          `Invalid or missing type for field "${key}". Received: ${typeof value}`,
+          currentPath
+        );
       }
+    } 
+    // 2. Nested Schema Object Check
+    else if (Type.object(typeCheck)) {
+      if (value === undefined || value === null) {
+        throw new ValidationError(
+          `Missing required object field "${key}".`,
+          currentPath
+        );
+      }
+      validateSchema(typeCheck, value, currentPath);
     }
   }
 

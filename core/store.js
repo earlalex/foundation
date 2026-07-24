@@ -117,7 +117,7 @@ function DeepFreeze(obj) {
 
 // --- STATE SCHEMAS & SINGLETON INITIALIZATION ---
 
-// Helper function to validate an optional user object cleanly
+// User Profile Schema for authenticated session tracking
 const UserSchema = {
   uid: Type.string,
   email: Type.string,
@@ -134,7 +134,9 @@ const stateSchemas = {
     return true;
   }),
   theme: Type.string,
-  devMode: Type.boolean // Dev Mode toggle schema property
+  devMode: Type.boolean,
+  contentFeed: Type.optional(Type.array()),
+  history: Type.optional(Type.array())
 };
 
 // Check localStorage for saved preference, defaulting to false
@@ -143,10 +145,13 @@ const initialDevMode = localStorage.getItem('foundation_dev_mode') === 'true';
 export const store = new Store({
   user: null,
   theme: 'dark',
-  devMode: initialDevMode
+  devMode: initialDevMode,
+  contentFeed: [],
+  history: []
 }, stateSchemas);
 
-// Register Default Store Actions
+// --- REGISTER STORE ACTIONS ---
+
 store.registerAction('SET_USER', (state, userPayload) => {
   return { ...state, user: userPayload };
 });
@@ -161,6 +166,17 @@ store.registerAction('TOGGLE_THEME', (state) => {
 });
 
 store.registerAction('SET_DEV_MODE', (state, enabled) => {
-  localStorage.setItem('foundation_dev_mode', enabled ? 'true' : 'false');
-  return { ...state, devMode: Boolean(enabled) };
+  const isEnabled = Boolean(enabled);
+  localStorage.setItem('foundation_dev_mode', isEnabled ? 'true' : 'false');
+  return { ...state, devMode: isEnabled };
+});
+
+store.registerAction('SET_CONTENT_FEED', (state, items) => {
+  return { ...state, contentFeed: Array.isArray(items) ? items : [] };
+});
+
+store.registerAction('PUSH_HISTORY', (state, path) => {
+  if (!path) return state;
+  const updatedHistory = [...(state.history || []), path].slice(-20);
+  return { ...state, history: updatedHistory };
 });

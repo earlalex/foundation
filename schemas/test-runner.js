@@ -185,13 +185,14 @@ export function runAllSchemaTests() {
   });
 
   // --- I. EVENT SCHEMA (Live / Google Meet Events) ---
-  assertTest('Event Schema: Passes valid live event with Google Meet link', () => {
+ assertTest('Event Schema: Passes valid live event with Google Meet link & location', () => {
     schemaRegistry.validate({
       type: 'event',
       id: 'live-qa-session',
       title: 'Live Q&A: Zero-Build Frameworks',
       description: 'Interactive Google Meet video session on no-build architecture.',
       eventType: 'google-meet',
+      location: 'Google Meet / Main Conference Room 4B',
       date: '2026-07-25',
       startTime: '14:00',
       endTime: '15:00',
@@ -209,11 +210,11 @@ export function runAllSchemaTests() {
         id: 'live-qa-session',
         title: 'Live Q&A: Zero-Build Frameworks',
         description: 'Interactive Google Meet video session on no-build architecture.',
-        eventType: 'google-meet',
+        // eventType is intentionally missing here so validation fails as expected
         date: '2026-07-25',
         startTime: '14:00',
         endTime: '15:00',
-        location: 'Google Meet / Main Conference Room 4B', // 👈 Included location in test payload
+        location: 'Google Meet / Main Conference Room 4B',
         meetUrl: 'https://meet.google.com/abc-defg-hij',
         calendarEventId: 'cal_evt_12345',
         access: validAccess,

@@ -2,16 +2,16 @@
 
 export class ErrorHandler {
   constructor() {
-    this.initGlobalListeners();
+    if (typeof window !== 'undefined') {
+      this.initGlobalListeners();
+    }
   }
 
   initGlobalListeners() {
-    // Catch standard JS runtime errors & thrown exceptions
     window.addEventListener('error', (event) => {
       this.handleError(event.error || new Error(event.message));
     });
 
-    // Catch unhandled promise rejections (e.g. failed fetches)
     window.addEventListener('unhandledrejection', (event) => {
       const reason = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
       this.handleError(reason);
@@ -21,19 +21,18 @@ export class ErrorHandler {
   handleError(error) {
     console.error('[Foundation Monitor Captured Error]:', error);
 
-    // 1. Differentiate between user-facing validation errors and critical system failures
-    if (error.name === 'ValidationError') {
+    if (error?.name === 'ValidationError') {
       this.showToast(`Data Error: ${error.message}`, 'warning');
     } else {
       this.showToast('Something unexpected happened. We are working on it!', 'error');
     }
 
-    // 2. Placeholder hook for sending error notifications/logs to an external service
     this.logToServer(error);
   }
 
   showToast(message, type = 'info') {
-    // Create container if it doesn't exist
+    if (typeof document === 'undefined' || !document.body) return;
+
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -50,7 +49,6 @@ export class ErrorHandler {
       document.body.appendChild(container);
     }
 
-    // Render lightweight inline toast
     const toast = document.createElement('div');
     const bgColor = type === 'error' ? '#e53e3e' : type === 'warning' ? '#dd6b20' : '#3182ce';
     
@@ -68,7 +66,6 @@ export class ErrorHandler {
 
     container.appendChild(toast);
 
-    // Auto dismiss after 4 seconds
     setTimeout(() => {
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 300);
@@ -76,10 +73,8 @@ export class ErrorHandler {
   }
 
   logToServer(error) {
-    // In the future, this can post logs to Cloudflare Workers or Firebase
-    // fetch('/api/log-error', { method: 'POST', body: JSON.stringify({ message: error.message, stack: error.stack }) });
+    // External error log hook
   }
 }
 
-// Instantiate singleton monitoring immediately
 export const errorHandler = new ErrorHandler();
