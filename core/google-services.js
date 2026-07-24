@@ -6,19 +6,23 @@ import { errorHandler } from '/core/error-handler.js';
 let googleAccessToken = null;
 
 /**
- * Request OAuth Scopes for Calendar, Contacts, and Gmail
+ * Request OAuth Scopes for Calendar, Contacts, Gmail, Search Console, & Analytics
  */
 export async function authenticateGoogleServices() {
   const provider = new GoogleAuthProvider();
   provider.addScope('https://www.googleapis.com/auth/calendar');
   provider.addScope('https://www.googleapis.com/auth/contacts');
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
+  
+  // 👈 Readonly scopes for SEO & Analytics Dashboard
+  provider.addScope('https://www.googleapis.com/auth/webmasters.readonly');
+  provider.addScope('https://www.googleapis.com/auth/analytics.readonly');
 
   try {
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     googleAccessToken = credential.accessToken;
-    console.log('[Google Services]: Access token acquired.');
+    console.log('[Google Services]: Access token acquired with SEO & Analytics scopes.');
     return googleAccessToken;
   } catch (err) {
     errorHandler.handleError(new Error(`Google Auth Failed: ${err.message}`));
@@ -46,13 +50,12 @@ export async function createGoogleCalendarEvent(eventData) {
   const calendarPayload = {
     summary: eventData.title,
     description: eventData.description,
-    location: eventData.location || '', // 👈 Added location support
+    location: eventData.location || '',
     start: { dateTime: new Date(startIso).toISOString() },
     end: { dateTime: new Date(endIso).toISOString() },
     attendees: eventData.attendeeEmail ? [{ email: eventData.attendeeEmail }] : []
   };
 
-  // If type is google-meet, request auto-generated Google Meet link
   if (eventData.eventType === 'google-meet') {
     calendarPayload.conferenceData = {
       createRequest: {
@@ -134,7 +137,6 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
     messageBody
   ].join('\r\n');
 
-  // Base64Url encode string
   const encodedEmail = btoa(unescape(encodeURIComponent(rawEmail)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
@@ -156,5 +158,66 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
   } catch (err) {
     errorHandler.handleError(new Error(`Failed to send Gmail: ${err.message}`));
     return false;
+  }
+}
+
+/**
+ * 4. GOOGLE SEARCH CONSOLE: Fetch indexing & keyword query stats
+ */
+export async function getSearchConsolePerformance(siteUrl) {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  try {
+    const encodedSite = encodeURIComponent(siteUrl);
+    const response = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodedSite}/searchAnalytics/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        startDate: '2026-06-01',
+        endDate: '2026-07-24',
+        dimensions: ['query', 'page'],
+        rowLimit: 10
+      })
+    });
+
+    const data = await response.json();
+    console.log('[Search Console Data]:', data);
+    return data;
+  } catch (err) {
+    errorHandler.handleError(new Error(`Failed to fetch Search Console data: ${err.message}`));
+    return null;
+  }
+}
+
+/**
+ * 5. GOOGLE ANALYTICS 4: Fetch traffic summaries
+ */
+export async function getAnalyticsOverview(propertyId) {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+        metrics: [{ name: 'activeUsers' }, { name: 'screenPageViews' }]
+      })
+    });
+
+    const data = await response.json();
+    console.log('[GA4 Report Data]:', data);
+    return data;
+  } catch (err) {
+    errorHandler.handleError(new Error(`Failed to fetch GA4 report: ${err.message}`));
+    return null;
   }
 }
