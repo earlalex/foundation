@@ -30,6 +30,14 @@ window.addEventListener('pageLoaded', (e) => {
   console.log(`[Lifecycle]: Page loaded -> ${e.detail.path}`);
 });
 
+
+import { runAllSchemaTests } from '/schemas/test-runner.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Run test suite
+  runAllSchemaTests();
+});
+
 /* Error Handling Test
 import { errorHandler } from '/core/error-handler.js';
 import { validateSchema, Type } from '/core/validator.js';

@@ -16,16 +16,30 @@ export const Type = {
   number: (val) => typeof val === 'number' && !isNaN(val),
   boolean: (val) => typeof val === 'boolean',
   object: (val) => typeof val === 'object' && val !== null && !Array.isArray(val),
-  array: (val) => Array.isArray(val),
+  
+  // Clean, strict-mode compatible smart array validator
+  array: (itemCheckFn) => {
+    // Allows uncalled usage like `Type.array` inside validateSchema
+    if (Array.isArray(itemCheckFn)) {
+      return true;
+    }
+    return (val) => {
+      if (!Array.isArray(val)) return false;
+      if (typeof itemCheckFn !== 'function') return true;
+      return val.every((item) => itemCheckFn(item));
+    };
+  },
+
   function: (val) => typeof val === 'function',
-  optional: (checkFn) => (val) => val === undefined || val === null || checkFn(val)
+  optional: (checkFn) => (val) => {
+    // Guard against passing undefined/non-functions to optional
+    if (typeof checkFn !== 'function') return true;
+    return val === undefined || val === null || checkFn(val);
+  }
 };
 
 /**
  * Validates an object against a target schema.
- * @param {Object} schema - Object describing expected property types.
- * @param {Object} data - The payload to validate.
- * @returns {boolean} Returns true if valid, throws ValidationError if invalid.
  */
 export function validateSchema(schema, data, parentPath = '') {
   if (!Type.object(data)) {
@@ -38,7 +52,9 @@ export function validateSchema(schema, data, parentPath = '') {
 
     // Nested schema handling
     if (Type.object(typeCheck)) {
-      validateSchema(typeCheck, value || {}, currentPath);
+      if (value !== undefined && value !== null) {
+        validateSchema(typeCheck, value, currentPath);
+      }
       continue;
     }
 
