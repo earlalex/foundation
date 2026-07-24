@@ -46,6 +46,7 @@ export async function createGoogleCalendarEvent(eventData) {
   const calendarPayload = {
     summary: eventData.title,
     description: eventData.description,
+    location: eventData.location || '', // 👈 Added location support
     start: { dateTime: new Date(startIso).toISOString() },
     end: { dateTime: new Date(endIso).toISOString() },
     attendees: eventData.attendeeEmail ? [{ email: eventData.attendeeEmail }] : []

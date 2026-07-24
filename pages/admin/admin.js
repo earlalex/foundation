@@ -2,7 +2,7 @@
 import { store } from '/core/store.js';
 import { contentDB } from '/core/db.js';
 import { uploadFileToDrive } from '/core/drive-upload.js';
-import { createGoogleCalendarEvent } from '/core/google-services.js'; // 👈 1. Added missing import
+import { createGoogleCalendarEvent } from '/core/google-services.js';
 
 export function initAdminPage() {
   const radioOn = document.getElementById('radio-dev-on');
@@ -41,7 +41,7 @@ export function initAdminPage() {
     syncUI(false);
   });
 
-  // 👈 2. Toggle event-specific inputs when "event" is selected in dropdown
+  // Toggle event-specific inputs when "event" is selected in dropdown
   const contentTypeSelect = document.getElementById('content-type');
   const eventFieldsContainer = document.getElementById('event-fields');
 
@@ -96,13 +96,15 @@ export function initAdminPage() {
 
     // 3. Process Event / Google Meet Integration
     if (contentType === 'event') {
+      const locationVal = document.getElementById('event-location')?.value || '';
       const startTimeVal = document.getElementById('event-start-time').value || '14:00';
-      const endTimeVal = document.getElementById('event-end-time')?.value || '15:00'; // 👈 3. Dynamic End Time
+      const endTimeVal = document.getElementById('event-end-time')?.value || '15:00';
 
       const eventDetails = {
         title: title,
         description: description,
         eventType: document.getElementById('event-type').value,
+        location: locationVal,
         date: document.getElementById('event-date').value || currentDate,
         startTime: startTimeVal,
         endTime: endTimeVal
@@ -111,13 +113,15 @@ export function initAdminPage() {
       // Create Google Calendar event & auto-generate Meet link
       const calResult = await createGoogleCalendarEvent(eventDetails);
 
+      payload.eventType = eventDetails.eventType;
+      payload.location = eventDetails.location;
+      payload.date = eventDetails.date;
+      payload.startTime = eventDetails.startTime;
+      payload.endTime = eventDetails.endTime;
+
       if (calResult) {
         payload.meetUrl = calResult.meetUrl;
         payload.calendarEventId = calResult.calendarEventId;
-        payload.eventType = eventDetails.eventType;
-        payload.date = eventDetails.date;
-        payload.startTime = eventDetails.startTime;
-        payload.endTime = eventDetails.endTime;
       }
     } 
     // 4. Custom schema fields for Podcast & Education

@@ -34,7 +34,7 @@
         <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Content Schema Type:</label>
         <select id="content-type" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;">
           <option value="blog">Blog Post</option>
-          <option value="event">Live Event / Google Meet</option> <!-- 👈 Added Event Option -->
+          <option value="event">Live Event / Google Meet</option>
           <option value="podcast">Podcast Episode</option>
           <option value="education">Educational Course</option>
           <option value="book">Book</option>
@@ -88,7 +88,7 @@
       <div id="event-fields" style="display: none; border-top: 1px solid #edf2f7; padding-top: 1rem; margin-top: 1rem;">
         <h4 style="margin: 0 0 0.5rem 0;">📅 Event Settings</h4>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div>
             <label style="display: block; font-weight: 600; font-size: 0.85rem;">Event Type:</label>
             <select id="event-type" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;">
@@ -98,6 +98,13 @@
             </select>
           </div>
 
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem;">Location / Room / Platform:</label>
+            <input type="text" id="event-location" placeholder="e.g. Google Meet or 100 Main St, Room 204" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
           <div>
             <label style="display: block; font-weight: 600; font-size: 0.85rem;">Date:</label>
             <input type="date" id="event-date" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />

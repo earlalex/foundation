@@ -10,6 +10,7 @@ export const EventSchema = {
   date: Type.string,       // 'YYYY-MM-DD'
   startTime: Type.string,  // '14:00'
   endTime: Type.string,    // '15:00'
+  location: Type.optional(Type.string),
   meetUrl: Type.optional(Type.string),
   calendarEventId: Type.optional(Type.string),
   access: {

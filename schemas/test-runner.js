@@ -206,13 +206,18 @@ export function runAllSchemaTests() {
     try {
       schemaRegistry.validate({
         type: 'event',
-        id: 'bad-event',
-        title: 'Broken Event',
-        description: 'Missing eventType',
+        id: 'live-qa-session',
+        title: 'Live Q&A: Zero-Build Frameworks',
+        description: 'Interactive Google Meet video session on no-build architecture.',
+        eventType: 'google-meet',
         date: '2026-07-25',
         startTime: '14:00',
         endTime: '15:00',
-        access: validAccess
+        location: 'Google Meet / Main Conference Room 4B', // 👈 Included location in test payload
+        meetUrl: 'https://meet.google.com/abc-defg-hij',
+        calendarEventId: 'cal_evt_12345',
+        access: validAccess,
+        preview: validPreview
       });
       throw new Error('Should have failed due to missing eventType');
     } catch (e) {
