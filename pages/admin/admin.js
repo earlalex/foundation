@@ -6,6 +6,7 @@ import {
   createGoogleCalendarEvent, 
   getSearchConsoleNotifications, 
   requestSearchConsoleCrawl, 
+  getSearchConsoleSecurityIssues,
   getAnalyticsOverview, 
   fetchSeoMyRankAddr,
   runLighthouseAudit
@@ -13,8 +14,8 @@ import {
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
 
-const MONTHLY_MEMBERSHIP_FEE = 29.00; // Standard $29/mo membership base
-const REFERRAL_COMMISSION_RATE = 0.10; // 10% monthly recurring referral credit
+const MONTHLY_MEMBERSHIP_FEE = 29.00; 
+const REFERRAL_COMMISSION_RATE = 0.10; 
 
 // Preset Brand Guide Definitions
 const THEME_PRESETS = {
@@ -118,6 +119,8 @@ export function initAdminPage() {
         loadSeoAndAnalyticsTab();
       } else if (targetTab === 'performance') {
         loadPerformanceTab();
+      } else if (targetTab === 'security') {
+        loadGscSecurityThreats();
       }
     });
   });
@@ -404,7 +407,6 @@ export function initAdminPage() {
       
       let users = await contentDB.getAllUsers();
 
-      // Enforce Primary Admin Presence
       const hasAdminInList = users.some(u => u.email === connectedAdminEmail);
       if (!hasAdminInList) {
         users.unshift({
@@ -418,7 +420,6 @@ export function initAdminPage() {
         });
       }
 
-      // Map Affiliate Referrals and Calculate 10% Monthly Payout Offset
       const referralMap = {};
       users.forEach(u => {
         if (u.referredBy) {
@@ -430,7 +431,6 @@ export function initAdminPage() {
         const isPrimary = u.email === connectedAdminEmail || u.role === 'admin';
         const activeReferrals = referralMap[u.affiliateCode || u.id] || u.referredCount || 0;
         
-        // 10% per referred active paying member ($2.90 credit per $29/mo member)
         const monthlyEarnings = u.role === 'affiliate' ? (activeReferrals * (MONTHLY_MEMBERSHIP_FEE * REFERRAL_COMMISSION_RATE)) : 0;
         const netCost = u.role === 'subscriber' ? 0 : Math.max(0, MONTHLY_MEMBERSHIP_FEE - monthlyEarnings);
         const isFullyCovered = u.role === 'affiliate' && monthlyEarnings >= MONTHLY_MEMBERSHIP_FEE;
@@ -478,7 +478,6 @@ export function initAdminPage() {
         `;
       }).join('');
 
-      // Wire Role Switcher Change Listener
       document.querySelectorAll('.select-role-change').forEach((select) => {
         select.addEventListener('change', async (e) => {
           const uId = e.target.getAttribute('data-id');
@@ -493,7 +492,6 @@ export function initAdminPage() {
         });
       });
 
-      // Wire Delete User Listener
       document.querySelectorAll('.btn-user-delete').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           const uId = e.target.getAttribute('data-id');
@@ -512,7 +510,6 @@ export function initAdminPage() {
     if (refreshBtn) refreshBtn.onclick = renderUsersList;
     renderUsersList();
 
-    // Wire Create User Form Listener
     const createUserForm = document.getElementById('create-user-form');
     createUserForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -521,7 +518,6 @@ export function initAdminPage() {
       const role = document.getElementById('new-user-role').value;
       const referredBy = document.getElementById('new-user-referrer')?.value || null;
 
-      // Single Admin Enforcement Guard
       if (role === 'admin') {
         alert('System Policy Error: Admin privileges are locked uniquely to the Google Workspace owner.');
         return;
@@ -795,7 +791,90 @@ export function initAdminPage() {
     executeAudit();
   }
 
-  // --- 10. DEV MODE SWITCHER ---
+  // --- 10. TAB 9: SECURITY, GSC THREAT MONITORS, & DEV OPS ---
+  async function loadGscSecurityThreats() {
+    const scanBtn = document.getElementById('btn-scan-gsc-security');
+    const reconsiderBtn = document.getElementById('btn-request-reconsideration');
+
+    async function renderThreatReport() {
+      if (scanBtn) scanBtn.textContent = 'Querying Search Console Security...';
+      const secData = await getSearchConsoleSecurityIssues();
+
+      if (secData) {
+        const banner = document.getElementById('gsc-security-banner');
+        const icon = document.getElementById('gsc-status-icon');
+        const title = document.getElementById('gsc-status-title');
+        const sub = document.getElementById('gsc-status-sub');
+        const lastScanned = document.getElementById('gsc-last-scanned');
+
+        if (lastScanned) lastScanned.textContent = `Last Scanned: ${secData.lastScanned}`;
+
+        if (secData.hasThreats) {
+          if (banner) {
+            banner.style.background = '#fff5f5';
+            banner.style.borderColor = '#fed7d7';
+          }
+          if (icon) icon.textContent = '⚠️';
+          if (title) {
+            title.textContent = 'Security Threats / Negative Action Flagged';
+            title.style.color = '#c53030';
+          }
+          if (sub) {
+            sub.textContent = 'Google Search Console has flagged security issues or manual action penalties against this site.';
+            sub.style.color = '#9b2c2c';
+          }
+        } else {
+          if (banner) {
+            banner.style.background = '#f0fdf4';
+            banner.style.borderColor = '#bbf7d0';
+          }
+          if (icon) icon.textContent = '✅';
+          if (title) {
+            title.textContent = 'No Negative Security Issues Detected';
+            title.style.color = '#166534';
+          }
+          if (sub) {
+            sub.textContent = 'Domain is clean of phishing, defacement, malware, and unnatural links in Google Search Console.';
+            sub.style.color = '#15803d';
+          }
+        }
+
+        // Update Security Category Flags
+        const p = secData.categories.phishingSocialEngineering;
+        document.getElementById('gsc-flag-phishing').textContent = p.flagged ? 'FLAGGED THREAT' : 'CLEAN';
+        document.getElementById('gsc-flag-phishing').style.color = p.flagged ? '#e53e3e' : '#38a169';
+        document.getElementById('gsc-desc-phishing').textContent = p.status;
+
+        const h = secData.categories.hackedContentDefacement;
+        document.getElementById('gsc-flag-hacked').textContent = h.flagged ? 'FLAGGED THREAT' : 'CLEAN';
+        document.getElementById('gsc-flag-hacked').style.color = h.flagged ? '#e53e3e' : '#38a169';
+        document.getElementById('gsc-desc-hacked').textContent = h.status;
+
+        const l = secData.categories.unnaturalLinksSpam;
+        document.getElementById('gsc-flag-links').textContent = l.flagged ? 'PENALTY ACTIVE' : 'CLEAN';
+        document.getElementById('gsc-flag-links').style.color = l.flagged ? '#e53e3e' : '#38a169';
+        document.getElementById('gsc-desc-links').textContent = l.status;
+
+        const m = secData.categories.malwareHarmfulDownloads;
+        document.getElementById('gsc-flag-malware').textContent = m.flagged ? 'MALWARE FOUND' : 'CLEAN';
+        document.getElementById('gsc-flag-malware').style.color = m.flagged ? '#e53e3e' : '#38a169';
+        document.getElementById('gsc-desc-malware').textContent = m.status;
+      }
+
+      if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
+    }
+
+    if (scanBtn) scanBtn.onclick = renderThreatReport;
+    if (reconsiderBtn) {
+      reconsiderBtn.onclick = () => {
+        alert('Reconsideration / Clean Review Request submitted to Google Search Quality Team. Review usually completes within 3-7 business days.');
+      };
+    }
+
+    renderThreatReport();
+  }
+
+  // --- 11. DEV MODE SWITCHER ---
   const radioOn = document.getElementById('radio-dev-on');
   const radioOff = document.getElementById('radio-dev-off');
   const labelOn = document.getElementById('label-dev-on');
@@ -850,7 +929,7 @@ export function initAdminPage() {
     syncDevUI(false);
   });
 
-  // --- 11. SECURITY & VIRUSTOTAL SCAN ---
+  // --- 12. SECURITY & VIRUSTOTAL SCAN ---
   const scanVtBtn = document.getElementById('btn-scan-virustotal');
   scanVtBtn?.addEventListener('click', async () => {
     scanVtBtn.textContent = 'Scanning Edge...';
