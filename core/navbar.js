@@ -1,5 +1,5 @@
 // core/navbar.js
-import { store } from '/core/store.js';
+import { store } from './store.js';
 
 export function initNavbar() {
   const navToggle = document.getElementById('nav-toggle');

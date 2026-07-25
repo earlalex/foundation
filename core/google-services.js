@@ -1,7 +1,7 @@
 // core/google-services.js
 import { GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { auth } from '/core/auth.js';
-import { errorHandler } from '/core/error-handler.js';
+import { auth } from './auth.js';
+import { errorHandler } from './error-handler.js';
 
 let googleAccessToken = null;
 

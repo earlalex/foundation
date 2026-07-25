@@ -8,8 +8,8 @@ import {
   onAuthStateChanged 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-import { store } from '/core/store.js';
-import { errorHandler } from '/core/error-handler.js';
+import { store } from './store.js';
+import { errorHandler } from './error-handler.js';
 
 // ⚠️ Replace this with your actual Firebase Project Config
 const firebaseConfig = {

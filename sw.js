@@ -1,17 +1,17 @@
 // sw.js - Zero-Build Caching Engine with SPA Offline Fallback
 const CACHE_NAME = 'foundation-v1';
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/index.js',
-  '/styles/main.css',
-  '/core/store.js',
-  '/core/validator.js',
-  '/core/theme.js',
-  '/router/router.js',
-  '/components/global/ContentCard.js',
-  '/pages/home/home.html',
-  '/pages/404.html'
+  './',
+  './index.html',
+  './index.js',
+  './styles/main.css',
+  './core/store.js',
+  './core/validator.js',
+  './core/theme.js',
+  './router/router.js',
+  './components/global/ContentCard.js',
+  './pages/home/home.html',
+  './pages/404.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -53,7 +53,7 @@ self.addEventListener('fetch', (event) => {
         if (cachedResponse) return cachedResponse;
 
         if (isNavigation) {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
 
         return new Response('Offline resource unavailable.', { status: 503 });

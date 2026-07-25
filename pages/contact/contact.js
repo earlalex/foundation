@@ -1,5 +1,5 @@
 // pages/contact/contact.js
-import { createGoogleContact, sendGmailNotification } from '/core/google-services.js';
+import { createGoogleContact, sendGmailNotification } from '../../core/google-services.js';
 
 export function initContactPage() {
   const form = document.getElementById('contact-form');

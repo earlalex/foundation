@@ -1,5 +1,5 @@
 // core/theme.js
-import { store } from '/core/store.js';
+import { store } from './store.js';
 
 // Default Foundation Theme Schema
 export const defaultBrandTheme = {

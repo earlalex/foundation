@@ -1,6 +1,6 @@
 // core/store.js
-import { Type, validateSchema } from '/core/validator.js';
-import { errorHandler } from '/core/error-handler.js';
+import { Type, validateSchema } from './validator.js';
+import { errorHandler } from './error-handler.js';
 
 class Store {
   #state;

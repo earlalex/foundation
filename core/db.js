@@ -11,9 +11,9 @@ import {
   limit 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-import { auth } from '/core/auth.js';
-import { schemaRegistry } from '/schemas/registry.js';
-import { errorHandler } from '/core/error-handler.js';
+import { auth } from './auth.js';
+import { schemaRegistry } from '../schemas/registry.js';
+import { errorHandler } from './error-handler.js';
 
 const db = getFirestore();
 const CONTENT_COLLECTION = 'content';

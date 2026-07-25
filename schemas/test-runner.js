@@ -1,6 +1,6 @@
 // schemas/test-runner.js
-import { validateSchema, Type } from '/core/validator.js';
-import { schemaRegistry } from '/schemas/registry.js';
+import { validateSchema, Type } from '../core/validator.js';
+import { schemaRegistry } from './registry.js';
 
 export function runAllSchemaTests() {
   console.group('🧪 Running Foundation Schema Test Suite...');
@@ -58,7 +58,7 @@ export function runAllSchemaTests() {
 
   // Shared valid mock blocks
   const validAccess = { visibility: 'public' };
-  const validMedia = { type: 'image', src: '/assets/img.jpg' };
+  const validMedia = { type: 'image', src: './assets/img.jpg' };
   const validPreview = { featuredImage: validMedia, teaserText: 'Preview text' };
 
   // --- A. BLOG SCHEMA ---
@@ -127,7 +127,7 @@ export function runAllSchemaTests() {
       description: 'Master raw JS',
       access: { visibility: 'paid', requiredTier: 'pro' },
       quizQuestions: [{ id: 'q1', prompt: 'What is DOM?', type: 'text-field' }],
-      worksheets: [{ title: 'Exercises', pdfUrl: '/assets/ex.pdf' }]
+      worksheets: [{ title: 'Exercises', pdfUrl: './assets/ex.pdf' }]
     });
   });
 
@@ -153,7 +153,7 @@ export function runAllSchemaTests() {
       description: 'Talking zero-build architectures',
       date: '2026-07-23',
       episodeNumber: 12,
-      audio: { type: 'audio', src: '/assets/ep12.mp3' },
+      audio: { type: 'audio', src: './assets/ep12.mp3' },
       access: validAccess
     });
   });

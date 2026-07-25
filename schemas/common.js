@@ -1,4 +1,4 @@
-import { Type } from '/core/validator.js';
+import { Type } from '../core/validator.js';
 
 // Access Control Rule
 // visibility: "public" (everyone), "authenticated" (logged in), "paid" (subscribers/buyers)

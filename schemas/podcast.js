@@ -1,6 +1,6 @@
 // schemas/podcast.js
-import { Type } from '/core/validator.js';
-import { AccessSchema, LinkSchema, MediaSchema, PreviewSchema } from '/schemas/common.js';
+import { Type } from '../core/validator.js';
+import { AccessSchema, LinkSchema, MediaSchema, PreviewSchema } from './common.js';
 
 export const PodcastSchema = {
   type: Type.string,

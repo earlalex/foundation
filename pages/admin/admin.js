@@ -1,9 +1,9 @@
 // pages/admin/admin.js
-import { store } from '/core/store.js';
-import { contentDB } from '/core/db.js';
-import { uploadFileToDrive } from '/core/drive-upload.js';
-import { createGoogleCalendarEvent } from '/core/google-services.js';
-import { themeEngine, defaultBrandTheme } from '/core/theme.js';
+import { store } from '../../core/store.js';
+import { contentDB } from '../../core/db.js';
+import { uploadFileToDrive } from '../../core/drive-upload.js';
+import { createGoogleCalendarEvent } from '../../core/google-services.js';
+import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 
 // Preset Brand Guide Definitions
 const THEME_PRESETS = {
@@ -267,7 +267,7 @@ export function initAdminPage() {
   const runTestsBtn = document.getElementById('btn-run-tests');
   runTestsBtn?.addEventListener('click', async () => {
     try {
-      const { runAllSchemaTests } = await import('/schemas/test-runner.js');
+      const { runAllSchemaTests } = await import('./schemas/test-runner.js');
       runAllSchemaTests();
     } catch (err) {
       console.error('Failed to execute test runner module:', err);

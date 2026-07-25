@@ -1,13 +1,13 @@
-import { validateSchema } from '/core/validator.js';
-import { AnnouncementSchema } from '/schemas/announcement.js';
-import { BlogSchema } from '/schemas/blog.js';
-import { BookSchema } from '/schemas/book.js';
-import { EducationSchema } from '/schemas/education.js';
-import { HowToSchema } from '/schemas/howto.js';
-import { PodcastSchema } from '/schemas/podcast.js';
-import { PortfolioSchema } from '/schemas/portfolio.js';
-import { SponsorSchema } from '/schemas/sponsor.js';
-import { EventSchema } from '/schemas/event.js';
+import { validateSchema } from '../core/validator.js';
+import { AnnouncementSchema } from './announcement.js';
+import { BlogSchema } from './blog.js';
+import { BookSchema } from './book.js';
+import { EducationSchema } from './education.js';
+import { HowToSchema } from './howto.js';
+import { PodcastSchema } from './podcast.js';
+import { PortfolioSchema } from './portfolio.js';
+import { SponsorSchema } from './sponsor.js';
+import { EventSchema } from './event.js';
 
 class SchemaRegistry {
   #schemas = new Map();

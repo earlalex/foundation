@@ -1,7 +1,7 @@
 // router/router.js
-import { validateSchema, Type } from '/core/validator.js';
-import { authManager } from '/core/auth.js';
-import { store } from '/core/store.js';
+import { validateSchema, Type } from '../core/validator.js';
+import { authManager } from '../core/auth.js';
+import { store } from '../core/store.js';
 
 // Schema to ensure route metadata in routes.json or manual config is valid
 const RouteMetaSchema = {
@@ -64,7 +64,25 @@ export class Router {
 
   async loadRoute(path) {
     // 1. Normalize path
-    let cleanPath = path === '/' ? '/home' : path;
+    let cleanPath = path || '/';
+
+    // Strip trailing slash if present (unless root '/')
+    if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+      cleanPath = cleanPath.slice(0, -1);
+    }
+
+    // Normalize root or index.html to default '/home'
+    if (cleanPath === '/' || cleanPath.endsWith('/index.html') || cleanPath === './') {
+      cleanPath = '/home';
+    }
+
+    // Extract subroute key if running under a repository subpath (e.g. /foundation/admin -> /admin)
+    if (!this.routesManifest[cleanPath]) {
+      const lastSegment = cleanPath.split('/').filter(Boolean).pop();
+      if (lastSegment && this.routesManifest[`/${lastSegment}`]) {
+        cleanPath = `/${lastSegment}`;
+      }
+    }
 
     // 2. ADMIN GUARD CHECK (Bypassed if Dev Mode is ON or User is Admin)
     const isDevModeActive = store.state.devMode === true;
@@ -111,11 +129,11 @@ export class Router {
 
     if (!viewPath) {
       if (cleanPath === '/admin') {
-        viewPath = '/pages/admin/admin.html';
+        viewPath = './pages/admin/admin.html';
       } else if (cleanPath === '/home') {
-        viewPath = '/pages/home/home.html';
+        viewPath = './pages/home/home.html';
       } else {
-        viewPath = `/pages${cleanPath}.html`;
+        viewPath = `./pages${cleanPath}.html`;
       }
     }
 
@@ -126,7 +144,7 @@ export class Router {
       if (!response.ok) {
         console.warn(`[Router]: View path "${viewPath}" returned status ${response.status}. Fetching 404 fallback.`);
         cleanPath = '/404';
-        response = await fetch('/pages/404.html');
+        response = await fetch('./pages/404.html');
         
         if (!response.ok) {
           throw new Error('Fallback 404.html view file is missing from /pages!');

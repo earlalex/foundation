@@ -1,5 +1,5 @@
 // pages/home/home.js
-import { contentDB } from '/core/db.js';
+import { contentDB } from '../../core/db.js';
 
 export async function initHomePage() {
   const container = document.getElementById('home-sections-container');

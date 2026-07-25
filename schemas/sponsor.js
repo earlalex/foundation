@@ -1,5 +1,5 @@
 // schemas/sponsor.js
-import { Type } from '/core/validator.js';
+import { Type } from '../core/validator.js';
 
 export const SponsorSchema = {
   type: Type.string,

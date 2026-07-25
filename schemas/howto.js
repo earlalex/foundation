@@ -1,5 +1,5 @@
-import { Type } from '/core/validator.js';
-import { AccessSchema, ProductSchema, LinkSchema, MediaSchema, PreviewSchema } from '/schemas/common.js';
+import { Type } from '../core/validator.js';
+import { AccessSchema, ProductSchema, LinkSchema, MediaSchema, PreviewSchema } from './common.js';
 
 export const HowToSchema = {
   type: Type.string,                       // "howto"

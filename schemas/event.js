@@ -1,5 +1,5 @@
 // schemas/event.js
-import { Type } from '/core/validator.js';
+import { Type } from '../core/validator.js';
 
 export const EventSchema = {
   type: Type.literal('event'),
