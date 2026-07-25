@@ -280,7 +280,7 @@ export function initAdminPage() {
     }
   });
 
-  // --- 4. NEW TAB 3: PUBLIC PROFILE / AUTHOR MANAGER ---
+  // --- 4. TAB 3: PUBLIC PROFILE / AUTHOR MANAGER ---
   const authorProfile = currentCfg.authorProfile || {};
   const authorNameInput = document.getElementById('author-name');
   const authorRoleInput = document.getElementById('author-role');
@@ -592,7 +592,7 @@ export function initAdminPage() {
     renderLookerStudio();
   }
 
-  // --- 8. NEW TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) ---
+  // --- 8. TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) ---
   async function loadPerformanceTab() {
     const runBtn = document.getElementById('btn-run-lighthouse');
     const strategySelect = document.getElementById('lh-strategy-select');

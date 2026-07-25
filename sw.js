@@ -5,11 +5,13 @@ const PRECACHE_ASSETS = [
   './index.html',
   './index.js',
   './styles/main.css',
+  './core/config.js',
   './core/store.js',
   './core/validator.js',
   './core/theme.js',
   './router/router.js',
   './components/global/ContentCard.js',
+  './components/global/AuthorCard.js',
   './pages/home/home.html',
   './pages/404.html'
 ];
@@ -36,9 +38,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
   const isNavigation = event.request.mode === 'navigate';
-
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -51,11 +51,9 @@ self.addEventListener('fetch', (event) => {
       .catch(async () => {
         const cachedResponse = await caches.match(event.request);
         if (cachedResponse) return cachedResponse;
-
         if (isNavigation) {
           return caches.match('./index.html');
         }
-
         return new Response('Offline resource unavailable.', { status: 503 });
       })
   );

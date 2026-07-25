@@ -7,6 +7,7 @@ import { themeEngine } from './core/theme.js';
 
 // Web Components
 import './components/global/ContentCard.js';
+import './components/global/AuthorCard.js';
 
 // Automated Test Suites
 import { runAllSchemaTests } from './schemas/test-runner.js';
