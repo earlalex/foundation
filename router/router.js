@@ -3,7 +3,6 @@ import { validateSchema, Type } from '../core/validator.js';
 import { authManager } from '../core/auth.js';
 import { store } from '../core/store.js';
 
-// Schema to ensure route metadata in routes.json or manual config is valid
 const RouteMetaSchema = {
   title: Type.string,
   description: Type.optional(Type.string),
@@ -15,7 +14,6 @@ export class Router {
     this.appContainer = document.getElementById('app');
     this.routesManifest = routesManifest;
     
-    // Validate provided routes manifest structure on initialization
     this.validateManifest();
     this.init();
   }
@@ -34,7 +32,6 @@ export class Router {
     // 1. Intercept link clicks across the site
     document.body.addEventListener('click', (e) => {
       const anchor = e.target.closest('a');
-      
       if (
         anchor && 
         anchor.origin === window.location.origin && 
@@ -46,12 +43,12 @@ export class Router {
       }
     });
 
-    // 2. Handle back/forward navigation in the browser
+    // 2. Handle back/forward navigation
     window.addEventListener('popstate', () => {
       this.loadRoute(window.location.pathname);
     });
 
-    // 3. Initial page load hit: Check for GitHub Pages SPA stored subroute
+    // 3. Check for GitHub Pages SPA stored subroute
     const storedRoute = sessionStorage.getItem('foundation_spa_route');
     if (storedRoute) {
       sessionStorage.removeItem('foundation_spa_route');
@@ -74,22 +71,18 @@ export class Router {
   async loadRoute(path) {
     // 1. Normalize path
     let rawPath = path || '/';
-
-    // Remove index.html if present
+    
     if (rawPath.endsWith('/index.html')) {
       rawPath = rawPath.replace(/\/index\.html$/, '');
     }
-
-    // Remove trailing slash if present (except for root '/')
     if (rawPath.length > 1 && rawPath.endsWith('/')) {
       rawPath = rawPath.slice(0, -1);
     }
 
-    // Extract path segments (e.g. '/foundation/admin' -> ['foundation', 'admin'])
     const segments = rawPath.split('/').filter(Boolean);
     let cleanPath = '/home';
 
-    if (segments.length === 0) {
+    if (segments.length === 0 || rawPath === '/' || rawPath === './') {
       cleanPath = '/home';
     } else {
       const lastSegment = `/${segments[segments.length - 1]}`;
@@ -98,9 +91,8 @@ export class Router {
         cleanPath = rawPath;
       } else if (this.routesManifest[lastSegment]) {
         cleanPath = lastSegment;
-      } else if (segments.length === 1) {
-        cleanPath = '/home';
       } else {
+        // Correctly route all unrecognized paths to /404
         cleanPath = '/404';
       }
     }
@@ -174,16 +166,10 @@ export class Router {
 
       const htmlContent = await response.text();
       
-      // Inject HTML into app container
       this.appContainer.innerHTML = htmlContent;
-
-      // Update SEO Title & Meta Description dynamically
       this.updateMetadata(cleanPath);
-
-      // Accessibility: Shift focus to main app wrapper on transition
       this.appContainer.focus();
 
-      // Dispatch event so page controllers know when to mount
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: path } 
       }));

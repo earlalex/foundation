@@ -11,11 +11,18 @@ import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
 
-// Initialize Firebase App & Auth with configuration from ConfigEngine
-const firebaseConfig = configManager.current.firebase || {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID"
+const currentFbConfig = configManager.current.firebase;
+
+// Validate that Firebase credentials are not unconfigured placeholders
+const isConfigured = currentFbConfig && 
+                     currentFbConfig.projectId && 
+                     currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
+                     currentFbConfig.apiKey !== "YOUR_API_KEY";
+
+const firebaseConfig = isConfigured ? currentFbConfig : {
+  apiKey: "AIzaSy_DEMO_KEY_FOUNDATION",
+  authDomain: "demo.firebaseapp.com",
+  projectId: "demo-foundation-app"
 };
 
 const app = initializeApp(firebaseConfig);
