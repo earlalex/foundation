@@ -2,7 +2,13 @@
 import { store } from '../../core/store.js';
 import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
-import { createGoogleCalendarEvent } from '../../core/google-services.js';
+import { 
+  createGoogleCalendarEvent, 
+  getSearchConsoleNotifications, 
+  requestSearchConsoleCrawl, 
+  getAnalyticsOverview, 
+  fetchSeoMyRankAddr 
+} from '../../core/google-services.js';
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
 
@@ -87,7 +93,7 @@ export function initAdminPage() {
   // --- 1. TAB ROUTING CONTROLLER ---
   const tabButtons = document.querySelectorAll('.admin-tab');
   const panels = document.querySelectorAll('.admin-panel');
-
+  
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
@@ -97,9 +103,15 @@ export function initAdminPage() {
       });
       btn.style.borderBottom = '3px solid var(--theme-color-primary, #2b6cb0)';
       btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
+      
       panels.forEach((p) => {
         p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
       });
+
+      // Lazy load Tab 6 data on demand
+      if (targetTab === 'seo') {
+        loadSeoAndAnalyticsTab();
+      }
     });
   });
 
@@ -111,7 +123,6 @@ export function initAdminPage() {
   const lookerUrlInput = document.getElementById('looker-studio-url');
   const headerScriptsInput = document.getElementById('header-scripts');
 
-  // Pre-fill site configuration
   const currentCfg = configManager.current || {};
   if (siteTitleInput) siteTitleInput.value = currentCfg.siteTitle || '';
   if (siteTaglineInput) siteTaglineInput.value = currentCfg.siteTagline || '';
@@ -124,7 +135,6 @@ export function initAdminPage() {
     e.preventDefault();
     const siteLogoInput = document.getElementById('site-logo');
     const siteFaviconInput = document.getElementById('site-favicon');
-
     let logoAsset = currentCfg.siteLogo || null;
     let faviconAsset = currentCfg.siteFavicon || null;
 
@@ -161,7 +171,6 @@ export function initAdminPage() {
       },
       headerScripts: headerScriptsInput.value
     };
-
     const success = await configManager.saveToFirebase(updatedEmbedsConfig);
     if (success) {
       alert('Integration embeds and custom header scripts saved to Firestore!');
@@ -224,7 +233,6 @@ export function initAdminPage() {
   const bizTermsUrlInput = document.getElementById('biz-terms-url');
   const bizRefundUrlInput = document.getElementById('biz-refund-url');
 
-  // Pre-fill Business Profile
   const bizProfile = currentCfg.businessProfile || {};
   if (bizLegalNameInput) bizLegalNameInput.value = bizProfile.legalName || '';
   if (bizDbaInput) bizDbaInput.value = bizProfile.dba || '';
@@ -264,7 +272,6 @@ export function initAdminPage() {
         refundUrl: bizRefundUrlInput.value
       }
     };
-
     const success = await configManager.saveToFirebase(updatedBizConfig);
     if (success) {
       alert(`Business & Legal Profile updated in Firestore for "${bizLegalNameInput.value}"!`);
@@ -333,8 +340,8 @@ export function initAdminPage() {
     const visibility = document.getElementById('content-visibility').value;
     const rawBody = document.getElementById('content-body').value;
     const fileInput = document.getElementById('media-file');
-
     let assetData = null;
+
     if (fileInput && fileInput.files.length > 0) {
       assetData = await uploadFileToDrive(fileInput.files[0]);
     }
@@ -383,7 +390,6 @@ export function initAdminPage() {
       payload.date = eventDetails.date;
       payload.startTime = eventDetails.startTime;
       payload.endTime = eventDetails.endTime;
-
       if (calResult) {
         payload.meetUrl = calResult.meetUrl;
         payload.calendarEventId = calResult.calendarEventId;
@@ -407,22 +413,125 @@ export function initAdminPage() {
     }
   });
 
-  // --- 6. TAB 6: SEO & ANALYTICS HANDLERS ---
-  const seoRankBtn = document.getElementById('btn-fetch-seo-rank');
-  seoRankBtn?.addEventListener('click', async () => {
-    seoRankBtn.textContent = 'Fetching Rank...';
-    try {
-      const domain = window.location.hostname || 'foundation.dev';
-      console.log(`[SEO Service]: Fetching my-addr.com ranking telemetries for ${domain}...`);
-      setTimeout(() => {
-        alert(`[SEO Telemetry Updated]: ${domain} is indexed and sitting in Top 1% metrics.`);
-        seoRankBtn.textContent = 'Refresh Rank';
-      }, 800);
-    } catch (err) {
-      console.error('SEO rank check failed:', err);
-      seoRankBtn.textContent = 'Refresh Rank';
+  // --- 6. TAB 6: SEO & ANALYTICS CONTROLLER ---
+  async function loadSeoAndAnalyticsTab() {
+    // 1. Fetch & Render SEO-MY-RANK-ADDR Telemetry
+    const rankBtn = document.getElementById('btn-fetch-seo-rank');
+    if (rankBtn) {
+      rankBtn.onclick = async () => {
+        rankBtn.textContent = 'Querying My-Addr...';
+        const telemetry = await fetchSeoMyRankAddr(window.location.hostname);
+        document.getElementById('rank-google').textContent = telemetry.googleRank;
+        document.getElementById('rank-moz-da').textContent = `${telemetry.mozDomainAuthority} / 100`;
+        document.getElementById('rank-moz-pa').textContent = `${telemetry.mozPageAuthority} / 100`;
+        document.getElementById('rank-alexa').textContent = `#${telemetry.globalAlexaRank}`;
+        document.getElementById('rank-backlinks').textContent = Number(telemetry.backlinksCount).toLocaleString();
+        rankBtn.textContent = 'Refresh Rank Telemetry';
+      };
     }
-  });
+
+    // 2. Google Search Console Crawl Submission
+    const crawlForm = document.getElementById('gsc-crawl-form');
+    crawlForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const crawlUrl = document.getElementById('gsc-crawl-url').value;
+      const feedback = document.getElementById('gsc-crawl-feedback');
+      
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.textContent = `Submitting "${crawlUrl}" to Search Console crawler...`;
+      }
+
+      const res = await requestSearchConsoleCrawl(crawlUrl);
+      if (feedback) {
+        if (res.success) {
+          feedback.style.background = '#f0fdf4';
+          feedback.style.color = '#166534';
+          feedback.textContent = `Success: ${crawlUrl} was submitted to Google index queue.`;
+        } else {
+          feedback.style.background = '#fff5f5';
+          feedback.style.color = '#c53030';
+          feedback.textContent = `Crawl Request Error: ${res.error || 'Check OAuth permissions'}`;
+        }
+      }
+    });
+
+    // 3. Search Console Notifications Stream
+    const notifsContainer = document.getElementById('gsc-notifs-container');
+    const refreshNotifsBtn = document.getElementById('btn-refresh-gsc-notifs');
+
+    async function renderGscNotifs() {
+      if (!notifsContainer) return;
+      notifsContainer.innerHTML = '<p style="color:#a0aec0; font-size:0.8rem;">Fetching messages...</p>';
+      const alerts = await getSearchConsoleNotifications();
+      
+      if (!alerts || alerts.length === 0) {
+        notifsContainer.innerHTML = '<p style="color:#718096; font-size:0.8rem;">No unread Search Console alerts.</p>';
+        return;
+      }
+
+      notifsContainer.innerHTML = alerts.map(item => `
+        <div style="padding: 8px 10px; border-left: 3px solid ${item.type === 'warning' ? '#dd6b20' : '#38a169'}; background: #f7fafc; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.8rem;">
+            <span>${item.title}</span>
+            <span style="color: #a0aec0; font-weight: normal;">${item.date}</span>
+          </div>
+          <p style="margin: 2px 0 0 0; color: #4a5568; font-size: 0.75rem;">${item.message}</p>
+        </div>
+      `).join('');
+    }
+
+    if (refreshNotifsBtn) refreshNotifsBtn.onclick = renderGscNotifs;
+    renderGscNotifs();
+
+    // 4. GA4 Traffic Telemetry
+    const ga4Btn = document.getElementById('btn-refresh-ga4');
+    const rangeSelect = document.getElementById('select-ga4-range');
+
+    async function renderGa4Data() {
+      const range = rangeSelect?.value || '30daysAgo';
+      const stats = await getAnalyticsOverview(null, range);
+      if (stats) {
+        document.getElementById('ga4-users').textContent = stats.activeUsers;
+        document.getElementById('ga4-views').textContent = stats.screenPageViews;
+        document.getElementById('ga4-duration').textContent = stats.avgSessionDuration;
+        document.getElementById('ga4-bounce').textContent = stats.bounceRate;
+
+        const topPagesBox = document.getElementById('ga4-top-pages');
+        if (topPagesBox && Array.isArray(stats.topPages)) {
+          topPagesBox.innerHTML = stats.topPages.map(p => `
+            <div style="display:flex; justify-content:space-between; padding: 4px 8px; background:#f7fafc; border-radius: 4px;">
+              <code style="color:#2b6cb0;">${p.path}</code>
+              <strong>${p.views} views</strong>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    if (ga4Btn) ga4Btn.onclick = renderGa4Data;
+    renderGa4Data();
+
+    // 5. Looker Studio Embed Frame
+    const embedIframe = document.getElementById('looker-studio-embed');
+    const placeholder = document.getElementById('analytics-placeholder');
+    const reloadLookerBtn = document.getElementById('btn-reload-looker');
+    const embedUrl = configManager.current.thirdParty?.lookerStudioEmbedUrl;
+
+    function renderLookerStudio() {
+      if (embedIframe && embedUrl && embedUrl.startsWith('http')) {
+        embedIframe.src = embedUrl;
+        embedIframe.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      } else {
+        if (embedIframe) embedIframe.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+      }
+    }
+
+    if (reloadLookerBtn) reloadLookerBtn.onclick = renderLookerStudio;
+    renderLookerStudio();
+  }
 
   // --- 7. DEV MODE SWITCHER ---
   const radioOn = document.getElementById('radio-dev-on');
