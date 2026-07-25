@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Foundation</title>
-  <link rel="stylesheet" href="/styles/main.css">
+  <link rel="stylesheet" href="./styles/main.css">
   <link rel="icon" href="data:,">
   <style>
     .no-js-banner {
@@ -19,8 +19,7 @@
       text-align: center;
     }
   </style>
-
-  <script type="module" src="/index.js" onerror="handleScriptError()"></script>
+  <script type="module" src="./index.js" onerror="handleScriptError()"></script>
   <script>
     function handleScriptError() {
       const app = document.getElementById('app');
@@ -34,23 +33,23 @@
     }
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js');
+        // Register Service Worker with relative scope for GitHub Pages subpaths
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {
+          console.warn('[Service Worker]: Registration bypassed or failed in current environment:', err);
+        });
       });
     }
   </script>
 </head>
 <body>
-
   <noscript>
     <div class="no-js-banner">
       <h2>JavaScript Required</h2>
       <p>Foundation relies on JavaScript to load pages dynamically. Please enable JavaScript in your browser settings to view this site.</p>
     </div>
   </noscript>
-
   <header id="global-header"></header>
   <main id="app" tabindex="-1" aria-live="polite"></main>
   <footer id="global-footer"></footer>
-
 </body>
 </html>
