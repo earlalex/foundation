@@ -9,7 +9,9 @@ import {
   getSearchConsoleSecurityIssues,
   getAnalyticsOverview, 
   fetchSeoMyRankAddr,
-  runLighthouseAudit
+  runLighthouseAudit,
+  syncGoogleContactRole,
+  sendBulkGmail
 } from '../../core/google-services.js';
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
@@ -390,7 +392,7 @@ export function initAdminPage() {
     }
   });
 
-  // --- 6. TAB 5: USER DIRECTORY & 10% AFFILIATE ENGINE CONTROLLER ---
+  // --- 6. TAB 5: USER DIRECTORY, GOOGLE CONTACTS & MASS EMAIL CONTROLLER ---
   async function loadUserDirectoryTab() {
     const adminEmailBadge = document.getElementById('connected-admin-email');
     const connectedAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@foundation.dev';
@@ -398,16 +400,20 @@ export function initAdminPage() {
 
     const tbody = document.getElementById('user-directory-tbody');
     const refreshBtn = document.getElementById('btn-refresh-users');
+    const syncContactsBtn = document.getElementById('btn-sync-google-contacts');
+    const massEmailForm = document.getElementById('mass-email-form');
+
+    let cachedUsers = [];
 
     async function renderUsersList() {
       if (!tbody) return;
       tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: #a0aec0;">Fetching user records...</td></tr>';
       
-      let users = await contentDB.getAllUsers();
+      cachedUsers = await contentDB.getAllUsers();
+      const hasAdminInList = cachedUsers.some(u => u.email === connectedAdminEmail);
 
-      const hasAdminInList = users.some(u => u.email === connectedAdminEmail);
       if (!hasAdminInList) {
-        users.unshift({
+        cachedUsers.unshift({
           id: 'primary-admin-root',
           name: store.state.user?.displayName || 'Primary System Administrator',
           email: connectedAdminEmail,
@@ -419,13 +425,13 @@ export function initAdminPage() {
       }
 
       const referralMap = {};
-      users.forEach(u => {
+      cachedUsers.forEach(u => {
         if (u.referredBy) {
           referralMap[u.referredBy] = (referralMap[u.referredBy] || 0) + 1;
         }
       });
 
-      tbody.innerHTML = users.map((u) => {
+      tbody.innerHTML = cachedUsers.map((u) => {
         const isPrimary = u.email === connectedAdminEmail || u.role === 'admin';
         const activeReferrals = referralMap[u.affiliateCode || u.id] || u.referredCount || 0;
         
@@ -476,6 +482,7 @@ export function initAdminPage() {
         `;
       }).join('');
 
+      // Wire Role Switcher Listeners
       document.querySelectorAll('.select-role-change').forEach((select) => {
         select.addEventListener('change', async (e) => {
           const uId = e.target.getAttribute('data-id');
@@ -483,13 +490,17 @@ export function initAdminPage() {
           
           const affiliateCode = newRole === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
           const updated = await contentDB.saveUser({ id: uId, role: newRole, affiliateCode });
+          
           if (updated) {
-            alert(`User role updated to "${newRole.toUpperCase()}"!`);
+            // Auto-sync Google Contact Role Label
+            await syncGoogleContactRole({ name: updated.name, email: updated.email, role: newRole });
+            alert(`User role updated to "${newRole.toUpperCase()}" & synced to Google Contacts!`);
             renderUsersList();
           }
         });
       });
 
+      // Wire Delete User Listeners
       document.querySelectorAll('.btn-user-delete').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           const uId = e.target.getAttribute('data-id');
@@ -505,9 +516,60 @@ export function initAdminPage() {
       });
     }
 
+    // Google Contacts Bulk Sync Button
+    if (syncContactsBtn) {
+      syncContactsBtn.onclick = async () => {
+        syncContactsBtn.textContent = 'Syncing Google Contacts...';
+        let syncedCount = 0;
+        for (const user of cachedUsers) {
+          if (user.email && user.role !== 'admin') {
+            const res = await syncGoogleContactRole(user);
+            if (res) syncedCount++;
+          }
+        }
+        alert(`Successfully synced ${syncedCount} platform users to Google Contacts with role labels!`);
+        syncContactsBtn.textContent = 'Sync All to Google Contacts';
+      };
+    }
+
+    // Mass Email Form Submitter
+    massEmailForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const targetRole = document.getElementById('mass-email-target-role').value;
+      const subject = document.getElementById('mass-email-subject').value;
+      const messageBody = document.getElementById('mass-email-body').value;
+
+      // Filter target user list
+      const recipients = cachedUsers.filter(u => {
+        if (targetRole === 'all') return u.email && u.role !== 'admin';
+        return u.role === targetRole;
+      });
+
+      if (recipients.length === 0) {
+        alert(`No users found matching the selected tier ("${targetRole.toUpperCase()}").`);
+        return;
+      }
+
+      if (confirm(`Dispatch Gmail broadcast to ${recipients.length} recipients in the "${targetRole.toUpperCase()}" group?`)) {
+        const sendBtn = document.getElementById('btn-send-mass-email');
+        if (sendBtn) sendBtn.textContent = `Broadcasting to ${recipients.length} users...`;
+
+        const { sentCount, failedCount } = await sendBulkGmail({
+          recipientList: recipients,
+          subject,
+          messageBody
+        });
+
+        alert(`Mass Email Broadcast Complete!\n\nSuccessful: ${sentCount}\nFailed: ${failedCount}`);
+        if (sendBtn) sendBtn.textContent = 'Dispatch Mass Email via Gmail';
+        e.target.reset();
+      }
+    });
+
     if (refreshBtn) refreshBtn.onclick = renderUsersList;
     renderUsersList();
 
+    // Create User Handler
     const createUserForm = document.getElementById('create-user-form');
     createUserForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -522,17 +584,13 @@ export function initAdminPage() {
       }
 
       const affiliateCode = role === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
-      const res = await contentDB.saveUser({ 
-        name, 
-        email, 
-        role, 
-        referredBy,
-        affiliateCode,
-        status: 'Active' 
-      });
+      const newUser = { name, email, role, referredBy, affiliateCode, status: 'Active' };
+      const res = await contentDB.saveUser(newUser);
 
       if (res) {
-        alert(`Account created for ${name} as ${role.toUpperCase()}`);
+        // Sync new user directly to Google Contacts
+        await syncGoogleContactRole(newUser);
+        alert(`Account created for ${name} as ${role.toUpperCase()} and added to Google Contacts!`);
         e.target.reset();
         renderUsersList();
       }
@@ -838,7 +896,6 @@ export function initAdminPage() {
           }
         }
 
-        // Update Security Category Flags
         const p = secData.categories.phishingSocialEngineering;
         document.getElementById('gsc-flag-phishing').textContent = p.flagged ? 'FLAGGED THREAT' : 'CLEAN';
         document.getElementById('gsc-flag-phishing').style.color = p.flagged ? '#e53e3e' : '#38a169';

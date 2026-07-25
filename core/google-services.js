@@ -91,7 +91,7 @@ export async function createGoogleCalendarEvent(eventData) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                           2. GOOGLE CONTACTS & GMAIL                        */
+/*                   2. GOOGLE CONTACTS & ROLE LABEL SYNC                     */
 /* -------------------------------------------------------------------------- */
 export async function createGoogleContact(contact) {
   const token = await getAccessToken();
@@ -101,7 +101,7 @@ export async function createGoogleContact(contact) {
     names: [{ givenName: contact.name }],
     emailAddresses: [{ value: contact.email }],
     phoneNumbers: contact.phone ? [{ value: contact.phone }] : [],
-    userDefined: [{ key: 'Source', value: 'Website Contact Form' }]
+    userDefined: [{ key: 'UserRole', value: contact.role || 'Subscriber' }]
   };
 
   try {
@@ -122,6 +122,63 @@ export async function createGoogleContact(contact) {
   }
 }
 
+/**
+ * Synchronize user role labels directly into Google Contacts
+ */
+export async function syncGoogleContactRole(user) {
+  const token = await getAccessToken();
+  if (!token) return false;
+
+  const roleLabel = user.role === 'affiliate' ? 'Affiliate Member' : user.role === 'member' ? 'Member' : 'Subscriber';
+
+  try {
+    // Search existing contact by email
+    const searchRes = await fetch(`https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(user.email)}&readMask=names,emailAddresses,userDefined`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const searchData = await searchRes.json();
+    const existingPerson = searchData.results?.[0]?.person;
+
+    if (existingPerson) {
+      // Update existing Google Contact role metadata
+      const resourceName = existingPerson.resourceName;
+      const etag = existingPerson.etag;
+      const userDefined = existingPerson.userDefined || [];
+
+      // Update or insert UserRole attribute
+      const roleIdx = userDefined.findIndex(u => u.key === 'UserRole');
+      if (roleIdx >= 0) {
+        userDefined[roleIdx].value = roleLabel;
+      } else {
+        userDefined.push({ key: 'UserRole', value: roleLabel });
+      }
+
+      await fetch(`https://people.googleapis.com/v1/${resourceName}:updateContact?updatePersonFields=userDefined`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          etag,
+          userDefined
+        })
+      });
+      console.log(`[Google Contacts]: Updated role label "${roleLabel}" for ${user.email}`);
+    } else {
+      // Contact doesn't exist yet -> Create new contact with label
+      await createGoogleContact({ name: user.name, email: user.email, role: roleLabel });
+    }
+    return true;
+  } catch (err) {
+    errorHandler.handleError(new Error(`Google Contacts role sync failed for ${user.email}: ${err.message}`));
+    return false;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                       3. GMAIL MASS EMAIL BROADCASTER                      */
+/* -------------------------------------------------------------------------- */
 export async function sendGmailNotification({ toEmail, subject, messageBody }) {
   const token = await getAccessToken();
   if (!token) return false;
@@ -157,8 +214,39 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
   }
 }
 
+/**
+ * Dispatch personalized mass email to array of target user addresses
+ */
+export async function sendBulkGmail({ recipientList, subject, messageBody }) {
+  const token = await getAccessToken();
+  if (!token || !Array.isArray(recipientList) || recipientList.length === 0) return { sentCount: 0, failedCount: 0 };
+
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (const user of recipientList) {
+    const email = typeof user === 'string' ? user : user.email;
+    const name = typeof user === 'object' ? (user.name || 'Member') : 'Member';
+    const personalizedBody = messageBody.replace(/{{name}}/g, name);
+
+    const success = await sendGmailNotification({
+      toEmail: email,
+      subject: subject,
+      messageBody: personalizedBody
+    });
+
+    if (success) {
+      sentCount++;
+    } else {
+      failedCount++;
+    }
+  }
+
+  return { sentCount, failedCount };
+}
+
 /* -------------------------------------------------------------------------- */
-/*                       3. GOOGLE SEARCH CONSOLE ENGINE                       */
+/*                       4. GOOGLE SEARCH CONSOLE ENGINE                       */
 /* -------------------------------------------------------------------------- */
 export async function getSearchConsolePerformance(siteUrl) {
   const token = await getAccessToken();
@@ -239,9 +327,6 @@ export async function requestSearchConsoleCrawl(targetUrl) {
   }
 }
 
-/**
- * Fetch Negative Security Issues & Threats (Phishing, Defacement, Malware, Unnatural Links)
- */
 export async function getSearchConsoleSecurityIssues() {
   const token = await getAccessToken();
   
@@ -266,7 +351,6 @@ export async function getSearchConsoleSecurityIssues() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await response.json();
-
     const issues = data.securityIssues || [];
     const hasThreats = issues.length > 0;
 
@@ -285,7 +369,7 @@ export async function getSearchConsoleSecurityIssues() {
         },
         unnaturalLinksSpam: { 
           flagged: issues.some(i => i.type?.includes('UNNATURAL_LINKS') || i.type?.includes('SPAM')), 
-          status: issues.find(i => i.type?.includes('UNNATURAL_LINKS'))?.details || 'No manual action link penalties' 
+          status: issues.find(i => i.type?.includes('UNNATURAL_LINKS') || i.type?.includes('SPAM'))?.details || 'No manual action link penalties' 
         },
         malwareHarmfulDownloads: { 
           flagged: issues.some(i => i.type?.includes('MALWARE')), 
@@ -301,7 +385,7 @@ export async function getSearchConsoleSecurityIssues() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                         4. GOOGLE ANALYTICS (GA4) ENGINE                    */
+/*                         5. GOOGLE ANALYTICS (GA4) ENGINE                    */
 /* -------------------------------------------------------------------------- */
 export async function getAnalyticsOverview(propertyIdOverride, dateRange = '30daysAgo') {
   const token = await getAccessToken();
@@ -343,7 +427,7 @@ export async function getAnalyticsOverview(propertyIdOverride, dateRange = '30da
 }
 
 /* -------------------------------------------------------------------------- */
-/*                    5. SEO-MY-RANK-ADDR RANK TELEMETRY                      */
+/*                    6. SEO-MY-RANK-ADDR RANK TELEMETRY                      */
 /* -------------------------------------------------------------------------- */
 export async function fetchSeoMyRankAddr(domain) {
   const targetDomain = domain || window.location.hostname || 'foundation.dev';
@@ -370,7 +454,7 @@ export async function fetchSeoMyRankAddr(domain) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                 6. GOOGLE PAGESPEED / LIGHTHOUSE AUDIT ENGINE              */
+/*                 7. GOOGLE PAGESPEED / LIGHTHOUSE AUDIT ENGINE              */
 /* -------------------------------------------------------------------------- */
 export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
   const urlToAudit = targetUrl || window.location.href;
