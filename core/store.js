@@ -39,6 +39,12 @@ class Store {
         validateSchema(this.#schemas, proposedState, 'store.state');
       }
       this.#state = DeepFreeze(proposedState);
+
+      // Optional console log output when in dev mode
+      if (this.#state.devMode) {
+        console.log(`%c[Store Dispatch]: %c${actionName}`, 'color: #805ad5; font-weight: bold;', 'color: #2b6cb0; font-weight: 600;', payload !== undefined ? payload : '');
+      }
+
       this.#notify();
     } catch (err) {
       errorHandler.handleError(err);

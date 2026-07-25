@@ -1,9 +1,10 @@
 // router/test-router.js
 import { Router } from './router.js';
 import { authManager } from '../core/auth.js';
+import { store } from '../core/store.js';
 
 export async function runRouterTests() {
-  console.group('🧪 Running SPA Router Test Suite...');
+  console.group('  Running SPA Router Test Suite...');
   let totalTests = 0;
   let passedTests = 0;
 
@@ -34,12 +35,10 @@ export async function runRouterTests() {
 
   const testRouter = new Router(testManifest);
 
-  // --- TEST 1: Initial Manifest Parsing ---
   await assertTest('Router stores route manifest correctly', () => {
     if (!testRouter) throw new Error('Router instance failed to initialize.');
   });
 
-  // --- TEST 2: Lifecycle Event Listener Dispatch ---
   await assertTest('Dispatches "pageLoaded" custom event on navigation', async () => {
     let receivedPath = '';
     const handlePageLoaded = (e) => {
@@ -55,7 +54,6 @@ export async function runRouterTests() {
     }
   });
 
-  // --- TEST 3: Document Title & Metadata Updates ---
   await assertTest('Updates document.title based on route manifest', async () => {
     await testRouter.loadRoute('/about');
     if (!document.title.includes('About Us')) {
@@ -63,38 +61,49 @@ export async function runRouterTests() {
     }
   });
 
-  // --- TEST 4: Admin Guard Protection (Unauthenticated) ---
-  await assertTest('Blocks unauthenticated user from accessing /admin', async () => {
+  await assertTest('Blocks unauthenticated user from accessing /admin when Dev Mode is OFF', async () => {
+    store.dispatch('SET_DEV_MODE', false);
     const originalAdminCheck = authManager.isAdminAuthenticated;
     authManager.isAdminAuthenticated = () => false;
+
     await testRouter.loadRoute('/admin');
     const appHTML = appContainer.innerHTML.toLowerCase();
     
     const isLocked = appHTML.includes('admin') || 
-                      appHTML.includes('authorization') || 
-                      appHTML.includes('required') || 
-                      appHTML.includes('sign in');
+                     appHTML.includes('authorization') || 
+                     appHTML.includes('required') || 
+                     appHTML.includes('sign in');
+
     authManager.isAdminAuthenticated = originalAdminCheck;
     if (!isLocked) {
-      throw new Error('Unauthenticated user was allowed into /admin view!');
+      throw new Error('Unauthenticated user was allowed into /admin view while Dev Mode was OFF!');
     }
   });
 
-  // --- TEST 5: Fallback 404 Routing for Non-Existent Paths ---
-  await assertTest('Routes unknown path to 404 handler or fallback page', async () => {
+  await assertTest('Grants direct access to /admin when Dev Mode is ON', async () => {
+    store.dispatch('SET_DEV_MODE', true);
+    await testRouter.loadRoute('/admin');
+    const appHTML = appContainer.innerHTML.toLowerCase();
+    
+    const isUnlocked = appHTML.includes('command center') || appHTML.includes('admin-panel') || appHTML.includes('site & brand');
+    if (!isUnlocked) {
+      throw new Error('Dev Mode active but direct access to /admin was blocked.');
+    }
+  });
+
+  await assertTest('Routes unknown path to 404 fallback page', async () => {
     await testRouter.loadRoute('/some-random-non-existent-page-123');
     const is404 = document.title.includes('Page Not Found') || 
-                   document.title.includes('404') || 
-                   appContainer.innerHTML.includes('404');
+                    document.title.includes('404') || 
+                    appContainer.innerHTML.includes('404');
     if (!is404) {
       throw new Error('Non-existent route did not resolve to 404 handling.');
     }
   });
 
-  // --- SUMMARY ---
   const passedAll = totalTests === passedTests;
   console.log(
-    `%c\n📊 Router Test Summary: ${passedTests}/${totalTests} Tests Passed ${passedAll ? '🎉' : '⚠️'}`,
+    `%c\n  Router Test Summary: ${passedTests}/${totalTests} Tests Passed ${passedAll ? '✅' : '❌'}`,
     `font-size: 14px; font-weight: bold; color: ${passedAll ? '#38a169' : '#e53e3e'};`
   );
   console.groupEnd();

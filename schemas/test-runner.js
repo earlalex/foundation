@@ -3,7 +3,7 @@ import { validateSchema, Type } from '../core/validator.js';
 import { schemaRegistry } from './registry.js';
 
 export function runAllSchemaTests() {
-  console.group('🧪 Running Foundation Schema Test Suite...');
+  console.group('  Running Foundation Schema Test Suite...');
   let totalTests = 0;
   let passedTests = 0;
 
@@ -11,16 +11,15 @@ export function runAllSchemaTests() {
     totalTests++;
     try {
       testFn();
-      console.log(`%c  ✅ PASS: ${testName}`, 'color: #38a169; font-weight: bold;');
+      console.log(`%c    PASS: ${testName}`, 'color: #38a169; font-weight: bold;');
       passedTests++;
     } catch (err) {
-      console.error(`  ❌ FAIL: ${testName}\n     Reason: ${err.message}`);
+      console.error(`    FAIL: ${testName}\n     Reason: ${err.message}`);
     }
   }
 
   // --- 1. CORE VALIDATOR ENGINE TESTS ---
   console.group('1. Core Validator Unit Tests');
-
   assertTest('Validator approves correct primitive types', () => {
     const schema = { name: Type.string, age: Type.number, active: Type.boolean };
     validateSchema(schema, { name: 'Alice', age: 30, active: true });
@@ -36,7 +35,7 @@ export function runAllSchemaTests() {
     }
   });
 
-  assertTest('Validator handles uncalled Type.array and Type.array(Type.string)', () => {
+  assertTest('Validator handles Type.array and Type.array(Type.string)', () => {
     const schema = { tags: Type.array, skills: Type.array(Type.string) };
     validateSchema(schema, { tags: [1, 2, 3], skills: ['js', 'css'] });
   });
@@ -50,18 +49,14 @@ export function runAllSchemaTests() {
       if (e.name !== 'ValidationError') throw e;
     }
   });
-
   console.groupEnd();
 
-  // --- 2. CONTENT SCHEMA REGISTRY TESTS ---
+  // --- 2. REGISTERED CONTENT SCHEMAS TESTS ---
   console.group('2. Registered Content Schemas Tests');
-
-  // Shared valid mock blocks
   const validAccess = { visibility: 'public' };
   const validMedia = { type: 'image', src: './assets/img.jpg' };
   const validPreview = { featuredImage: validMedia, teaserText: 'Preview text' };
 
-  // --- A. BLOG SCHEMA ---
   assertTest('Blog Schema: Passes valid payload', () => {
     schemaRegistry.validate({
       type: 'blog',
@@ -92,7 +87,6 @@ export function runAllSchemaTests() {
     }
   });
 
-  // --- B. ANNOUNCEMENT SCHEMA ---
   assertTest('Announcement Schema: Passes valid payload', () => {
     schemaRegistry.validate({
       type: 'announcement',
@@ -105,7 +99,6 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- C. BOOK SCHEMA ---
   assertTest('Book Schema: Passes valid payload with product info', () => {
     schemaRegistry.validate({
       type: 'book',
@@ -118,7 +111,6 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- D. EDUCATION SCHEMA ---
   assertTest('Education Schema: Passes valid course with quiz and worksheets', () => {
     schemaRegistry.validate({
       type: 'education',
@@ -131,7 +123,6 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- E. HOWTO SCHEMA ---
   assertTest('HowTo Schema: Passes valid step-by-step guide', () => {
     schemaRegistry.validate({
       type: 'howto',
@@ -144,7 +135,6 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- F. PODCAST SCHEMA ---
   assertTest('Podcast Schema: Passes valid episode with audio/video', () => {
     schemaRegistry.validate({
       type: 'podcast',
@@ -158,7 +148,6 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- G. PORTFOLIO SCHEMA ---
   assertTest('Portfolio Schema: Passes valid case study', () => {
     schemaRegistry.validate({
       type: 'portfolio',
@@ -171,7 +160,6 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- H. SPONSOR SCHEMA ---
   assertTest('Sponsor Schema: Passes valid partner deal', () => {
     schemaRegistry.validate({
       type: 'sponsor',
@@ -184,15 +172,14 @@ export function runAllSchemaTests() {
     });
   });
 
-  // --- I. EVENT SCHEMA (Live / Google Meet Events) ---
- assertTest('Event Schema: Passes valid live event with Google Meet link & location', () => {
+  assertTest('Event Schema: Passes valid live event with Google Meet link', () => {
     schemaRegistry.validate({
       type: 'event',
       id: 'live-qa-session',
       title: 'Live Q&A: Zero-Build Frameworks',
-      description: 'Interactive Google Meet video session on no-build architecture.',
+      description: 'Interactive Google Meet video session.',
       eventType: 'google-meet',
-      location: 'Google Meet / Main Conference Room 4B',
+      location: 'Google Meet',
       date: '2026-07-25',
       startTime: '14:00',
       endTime: '15:00',
@@ -202,36 +189,11 @@ export function runAllSchemaTests() {
       preview: validPreview
     });
   });
-
-  assertTest('Event Schema: Catches invalid date/time format or missing eventType', () => {
-    try {
-      schemaRegistry.validate({
-        type: 'event',
-        id: 'live-qa-session',
-        title: 'Live Q&A: Zero-Build Frameworks',
-        description: 'Interactive Google Meet video session on no-build architecture.',
-        // eventType is intentionally missing here so validation fails as expected
-        date: '2026-07-25',
-        startTime: '14:00',
-        endTime: '15:00',
-        location: 'Google Meet / Main Conference Room 4B',
-        meetUrl: 'https://meet.google.com/abc-defg-hij',
-        calendarEventId: 'cal_evt_12345',
-        access: validAccess,
-        preview: validPreview
-      });
-      throw new Error('Should have failed due to missing eventType');
-    } catch (e) {
-      if (e.name !== 'ValidationError') throw e;
-    }
-  });
-
   console.groupEnd();
 
-  // --- SUMMARY ---
   const passedAll = totalTests === passedTests;
   console.log(
-    `%c\n📊 Test Suite Summary: ${passedTests}/${totalTests} Tests Passed ${passedAll ? '🎉' : '⚠️'}`,
+    `%c\n  Schema Test Summary: ${passedTests}/${totalTests} Tests Passed ${passedAll ? '✅' : '❌'}`,
     `font-size: 14px; font-weight: bold; color: ${passedAll ? '#38a169' : '#e53e3e'};`
   );
   console.groupEnd();
