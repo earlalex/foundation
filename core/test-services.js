@@ -21,14 +21,15 @@ export async function runServicesTests() {
     }
   }
 
-  // --- 1. AFFILIATE REFERRAL COMMISSION CALCULATOR ---
+  // 1. AFFILIATE REFERRAL COMMISSION CALCULATOR
   await assertTest('Affiliate Commission Engine: Computes 10% monthly referral credit correctly', () => {
     const monthlyFee = 29.00;
     const commissionRate = 0.10;
     const referrals = 5;
     
-    const monthlyEarnings = referrals * (monthlyFee * commissionRate);
-    const expected = 14.50; // $2.90 * 5 = $14.50
+    // Fixed floating point rounding with Number.toFixed()
+    const monthlyEarnings = parseFloat((referrals * (monthlyFee * commissionRate)).toFixed(2));
+    const expected = 14.50;
 
     if (monthlyEarnings !== expected) {
       throw new Error(`Expected $14.50 monthly credit, calculated $${monthlyEarnings.toFixed(2)}`);
@@ -38,9 +39,9 @@ export async function runServicesTests() {
   await assertTest('Affiliate Commission Engine: Identifies 100% membership fee offset threshold', () => {
     const monthlyFee = 29.00;
     const commissionRate = 0.10;
-    const referrals = 10; // 10 referrals * $2.90 = $29.00 (100% offset)
+    const referrals = 10;
 
-    const monthlyEarnings = referrals * (monthlyFee * commissionRate);
+    const monthlyEarnings = parseFloat((referrals * (monthlyFee * commissionRate)).toFixed(2));
     const isFullyCovered = monthlyEarnings >= monthlyFee;
 
     if (!isFullyCovered) {
@@ -48,7 +49,7 @@ export async function runServicesTests() {
     }
   });
 
-  // --- 2. MASS GMAIL RECIPIENT FILTERING ---
+  // 2. MASS GMAIL RECIPIENT FILTERING
   await assertTest('Mass Email Broadcaster: Filters target recipients by membership tier correctly', () => {
     const mockUsers = [
       { email: 'sub@ex.com', role: 'subscriber' },
@@ -69,7 +70,7 @@ export async function runServicesTests() {
     }
   });
 
-  // --- 3. GOOGLE CONTACTS ROLE LABEL FORMATTING ---
+  // 3. GOOGLE CONTACTS ROLE LABEL FORMATTING
   await assertTest('Google Contacts Sync: Formats custom UserRole labels accurately', () => {
     const formatRoleLabel = (role) => {
       return role === 'affiliate' ? 'Affiliate Member' : role === 'member' ? 'Member' : 'Subscriber';
@@ -80,7 +81,7 @@ export async function runServicesTests() {
     if (formatRoleLabel('subscriber') !== 'Subscriber') throw new Error('Subscriber label mismatch');
   });
 
-  // --- 4. SEARCH CONSOLE THREAT MONITOR STRUCTURE ---
+  // 4. SEARCH CONSOLE THREAT MONITOR STRUCTURE
   await assertTest('Search Console Threat Monitor: Returns structured threat categories', async () => {
     const secReport = await getSearchConsoleSecurityIssues();
     if (!secReport || typeof secReport !== 'object') {
@@ -91,7 +92,7 @@ export async function runServicesTests() {
     }
   });
 
-  // --- 5. LIGHTHOUSE AUDIT ENGINE ---
+  // 5. LIGHTHOUSE AUDIT ENGINE
   await assertTest('Lighthouse Audit Engine: Formats Core Web Vitals telemetries', async () => {
     const audit = await runLighthouseAudit(window.location.href, 'mobile');
     if (!audit || typeof audit.scores?.performance !== 'number') {
@@ -102,7 +103,7 @@ export async function runServicesTests() {
     }
   });
 
-  // --- 6. SEO-MY-RANK-ADDR TELEMETRY ---
+  // 6. SEO-MY-RANK-ADDR TELEMETRY
   await assertTest('SEO Rank Service: Queries domain authority metrics', async () => {
     const telemetry = await fetchSeoMyRankAddr('foundation.dev');
     if (!telemetry || !telemetry.googleRank) {

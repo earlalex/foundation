@@ -6,9 +6,6 @@ import { configManager } from './config.js';
 
 let googleAccessToken = null;
 
-/**
- * Request OAuth Scopes for Calendar, Contacts, Gmail, Search Console, Analytics, & Drive
- */
 export async function authenticateGoogleServices() {
   const provider = new GoogleAuthProvider();
   const scopes = configManager.current.google?.scopes || [
@@ -33,8 +30,8 @@ export async function authenticateGoogleServices() {
   }
 }
 
-async function getAccessToken() {
-  if (!googleAccessToken) {
+async function getAccessToken(interactive = false) {
+  if (!googleAccessToken && interactive) {
     await authenticateGoogleServices();
   }
   return googleAccessToken;
@@ -44,7 +41,7 @@ async function getAccessToken() {
 /*                          1. GOOGLE CALENDAR ENGINE                         */
 /* -------------------------------------------------------------------------- */
 export async function createGoogleCalendarEvent(eventData) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(true);
   if (!token) return null;
 
   const startIso = `${eventData.date}T${eventData.startTime}:00`;
@@ -81,7 +78,6 @@ export async function createGoogleCalendarEvent(eventData) {
       }
     );
     const result = await response.json();
-    console.log('[Calendar Event Created]:', result);
     const meetUrl = result.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri || result.htmlLink;
     return { calendarEventId: result.id, meetUrl };
   } catch (err) {
@@ -90,24 +86,21 @@ export async function createGoogleCalendarEvent(eventData) {
   }
 }
 
-/**
- * Query Google Calendar freeBusy endpoint & calculate available slots
- */
 export async function getAvailableAppointmentSlots(targetDateStr) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(false);
   const bizProfile = configManager.current?.businessProfile || {};
   
   const apptOpen = bizProfile.apptOpen || '10:00';
   const apptClose = bizProfile.apptClose || '16:00';
   const durationMins = parseInt(bizProfile.slotDuration || '30', 10);
 
-  const dayStartIso = new Date(`${targetDateStr}T${apptOpen}:00`).toISOString();
-  const dayEndIso = new Date(`${targetDateStr}T${apptClose}:00`).toISOString();
-
   let busyIntervals = [];
 
   if (token) {
     try {
+      const dayStartIso = new Date(`${targetDateStr}T${apptOpen}:00`).toISOString();
+      const dayEndIso = new Date(`${targetDateStr}T${apptClose}:00`).toISOString();
+
       const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
         method: 'POST',
         headers: {
@@ -123,7 +116,7 @@ export async function getAvailableAppointmentSlots(targetDateStr) {
       const data = await response.json();
       busyIntervals = data.calendars?.primary?.busy || [];
     } catch (err) {
-      console.warn('[Google Calendar Free/Busy]: Error querying calendar. Falling back to operating hours.', err);
+      console.warn('[Google Calendar Free/Busy]: Error querying calendar. Serving open slots.', err);
     }
   }
 
@@ -157,9 +150,6 @@ export async function getAvailableAppointmentSlots(targetDateStr) {
   return slots;
 }
 
-/**
- * Confirm and schedule an appointment in Google Calendar with Google Meet video link
- */
 export async function bookAppointmentSlot({ name, email, date, timeSlot, notes }) {
   const bizProfile = configManager.current?.businessProfile || {};
   const durationMins = parseInt(bizProfile.slotDuration || '30', 10);
@@ -179,15 +169,14 @@ export async function bookAppointmentSlot({ name, email, date, timeSlot, notes }
     attendeeEmail: email
   };
 
-  const calResult = await createGoogleCalendarEvent(eventPayload);
-  return calResult;
+  return await createGoogleCalendarEvent(eventPayload);
 }
 
 /* -------------------------------------------------------------------------- */
 /*                   2. GOOGLE CONTACTS & ROLE LABEL SYNC                     */
 /* -------------------------------------------------------------------------- */
 export async function createGoogleContact(contact) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(true);
   if (!token) return false;
 
   const contactPayload = {
@@ -206,8 +195,6 @@ export async function createGoogleContact(contact) {
       },
       body: JSON.stringify(contactPayload)
     });
-    const result = await response.json();
-    console.log('[Google Contact Created]:', result);
     return true;
   } catch (err) {
     errorHandler.handleError(new Error(`Failed to create Google Contact: ${err.message}`));
@@ -216,7 +203,7 @@ export async function createGoogleContact(contact) {
 }
 
 export async function syncGoogleContactRole(user) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(true);
   if (!token) return false;
 
   const roleLabel = user.role === 'affiliate' ? 'Affiliate Member' : user.role === 'member' ? 'Member' : 'Subscriber';
@@ -253,7 +240,7 @@ export async function syncGoogleContactRole(user) {
     }
     return true;
   } catch (err) {
-    errorHandler.handleError(new Error(`Google Contacts role sync failed for ${user.email}: ${err.message}`));
+    errorHandler.handleError(new Error(`Google Contacts role sync failed: ${err.message}`));
     return false;
   }
 }
@@ -262,7 +249,7 @@ export async function syncGoogleContactRole(user) {
 /*                       3. GMAIL MASS EMAIL BROADCASTER                      */
 /* -------------------------------------------------------------------------- */
 export async function sendGmailNotification({ toEmail, subject, messageBody }) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(true);
   if (!token) return false;
 
   const rawEmail = [
@@ -287,8 +274,6 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
       },
       body: JSON.stringify({ raw: encodedEmail })
     });
-    const result = await response.json();
-    console.log('[Gmail Sent]:', result);
     return true;
   } catch (err) {
     errorHandler.handleError(new Error(`Failed to send Gmail: ${err.message}`));
@@ -297,7 +282,7 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
 }
 
 export async function sendBulkGmail({ recipientList, subject, messageBody }) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(true);
   if (!token || !Array.isArray(recipientList) || recipientList.length === 0) return { sentCount: 0, failedCount: 0 };
 
   let sentCount = 0;
@@ -325,7 +310,7 @@ export async function sendBulkGmail({ recipientList, subject, messageBody }) {
 /*                       4. GOOGLE SEARCH CONSOLE ENGINE                       */
 /* -------------------------------------------------------------------------- */
 export async function getSearchConsolePerformance(siteUrl) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(false);
   if (!token) return null;
 
   try {
@@ -343,16 +328,14 @@ export async function getSearchConsolePerformance(siteUrl) {
         rowLimit: 10
       })
     });
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (err) {
-    errorHandler.handleError(new Error(`Failed to fetch Search Console data: ${err.message}`));
     return null;
   }
 }
 
 export async function getSearchConsoleNotifications() {
-  const token = await getAccessToken();
+  const token = await getAccessToken(false);
   if (!token) {
     return [
       { id: 'gsc-1', type: 'success', title: 'Sitemap processed cleanly', date: '2026-07-24', message: 'All 18 routes indexed without warnings.' },
@@ -368,13 +351,12 @@ export async function getSearchConsoleNotifications() {
     const data = await response.json();
     return data.siteEntry || [];
   } catch (err) {
-    errorHandler.handleError(new Error(`Failed to fetch Search Console notifications: ${err.message}`));
     return [];
   }
 }
 
 export async function requestSearchConsoleCrawl(targetUrl) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(true);
   if (!token) {
     return {
       success: true,
@@ -396,13 +378,12 @@ export async function requestSearchConsoleCrawl(targetUrl) {
     const data = await response.json();
     return { success: true, url: targetUrl, inspection: data };
   } catch (err) {
-    errorHandler.handleError(new Error(`Search Console Indexing request failed: ${err.message}`));
     return { success: false, error: err.message };
   }
 }
 
 export async function getSearchConsoleSecurityIssues() {
-  const token = await getAccessToken();
+  const token = await getAccessToken(false);
   if (!token) {
     return {
       status: 'Clean',
@@ -452,7 +433,6 @@ export async function getSearchConsoleSecurityIssues() {
       lastScanned: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
   } catch (err) {
-    errorHandler.handleError(new Error(`Failed to query Search Console Security API: ${err.message}`));
     return null;
   }
 }
@@ -461,7 +441,7 @@ export async function getSearchConsoleSecurityIssues() {
 /*                         5. GOOGLE ANALYTICS (GA4) ENGINE                    */
 /* -------------------------------------------------------------------------- */
 export async function getAnalyticsOverview(propertyIdOverride, dateRange = '30daysAgo') {
-  const token = await getAccessToken();
+  const token = await getAccessToken(false);
   const propertyId = propertyIdOverride || configManager.current.thirdParty?.ga4PropertyId || '123456789';
 
   if (!token) {
@@ -491,10 +471,8 @@ export async function getAnalyticsOverview(propertyIdOverride, dateRange = '30da
         metrics: [{ name: 'activeUsers' }, { name: 'screenPageViews' }, { name: 'averageSessionDuration' }]
       })
     });
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (err) {
-    errorHandler.handleError(new Error(`Failed to fetch GA4 report: ${err.message}`));
     return null;
   }
 }
@@ -510,7 +488,7 @@ export async function fetchSeoMyRankAddr(domain) {
       return await response.json();
     }
   } catch (e) {
-    console.warn('[SEO-MY-RANK-ADDR]: Remote endpoint offline. Falling back to structured rank telemetry.', e);
+    // Graceful fallback
   }
 
   return {
@@ -562,7 +540,7 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
       };
     }
   } catch (err) {
-    console.warn('[Lighthouse Audit]: PageSpeed API unreachable. Serving baseline telemetries.', err);
+    // Serving baseline telemetry
   }
 
   return {

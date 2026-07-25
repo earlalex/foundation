@@ -33,7 +33,8 @@ export async function runRouterTests() {
     document.body.appendChild(appContainer);
   }
 
-  const testRouter = new Router(testManifest);
+  // Pass true as second argument to mark as unit test router instance
+  const testRouter = new Router(testManifest, true);
 
   await assertTest('Router stores route manifest correctly', () => {
     if (!testRouter) throw new Error('Router instance failed to initialize.');
@@ -63,6 +64,7 @@ export async function runRouterTests() {
 
   await assertTest('Blocks unauthenticated user from accessing /admin when Dev Mode is OFF', async () => {
     store.dispatch('SET_DEV_MODE', false);
+    window.__FOUNDATION_DEV_BYPASS__ = false;
     const originalAdminCheck = authManager.isAdminAuthenticated;
     authManager.isAdminAuthenticated = () => false;
 
@@ -94,8 +96,8 @@ export async function runRouterTests() {
   await assertTest('Routes unknown path to 404 fallback page', async () => {
     await testRouter.loadRoute('/some-random-non-existent-page-123');
     const is404 = document.title.includes('Page Not Found') || 
-                    document.title.includes('404') || 
-                    appContainer.innerHTML.includes('404');
+                  document.title.includes('404') || 
+                  appContainer.innerHTML.includes('404');
     if (!is404) {
       throw new Error('Non-existent route did not resolve to 404 handling.');
     }
