@@ -13,6 +13,9 @@ import {
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
 
+const MONTHLY_MEMBERSHIP_FEE = 29.00; // Standard $29/mo membership base
+const REFERRAL_COMMISSION_RATE = 0.10; // 10% monthly recurring referral credit
+
 // Preset Brand Guide Definitions
 const THEME_PRESETS = {
   default: defaultBrandTheme,
@@ -386,7 +389,7 @@ export function initAdminPage() {
     }
   });
 
-  // --- 6. TAB 5: USER DIRECTORY CONTROLLER ---
+  // --- 6. TAB 5: USER DIRECTORY & 10% AFFILIATE ENGINE CONTROLLER ---
   async function loadUserDirectoryTab() {
     const adminEmailBadge = document.getElementById('connected-admin-email');
     const connectedAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@foundation.dev';
@@ -401,7 +404,7 @@ export function initAdminPage() {
       
       let users = await contentDB.getAllUsers();
 
-      // Ensure Single Google Workspace Primary Admin is explicitly present and locked
+      // Enforce Primary Admin Presence
       const hasAdminInList = users.some(u => u.email === connectedAdminEmail);
       if (!hasAdminInList) {
         users.unshift({
@@ -410,31 +413,62 @@ export function initAdminPage() {
           email: connectedAdminEmail,
           role: 'admin',
           status: 'Active',
-          isPrimaryAdmin: true
+          affiliateCode: 'FOUNDATION_ROOT',
+          referredCount: 0
         });
       }
 
+      // Map Affiliate Referrals and Calculate 10% Monthly Payout Offset
+      const referralMap = {};
+      users.forEach(u => {
+        if (u.referredBy) {
+          referralMap[u.referredBy] = (referralMap[u.referredBy] || 0) + 1;
+        }
+      });
+
       tbody.innerHTML = users.map((u) => {
         const isPrimary = u.email === connectedAdminEmail || u.role === 'admin';
+        const activeReferrals = referralMap[u.affiliateCode || u.id] || u.referredCount || 0;
+        
+        // 10% per referred active paying member ($2.90 credit per $29/mo member)
+        const monthlyEarnings = u.role === 'affiliate' ? (activeReferrals * (MONTHLY_MEMBERSHIP_FEE * REFERRAL_COMMISSION_RATE)) : 0;
+        const netCost = u.role === 'subscriber' ? 0 : Math.max(0, MONTHLY_MEMBERSHIP_FEE - monthlyEarnings);
+        const isFullyCovered = u.role === 'affiliate' && monthlyEarnings >= MONTHLY_MEMBERSHIP_FEE;
+
+        const roleBadgeColor = isPrimary ? '#c05621' : u.role === 'affiliate' ? '#2b6cb0' : u.role === 'member' ? '#2f855a' : '#4a5568';
+        const roleBgColor = isPrimary ? '#feebc8' : u.role === 'affiliate' ? '#ebf8ff' : u.role === 'member' ? '#f0fdf4' : '#f7fafc';
+        const roleLabel = isPrimary ? '👑 Admin (Locked)' : u.role === 'affiliate' ? '🤝 Affiliate Member' : u.role === 'member' ? '💳 Member (Paid)' : '👤 Subscriber (Free)';
+
         return `
           <tr style="border-bottom: 1px solid #edf2f7;">
             <td style="padding: 10px;">
               <strong>${u.name || 'Platform User'}</strong>
               <div style="font-size: 0.75rem; color: #718096;">${u.email}</div>
+              ${u.affiliateCode ? `<code style="font-size: 0.7rem; background: #edf2f7; padding: 2px 4px; border-radius: 3px; color: #4a5568;">Ref Code: ${u.affiliateCode}</code>` : ''}
             </td>
             <td style="padding: 10px;">
-              <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${isPrimary ? '#feebc8' : u.role === 'editor' ? '#ebf8ff' : '#f7fafc'}; color: ${isPrimary ? '#c05621' : u.role === 'editor' ? '#2b6cb0' : '#4a5568'};">
-                ${isPrimary ? '👑 Admin (Locked)' : u.role.toUpperCase()}
+              <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${roleBgColor}; color: ${roleBadgeColor};">
+                ${roleLabel}
               </span>
             </td>
             <td style="padding: 10px;">
-              <span style="color: #38a169; font-weight: 600;">● ${u.status || 'Active'}</span>
+              ${u.role === 'affiliate' ? `
+                <div style="font-size: 0.8rem;">
+                  <div>Referred: <strong>${activeReferrals} members</strong></div>
+                  <div>10% Monthly Credit: <strong style="color: #38a169;">+$${monthlyEarnings.toFixed(2)}/mo</strong></div>
+                  <div style="font-size: 0.75rem; color: ${isFullyCovered ? '#2b6cb0' : '#718096'}; font-weight: bold;">
+                    ${isFullyCovered ? '🎉 Membership 100% Offset (Profitable)' : `Net Monthly Cost: $${netCost.toFixed(2)}/mo`}
+                  </div>
+                </div>
+              ` : `<span style="color: #a0aec0; font-size: 0.8rem;">N/A (Standard Role)</span>`}
             </td>
             <td style="padding: 10px; text-align: right;">
-              ${isPrimary ? `<span style="font-size: 0.75rem; color: #a0aec0; italic;">Google Workspace Owner</span>` : `
-                <button class="btn-user-promote" data-id="${u.id}" data-role="${u.role}" style="padding: 4px 8px; font-size: 0.75rem; background: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">
-                  ${u.role === 'editor' ? 'Downgrade to Member' : 'Promote to Editor'}
-                </button>
+              ${isPrimary ? `<span style="font-size: 0.75rem; color: #a0aec0; font-style: italic;">Google Workspace Owner</span>` : `
+                <select class="select-role-change" data-id="${u.id}" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #cbd5e0; margin-right: 4px;">
+                  <option value="subscriber" ${u.role === 'subscriber' ? 'selected' : ''}>Subscriber (Free)</option>
+                  <option value="member" ${u.role === 'member' ? 'selected' : ''}>Member ($29/mo)</option>
+                  <option value="affiliate" ${u.role === 'affiliate' ? 'selected' : ''}>Affiliate Member (10% Ref)</option>
+                </select>
                 <button class="btn-user-delete" data-id="${u.id}" data-name="${u.name || u.email}" style="padding: 4px 8px; font-size: 0.75rem; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer;">
                   Delete
                 </button>
@@ -444,16 +478,16 @@ export function initAdminPage() {
         `;
       }).join('');
 
-      // Wire Promote/Downgrade Button Listeners
-      document.querySelectorAll('.btn-user-promote').forEach((btn) => {
-        btn.addEventListener('click', async (e) => {
+      // Wire Role Switcher Change Listener
+      document.querySelectorAll('.select-role-change').forEach((select) => {
+        select.addEventListener('change', async (e) => {
           const uId = e.target.getAttribute('data-id');
-          const currentRole = e.target.getAttribute('data-role');
-          const nextRole = currentRole === 'editor' ? 'member' : 'editor';
+          const newRole = e.target.value;
           
-          const updated = await contentDB.saveUser({ id: uId, role: nextRole });
+          const affiliateCode = newRole === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
+          const updated = await contentDB.saveUser({ id: uId, role: newRole, affiliateCode });
           if (updated) {
-            alert(`User access level updated to "${nextRole.toUpperCase()}"`);
+            alert(`User role updated to "${newRole.toUpperCase()}"!`);
             renderUsersList();
           }
         });
@@ -485,6 +519,7 @@ export function initAdminPage() {
       const name = document.getElementById('new-user-name').value;
       const email = document.getElementById('new-user-email').value;
       const role = document.getElementById('new-user-role').value;
+      const referredBy = document.getElementById('new-user-referrer')?.value || null;
 
       // Single Admin Enforcement Guard
       if (role === 'admin') {
@@ -492,7 +527,17 @@ export function initAdminPage() {
         return;
       }
 
-      const res = await contentDB.saveUser({ name, email, role, status: 'Active' });
+      const affiliateCode = role === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
+
+      const res = await contentDB.saveUser({ 
+        name, 
+        email, 
+        role, 
+        referredBy,
+        affiliateCode,
+        status: 'Active' 
+      });
+
       if (res) {
         alert(`Account created for ${name} as ${role.toUpperCase()}`);
         e.target.reset();
