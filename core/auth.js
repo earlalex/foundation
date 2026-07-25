@@ -7,29 +7,20 @@ import {
   signOut, 
   onAuthStateChanged 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
 import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
+import { configManager } from './config.js';
 
-// ⚠️ Replace this with your actual Firebase Project Config
-const firebaseConfig = {
+// Initialize Firebase App & Auth with configuration from ConfigEngine
+const firebaseConfig = configManager.current.firebase || {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  projectId: "YOUR_PROJECT_ID"
 };
 
-// Initialize Firebase App & Auth
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-
-// Define Admin UIDs or emails allowed to access settings
-const ADMIN_EMAILS = [
-  'your-email@gmail.com' // Replace with your actual Google account email
-];
 
 export class AuthManager {
   constructor() {
@@ -39,9 +30,9 @@ export class AuthManager {
   initAuthObserver() {
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        const isAdmin = ADMIN_EMAILS.includes(user.email);
-        
-        // Dispatch user profile into Immutable Global Store
+        const adminEmails = configManager.current.adminEmails || [];
+        const isAdmin = adminEmails.includes(user.email);
+
         store.dispatch('SET_USER', {
           uid: user.uid,
           email: user.email,
@@ -49,10 +40,8 @@ export class AuthManager {
           photoURL: user.photoURL,
           isAdmin: isAdmin
         });
-
         console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin})`);
       } else {
-        // Clear user state on logout
         store.dispatch('LOGOUT');
         console.log('[Auth]: Signed out.');
       }
@@ -76,7 +65,6 @@ export class AuthManager {
     }
   }
 
-  // Guard Helper for Admin Views
   isAdminAuthenticated() {
     const user = store.state.user;
     return !!(user && user.isAdmin);

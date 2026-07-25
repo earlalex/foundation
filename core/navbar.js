@@ -38,7 +38,6 @@ export function initNavbar() {
   function syncAdminLinkVisibility(state) {
     const adminLink = document.getElementById('nav-admin-link');
     if (adminLink) {
-      // Hide completely from public visitors; only display for admins
       adminLink.style.display = state.user?.isAdmin ? 'inline-block' : 'none';
     }
   }

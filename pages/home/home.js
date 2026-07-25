@@ -104,9 +104,9 @@ function renderContentCard(item) {
       ${
         isEvent && item.meetUrl
           ? `
-        <a href="${item.meetUrl}" target="_blank" rel="noopener noreferrer" 
-           style="display: inline-block; text-align: center; background: #2b6cb0; color: #ffffff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
-             Join Google Meet
+        <a href="${item.meetUrl}" target="_blank" rel="noopener noreferrer"
+            style="display: inline-block; text-align: center; background: #2b6cb0; color: #ffffff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
+            Join Google Meet
         </a>
       `
           : ''

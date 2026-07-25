@@ -1,5 +1,4 @@
 // core/validator.js
-
 export class ValidationError extends Error {
   constructor(message, path = '') {
     super(path ? `[Validation Error at '${path}']: ${message}` : `[Validation Error]: ${message}`);
@@ -16,10 +15,8 @@ export const Type = {
   number: (val) => typeof val === 'number' && !isNaN(val),
   boolean: (val) => typeof val === 'boolean',
   object: (val) => typeof val === 'object' && val !== null && !Array.isArray(val),
-  
   // Literal matcher for exact value checking (e.g., Type.literal('event'))
   literal: (expectedValue) => (val) => val === expectedValue,
-
   // Clean, strict-mode compatible smart array validator
   array: (itemCheckFn) => {
     // Allows uncalled usage like `Type.array` inside validateSchema
@@ -32,7 +29,6 @@ export const Type = {
       return val.every((item) => itemCheckFn(item));
     };
   },
-
   function: (val) => typeof val === 'function',
   optional: (checkFn) => (val) => {
     // Guard against passing undefined/non-functions to optional
@@ -73,6 +69,5 @@ export function validateSchema(schema, data, parentPath = '') {
       validateSchema(typeCheck, value, currentPath);
     }
   }
-
   return true;
 }

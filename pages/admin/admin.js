@@ -98,7 +98,7 @@ export function initAdminPage() {
   // --- 1. TAB ROUTING CONTROLLER ---
   const tabButtons = document.querySelectorAll('.admin-tab');
   const panels = document.querySelectorAll('.admin-panel');
-  
+
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
@@ -198,6 +198,7 @@ export function initAdminPage() {
     const currentTheme = store.state.activeBrandGuide || defaultBrandTheme;
     themeJsonInput.value = JSON.stringify(currentTheme, null, 2);
   }
+
   loadActiveThemeIntoTextarea();
 
   themeForm?.addEventListener('submit', (e) => {
@@ -312,7 +313,6 @@ export function initAdminPage() {
     e.preventDefault();
     const avatarInput = document.getElementById('author-avatar-file');
     const signatureInput = document.getElementById('author-signature-file');
-
     let avatarUrl = authorProfile.avatarUrl || null;
     let signatureUrl = authorProfile.signatureUrl || null;
 
@@ -320,7 +320,6 @@ export function initAdminPage() {
       const res = await uploadFileToDrive(avatarInput.files[0]);
       if (res) avatarUrl = res.src;
     }
-
     if (signatureInput && signatureInput.files.length > 0) {
       const res = await uploadFileToDrive(signatureInput.files[0]);
       if (res) signatureUrl = res.src;
@@ -343,7 +342,6 @@ export function initAdminPage() {
         }
       }
     };
-
     const success = await configManager.saveToFirebase(updatedProfile);
     if (success) {
       alert(`Public Author Profile saved for "${authorNameInput.value}"! Component widgets updated.`);
@@ -524,7 +522,6 @@ export function initAdminPage() {
       }
 
       const affiliateCode = role === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
-
       const res = await contentDB.saveUser({ 
         name, 
         email, 
@@ -562,8 +559,8 @@ export function initAdminPage() {
     const visibility = document.getElementById('content-visibility').value;
     const rawBody = document.getElementById('content-body').value;
     const fileInput = document.getElementById('media-file');
-    let assetData = null;
 
+    let assetData = null;
     if (fileInput && fileInput.files.length > 0) {
       assetData = await uploadFileToDrive(fileInput.files[0]);
     }
@@ -596,6 +593,7 @@ export function initAdminPage() {
       const locationVal = document.getElementById('event-location')?.value || '';
       const startTimeVal = document.getElementById('event-start-time')?.value || '14:00';
       const endTimeVal = document.getElementById('event-end-time')?.value || '15:00';
+
       const eventDetails = {
         title: title,
         description: description,
@@ -612,6 +610,7 @@ export function initAdminPage() {
       payload.date = eventDetails.date;
       payload.startTime = eventDetails.startTime;
       payload.endTime = eventDetails.endTime;
+
       if (calResult) {
         payload.meetUrl = calResult.meetUrl;
         payload.calendarEventId = calResult.calendarEventId;
@@ -860,7 +859,6 @@ export function initAdminPage() {
         document.getElementById('gsc-flag-malware').style.color = m.flagged ? '#e53e3e' : '#38a169';
         document.getElementById('gsc-desc-malware').textContent = m.status;
       }
-
       if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
     }
 
@@ -870,7 +868,6 @@ export function initAdminPage() {
         alert('Reconsideration / Clean Review Request submitted to Google Search Quality Team. Review usually completes within 3-7 business days.');
       };
     }
-
     renderThreatReport();
   }
 

@@ -36,7 +36,6 @@ export class ThemeEngine {
     // 1. Try restoring theme from localStorage or fallback to default
     const savedTheme = localStorage.getItem('foundation_active_theme');
     let activeTheme = defaultBrandTheme;
-
     if (savedTheme) {
       try {
         activeTheme = JSON.parse(savedTheme);
@@ -44,7 +43,6 @@ export class ThemeEngine {
         console.warn('[ThemeEngine]: Failed to parse stored theme JSON. Resetting to default.');
       }
     }
-
     this.applyTheme(activeTheme);
   }
 
@@ -53,7 +51,6 @@ export class ThemeEngine {
    */
   applyTheme(themeConfig) {
     if (!themeConfig || typeof themeConfig !== 'object') return;
-
     const root = document.documentElement;
 
     // Map Colors
@@ -62,14 +59,12 @@ export class ThemeEngine {
         root.style.setProperty(`--theme-color-${this.#toKebabCase(key)}`, val);
       });
     }
-
     // Map Typography
     if (themeConfig.typography) {
       Object.entries(themeConfig.typography).forEach(([key, val]) => {
         root.style.setProperty(`--theme-font-${this.#toKebabCase(key)}`, val);
       });
     }
-
     // Map Layout & Spacing
     if (themeConfig.layout) {
       Object.entries(themeConfig.layout).forEach(([key, val]) => {
