@@ -109,7 +109,9 @@ export function initAdminPage() {
         p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
       });
 
-      if (targetTab === 'seo') {
+      if (targetTab === 'users') {
+        loadUserDirectoryTab();
+      } else if (targetTab === 'seo') {
         loadSeoAndAnalyticsTab();
       } else if (targetTab === 'performance') {
         loadPerformanceTab();
@@ -384,7 +386,122 @@ export function initAdminPage() {
     }
   });
 
-  // --- 6. TAB 6: CMS PUBLISHER CONTROLLER ---
+  // --- 6. TAB 5: USER DIRECTORY CONTROLLER ---
+  async function loadUserDirectoryTab() {
+    const adminEmailBadge = document.getElementById('connected-admin-email');
+    const connectedAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@foundation.dev';
+    if (adminEmailBadge) adminEmailBadge.textContent = connectedAdminEmail;
+
+    const tbody = document.getElementById('user-directory-tbody');
+    const refreshBtn = document.getElementById('btn-refresh-users');
+
+    async function renderUsersList() {
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: #a0aec0;">Fetching user records...</td></tr>';
+      
+      let users = await contentDB.getAllUsers();
+
+      // Ensure Single Google Workspace Primary Admin is explicitly present and locked
+      const hasAdminInList = users.some(u => u.email === connectedAdminEmail);
+      if (!hasAdminInList) {
+        users.unshift({
+          id: 'primary-admin-root',
+          name: store.state.user?.displayName || 'Primary System Administrator',
+          email: connectedAdminEmail,
+          role: 'admin',
+          status: 'Active',
+          isPrimaryAdmin: true
+        });
+      }
+
+      tbody.innerHTML = users.map((u) => {
+        const isPrimary = u.email === connectedAdminEmail || u.role === 'admin';
+        return `
+          <tr style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 10px;">
+              <strong>${u.name || 'Platform User'}</strong>
+              <div style="font-size: 0.75rem; color: #718096;">${u.email}</div>
+            </td>
+            <td style="padding: 10px;">
+              <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${isPrimary ? '#feebc8' : u.role === 'editor' ? '#ebf8ff' : '#f7fafc'}; color: ${isPrimary ? '#c05621' : u.role === 'editor' ? '#2b6cb0' : '#4a5568'};">
+                ${isPrimary ? '👑 Admin (Locked)' : u.role.toUpperCase()}
+              </span>
+            </td>
+            <td style="padding: 10px;">
+              <span style="color: #38a169; font-weight: 600;">● ${u.status || 'Active'}</span>
+            </td>
+            <td style="padding: 10px; text-align: right;">
+              ${isPrimary ? `<span style="font-size: 0.75rem; color: #a0aec0; italic;">Google Workspace Owner</span>` : `
+                <button class="btn-user-promote" data-id="${u.id}" data-role="${u.role}" style="padding: 4px 8px; font-size: 0.75rem; background: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;">
+                  ${u.role === 'editor' ? 'Downgrade to Member' : 'Promote to Editor'}
+                </button>
+                <button class="btn-user-delete" data-id="${u.id}" data-name="${u.name || u.email}" style="padding: 4px 8px; font-size: 0.75rem; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                  Delete
+                </button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Wire Promote/Downgrade Button Listeners
+      document.querySelectorAll('.btn-user-promote').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const uId = e.target.getAttribute('data-id');
+          const currentRole = e.target.getAttribute('data-role');
+          const nextRole = currentRole === 'editor' ? 'member' : 'editor';
+          
+          const updated = await contentDB.saveUser({ id: uId, role: nextRole });
+          if (updated) {
+            alert(`User access level updated to "${nextRole.toUpperCase()}"`);
+            renderUsersList();
+          }
+        });
+      });
+
+      // Wire Delete User Listener
+      document.querySelectorAll('.btn-user-delete').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const uId = e.target.getAttribute('data-id');
+          const name = e.target.getAttribute('data-name');
+          if (confirm(`Are you sure you want to delete user account for "${name}"?`)) {
+            const success = await contentDB.deleteUser(uId);
+            if (success) {
+              alert(`User "${name}" deleted.`);
+              renderUsersList();
+            }
+          }
+        });
+      });
+    }
+
+    if (refreshBtn) refreshBtn.onclick = renderUsersList;
+    renderUsersList();
+
+    // Wire Create User Form Listener
+    const createUserForm = document.getElementById('create-user-form');
+    createUserForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('new-user-name').value;
+      const email = document.getElementById('new-user-email').value;
+      const role = document.getElementById('new-user-role').value;
+
+      // Single Admin Enforcement Guard
+      if (role === 'admin') {
+        alert('System Policy Error: Admin privileges are locked uniquely to the Google Workspace owner.');
+        return;
+      }
+
+      const res = await contentDB.saveUser({ name, email, role, status: 'Active' });
+      if (res) {
+        alert(`Account created for ${name} as ${role.toUpperCase()}`);
+        e.target.reset();
+        renderUsersList();
+      }
+    });
+  }
+
+  // --- 7. TAB 6: CMS PUBLISHER CONTROLLER ---
   const contentTypeSelect = document.getElementById('content-type');
   const eventFieldsContainer = document.getElementById('event-fields');
 
@@ -477,7 +594,7 @@ export function initAdminPage() {
     }
   });
 
-  // --- 7. TAB 7: SEO & ANALYTICS CONTROLLER ---
+  // --- 8. TAB 7: SEO & ANALYTICS CONTROLLER ---
   async function loadSeoAndAnalyticsTab() {
     const rankBtn = document.getElementById('btn-fetch-seo-rank');
     if (rankBtn) {
@@ -592,7 +709,7 @@ export function initAdminPage() {
     renderLookerStudio();
   }
 
-  // --- 8. TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) ---
+  // --- 9. TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) ---
   async function loadPerformanceTab() {
     const runBtn = document.getElementById('btn-run-lighthouse');
     const strategySelect = document.getElementById('lh-strategy-select');
@@ -633,7 +750,7 @@ export function initAdminPage() {
     executeAudit();
   }
 
-  // --- 9. DEV MODE SWITCHER ---
+  // --- 10. DEV MODE SWITCHER ---
   const radioOn = document.getElementById('radio-dev-on');
   const radioOff = document.getElementById('radio-dev-off');
   const labelOn = document.getElementById('label-dev-on');
@@ -688,7 +805,7 @@ export function initAdminPage() {
     syncDevUI(false);
   });
 
-  // --- 10. SECURITY & VIRUSTOTAL SCAN ---
+  // --- 11. SECURITY & VIRUSTOTAL SCAN ---
   const scanVtBtn = document.getElementById('btn-scan-virustotal');
   scanVtBtn?.addEventListener('click', async () => {
     scanVtBtn.textContent = 'Scanning Edge...';
