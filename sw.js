@@ -14,6 +14,7 @@ const PRECACHE_ASSETS = [
   './components/global/ContentCard.js',
   './components/global/AuthorCard.js',
   './pages/home/home.html',
+  './pages/detail/detail.html',
   './pages/404.html'
 ];
 

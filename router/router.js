@@ -40,12 +40,12 @@ export class Router {
         anchor.getAttribute('target') !== '_blank'
       ) {
         e.preventDefault();
-        this.navigateTo(anchor.pathname);
+        this.navigateTo(anchor.pathname + anchor.search);
       }
     });
 
     window.addEventListener('popstate', () => {
-      this.loadRoute(window.location.pathname);
+      this.loadRoute(window.location.pathname + window.location.search);
     });
 
     const storedRoute = sessionStorage.getItem('foundation_spa_route');
@@ -56,19 +56,19 @@ export class Router {
       window.history.replaceState({}, '', fullUrl);
       this.loadRoute(storedRoute);
     } else {
-      this.loadRoute(window.location.pathname);
+      this.loadRoute(window.location.pathname + window.location.search);
     }
   }
 
   async navigateTo(path) {
-    if (window.location.pathname !== path) {
+    if ((window.location.pathname + window.location.search) !== path) {
       window.history.pushState({}, '', path);
       await this.loadRoute(path);
     }
   }
 
-  async loadRoute(path) {
-    // 0. FIRST-RUN SETUP WIZARD GUARD (Bypassed in unit test instances)
+  async loadRoute(fullPath) {
+    // 0. FIRST-RUN SETUP WIZARD GUARD
     const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
     if (!isConfigured && !this.isTestInstance) {
       this.renderSetupWizard();
@@ -76,7 +76,9 @@ export class Router {
     }
 
     // 1. Normalize path
-    let rawPath = path || '/';
+    const urlObj = new URL(fullPath, window.location.origin);
+    let rawPath = urlObj.pathname || '/';
+
     if (rawPath.endsWith('/index.html')) {
       rawPath = rawPath.replace(/\/index\.html$/, '');
     }
@@ -91,7 +93,6 @@ export class Router {
       cleanPath = '/home';
     } else {
       const lastSegment = `/${segments[segments.length - 1]}`;
-
       if (this.routesManifest[rawPath]) {
         cleanPath = rawPath;
       } else if (this.routesManifest[lastSegment]) {
@@ -120,23 +121,16 @@ export class Router {
           </button>
         </section>
       `;
-
       document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
         await authManager.loginWithGoogle();
         this.loadRoute('/admin');
       });
-
       return;
-    }
-
-    if (cleanPath === '/admin' && isDevConsoleBypass) {
-      console.log('[Router Guard]: Emergency Console Dev Bypass Active -> Access Granted.');
     }
 
     // 3. Determine view HTML template location
     const manifestEntry = this.routesManifest[cleanPath];
     let viewPath = manifestEntry?.viewPath;
-
     if (!viewPath) {
       if (cleanPath === '/admin') {
         viewPath = './pages/admin/admin.html';
@@ -149,16 +143,9 @@ export class Router {
 
     try {
       let response = await fetch(viewPath);
-
       if (!response.ok) {
         cleanPath = '/404';
         response = await fetch('./pages/404.html');
-        if (!response.ok) {
-          this.appContainer.innerHTML = '<section style="padding: 2rem; text-align: center;"><h1>404 - Page Not Found</h1></section>';
-          this.updateMetadata('/404');
-          window.dispatchEvent(new CustomEvent('pageLoaded', { detail: { path: '/404', fullPath: path } }));
-          return;
-        }
       }
 
       const htmlContent = await response.text();
@@ -167,12 +154,12 @@ export class Router {
       this.appContainer.focus();
 
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
-        detail: { path: cleanPath, fullPath: path } 
+        detail: { path: cleanPath, fullPath: fullPath, query: urlObj.search } 
       }));
     } catch (err) {
       this.appContainer.innerHTML = '<section style="padding: 2rem; text-align: center;"><h1>404 - Page Not Found</h1></section>';
       this.updateMetadata('/404');
-      window.dispatchEvent(new CustomEvent('pageLoaded', { detail: { path: '/404', fullPath: path } }));
+      window.dispatchEvent(new CustomEvent('pageLoaded', { detail: { path: '/404', fullPath: fullPath } }));
     }
   }
 
@@ -183,14 +170,12 @@ export class Router {
           <h1 style="margin: 0 0 0.5rem 0; color: #2b6cb0;">🚀 Foundation Setup Wizard</h1>
           <p style="margin: 0; color: #718096; font-size: 0.95rem;">Configure your primary Google Workspace owner and site settings to initialize the framework.</p>
         </div>
-
         <form id="setup-wizard-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
           <div>
             <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Primary Google Workspace Admin Email (Owner):</label>
             <input type="email" id="wizard-admin-email" placeholder="owner@yourdomain.com" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             <span style="font-size: 0.75rem; color: #718096;">System Administrator status will be anchored exclusively to this Google account.</span>
           </div>
-
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
               <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Website Title:</label>
@@ -201,7 +186,6 @@ export class Router {
               <input type="url" id="wizard-site-domain" value="${window.location.origin}" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
           </div>
-
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
               <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Firebase API Key:</label>
@@ -212,7 +196,6 @@ export class Router {
               <input type="text" id="wizard-fb-project" placeholder="my-app-id" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
           </div>
-
           <button type="submit" class="btn-primary" style="padding: 12px; font-size: 1rem; background: #38a169; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 1rem;">
             Complete Setup & Initialize Platform
           </button>

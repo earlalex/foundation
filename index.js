@@ -74,6 +74,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       description: 'Schedule a consultation or send an inquiry.',
       viewPath: './pages/contact/contact.html'
     },
+    '/detail': {
+      title: 'Publication Detail',
+      description: 'Read full articles, publications, and event details.',
+      viewPath: './pages/detail/detail.html'
+    },
     '/admin': {
       title: 'Admin Dashboard',
       description: 'Manage settings and site metadata.',
@@ -90,6 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Single Unified Page Lifecycle Listener
 window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
+  
   if (e.detail.path === '/home') {
     initHomePage();
   } else if (e.detail.path === '/about') {
@@ -98,6 +104,8 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/events/events.js').then(m => m.initEventsPage());
   } else if (e.detail.path === '/contact') {
     import('./pages/contact/contact.js').then(m => m.initContactPage());
+  } else if (e.detail.path === '/detail') {
+    import('./pages/detail/detail.js').then(m => m.initDetailPage());
   } else if (e.detail.path === '/admin') {
     initAdminPage();
   }
