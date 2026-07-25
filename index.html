@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Foundation</title>
+  
+  <!-- CSS Design System -->
   <link rel="stylesheet" href="./styles/main.css">
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+
   <style>
     .no-js-banner {
       max-width: 600px;
@@ -15,28 +19,32 @@
       background-color: #fff3cd;
       border: 1px solid #ffeeba;
       color: #856404;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       text-align: center;
     }
   </style>
+
+  <!-- ES Module Application Boot -->
   <script type="module" src="./index.js" onerror="handleScriptError()"></script>
+  
   <script>
     function handleScriptError() {
       const app = document.getElementById('app');
       if (app) {
         app.innerHTML = `
           <div class="no-js-banner">
-            <h2>Connection or Compatibility Issue</h2>
-            <p>We couldn't load Foundation. Please check your internet connection, try disabling aggressive browser extensions, or refresh the page.</p>
+            <h2>Compatibility or Loading Issue</h2>
+            <p>We couldn't load Foundation. Please ensure you are using a modern supported browser (Chrome, Safari, Edge, Firefox) or try disabling restrictive extension rules.</p>
           </div>`;
       }
     }
+
+    // Register Service Worker with robust error handling
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // Register Service Worker with relative scope for GitHub Pages subpaths
-        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {
-          console.warn('[Service Worker]: Registration bypassed or failed in current environment:', err);
-        });
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then((reg) => console.log('[ServiceWorker]: Registered with scope:', reg.scope))
+          .catch((err) => console.warn('[ServiceWorker]: Registration bypassed:', err));
       });
     }
   </script>
@@ -45,9 +53,10 @@
   <noscript>
     <div class="no-js-banner">
       <h2>JavaScript Required</h2>
-      <p>Foundation relies on JavaScript to load pages dynamically. Please enable JavaScript in your browser settings to view this site.</p>
+      <p>Foundation relies on native modern JavaScript to run. Please enable JavaScript in your browser settings to continue.</p>
     </div>
   </noscript>
+
   <header id="global-header"></header>
   <main id="app" tabindex="-1" aria-live="polite"></main>
   <footer id="global-footer"></footer>

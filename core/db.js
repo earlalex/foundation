@@ -11,26 +11,27 @@ import {
   where, 
   limit 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { auth } from './auth.js';
 import { schemaRegistry } from '../schemas/registry.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
 
-const db = getFirestore();
 const CONTENT_COLLECTION = 'content';
 const USERS_COLLECTION = 'users';
 
-function isFirebaseConfigured() {
-  const cfg = configManager.current?.firebase;
-  return cfg && cfg.projectId && cfg.projectId !== 'YOUR_PROJECT_ID' && cfg.apiKey !== 'YOUR_API_KEY';
+function getFirestoreDB() {
+  try {
+    return getFirestore();
+  } catch (e) {
+    console.warn('[DB]: Firestore instance uninitialized.', e);
+    return null;
+  }
 }
 
 export class ContentDB {
   async saveContent(contentData) {
-    if (!isFirebaseConfigured()) {
-      console.warn('[DB]: Firebase is not configured with real API credentials. Action simulated.');
-      return true;
-    }
+    const db = getFirestoreDB();
+    if (!db) return false;
+
     try {
       schemaRegistry.validate(contentData);
       const docRef = doc(db, CONTENT_COLLECTION, contentData.id);
@@ -38,7 +39,6 @@ export class ContentDB {
         ...contentData,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`[DB]: Successfully saved content ${contentData.id}`);
       return true;
     } catch (err) {
       errorHandler.handleError(err);
@@ -47,7 +47,9 @@ export class ContentDB {
   }
 
   async getContentById(id) {
-    if (!isFirebaseConfigured()) return null;
+    const db = getFirestoreDB();
+    if (!db) return null;
+
     try {
       const docRef = doc(db, CONTENT_COLLECTION, id);
       const docSnap = await getDoc(docRef);
@@ -64,10 +66,9 @@ export class ContentDB {
   }
 
   async getContentByType(type, maxItems = 12) {
-    if (!isFirebaseConfigured()) {
-      console.log('[DB]: Firebase unconfigured/demo environment. Returning baseline content feed.');
-      return [];
-    }
+    const db = getFirestoreDB();
+    if (!db) return [];
+
     try {
       const q = query(
         collection(db, CONTENT_COLLECTION), 
@@ -89,7 +90,9 @@ export class ContentDB {
   }
 
   async getAllUsers() {
-    if (!isFirebaseConfigured()) return [];
+    const db = getFirestoreDB();
+    if (!db) return [];
+
     try {
       const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
       const users = [];
@@ -104,7 +107,9 @@ export class ContentDB {
   }
 
   async saveUser(userData) {
-    if (!isFirebaseConfigured()) return userData;
+    const db = getFirestoreDB();
+    if (!db) return userData;
+
     try {
       const userId = userData.id || userData.email.replace(/[@.]/g, '_');
       const docRef = doc(db, USERS_COLLECTION, userId);
@@ -114,7 +119,6 @@ export class ContentDB {
         updatedAt: new Date().toISOString()
       };
       await setDoc(docRef, payload, { merge: true });
-      console.log(`[DB]: Successfully saved user ${userId}`);
       return payload;
     } catch (err) {
       errorHandler.handleError(err);
@@ -123,11 +127,12 @@ export class ContentDB {
   }
 
   async deleteUser(userId) {
-    if (!isFirebaseConfigured()) return true;
+    const db = getFirestoreDB();
+    if (!db) return true;
+
     try {
       const docRef = doc(db, USERS_COLLECTION, userId);
       await deleteDoc(docRef);
-      console.log(`[DB]: Deleted user ${userId}`);
       return true;
     } catch (err) {
       errorHandler.handleError(err);

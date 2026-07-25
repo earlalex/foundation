@@ -1,6 +1,14 @@
-/* styles/main.css */
+/* styles/main.css - Enterprise Baseline Stylesheet */
+
+/* --- CSS RESET & BOX-SIZING --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 :root {
-  /* Default Fallback Theme Variables */
+  /* Dynamic Theme Fallback Variable Definitions */
   --theme-color-primary: #2b6cb0;
   --theme-color-primary-hover: #2c5282;
   --theme-color-surface: #ffffff;
@@ -11,26 +19,41 @@
   --theme-color-accent: #38a169;
   --theme-color-danger: #e53e3e;
 
-  --theme-font-font-family: system-ui, -apple-system, sans-serif;
+  --theme-font-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --theme-font-font-size-base: 16px;
   --theme-font-heading-weight: 700;
 
   --theme-layout-border-radius: 8px;
   --theme-layout-container-max-width: 1000px;
-  --theme-layout-box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --theme-layout-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+html {
+  font-size: var(--theme-font-font-size-base);
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
-  padding: 0;
   font-family: var(--theme-font-font-family);
-  font-size: var(--theme-font-font-size-base);
   background-color: var(--theme-color-background);
   color: var(--theme-color-text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Global Utility Classes using Theme Variables */
+#app {
+  flex: 1;
+  width: 100%;
+  max-width: var(--theme-layout-container-max-width);
+  margin: 0 auto;
+}
+
+/* --- UI COMPONENTS & UTILITIES --- */
 .btn-primary {
   background-color: var(--theme-color-primary);
   color: #ffffff;
@@ -38,12 +61,22 @@ body {
   padding: 10px 18px;
   border-radius: var(--theme-layout-border-radius);
   font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
 }
 
 .btn-primary:hover {
   background-color: var(--theme-color-primary-hover);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 .card {
@@ -52,4 +85,10 @@ body {
   border-radius: var(--theme-layout-border-radius);
   box-shadow: var(--theme-layout-box-shadow);
   padding: 1.25rem;
+}
+
+/* Accessibility Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--theme-color-primary);
+  outline-offset: 2px;
 }
