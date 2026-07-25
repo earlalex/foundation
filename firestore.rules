@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails;
+    }
+
+    // Settings & Master Configuration Document
+    match /settings/config {
+      allow read: if true; // Public needs site identity & brand settings
+      allow write: if isAdmin();
+    }
+
+    // User Directory & Affiliate Profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // CMS Content Feed & Publications
+    match /content/{contentId} {
+      allow read: if resource.data.access.visibility == 'public' || 
+                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') || 
+                  isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
