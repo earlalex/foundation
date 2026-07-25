@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     '/about': {
       title: 'About Me',
       description: 'Learn more about the creator and platform architect.',
-      viewPath: './pages/about.html'
+      viewPath: './pages/about/about.html'
     },
     '/events': {
       title: 'Events & Live Meets',
@@ -93,7 +93,7 @@ window.addEventListener('pageLoaded', (e) => {
   if (e.detail.path === '/home') {
     initHomePage();
   } else if (e.detail.path === '/about') {
-    import('./pages/about.js').then(m => m.initAboutPage());
+    import('./pages/about/about.js').then(m => m.initAboutPage());
   } else if (e.detail.path === '/events') {
     import('./pages/events/events.js').then(m => m.initEventsPage());
   } else if (e.detail.path === '/contact') {

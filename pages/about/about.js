@@ -1,4 +1,4 @@
-// pages/about.js
+// pages/about/about.js
 import { configManager } from '../../core/config.js';
 
 export function initAboutPage() {
