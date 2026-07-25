@@ -1,12 +1,29 @@
 // core/config.js
 import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
 
-const CONFIG_DOC_PATH = 'settings/config';
+export const defaultConfig = {
+  siteTitle: "Foundation Framework",
+  siteTagline: "A zero-build web framework",
+  siteDomain: window.location.origin,
+  isInstalled: false,
+  adminEmails: [],
+  firebase: {
+    apiKey: "",
+    projectId: ""
+  },
+  thirdParty: {
+    lookerStudioEmbedUrl: "",
+    ga4PropertyId: ""
+  },
+  cloudflare: {
+    workflowUrl: "/api/workflow-trigger",
+    vtUrl: "/api/virustotal-scan"
+  }
+};
 
 class ConfigEngine {
-  #activeConfig = null;
+  #activeConfig = { ...defaultConfig };
 
   async init() {
     try {
@@ -15,21 +32,21 @@ class ConfigEngine {
       const docSnap = await getDoc(configRef);
 
       if (docSnap.exists()) {
-        this.#activeConfig = docSnap.data();
+        this.#activeConfig = { ...defaultConfig, ...docSnap.data() };
         console.log('[ConfigEngine]: Master configuration loaded from Firestore.');
-        return true;
+        return this.#activeConfig.isInstalled && this.#activeConfig.adminEmails?.length > 0;
       } else {
-        console.warn('[ConfigEngine]: No configuration found in Firestore. Triggering Setup Wizard.');
-        return false; // Trigger install wizard
+        console.warn('[ConfigEngine]: No config found in Firestore. First-Run Setup Required.');
+        return false;
       }
     } catch (err) {
-      console.warn('[ConfigEngine]: Could not load Firestore config. First-time setup required.');
+      console.warn('[ConfigEngine]: Unconfigured or offline. First-Run Setup Required.', err.message);
       return false;
     }
   }
 
   get current() {
-    return this.#activeConfig || {};
+    return this.#activeConfig;
   }
 
   async saveToFirebase(configPayload) {
@@ -37,6 +54,7 @@ class ConfigEngine {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
       const updatedData = {
+        ...this.#activeConfig,
         ...configPayload,
         isInstalled: true,
         updatedAt: new Date().toISOString()
