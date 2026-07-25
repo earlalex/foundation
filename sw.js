@@ -10,6 +10,7 @@ const PRECACHE_ASSETS = [
   './core/validator.js',
   './core/theme.js',
   './core/logger.js',
+  './core/navbar.js',
   './router/router.js',
   './components/global/ContentCard.js',
   './components/global/AuthorCard.js',

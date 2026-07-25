@@ -6,6 +6,7 @@ import { Router } from './router/router.js';
 import { themeEngine } from './core/theme.js';
 import { logger } from './core/logger.js';
 import { configManager } from './core/config.js';
+import { initNavbar } from './core/navbar.js';
 
 // Web Components
 import './components/global/ContentCard.js';
@@ -38,7 +39,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Initialize Firestore Master Configuration
   await configManager.init();
 
-  // 2. Boot Test Suites in Dev Mode
+  // 2. Initialize Top Global Navbar Header
+  initNavbar();
+
+  // 3. Boot Test Suites in Dev Mode
   if (store.state.devMode) {
     logger.group('Dev Mode Test Suite Execution');
     window.store = store;
@@ -52,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logger.groupEnd();
   }
   
-  // 3. Mount Router
+  // 4. Mount Router
   window.router = new Router({
     '/home': {
       title: 'Home',

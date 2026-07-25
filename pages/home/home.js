@@ -10,7 +10,7 @@ export async function initHomePage() {
     const allItems = await contentDB.getContentByType('all', 50);
     if (!allItems || allItems.length === 0) {
       container.innerHTML = `
-        <div style="text-align: center; padding: 3rem 1.5rem; background: #f7fafc; border-radius: 8px; border: 1px dashed #cbd5e0;">
+        <div style="text-align: center; padding: 3rem 1.5rem; background: var(--theme-color-surface, #ffffff); border-radius: 8px; border: 1px dashed var(--theme-color-border, #cbd5e0);">
           <p style="color: #718096; margin: 0; font-size: 1.05rem;">No public publications found yet.</p>
         </div>
       `;
@@ -43,16 +43,17 @@ export async function initHomePage() {
     sectionConfigs.forEach((config) => {
       const typeItems = grouped[config.type] || [];
       if (typeItems.length === 0) return;
+
       renderedCount++;
       const previewItems = typeItems.slice(0, 3); // Top 3 previews per section
 
       htmlOutput += `
-        <section style="border-bottom: 1px solid #edf2f7; padding-bottom: 2.5rem;">
+        <section style="border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 2.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-            <h2 style="font-size: 1.35rem; color: #1a202c; font-weight: 700; margin: 0;">
+            <h2 style="font-size: 1.35rem; color: var(--theme-color-text-primary, #1a202c); font-weight: 700; margin: 0;">
               ${config.title}
             </h2>
-            <span style="font-size: 0.85rem; color: #718096; font-weight: 600; background: #edf2f7; padding: 3px 10px; border-radius: 12px;">
+            <span style="font-size: 0.85rem; color: #718096; font-weight: 600; background: var(--theme-color-background, #edf2f7); padding: 3px 10px; border-radius: 12px;">
               ${typeItems.length} ${typeItems.length === 1 ? 'item' : 'items'}
             </span>
           </div>
@@ -88,6 +89,7 @@ export async function initHomePage() {
  */
 function renderContentCard(item) {
   const isEvent = item.type === 'event';
+  const id = escapeHTML(item.id || '');
   const title = escapeHTML(item.title || '');
   const date = escapeHTML(item.date || '');
   const description = escapeHTML(item.preview?.teaserText || item.description || '');
@@ -96,6 +98,7 @@ function renderContentCard(item) {
   return `
     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
       <content-card 
+        id="${id}"
         title="${title}" 
         date="${date}" 
         author="${author}"
@@ -104,7 +107,7 @@ function renderContentCard(item) {
       ${
         isEvent && item.meetUrl
           ? `
-        <a href="${item.meetUrl}" target="_blank" rel="noopener noreferrer"
+        <a href="${item.meetUrl}" target="_blank" rel="noopener noreferrer" 
             style="display: inline-block; text-align: center; background: #2b6cb0; color: #ffffff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
             Join Google Meet
         </a>
