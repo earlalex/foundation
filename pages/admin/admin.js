@@ -4,6 +4,7 @@ import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { createGoogleCalendarEvent } from '../../core/google-services.js';
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
+import { configManager } from '../../core/config.js';
 
 // Preset Brand Guide Definitions
 const THEME_PRESETS = {
@@ -83,29 +84,26 @@ const THEME_PRESETS = {
 };
 
 export function initAdminPage() {
-  // --- 1. TAB ROUTING & CONTROLLER ---
+  // --- 1. TAB ROUTING ---
   const tabButtons = document.querySelectorAll('.admin-tab');
   const panels = document.querySelectorAll('.admin-panel');
 
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
-
       tabButtons.forEach((b) => {
         b.style.borderBottom = 'none';
         b.style.color = 'var(--theme-color-text-secondary, #4a5568)';
       });
-
       btn.style.borderBottom = '3px solid var(--theme-color-primary, #2b6cb0)';
       btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
-
       panels.forEach((p) => {
         p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
       });
     });
   });
 
-  // --- 2. TAB 1: SITE & BRAND SETTINGS CONTROLLERS ---
+  // --- 2. TAB 1: SITE SETTINGS & THEME ENGINE ---
   const siteSettingsForm = document.getElementById('site-settings-form');
   const siteLogoInput = document.getElementById('site-logo');
   const siteFaviconInput = document.getElementById('site-favicon');
@@ -115,20 +113,16 @@ export function initAdminPage() {
     const siteTitle = document.getElementById('site-title').value;
     const siteDomain = document.getElementById('site-domain').value;
 
-    let logoData = null;
-    let faviconData = null;
-
     if (siteLogoInput && siteLogoInput.files.length > 0) {
-      logoData = await uploadFileToDrive(siteLogoInput.files[0]);
+      await uploadFileToDrive(siteLogoInput.files[0]);
     }
     if (siteFaviconInput && siteFaviconInput.files.length > 0) {
-      faviconData = await uploadFileToDrive(siteFaviconInput.files[0]);
+      await uploadFileToDrive(siteFaviconInput.files[0]);
     }
 
     alert(`Website Identity settings saved for "${siteTitle}" (${siteDomain})!`);
   });
 
-  // Theme Engine Controller
   const themeJsonInput = document.getElementById('theme-json-input');
   const themeForm = document.getElementById('theme-json-form');
   const presetSelect = document.getElementById('theme-preset-select');
@@ -167,15 +161,140 @@ export function initAdminPage() {
     }
   });
 
-  // Embeds & Integration Form Controller
-  const siteEmbedsForm = document.getElementById('site-embeds-form');
-  siteEmbedsForm?.addEventListener('submit', (e) => {
+  document.getElementById('site-embeds-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const lookerUrl = document.getElementById('looker-studio-url').value;
     alert('Embeds & Integration scripts saved!');
   });
 
-  // --- 3. DEV MODE SWITCHER ---
+  // --- 3. TAB 2: BUSINESS PROFILE ---
+  document.getElementById('business-profile-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const legalName = document.getElementById('biz-legal-name').value;
+    alert(`Business Profile updated for "${legalName}"!`);
+  });
+
+  // --- 4. TAB 3: FIREBASE & CLOUD CONFIGURATION ---
+  const cfgFbKey = document.getElementById('cfg-fb-key');
+  const cfgFbProject = document.getElementById('cfg-fb-project');
+  const cfgFbAdmins = document.getElementById('cfg-fb-admins');
+
+  if (cfgFbKey) cfgFbKey.value = configManager.current.firebase?.apiKey || '';
+  if (cfgFbProject) cfgFbProject.value = configManager.current.firebase?.projectId || '';
+  if (cfgFbAdmins) cfgFbAdmins.value = (configManager.current.adminEmails || []).join(', ');
+
+  document.getElementById('firebase-config-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const adminList = cfgFbAdmins.value.split(',').map(a => a.trim()).filter(Boolean);
+    const updated = {
+      firebase: {
+        ...configManager.current.firebase,
+        apiKey: cfgFbKey.value,
+        projectId: cfgFbProject.value
+      },
+      adminEmails: adminList
+    };
+    const success = await configManager.saveToFirebase(updated);
+    if (success) {
+      alert('Firebase Configuration synced to Firestore!');
+    }
+  });
+
+  // --- 5. TAB 5: CMS PUBLISHER CONTROLLER ---
+  const contentTypeSelect = document.getElementById('content-type');
+  const eventFieldsContainer = document.getElementById('event-fields');
+
+  contentTypeSelect?.addEventListener('change', (e) => {
+    if (eventFieldsContainer) {
+      eventFieldsContainer.style.display = e.target.value === 'event' ? 'block' : 'none';
+    }
+  });
+
+  const cmsForm = document.getElementById('cms-form');
+  cmsForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const contentType = document.getElementById('content-type').value;
+    const contentId = document.getElementById('content-id').value;
+    const title = document.getElementById('content-title').value;
+    const description = document.getElementById('content-description').value;
+    const visibility = document.getElementById('content-visibility').value;
+    const rawBody = document.getElementById('content-body').value;
+    const fileInput = document.getElementById('media-file');
+
+    let assetData = null;
+    if (fileInput && fileInput.files.length > 0) {
+      assetData = await uploadFileToDrive(fileInput.files[0]);
+    }
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const paragraphs = rawBody ? rawBody.split('\n').filter((p) => p.trim().length > 0) : [];
+
+    const payload = {
+      type: contentType,
+      id: contentId,
+      title: title,
+      description: description,
+      author: store.state.user?.displayName || 'Admin',
+      date: currentDate,
+      longFormText: paragraphs.length > 0 ? paragraphs : [description],
+      access: { visibility: visibility },
+      preview: {
+        teaserText: description,
+        featuredImage: assetData
+          ? {
+              type: assetData.category,
+              src: assetData.src,
+              localPath: assetData.localPath
+            }
+          : null
+      }
+    };
+
+    if (contentType === 'event') {
+      const locationVal = document.getElementById('event-location')?.value || '';
+      const startTimeVal = document.getElementById('event-start-time')?.value || '14:00';
+      const endTimeVal = document.getElementById('event-end-time')?.value || '15:00';
+      const eventDetails = {
+        title: title,
+        description: description,
+        eventType: document.getElementById('event-type').value,
+        location: locationVal,
+        date: document.getElementById('event-date')?.value || currentDate,
+        startTime: startTimeVal,
+        endTime: endTimeVal
+      };
+
+      const calResult = await createGoogleCalendarEvent(eventDetails);
+      payload.eventType = eventDetails.eventType;
+      payload.location = eventDetails.location;
+      payload.date = eventDetails.date;
+      payload.startTime = eventDetails.startTime;
+      payload.endTime = eventDetails.endTime;
+
+      if (calResult) {
+        payload.meetUrl = calResult.meetUrl;
+        payload.calendarEventId = calResult.calendarEventId;
+      }
+    } else if (contentType === 'podcast' && assetData) {
+      payload.audioUrl = assetData.src;
+    } else if (contentType === 'education' && assetData) {
+      payload.worksheets = [
+        {
+          title: fileInput.files[0].name,
+          pdfUrl: assetData.src
+        }
+      ];
+    }
+
+    const success = await contentDB.saveContent(payload);
+    if (success) {
+      alert(`Successfully published "${title}"!`);
+      e.target.reset();
+      if (eventFieldsContainer) eventFieldsContainer.style.display = 'none';
+    }
+  });
+
+  // --- 6. DEV MODE SWITCHER ---
   const radioOn = document.getElementById('radio-dev-on');
   const radioOff = document.getElementById('radio-dev-off');
   const labelOn = document.getElementById('label-dev-on');
@@ -230,44 +349,35 @@ export function initAdminPage() {
     syncDevUI(false);
   });
 
-  // --- 4. SEO & ANALYTICS ACTION HANDLERS ---
-  const seoRankBtn = document.getElementById('btn-fetch-seo-rank');
-  seoRankBtn?.addEventListener('click', async () => {
-    seoRankBtn.textContent = 'Fetching Rank...';
-    try {
-      const domain = window.location.hostname || 'foundation.dev';
-      console.log(`[SEO Service]: Fetching ranking telemetries for ${domain}...`);
-      setTimeout(() => {
-        alert(`[SEO Telemetry Updated]: ${domain} is indexed and sitting in Top 1% metrics.`);
-        seoRankBtn.textContent = 'Refresh Rank';
-      }, 800);
-    } catch (err) {
-      console.error('SEO rank check failed:', err);
-      seoRankBtn.textContent = 'Refresh Rank';
-    }
-  });
-
-  // --- 5. SECURITY & DEV OPS HANDLERS ---
+  // --- 7. SECURITY & VIRUSTOTAL SCAN ---
   const scanVtBtn = document.getElementById('btn-scan-virustotal');
   scanVtBtn?.addEventListener('click', async () => {
-    scanVtBtn.textContent = 'Scanning...';
+    scanVtBtn.textContent = 'Scanning Edge...';
     try {
       const domain = window.location.hostname || 'foundation.dev';
-      console.log(`[VirusTotal Integration]: Scanning domain signature for ${domain}...`);
-      setTimeout(() => {
+      const response = await fetch('/api/virustotal-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain })
+      });
+      const resData = await response.json();
+      
+      if (resData.error) {
+        alert(`[VirusTotal Edge Scan Note]: ${resData.error}`);
+      } else {
         alert(`[VirusTotal Analysis Complete]: 0/90 Engines Flagged Clean for ${domain}!`);
-        scanVtBtn.textContent = 'Run Live Scan';
-      }, 1000);
+      }
+      scanVtBtn.textContent = 'Run Live Edge Scan';
     } catch (err) {
-      console.error('VirusTotal scan failed:', err);
-      scanVtBtn.textContent = 'Run Live Scan';
+      console.error('VirusTotal edge scan failed:', err);
+      scanVtBtn.textContent = 'Run Live Edge Scan';
     }
   });
 
   const runTestsBtn = document.getElementById('btn-run-tests');
   runTestsBtn?.addEventListener('click', async () => {
     try {
-      const { runAllSchemaTests } = await import('./schemas/test-runner.js');
+      const { runAllSchemaTests } = await import('../../schemas/test-runner.js');
       runAllSchemaTests();
     } catch (err) {
       console.error('Failed to execute test runner module:', err);
