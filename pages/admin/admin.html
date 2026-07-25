@@ -15,6 +15,9 @@
     <button class="admin-tab" data-tab="business" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
       Business & Legal
     </button>
+    <button class="admin-tab" data-tab="profile" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+      Public Profile
+    </button>
     <button class="admin-tab" data-tab="config" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
       API Keys & Cloud
     </button>
@@ -26,6 +29,9 @@
     </button>
     <button class="admin-tab" data-tab="seo" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
       SEO & Analytics
+    </button>
+    <button class="admin-tab" data-tab="performance" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+      Performance (Lighthouse)
     </button>
     <button class="admin-tab" data-tab="security" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
       Security & Ops
@@ -222,7 +228,75 @@
     </div>
   </div>
 
-  <!-- TAB 3: API KEYS & CLOUD CONFIGURATION -->
+  <!-- NEW TAB 3: PUBLIC PROFILE & AUTHOR MANAGER -->
+  <div id="tab-profile" class="admin-panel" style="display: none;">
+    <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+      <h2 style="margin-top: 0; font-size: 1.25rem;">Administrator & Public Author Persona</h2>
+      <p style="color: #718096; font-size: 0.85rem; margin-bottom: 1.25rem;">Powers the global <code>&lt;author-card&gt;</code> Web Component rendered across blog posts, the About page, and contact widgets.</p>
+      
+      <form id="author-profile-form" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Full Author Name:</label>
+            <input type="text" id="author-name" placeholder="Jane Doe" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Professional Role / Title:</label>
+            <input type="text" id="author-role" placeholder="Lead Developer & Architect" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Tagline:</label>
+            <input type="text" id="author-tagline" placeholder="Building the zero-build web." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Avatar Photo Asset (Auto-Uploads to Drive):</label>
+            <input type="file" id="author-avatar-file" accept="image/*" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Custom Signature Asset:</label>
+            <input type="file" id="author-signature-file" accept="image/*" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Short Teaser Bio (Article Footer Card):</label>
+          <textarea id="author-short-bio" placeholder="Lead developer specializing in zero-build architectures..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Extended Public Bio (About Page):</label>
+          <textarea id="author-full-bio" placeholder="Detailed multi-paragraph biography rendered on the /about route..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 100px; box-sizing: border-box;"></textarea>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+        <h3 style="margin: 0; font-size: 1rem;">Social Media & Channels</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;">GitHub Profile URL:</label>
+            <input type="url" id="author-github" placeholder="https://github.com/..." style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;">Twitter / X URL:</label>
+            <input type="url" id="author-twitter" placeholder="https://x.com/..." style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;">LinkedIn Profile URL:</label>
+            <input type="url" id="author-linkedin" placeholder="https://linkedin.com/in/..." style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+          Save Author Profile
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TAB 4: API KEYS & CLOUD CONFIGURATION -->
   <div id="tab-config" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
@@ -262,7 +336,7 @@
     </div>
   </div>
 
-  <!-- TAB 4: USER MANAGEMENT -->
+  <!-- TAB 5: USER MANAGEMENT -->
   <div id="tab-users" class="admin-panel" style="display: none;">
     <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
       <h2 style="margin-top: 0;">User Directory</h2>
@@ -270,7 +344,7 @@
     </div>
   </div>
 
-  <!-- TAB 5: CMS PUBLISHER -->
+  <!-- TAB 6: CMS PUBLISHER -->
   <div id="tab-cms" class="admin-panel" style="display: none;">
     <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
       <h2 style="margin-top: 0;">Content Publisher</h2>
@@ -359,11 +433,9 @@
     </div>
   </div>
 
-  <!-- TAB 6: SEO & ANALYTICS -->
+  <!-- TAB 7: SEO & ANALYTICS -->
   <div id="tab-seo" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      
-      <!-- Section 1: SEO-MY-RANK-ADDR Telemetry Card -->
       <div style="background: #ffffff; border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
@@ -398,9 +470,7 @@
         </div>
       </div>
 
-      <!-- Section 2: Google Search Console Notifications & Crawl Request -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <!-- Crawl & Indexing Submission Tool -->
         <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
           <h3 style="margin: 0 0 0.5rem 0; font-size: 1.05rem;">Google Search Console: Crawl Request</h3>
           <p style="margin: 0 0 1rem 0; color: #718096; font-size: 0.8rem;">Submit a specific site route directly to Google's indexing queue.</p>
@@ -416,7 +486,6 @@
           <div id="gsc-crawl-feedback" style="margin-top: 0.75rem; display: none; padding: 8px 12px; border-radius: 4px; font-size: 0.8rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;"></div>
         </div>
 
-        <!-- Notifications Stream -->
         <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="margin: 0; font-size: 1.05rem;">Search Console Notifications</h3>
@@ -428,7 +497,6 @@
         </div>
       </div>
 
-      <!-- Section 3: Google Analytics 4 Telemetry -->
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
@@ -468,7 +536,6 @@
         <div id="ga4-top-pages" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;"></div>
       </div>
 
-      <!-- Section 4: Google Looker Studio Embedded Metric Tracker -->
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
@@ -485,11 +552,75 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- TAB 7: SECURITY & DEV OPS -->
+  <!-- NEW TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) -->
+  <div id="tab-performance" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">Lighthouse Real-Time Performance Engine</h2>
+            <p style="margin: 0; color: #718096; font-size: 0.85rem;">Queries Google PageSpeed Insights API (v5) to audit Core Web Vitals and site health.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <select id="lh-strategy-select" style="padding: 6px 10px; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.85rem;">
+              <option value="mobile" selected>Mobile Strategy</option>
+              <option value="desktop">Desktop Strategy</option>
+            </select>
+            <button id="btn-run-lighthouse" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">
+              Run Lighthouse Audit
+            </button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center; margin-bottom: 1.5rem;">
+          <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <span style="font-size: 0.75rem; color: #166534; font-weight: bold;">PERFORMANCE</span>
+            <strong id="lh-score-perf" style="display: block; font-size: 2rem; color: #15803d; margin-top: 4px;">98</strong>
+          </div>
+          <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <span style="font-size: 0.75rem; color: #166534; font-weight: bold;">ACCESSIBILITY</span>
+            <strong id="lh-score-access" style="display: block; font-size: 2rem; color: #15803d; margin-top: 4px;">100</strong>
+          </div>
+          <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <span style="font-size: 0.75rem; color: #166534; font-weight: bold;">BEST PRACTICES</span>
+            <strong id="lh-score-bp" style="display: block; font-size: 2rem; color: #15803d; margin-top: 4px;">96</strong>
+          </div>
+          <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <span style="font-size: 0.75rem; color: #166534; font-weight: bold;">SEO</span>
+            <strong id="lh-score-seo" style="display: block; font-size: 2rem; color: #15803d; margin-top: 4px;">100</strong>
+          </div>
+        </div>
+
+        <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Core Web Vitals & Loading Telemetry</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; text-align: center; margin-bottom: 1.5rem;">
+          <div style="background: #f7fafc; padding: 10px; border-radius: 6px;">
+            <span style="font-size: 0.75rem; color: #718096;">First Contentful Paint</span>
+            <strong id="lh-fcp" style="display: block; font-size: 1rem; color: #2d3748; margin-top: 2px;">0.6 s</strong>
+          </div>
+          <div style="background: #f7fafc; padding: 10px; border-radius: 6px;">
+            <span style="font-size: 0.75rem; color: #718096;">Largest Contentful Paint</span>
+            <strong id="lh-lcp" style="display: block; font-size: 1rem; color: #2d3748; margin-top: 2px;">1.1 s</strong>
+          </div>
+          <div style="background: #f7fafc; padding: 10px; border-radius: 6px;">
+            <span style="font-size: 0.75rem; color: #718096;">Cumulative Layout Shift</span>
+            <strong id="lh-cls" style="display: block; font-size: 1rem; color: #2d3748; margin-top: 2px;">0.00</strong>
+          </div>
+          <div style="background: #f7fafc; padding: 10px; border-radius: 6px;">
+            <span style="font-size: 0.75rem; color: #718096;">Total Blocking Time</span>
+            <strong id="lh-tbt" style="display: block; font-size: 1rem; color: #2d3748; margin-top: 2px;">0 ms</strong>
+          </div>
+        </div>
+
+        <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Lighthouse Opportunities & Diagnostics</h3>
+        <div id="lh-diagnostics-container" style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 9: SECURITY & DEV OPS -->
   <div id="tab-security" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">

@@ -7,7 +7,8 @@ import {
   getSearchConsoleNotifications, 
   requestSearchConsoleCrawl, 
   getAnalyticsOverview, 
-  fetchSeoMyRankAddr 
+  fetchSeoMyRankAddr,
+  runLighthouseAudit
 } from '../../core/google-services.js';
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
@@ -108,9 +109,10 @@ export function initAdminPage() {
         p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
       });
 
-      // Lazy load Tab 6 data on demand
       if (targetTab === 'seo') {
         loadSeoAndAnalyticsTab();
+      } else if (targetTab === 'performance') {
+        loadPerformanceTab();
       }
     });
   });
@@ -278,7 +280,69 @@ export function initAdminPage() {
     }
   });
 
-  // --- 4. TAB 3: FIREBASE & CLOUD CONFIGURATION ---
+  // --- 4. NEW TAB 3: PUBLIC PROFILE / AUTHOR MANAGER ---
+  const authorProfile = currentCfg.authorProfile || {};
+  const authorNameInput = document.getElementById('author-name');
+  const authorRoleInput = document.getElementById('author-role');
+  const authorTaglineInput = document.getElementById('author-tagline');
+  const authorShortBioInput = document.getElementById('author-short-bio');
+  const authorFullBioInput = document.getElementById('author-full-bio');
+  const authorGithubInput = document.getElementById('author-github');
+  const authorTwitterInput = document.getElementById('author-twitter');
+  const authorLinkedinInput = document.getElementById('author-linkedin');
+
+  if (authorNameInput) authorNameInput.value = authorProfile.name || '';
+  if (authorRoleInput) authorRoleInput.value = authorProfile.role || '';
+  if (authorTaglineInput) authorTaglineInput.value = authorProfile.tagline || '';
+  if (authorShortBioInput) authorShortBioInput.value = authorProfile.shortBio || '';
+  if (authorFullBioInput) authorFullBioInput.value = authorProfile.fullBio || '';
+  if (authorGithubInput) authorGithubInput.value = authorProfile.socials?.github || '';
+  if (authorTwitterInput) authorTwitterInput.value = authorProfile.socials?.twitter || '';
+  if (authorLinkedinInput) authorLinkedinInput.value = authorProfile.socials?.linkedin || '';
+
+  document.getElementById('author-profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const avatarInput = document.getElementById('author-avatar-file');
+    const signatureInput = document.getElementById('author-signature-file');
+
+    let avatarUrl = authorProfile.avatarUrl || null;
+    let signatureUrl = authorProfile.signatureUrl || null;
+
+    if (avatarInput && avatarInput.files.length > 0) {
+      const res = await uploadFileToDrive(avatarInput.files[0]);
+      if (res) avatarUrl = res.src;
+    }
+
+    if (signatureInput && signatureInput.files.length > 0) {
+      const res = await uploadFileToDrive(signatureInput.files[0]);
+      if (res) signatureUrl = res.src;
+    }
+
+    const updatedProfile = {
+      ...configManager.current,
+      authorProfile: {
+        name: authorNameInput.value,
+        role: authorRoleInput.value,
+        tagline: authorTaglineInput.value,
+        avatarUrl,
+        signatureUrl,
+        shortBio: authorShortBioInput.value,
+        fullBio: authorFullBioInput.value,
+        socials: {
+          github: authorGithubInput.value,
+          twitter: authorTwitterInput.value,
+          linkedin: authorLinkedinInput.value
+        }
+      }
+    };
+
+    const success = await configManager.saveToFirebase(updatedProfile);
+    if (success) {
+      alert(`Public Author Profile saved for "${authorNameInput.value}"! Component widgets updated.`);
+    }
+  });
+
+  // --- 5. TAB 4: FIREBASE & CLOUD CONFIGURATION ---
   const cfgFbKey = document.getElementById('cfg-fb-key');
   const cfgFbProject = document.getElementById('cfg-fb-project');
   const cfgFbAdmins = document.getElementById('cfg-fb-admins');
@@ -320,7 +384,7 @@ export function initAdminPage() {
     }
   });
 
-  // --- 5. TAB 5: CMS PUBLISHER CONTROLLER ---
+  // --- 6. TAB 6: CMS PUBLISHER CONTROLLER ---
   const contentTypeSelect = document.getElementById('content-type');
   const eventFieldsContainer = document.getElementById('event-fields');
 
@@ -413,9 +477,8 @@ export function initAdminPage() {
     }
   });
 
-  // --- 6. TAB 6: SEO & ANALYTICS CONTROLLER ---
+  // --- 7. TAB 7: SEO & ANALYTICS CONTROLLER ---
   async function loadSeoAndAnalyticsTab() {
-    // 1. Fetch & Render SEO-MY-RANK-ADDR Telemetry
     const rankBtn = document.getElementById('btn-fetch-seo-rank');
     if (rankBtn) {
       rankBtn.onclick = async () => {
@@ -430,7 +493,6 @@ export function initAdminPage() {
       };
     }
 
-    // 2. Google Search Console Crawl Submission
     const crawlForm = document.getElementById('gsc-crawl-form');
     crawlForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -456,7 +518,6 @@ export function initAdminPage() {
       }
     });
 
-    // 3. Search Console Notifications Stream
     const notifsContainer = document.getElementById('gsc-notifs-container');
     const refreshNotifsBtn = document.getElementById('btn-refresh-gsc-notifs');
 
@@ -484,7 +545,6 @@ export function initAdminPage() {
     if (refreshNotifsBtn) refreshNotifsBtn.onclick = renderGscNotifs;
     renderGscNotifs();
 
-    // 4. GA4 Traffic Telemetry
     const ga4Btn = document.getElementById('btn-refresh-ga4');
     const rangeSelect = document.getElementById('select-ga4-range');
 
@@ -512,7 +572,6 @@ export function initAdminPage() {
     if (ga4Btn) ga4Btn.onclick = renderGa4Data;
     renderGa4Data();
 
-    // 5. Looker Studio Embed Frame
     const embedIframe = document.getElementById('looker-studio-embed');
     const placeholder = document.getElementById('analytics-placeholder');
     const reloadLookerBtn = document.getElementById('btn-reload-looker');
@@ -533,7 +592,48 @@ export function initAdminPage() {
     renderLookerStudio();
   }
 
-  // --- 7. DEV MODE SWITCHER ---
+  // --- 8. NEW TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) ---
+  async function loadPerformanceTab() {
+    const runBtn = document.getElementById('btn-run-lighthouse');
+    const strategySelect = document.getElementById('lh-strategy-select');
+
+    async function executeAudit() {
+      if (runBtn) runBtn.textContent = 'Running PageSpeed Audit...';
+      const strategy = strategySelect?.value || 'mobile';
+      const audit = await runLighthouseAudit(window.location.href, strategy);
+
+      if (audit) {
+        document.getElementById('lh-score-perf').textContent = audit.scores.performance;
+        document.getElementById('lh-score-access').textContent = audit.scores.accessibility;
+        document.getElementById('lh-score-bp').textContent = audit.scores.bestPractices;
+        document.getElementById('lh-score-seo').textContent = audit.scores.seo;
+
+        document.getElementById('lh-fcp').textContent = audit.metrics.fcp;
+        document.getElementById('lh-lcp').textContent = audit.metrics.lcp;
+        document.getElementById('lh-cls').textContent = audit.metrics.cls;
+        document.getElementById('lh-tbt').textContent = audit.metrics.tbt;
+
+        const diagBox = document.getElementById('lh-diagnostics-container');
+        if (diagBox && Array.isArray(audit.diagnostics)) {
+          diagBox.innerHTML = audit.diagnostics.map(item => `
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f7fafc; border-radius: 4px; border-left: 3px solid #38a169;">
+              <div>
+                <strong>${item.title}</strong>
+                <p style="margin: 2px 0 0 0; color: #718096; font-size: 0.75rem;">${item.details}</p>
+              </div>
+              <span style="font-weight: bold; color: #15803d;">${item.score}</span>
+            </div>
+          `).join('');
+        }
+      }
+      if (runBtn) runBtn.textContent = 'Run Lighthouse Audit';
+    }
+
+    if (runBtn) runBtn.onclick = executeAudit;
+    executeAudit();
+  }
+
+  // --- 9. DEV MODE SWITCHER ---
   const radioOn = document.getElementById('radio-dev-on');
   const radioOff = document.getElementById('radio-dev-off');
   const labelOn = document.getElementById('label-dev-on');
@@ -588,7 +688,7 @@ export function initAdminPage() {
     syncDevUI(false);
   });
 
-  // --- 8. SECURITY & VIRUSTOTAL SCAN ---
+  // --- 10. SECURITY & VIRUSTOTAL SCAN ---
   const scanVtBtn = document.getElementById('btn-scan-virustotal');
   scanVtBtn?.addEventListener('click', async () => {
     scanVtBtn.textContent = 'Scanning Edge...';
