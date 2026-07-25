@@ -128,6 +128,10 @@ export class Router {
       return;
     }
 
+    if (cleanPath === '/admin' && isDevConsoleBypass) {
+      console.log('[Router Guard]: Emergency Console Dev Bypass Active -> Access Granted.');
+    }
+
     // 3. Determine view HTML template location
     const manifestEntry = this.routesManifest[cleanPath];
     let viewPath = manifestEntry?.viewPath;

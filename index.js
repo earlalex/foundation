@@ -71,4 +71,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Single Unified Page Lifecycle Listener
 window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
+  if (e.detail.path === '/home') {
+    initHomePage();
+  } else if (e.detail.path === '/admin') {
+    initAdminPage();
+  }
 });
