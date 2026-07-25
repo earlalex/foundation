@@ -51,8 +51,17 @@ export class Router {
       this.loadRoute(window.location.pathname);
     });
 
-    // 3. Initial page load hit
-    this.loadRoute(window.location.pathname);
+    // 3. Initial page load hit: Check for GitHub Pages SPA stored subroute
+    const storedRoute = sessionStorage.getItem('foundation_spa_route');
+    if (storedRoute) {
+      sessionStorage.removeItem('foundation_spa_route');
+      const repoPrefix = window.location.pathname.replace(/\/$/, '');
+      const fullUrl = repoPrefix + storedRoute;
+      window.history.replaceState({}, '', fullUrl);
+      this.loadRoute(storedRoute);
+    } else {
+      this.loadRoute(window.location.pathname);
+    }
   }
 
   async navigateTo(path) {
@@ -81,22 +90,17 @@ export class Router {
     let cleanPath = '/home';
 
     if (segments.length === 0) {
-      // Root domain '/'
       cleanPath = '/home';
     } else {
       const lastSegment = `/${segments[segments.length - 1]}`;
 
       if (this.routesManifest[rawPath]) {
-        // Direct match (e.g. '/admin' on root domain)
         cleanPath = rawPath;
       } else if (this.routesManifest[lastSegment]) {
-        // Subpath match (e.g. '/foundation/admin' -> '/admin')
         cleanPath = lastSegment;
       } else if (segments.length === 1) {
-        // Single segment not in manifest (e.g. '/foundation' on GitHub Pages) -> Repository Root!
         cleanPath = '/home';
       } else {
-        // Unknown multi-segment route -> 404
         cleanPath = '/404';
       }
     }
