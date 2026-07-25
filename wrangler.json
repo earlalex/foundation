@@ -1,12 +1,5 @@
 {
   "name": "foundation",
   "pages_build_output_dir": "./",
-  "compatibility_date": "2026-01-01",
-  "workflows": [
-    {
-      "name": "workflow-trigger",
-      "binding": "MY_WORKFLOW",
-      "class_name": "AutomationWorkflow"
-    }
-  ]
+  "compatibility_date": "2026-01-01"
 }
