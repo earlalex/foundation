@@ -16,8 +16,8 @@ import {
 import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
 
-const MONTHLY_MEMBERSHIP_FEE = 29.00; 
-const REFERRAL_COMMISSION_RATE = 0.10; 
+const MONTHLY_MEMBERSHIP_FEE = 29.00;
+const REFERRAL_COMMISSION_RATE = 0.10;
 
 // Preset Brand Guide Definitions
 const THEME_PRESETS = {
@@ -110,7 +110,7 @@ export function initAdminPage() {
       });
       btn.style.borderBottom = '3px solid var(--theme-color-primary, #2b6cb0)';
       btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
-      
+
       panels.forEach((p) => {
         p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
       });
@@ -392,7 +392,7 @@ export function initAdminPage() {
     }
   });
 
-  // --- 6. TAB 5: USER DIRECTORY, GOOGLE CONTACTS & MASS EMAIL CONTROLLER ---
+  // --- 6. TAB 5: USER DIRECTORY, DUES & AFFILIATE CONTROLLER ---
   async function loadUserDirectoryTab() {
     const adminEmailBadge = document.getElementById('connected-admin-email');
     const connectedAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@foundation.dev';
@@ -401,17 +401,16 @@ export function initAdminPage() {
     const tbody = document.getElementById('user-directory-tbody');
     const refreshBtn = document.getElementById('btn-refresh-users');
     const syncContactsBtn = document.getElementById('btn-sync-google-contacts');
+    const convertLateBtn = document.getElementById('btn-convert-late-users');
     const massEmailForm = document.getElementById('mass-email-form');
-
     let cachedUsers = [];
 
     async function renderUsersList() {
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: #a0aec0;">Fetching user records...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: #a0aec0;">Fetching user records...</td></tr>';
       
       cachedUsers = await contentDB.getAllUsers();
       const hasAdminInList = cachedUsers.some(u => u.email === connectedAdminEmail);
-
       if (!hasAdminInList) {
         cachedUsers.unshift({
           id: 'primary-admin-root',
@@ -419,6 +418,7 @@ export function initAdminPage() {
           email: connectedAdminEmail,
           role: 'admin',
           status: 'Active',
+          paymentStatus: 'Active',
           affiliateCode: 'FOUNDATION_ROOT',
           referredCount: 0
         });
@@ -438,10 +438,15 @@ export function initAdminPage() {
         const monthlyEarnings = u.role === 'affiliate' ? (activeReferrals * (MONTHLY_MEMBERSHIP_FEE * REFERRAL_COMMISSION_RATE)) : 0;
         const netCost = u.role === 'subscriber' ? 0 : Math.max(0, MONTHLY_MEMBERSHIP_FEE - monthlyEarnings);
         const isFullyCovered = u.role === 'affiliate' && monthlyEarnings >= MONTHLY_MEMBERSHIP_FEE;
-
+        
         const roleBadgeColor = isPrimary ? '#c05621' : u.role === 'affiliate' ? '#2b6cb0' : u.role === 'member' ? '#2f855a' : '#4a5568';
         const roleBgColor = isPrimary ? '#feebc8' : u.role === 'affiliate' ? '#ebf8ff' : u.role === 'member' ? '#f0fdf4' : '#f7fafc';
         const roleLabel = isPrimary ? '👑 Admin (Locked)' : u.role === 'affiliate' ? '🤝 Affiliate Member' : u.role === 'member' ? '💳 Member (Paid)' : '👤 Subscriber (Free)';
+
+        const paymentStatus = u.paymentStatus || 'Active';
+        const isDelinquent = paymentStatus.includes('Past Due') || paymentStatus.includes('Delinquent') || paymentStatus.includes('Converted');
+        const paymentBadgeColor = isDelinquent ? '#c53030' : '#2f855a';
+        const paymentBgColor = isDelinquent ? '#fff5f5' : '#f0fdf4';
 
         return `
           <tr style="border-bottom: 1px solid #edf2f7;">
@@ -453,6 +458,11 @@ export function initAdminPage() {
             <td style="padding: 10px;">
               <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${roleBgColor}; color: ${roleBadgeColor};">
                 ${roleLabel}
+              </span>
+            </td>
+            <td style="padding: 10px;">
+              <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${paymentBgColor}; color: ${paymentBadgeColor};">
+                ${paymentStatus}
               </span>
             </td>
             <td style="padding: 10px;">
@@ -492,7 +502,6 @@ export function initAdminPage() {
           const updated = await contentDB.saveUser({ id: uId, role: newRole, affiliateCode });
           
           if (updated) {
-            // Auto-sync Google Contact Role Label
             await syncGoogleContactRole({ name: updated.name, email: updated.email, role: newRole });
             alert(`User role updated to "${newRole.toUpperCase()}" & synced to Google Contacts!`);
             renderUsersList();
@@ -514,6 +523,31 @@ export function initAdminPage() {
           }
         });
       });
+    }
+
+    // Delinquency Converter Button
+    if (convertLateBtn) {
+      convertLateBtn.onclick = async () => {
+        convertLateBtn.textContent = 'Checking Payment Statuses...';
+        const users = await contentDB.getAllUsers();
+        let convertedCount = 0;
+
+        for (const user of users) {
+          const isPastDue = user.paymentStatus?.includes('Past Due') || user.paymentStatus === 'Delinquent';
+          if (isPastDue && user.role !== 'subscriber' && user.role !== 'admin') {
+            await contentDB.saveUser({
+              id: user.id,
+              role: 'subscriber',
+              paymentStatus: 'Past Due (Converted to Free)'
+            });
+            convertedCount++;
+          }
+        }
+
+        alert(`Delinquency Sweep Complete!\n\n${convertedCount} accounts converted to Free Subscriber tier due to unpaid dues.`);
+        convertLateBtn.textContent = 'Convert Late Dues to Subscribers';
+        renderUsersList();
+      };
     }
 
     // Google Contacts Bulk Sync Button
@@ -539,7 +573,6 @@ export function initAdminPage() {
       const subject = document.getElementById('mass-email-subject').value;
       const messageBody = document.getElementById('mass-email-body').value;
 
-      // Filter target user list
       const recipients = cachedUsers.filter(u => {
         if (targetRole === 'all') return u.email && u.role !== 'admin';
         return u.role === targetRole;
@@ -584,11 +617,10 @@ export function initAdminPage() {
       }
 
       const affiliateCode = role === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
-      const newUser = { name, email, role, referredBy, affiliateCode, status: 'Active' };
+      const newUser = { name, email, role, referredBy, affiliateCode, paymentStatus: 'Active', status: 'Active' };
       const res = await contentDB.saveUser(newUser);
 
       if (res) {
-        // Sync new user directly to Google Contacts
         await syncGoogleContactRole(newUser);
         alert(`Account created for ${name} as ${role.toUpperCase()} and added to Google Contacts!`);
         e.target.reset();
@@ -718,7 +750,6 @@ export function initAdminPage() {
         feedback.style.display = 'block';
         feedback.textContent = `Submitting "${crawlUrl}" to Search Console crawler...`;
       }
-
       const res = await requestSearchConsoleCrawl(crawlUrl);
       if (feedback) {
         if (res.success) {
@@ -745,7 +776,6 @@ export function initAdminPage() {
         notifsContainer.innerHTML = '<p style="color:#718096; font-size:0.8rem;">No unread Search Console alerts.</p>';
         return;
       }
-
       notifsContainer.innerHTML = alerts.map(item => `
         <div style="padding: 8px 10px; border-left: 3px solid ${item.type === 'warning' ? '#dd6b20' : '#38a169'}; background: #f7fafc; border-radius: 4px;">
           <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.8rem;">
@@ -885,7 +915,7 @@ export function initAdminPage() {
             banner.style.background = '#f0fdf4';
             banner.style.borderColor = '#bbf7d0';
           }
-          if (icon) icon.textContent = '✅';
+          if (icon) icon.textContent = '🛡️';
           if (title) {
             title.textContent = 'No Negative Security Issues Detected';
             title.style.color = '#166534';

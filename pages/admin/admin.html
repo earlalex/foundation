@@ -375,34 +375,38 @@
         </form>
       </div>
 
-      <!-- User Directory Table -->
+      <!-- User Directory Table with Stripe Payment Status & Delinquency Converter -->
       <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">User Directory & Referral Telemetry</h2>
-            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Affiliates earn 10% recurring commissions on monthly referrals to offset or exceed membership fees.</p>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">User Directory, Dues & Referral Telemetry</h2>
+            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Monitors membership dues, Stripe payment statuses, and automatic delinquency conversions.</p>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-convert-late-users" style="padding: 6px 12px; font-size: 0.8rem; background: #e53e3e; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+              Convert Late Dues to Subscribers
+            </button>
             <button id="btn-sync-google-contacts" style="padding: 6px 12px; font-size: 0.8rem; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
               Sync All to Google Contacts
             </button>
             <button id="btn-refresh-users" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Refresh Directory</button>
           </div>
         </div>
-        
+
         <div style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
             <thead>
               <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
-                <th style="padding: 10px;">User & Contact</th>
+                <th style="padding: 10px;">User & Email</th>
                 <th style="padding: 10px;">Membership Tier</th>
-                <th style="padding: 10px;">Affiliate Telemetry (10% Referral Engine)</th>
+                <th style="padding: 10px;">Payment Status / Dues</th>
+                <th style="padding: 10px;">Affiliate 10% Telemetry</th>
                 <th style="padding: 10px; text-align: right;">Manage Tier & Actions</th>
               </tr>
             </thead>
             <tbody id="user-directory-tbody">
               <tr>
-                <td colspan="4" style="padding: 1rem; text-align: center; color: #a0aec0;">Loading user directory and referral stats...</td>
+                <td colspan="5" style="padding: 1rem; text-align: center; color: #a0aec0;">Loading platform user directory...</td>
               </tr>
             </tbody>
           </table>
@@ -413,7 +417,7 @@
       <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
         <h2 style="margin-top: 0; font-size: 1.2rem;">Google Contacts & Gmail Mass Email Broadcaster</h2>
         <p style="margin: 0 0 1rem 0; color: #718096; font-size: 0.85rem;">Send targeted broadcast updates to users based on their assigned role tier via your authenticated Google Workspace account.</p>
-        
+
         <form id="mass-email-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
             <div>
@@ -439,7 +443,6 @@
           </button>
         </form>
       </div>
-
     </div>
   </div>
 
@@ -568,7 +571,6 @@
           </div>
         </div>
       </div>
-
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
         <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
           <h3 style="margin: 0 0 0.5rem 0; font-size: 1.05rem;">Google Search Console: Crawl Request</h3>
@@ -584,7 +586,6 @@
           </form>
           <div id="gsc-crawl-feedback" style="margin-top: 0.75rem; display: none; padding: 8px 12px; border-radius: 4px; font-size: 0.8rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;"></div>
         </div>
-
         <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="margin: 0; font-size: 1.05rem;">Search Console Notifications</h3>
@@ -595,7 +596,6 @@
           </div>
         </div>
       </div>
-
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
@@ -632,7 +632,6 @@
         <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #4a5568;">Top Page Route Traffic</h4>
         <div id="ga4-top-pages" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;"></div>
       </div>
-
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
@@ -734,10 +733,10 @@
         </div>
         <div id="gsc-security-banner" style="padding: 1rem; border-radius: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
           <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <div id="gsc-status-icon" style="font-size: 1.5rem;">✅</div>
+            <div id="gsc-status-icon" style="font-size: 1.5rem;">🛡️</div>
             <div>
               <strong id="gsc-status-title" style="display: block; font-size: 1rem; color: #166534;">No Negative Security Issues Detected</strong>
-              <span id="gsc-status-sub" style="font-size: 0.8rem; color: #15803d;">Domain is clean of phishing, defacement, and unnatural links in Google Search Console.</span>
+              <span id="gsc-status-sub" style="font-size: 0.8rem; color: #15803d;">Domain is clean of phishing, defacement, malware, and unnatural links in Google Search Console.</span>
             </div>
           </div>
           <span id="gsc-last-scanned" style="font-size: 0.75rem; color: #718096;">Last Scanned: Just now</span>
@@ -773,7 +772,6 @@
           </div>
         </div>
       </div>
-
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <h3 style="margin: 0; font-size: 1rem;">VirusTotal Threat Analysis (Cloudflare Edge)</h3>
@@ -790,7 +788,6 @@
           </div>
         </div>
       </div>
-
       <div style="background: #1a202c; color: #fff; border: 1px solid #2d3748; padding: 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
         <div>
           <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem;">Developer Mode</h3>
