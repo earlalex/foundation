@@ -1,21 +1,55 @@
-<!-- pages/home.html -->
-<section style="max-width: 1000px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
-  
-  <!-- Hero Section -->
-  <div style="text-align: center; margin-bottom: 3.5rem;">
-    <h1 style="font-size: 2.75rem; font-weight: 800; color: #1a202c; margin-bottom: 1rem; letter-spacing: -0.025em;">
-      Welcome to Foundation
-    </h1>
-    <p style="font-size: 1.2rem; color: #4a5568; max-width: 620px; margin: 0 auto; line-height: 1.6;">
-      A zero-build, modular web platform running natively in the browser.
-    </p>
-  </div>
-
-  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2.5rem 0;" />
-
-  <!-- Multi-Section Container -->
-  <div id="home-sections-container" style="display: flex; flex-direction: column; gap: 3rem;">
-    <p style="color: #a0aec0; text-align: center;">Loading publication sections...</p>
-  </div>
-
-</section>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foundation</title>
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="icon" href="data:,">
+  <style>
+    .no-js-banner {
+      max-width: 600px;
+      margin: 4rem auto;
+      padding: 2rem;
+      border-radius: 8px;
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      font-family: system-ui, -apple-system, sans-serif;
+      text-align: center;
+    }
+  </style>
+  <script type="module" src="./index.js" onerror="handleScriptError()"></script>
+  <script>
+    function handleScriptError() {
+      const app = document.getElementById('app');
+      if (app) {
+        app.innerHTML = `
+          <div class="no-js-banner">
+            <h2>Connection or Compatibility Issue</h2>
+            <p>We couldn't load Foundation. Please check your internet connection, try disabling aggressive browser extensions, or refresh the page.</p>
+          </div>`;
+      }
+    }
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        // Register Service Worker with relative scope for GitHub Pages subpaths
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {
+          console.warn('[Service Worker]: Registration bypassed or failed in current environment:', err);
+        });
+      });
+    }
+  </script>
+</head>
+<body>
+  <noscript>
+    <div class="no-js-banner">
+      <h2>JavaScript Required</h2>
+      <p>Foundation relies on JavaScript to load pages dynamically. Please enable JavaScript in your browser settings to view this site.</p>
+    </div>
+  </noscript>
+  <header id="global-header"></header>
+  <main id="app" tabindex="-1" aria-live="polite"></main>
+  <footer id="global-footer"></footer>
+</body>
+</html>

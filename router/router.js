@@ -1,6 +1,7 @@
 // router/router.js
 import { validateSchema, Type } from '/core/validator.js';
 import { authManager } from '/core/auth.js';
+import { store } from '/core/store.js';
 
 // Schema to ensure route metadata in routes.json or manual config is valid
 const RouteMetaSchema = {
@@ -13,7 +14,7 @@ export class Router {
   constructor(routesManifest = {}) {
     this.appContainer = document.getElementById('app');
     this.routesManifest = routesManifest;
-
+    
     // Validate provided routes manifest structure on initialization
     this.validateManifest();
     this.init();
@@ -65,17 +66,25 @@ export class Router {
     // 1. Normalize path
     let cleanPath = path === '/' ? '/home' : path;
 
-    // 2. ADMIN GUARD CHECK (Executes BEFORE fetching templates)
-    if (cleanPath === '/admin' && !authManager.isAdminAuthenticated()) {
-      console.warn('[Router Guard]: Access denied to /admin. User is not authenticated as admin.');
+    // 2. ADMIN GUARD CHECK (Bypassed if Dev Mode is ON or User is Admin)
+    const isDevModeActive = store.state.devMode === true;
+    const isAdminAuth = authManager.isAdminAuthenticated();
+
+    if (cleanPath === '/admin' && !isAdminAuth && !isDevModeActive) {
+      console.warn('[Router Guard]: Access denied to /admin. User is not authenticated as admin and Dev Mode is OFF.');
       
       this.appContainer.innerHTML = `
-        <section class="admin-lock-screen" style="text-align: center; padding: 4rem 2rem;">
+        <section class="admin-lock-screen" style="text-align: center; padding: 4rem 2rem; font-family: system-ui, sans-serif;">
           <h1>🔒 Admin Authorization Required</h1>
-          <p>Please log in with an authorized Google Admin account to access control settings.</p>
-          <button id="admin-login-btn" style="padding: 12px 24px; font-size: 16px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
-            Sign In with Google
-          </button>
+          <p style="color: #4a5568; margin-bottom: 1.5rem;">Please log in with an authorized Google Admin account or enable Dev Mode to access control settings.</p>
+          <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button id="admin-login-btn" style="padding: 12px 24px; font-size: 16px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+              Sign In with Google
+            </button>
+            <button id="dev-bypass-btn" style="padding: 12px 24px; font-size: 16px; background: #38a169; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+              Enable Dev Mode Bypass
+            </button>
+          </div>
         </section>
       `;
 
@@ -84,7 +93,16 @@ export class Router {
         this.loadRoute('/admin');
       });
 
+      document.getElementById('dev-bypass-btn')?.addEventListener('click', () => {
+        store.dispatch('SET_DEV_MODE', true);
+        this.loadRoute('/admin');
+      });
+
       return;
+    }
+
+    if (cleanPath === '/admin' && isDevModeActive) {
+      console.log('[Router Guard]: Dev Mode Active -> Granting direct access to /admin view.');
     }
 
     // 3. Determine view HTML template location
@@ -130,7 +148,6 @@ export class Router {
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: path } 
       }));
-
     } catch (err) {
       throw new Error(`Routing Failed: ${err.message}`);
     }
@@ -138,7 +155,6 @@ export class Router {
 
   updateMetadata(path) {
     const routeInfo = this.routesManifest[path];
-
     if (routeInfo) {
       document.title = `${routeInfo.title} | Foundation`;
       if (routeInfo.description) {
