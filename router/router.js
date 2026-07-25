@@ -64,23 +64,40 @@ export class Router {
 
   async loadRoute(path) {
     // 1. Normalize path
-    let cleanPath = path || '/';
+    let rawPath = path || '/';
 
-    // Strip trailing slash if present (unless root '/')
-    if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
-      cleanPath = cleanPath.slice(0, -1);
+    // Remove index.html if present
+    if (rawPath.endsWith('/index.html')) {
+      rawPath = rawPath.replace(/\/index\.html$/, '');
     }
 
-    // Normalize root or index.html to default '/home'
-    if (cleanPath === '/' || cleanPath.endsWith('/index.html') || cleanPath === './') {
+    // Remove trailing slash if present (except for root '/')
+    if (rawPath.length > 1 && rawPath.endsWith('/')) {
+      rawPath = rawPath.slice(0, -1);
+    }
+
+    // Extract path segments (e.g. '/foundation/admin' -> ['foundation', 'admin'])
+    const segments = rawPath.split('/').filter(Boolean);
+    let cleanPath = '/home';
+
+    if (segments.length === 0) {
+      // Root domain '/'
       cleanPath = '/home';
-    }
+    } else {
+      const lastSegment = `/${segments[segments.length - 1]}`;
 
-    // Extract subroute key if running under a repository subpath (e.g. /foundation/admin -> /admin)
-    if (!this.routesManifest[cleanPath]) {
-      const lastSegment = cleanPath.split('/').filter(Boolean).pop();
-      if (lastSegment && this.routesManifest[`/${lastSegment}`]) {
-        cleanPath = `/${lastSegment}`;
+      if (this.routesManifest[rawPath]) {
+        // Direct match (e.g. '/admin' on root domain)
+        cleanPath = rawPath;
+      } else if (this.routesManifest[lastSegment]) {
+        // Subpath match (e.g. '/foundation/admin' -> '/admin')
+        cleanPath = lastSegment;
+      } else if (segments.length === 1) {
+        // Single segment not in manifest (e.g. '/foundation' on GitHub Pages) -> Repository Root!
+        cleanPath = '/home';
+      } else {
+        // Unknown multi-segment route -> 404
+        cleanPath = '/404';
       }
     }
 
@@ -162,7 +179,7 @@ export class Router {
       // Accessibility: Shift focus to main app wrapper on transition
       this.appContainer.focus();
 
-      // Dispatch event so page controllers (initAdminPage, initHomePage) know when to mount
+      // Dispatch event so page controllers know when to mount
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: path } 
       }));
