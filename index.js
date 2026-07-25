@@ -17,6 +17,10 @@ import { runStoreTests } from './core/test-store.js';
 import { runRouterTests } from './router/test-router.js';
 import { runServicesTests } from './core/test-services.js';
 
+// Page Controllers
+import { initAdminPage } from './pages/admin/admin.js';
+import { initHomePage } from './pages/home/home.js';
+
 logger.info('Foundation Core initializing...');
 
 /**
@@ -55,6 +59,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       description: 'Welcome to Foundation - A custom zero-build web framework.',
       viewPath: './pages/home/home.html'
     },
+    '/about': {
+      title: 'About Me',
+      description: 'Learn more about the creator and platform architect.',
+      viewPath: './pages/about.html'
+    },
+    '/events': {
+      title: 'Events & Live Meets',
+      description: 'Upcoming webinars and interactive video sessions.',
+      viewPath: './pages/events/events.html'
+    },
+    '/contact': {
+      title: 'Contact & Appointments',
+      description: 'Schedule a consultation or send an inquiry.',
+      viewPath: './pages/contact/contact.html'
+    },
     '/admin': {
       title: 'Admin Dashboard',
       description: 'Manage settings and site metadata.',
@@ -73,6 +92,12 @@ window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
   if (e.detail.path === '/home') {
     initHomePage();
+  } else if (e.detail.path === '/about') {
+    import('./pages/about.js').then(m => m.initAboutPage());
+  } else if (e.detail.path === '/events') {
+    import('./pages/events/events.js').then(m => m.initEventsPage());
+  } else if (e.detail.path === '/contact') {
+    import('./pages/contact/contact.js').then(m => m.initContactPage());
   } else if (e.detail.path === '/admin') {
     initAdminPage();
   }

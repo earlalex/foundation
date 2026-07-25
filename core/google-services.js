@@ -90,6 +90,99 @@ export async function createGoogleCalendarEvent(eventData) {
   }
 }
 
+/**
+ * Query Google Calendar freeBusy endpoint & calculate available slots
+ */
+export async function getAvailableAppointmentSlots(targetDateStr) {
+  const token = await getAccessToken();
+  const bizProfile = configManager.current?.businessProfile || {};
+  
+  const apptOpen = bizProfile.apptOpen || '10:00';
+  const apptClose = bizProfile.apptClose || '16:00';
+  const durationMins = parseInt(bizProfile.slotDuration || '30', 10);
+
+  const dayStartIso = new Date(`${targetDateStr}T${apptOpen}:00`).toISOString();
+  const dayEndIso = new Date(`${targetDateStr}T${apptClose}:00`).toISOString();
+
+  let busyIntervals = [];
+
+  if (token) {
+    try {
+      const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          timeMin: dayStartIso,
+          timeMax: dayEndIso,
+          items: [{ id: 'primary' }]
+        })
+      });
+      const data = await response.json();
+      busyIntervals = data.calendars?.primary?.busy || [];
+    } catch (err) {
+      console.warn('[Google Calendar Free/Busy]: Error querying calendar. Falling back to operating hours.', err);
+    }
+  }
+
+  const slots = [];
+  let currentTime = new Date(`${targetDateStr}T${apptOpen}:00`);
+  const endTime = new Date(`${targetDateStr}T${apptClose}:00`);
+
+  while (currentTime.getTime() + durationMins * 60000 <= endTime.getTime()) {
+    const slotStart = new Date(currentTime);
+    const slotEnd = new Date(slotStart.getTime() + durationMins * 60000);
+
+    const isBusy = busyIntervals.some(busy => {
+      const busyStart = new Date(busy.start).getTime();
+      const busyEnd = new Date(busy.end).getTime();
+      return (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart);
+    });
+
+    if (!isBusy) {
+      const formattedLabel = slotStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      slots.push({
+        time: slotStart.toTimeString().substring(0, 5),
+        label: formattedLabel,
+        isoStart: slotStart.toISOString(),
+        isoEnd: slotEnd.toISOString()
+      });
+    }
+
+    currentTime = new Date(currentTime.getTime() + durationMins * 60000);
+  }
+
+  return slots;
+}
+
+/**
+ * Confirm and schedule an appointment in Google Calendar with Google Meet video link
+ */
+export async function bookAppointmentSlot({ name, email, date, timeSlot, notes }) {
+  const bizProfile = configManager.current?.businessProfile || {};
+  const durationMins = parseInt(bizProfile.slotDuration || '30', 10);
+
+  const startIso = `${date}T${timeSlot}:00`;
+  const startDate = new Date(startIso);
+  const endDate = new Date(startDate.getTime() + durationMins * 60000);
+
+  const eventPayload = {
+    title: `Consultation Meeting: ${name}`,
+    description: `Appointment booked via website contact portal.\n\nClient: ${name}\nEmail: ${email}\nNotes: ${notes || 'N/A'}`,
+    location: 'Google Meet Video Session',
+    eventType: 'google-meet',
+    date: date,
+    startTime: timeSlot,
+    endTime: endDate.toTimeString().substring(0, 5),
+    attendeeEmail: email
+  };
+
+  const calResult = await createGoogleCalendarEvent(eventPayload);
+  return calResult;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                   2. GOOGLE CONTACTS & ROLE LABEL SYNC                     */
 /* -------------------------------------------------------------------------- */
@@ -122,9 +215,6 @@ export async function createGoogleContact(contact) {
   }
 }
 
-/**
- * Synchronize user role labels directly into Google Contacts
- */
 export async function syncGoogleContactRole(user) {
   const token = await getAccessToken();
   if (!token) return false;
@@ -132,7 +222,6 @@ export async function syncGoogleContactRole(user) {
   const roleLabel = user.role === 'affiliate' ? 'Affiliate Member' : user.role === 'member' ? 'Member' : 'Subscriber';
 
   try {
-    // Search existing contact by email
     const searchRes = await fetch(`https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(user.email)}&readMask=names,emailAddresses,userDefined`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -140,12 +229,10 @@ export async function syncGoogleContactRole(user) {
     const existingPerson = searchData.results?.[0]?.person;
 
     if (existingPerson) {
-      // Update existing Google Contact role metadata
       const resourceName = existingPerson.resourceName;
       const etag = existingPerson.etag;
       const userDefined = existingPerson.userDefined || [];
 
-      // Update or insert UserRole attribute
       const roleIdx = userDefined.findIndex(u => u.key === 'UserRole');
       if (roleIdx >= 0) {
         userDefined[roleIdx].value = roleLabel;
@@ -159,14 +246,9 @@ export async function syncGoogleContactRole(user) {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          etag,
-          userDefined
-        })
+        body: JSON.stringify({ etag, userDefined })
       });
-      console.log(`[Google Contacts]: Updated role label "${roleLabel}" for ${user.email}`);
     } else {
-      // Contact doesn't exist yet -> Create new contact with label
       await createGoogleContact({ name: user.name, email: user.email, role: roleLabel });
     }
     return true;
@@ -214,9 +296,6 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
   }
 }
 
-/**
- * Dispatch personalized mass email to array of target user addresses
- */
 export async function sendBulkGmail({ recipientList, subject, messageBody }) {
   const token = await getAccessToken();
   if (!token || !Array.isArray(recipientList) || recipientList.length === 0) return { sentCount: 0, failedCount: 0 };
@@ -235,11 +314,8 @@ export async function sendBulkGmail({ recipientList, subject, messageBody }) {
       messageBody: personalizedBody
     });
 
-    if (success) {
-      sentCount++;
-    } else {
-      failedCount++;
-    }
+    if (success) sentCount++;
+    else failedCount++;
   }
 
   return { sentCount, failedCount };
@@ -268,7 +344,6 @@ export async function getSearchConsolePerformance(siteUrl) {
       })
     });
     const data = await response.json();
-    console.log('[Search Console Data]:', data);
     return data;
   } catch (err) {
     errorHandler.handleError(new Error(`Failed to fetch Search Console data: ${err.message}`));
@@ -301,7 +376,6 @@ export async function getSearchConsoleNotifications() {
 export async function requestSearchConsoleCrawl(targetUrl) {
   const token = await getAccessToken();
   if (!token) {
-    console.log(`[Search Console Crawl]: Queued ${targetUrl} for re-indexing.`);
     return {
       success: true,
       url: targetUrl,
@@ -329,7 +403,6 @@ export async function requestSearchConsoleCrawl(targetUrl) {
 
 export async function getSearchConsoleSecurityIssues() {
   const token = await getAccessToken();
-  
   if (!token) {
     return {
       status: 'Clean',
@@ -369,7 +442,7 @@ export async function getSearchConsoleSecurityIssues() {
         },
         unnaturalLinksSpam: { 
           flagged: issues.some(i => i.type?.includes('UNNATURAL_LINKS') || i.type?.includes('SPAM')), 
-          status: issues.find(i => i.type?.includes('UNNATURAL_LINKS') || i.type?.includes('SPAM'))?.details || 'No manual action link penalties' 
+          status: issues.find(i => i.type?.includes('UNNATURAL_LINKS'))?.details || 'No manual action link penalties' 
         },
         malwareHarmfulDownloads: { 
           flagged: issues.some(i => i.type?.includes('MALWARE')), 
