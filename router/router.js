@@ -70,7 +70,7 @@ export class Router {
   async loadRoute(fullPath) {
     // 0. FIRST-RUN SETUP WIZARD GUARD
     const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
-    if (!isConfigured && !this.isTestInstance) {
+    if (!isConfigured && !this.isTestInstance && !window.__FOUNDATION_DEV_BYPASS__) {
       this.renderSetupWizard();
       return;
     }

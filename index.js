@@ -37,7 +37,7 @@ window.foundationDevBypass = function() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Initialize Firestore Master Configuration
-  await configManager.init();
+  const isInstalled = await configManager.init();
 
   // 2. Initialize Top Global Navbar Header
   initNavbar();
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     logger.groupEnd();
   }
-  
+
   // 4. Mount Router
   window.router = new Router({
     '/home': {
@@ -94,12 +94,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       viewPath: './pages/404.html'
     }
   });
+
+  // 5. Hard Guard: If platform is unconfigured/uninstalled, force Setup Wizard immediately
+  if (!isInstalled && !window.__FOUNDATION_DEV_BYPASS__) {
+    logger.warn('[Core]: Platform unconfigured. Intercepting route to render Setup Wizard.');
+    window.router.renderSetupWizard();
+  }
 });
 
 // Single Unified Page Lifecycle Listener
 window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
-  
   if (e.detail.path === '/home') {
     initHomePage();
   } else if (e.detail.path === '/about') {
