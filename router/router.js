@@ -190,12 +190,26 @@ export class Router {
             <button id="admin-login-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
               Sign In with Google Workspace
             </button>
+            <div id="admin-login-error" style="color: #e53e3e; font-size: 0.85rem; margin-top: 1rem; padding: 10px; border-radius: 6px; background: #fff5f5; border: 1px solid #fed7d7; display: none; text-align: left; line-height: 1.4;"></div>
           </section>
         `;
 
         document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
-          await authManager.loginWithGoogle();
-          this.loadRoute('/admin');
+          const errorContainer = document.getElementById('admin-login-error');
+          if (errorContainer) {
+            errorContainer.style.display = 'none';
+            errorContainer.textContent = '';
+          }
+
+          try {
+            await authManager.loginWithGoogle();
+            this.loadRoute('/admin');
+          } catch (err) {
+            if (errorContainer) {
+              errorContainer.textContent = err.message || 'An unknown error occurred during sign-in.';
+              errorContainer.style.display = 'block';
+            }
+          }
         });
         return;
       }

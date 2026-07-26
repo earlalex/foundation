@@ -71,7 +71,16 @@ export class AuthManager {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
-      errorHandler.handleError(new Error(`Google Sign-In Failed: ${err.message}`));
+      let customError;
+      if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('auth/unauthorized-domain'))) {
+        customError = new Error(
+          `Unauthorized Domain: Please add "${window.location.hostname}" (or your base domain "foundation-5b8.pages.dev") to your Firebase Console -> Authentication -> Settings -> Authorized Domains list.`
+        );
+      } else {
+        customError = new Error(`Google Sign-In Failed: ${err.message}`);
+      }
+      errorHandler.handleError(customError);
+      throw customError;
     }
   }
 
