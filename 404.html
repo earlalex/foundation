@@ -2,22 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Foundation Redirecting...</title>
+  <title>Foundation Navigation</title>
   <script>
-    // GitHub Pages SPA Subroute Preservation
     const l = window.location;
-    const pathSegments = l.pathname.split('/').filter(Boolean);
-    
-    // Extract repo name (first segment) and intended subroute (e.g., /admin)
-    const repoName = pathSegments[0] || '';
-    const targetRoute = '/' + pathSegments.slice(1).join('/');
-
-    if (targetRoute && targetRoute !== '/') {
-      sessionStorage.setItem('foundation_spa_route', targetRoute);
+    // Handle GitHub Pages SPA subroute preservation without looping on Cloudflare or custom domains
+    if (l.hostname.endsWith('github.io')) {
+      const pathSegments = l.pathname.split('/').filter(Boolean);
+      const repoName = pathSegments[0] || '';
+      const targetRoute = '/' + pathSegments.slice(1).join('/');
+      if (targetRoute && targetRoute !== '/') {
+        sessionStorage.setItem('foundation_spa_route', targetRoute);
+      }
+      window.location.replace(l.origin + '/' + repoName + '/');
+    } else {
+      window.location.replace(l.origin + '/index.html');
     }
-
-    // Redirect to repo root index.html cleanly
-    window.location.replace(l.origin + '/' + repoName + '/');
   </script>
 </head>
 <body>

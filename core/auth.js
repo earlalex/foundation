@@ -1,5 +1,5 @@
 // core/auth.js
-import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -14,11 +14,11 @@ import { configManager } from './config.js';
 export function getFirebaseApp() {
   const currentFbConfig = configManager.current.firebase;
   const isConfigured = currentFbConfig && 
-                       currentFbConfig.projectId && 
-                       currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
-                       currentFbConfig.projectId !== "demo-foundation-app" &&
-                       currentFbConfig.apiKey !== "" &&
-                       currentFbConfig.apiKey !== "YOUR_API_KEY";
+                        currentFbConfig.projectId && 
+                        currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
+                        currentFbConfig.projectId !== "demo-foundation-app" &&
+                        currentFbConfig.apiKey !== "" &&
+                        currentFbConfig.apiKey !== "YOUR_API_KEY";
 
   const firebaseConfig = isConfigured ? currentFbConfig : {
     apiKey: "AIzaSy_DEMO_KEY_FOUNDATION",

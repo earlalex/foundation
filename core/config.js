@@ -5,7 +5,7 @@ import { errorHandler } from './error-handler.js';
 export const defaultConfig = {
   siteTitle: "Foundation Framework",
   siteTagline: "A zero-build web framework",
-  siteDomain: window.location.origin,
+  siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
   adminEmails: [],
   firebase: {
@@ -45,34 +45,43 @@ class ConfigEngine {
   async init() {
     this.#loadFromLocalStorage();
 
-    // GUARD: If no real Firebase project ID is configured locally, skip Firestore network query
     const fb = this.#activeConfig.firebase;
-    if (!fb || !fb.projectId || fb.projectId === "YOUR_PROJECT_ID" || fb.projectId === "demo-foundation-app" || !fb.apiKey) {
-      console.warn('[ConfigEngine]: Unconfigured environment. Displaying Setup Wizard.');
+    const hasLocalKeys = fb && fb.projectId && fb.projectId !== "YOUR_PROJECT_ID" && fb.projectId !== "demo-foundation-app" && fb.apiKey && fb.apiKey !== "YOUR_API_KEY";
+
+    // Unconfigured environment
+    if (!hasLocalKeys && !this.#activeConfig.isInstalled) {
+      console.warn('[ConfigEngine]: Unconfigured environment. Setup Wizard required.');
       return false;
     }
 
+    // Try verifying master config from Firestore
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
       
       const docSnap = await Promise.race([
         getDoc(configRef),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore fetch timeout')), 2500))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 2000))
       ]);
 
       if (docSnap && docSnap.exists()) {
-        this.#activeConfig = { ...defaultConfig, ...docSnap.data() };
-        localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
-        console.log('[ConfigEngine]: Master configuration loaded from Firestore.');
-        return this.#activeConfig.isInstalled && this.#activeConfig.adminEmails?.length > 0;
+        const firestoreData = docSnap.data();
+        this.#activeConfig = { ...defaultConfig, ...firestoreData, isInstalled: true };
+        
+        // Setup complete & verified in Firestore -> Clean up temporary LocalStorage credentials
+        localStorage.removeItem('foundation_config');
+        console.log('[ConfigEngine]: Master configuration verified from Firestore. Local storage cleared.');
+        return true;
+      } else if (hasLocalKeys) {
+        console.log('[ConfigEngine]: Local setup credentials loaded. Attempting initial sync to Firestore...');
+        await this.syncToFirestore();
+        return true;
       } else {
-        console.warn('[ConfigEngine]: No config found in Firestore. First-Run Setup Required.');
         return false;
       }
     } catch (err) {
-      console.warn('[ConfigEngine]: Firestore fetch skipped or offline.', err.message);
-      return false;
+      console.warn('[ConfigEngine]: Operating with active local setup configuration.', err.message);
+      return this.#activeConfig.isInstalled && this.#activeConfig.adminEmails?.length > 0;
     }
   }
 
@@ -80,7 +89,7 @@ class ConfigEngine {
     return this.#activeConfig || defaultConfig;
   }
 
-  async saveToFirebase(configPayload) {
+  async saveSetupCredentials(configPayload) {
     this.#activeConfig = {
       ...this.#activeConfig,
       ...configPayload,
@@ -88,23 +97,31 @@ class ConfigEngine {
       updatedAt: new Date().toISOString()
     };
 
-    // Save locally first so the app can recover and re-initialize Firebase on reload
+    // 1. Persist setup credentials to LocalStorage for recovery on page reload
     localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
+    console.log('[ConfigEngine]: Credentials saved to LocalStorage.');
 
+    // 2. Attempt background sync to Firestore
+    await this.syncToFirestore();
+    return true;
+  }
+
+  async syncToFirestore() {
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
 
-      // Use a timeout so network hangs on dummy/unauthenticated Firebase instances never freeze the UI button
       await Promise.race([
         setDoc(configRef, this.#activeConfig, { merge: true }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 1500))
       ]);
 
-      console.log('[ConfigEngine]: Configuration saved to Firestore successfully.');
+      console.log('[ConfigEngine]: Configuration synced to Firestore successfully.');
+      // Cleanup LocalStorage after successful Firestore sync
+      localStorage.removeItem('foundation_config');
       return true;
     } catch (err) {
-      console.warn('[ConfigEngine]: Configuration persisted locally. Firestore sync pending reload/auth.');
+      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending admin login/database rules.');
       return true;
     }
   }

@@ -66,8 +66,8 @@ export class Router {
 
   async navigateTo(path) {
     const currentFull = window.location.pathname + window.location.search;
-    const cleanTarget = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
-    const cleanCurrent = currentFull.length > 1 && currentFull.endsWith('/') ? currentFull.slice(0, -1) : currentFull;
+    let cleanTarget = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+    let cleanCurrent = currentFull.length > 1 && currentFull.endsWith('/') ? currentFull.slice(0, -1) : currentFull;
 
     if (cleanCurrent !== cleanTarget) {
       window.history.pushState({}, '', cleanTarget);
@@ -95,7 +95,6 @@ export class Router {
         rawPath = rawPath.replace(/\/index\.html$/, '');
       }
       
-      // Normalize trailing slashes strictly without causing browser redirects
       while (rawPath.length > 1 && rawPath.endsWith('/')) {
         rawPath = rawPath.slice(0, -1);
       }
@@ -238,12 +237,9 @@ export class Router {
         isInstalled: true
       };
 
-      await configManager.saveToFirebase(payload);
-      
-      // Update local router state safely without triggering a page reload loop
-      this.#isLoading = false;
-      window.history.replaceState({}, '', '/home');
-      await this.loadRoute('/home');
+      await configManager.saveSetupCredentials(payload);
+      // Reload page cleanly so Firebase initializes with the saved keys on boot
+      window.location.href = window.location.origin + '/home';
     });
   }
 

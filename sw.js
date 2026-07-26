@@ -1,5 +1,5 @@
-// sw.js - Production Service Worker v3
-const CACHE_NAME = 'foundation-prod-v3';
+// sw.js - Production Service Worker v4
+const CACHE_NAME = 'foundation-prod-v4';
 const PRECACHE_ASSETS = [
   './',
   './index.html',

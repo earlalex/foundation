@@ -36,7 +36,7 @@ window.foundationDevBypass = function() {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Initialize Firestore Master Configuration
+  // 1. Initialize Master Configuration (reads LocalStorage / Firestore)
   const isInstalled = await configManager.init();
 
   // 2. Boot Test Suites in Dev Mode
