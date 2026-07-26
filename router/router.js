@@ -17,6 +17,13 @@ export class Router {
     this.appContainer = document.getElementById('app');
     this.routesManifest = routesManifest;
     this.isTestInstance = isTestInstance;
+
+    // Calculate the repository or base path prefix of the SPA
+    let path = window.location.pathname;
+    if (path.endsWith('/index.html')) {
+      path = path.replace(/\/index\.html$/, '');
+    }
+    this.basePath = path.endsWith('/') ? path : path + '/';
     
     this.validateManifest();
     this.bindClickEvents();
@@ -55,22 +62,71 @@ export class Router {
     const storedRoute = sessionStorage.getItem('foundation_spa_route');
     if (storedRoute) {
       sessionStorage.removeItem('foundation_spa_route');
-      const repoPrefix = window.location.pathname.replace(/\/$/, '');
+      let repoPrefix = window.location.pathname;
+      if (repoPrefix.endsWith('/index.html')) {
+        repoPrefix = repoPrefix.replace(/\/index\.html$/, '');
+      }
+      repoPrefix = repoPrefix.replace(/\/$/, '');
+
       const fullUrl = repoPrefix + storedRoute;
       window.history.replaceState({}, '', fullUrl);
       await this.loadRoute(storedRoute);
     } else {
-      await this.loadRoute(window.location.pathname + window.location.search);
+      let currentPath = window.location.pathname + window.location.search;
+      // Normalize trailing slash and index.html in the current browser URL
+      let urlObj = new URL(currentPath, window.location.origin);
+      let pathname = urlObj.pathname || '/';
+      let originalPathname = pathname;
+
+      if (pathname.endsWith('/index.html')) {
+        pathname = pathname.replace(/\/index\.html$/, '');
+      }
+      while (pathname.length > 1 && pathname.endsWith('/')) {
+        pathname = pathname.slice(0, -1);
+      }
+
+      if (pathname !== originalPathname) {
+        const cleanUrl = pathname + urlObj.search;
+        window.history.replaceState({}, '', cleanUrl);
+        await this.loadRoute(cleanUrl);
+      } else {
+        await this.loadRoute(currentPath);
+      }
     }
   }
 
   async navigateTo(path) {
-    const currentFull = window.location.pathname + window.location.search;
-    let cleanTarget = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
-    let cleanCurrent = currentFull.length > 1 && currentFull.endsWith('/') ? currentFull.slice(0, -1) : currentFull;
+    // Normalize target path (remove leading/trailing slashes for comparison)
+    let cleanTarget = path;
+    if (cleanTarget.endsWith('/')) {
+      cleanTarget = cleanTarget.slice(0, -1);
+    }
+    if (!cleanTarget.startsWith('/')) {
+      cleanTarget = '/' + cleanTarget;
+    }
 
-    if (cleanCurrent !== cleanTarget) {
-      window.history.pushState({}, '', cleanTarget);
+    const currentFull = window.location.pathname + window.location.search;
+    let cleanCurrent = currentFull;
+    if (cleanCurrent.endsWith('/')) {
+      cleanCurrent = cleanCurrent.slice(0, -1);
+    }
+    if (!cleanCurrent.startsWith('/')) {
+      cleanCurrent = '/' + cleanCurrent;
+    }
+
+    // Strip basePath from cleanCurrent to get the relative route path
+    let relativeCurrent = cleanCurrent;
+    if (this.basePath !== '/' && cleanCurrent.startsWith(this.basePath.slice(0, -1))) {
+      relativeCurrent = cleanCurrent.slice(this.basePath.length - 1);
+    }
+    if (!relativeCurrent.startsWith('/')) {
+      relativeCurrent = '/' + relativeCurrent;
+    }
+
+    if (relativeCurrent !== cleanTarget) {
+      // Build the full URL to push to history
+      const pushUrl = this.basePath + cleanTarget.replace(/^\//, '');
+      window.history.pushState({}, '', pushUrl);
       await this.loadRoute(cleanTarget);
     }
   }
@@ -99,20 +155,22 @@ export class Router {
         rawPath = rawPath.slice(0, -1);
       }
 
-      const segments = rawPath.split('/').filter(Boolean);
-      let cleanPath = '/home';
+      // Strip basePath prefix to get the clean relative path
+      let relPath = rawPath;
+      if (this.basePath !== '/' && rawPath.startsWith(this.basePath.slice(0, -1))) {
+        relPath = rawPath.slice(this.basePath.length - 1);
+      }
+      if (!relPath.startsWith('/')) {
+        relPath = '/' + relPath;
+      }
 
-      if (segments.length === 0 || rawPath === '/' || rawPath === './') {
+      let cleanPath = '/home';
+      if (relPath === '/' || relPath === '/home' || relPath === '') {
         cleanPath = '/home';
+      } else if (this.routesManifest[relPath]) {
+        cleanPath = relPath;
       } else {
-        const lastSegment = `/${segments[segments.length - 1]}`;
-        if (this.routesManifest[rawPath]) {
-          cleanPath = rawPath;
-        } else if (this.routesManifest[lastSegment]) {
-          cleanPath = lastSegment;
-        } else {
-          cleanPath = '/404';
-        }
+        cleanPath = '/404';
       }
 
       // 2. HARDENED ADMIN GUARD CHECK
@@ -155,16 +213,28 @@ export class Router {
         }
       }
 
-      let response = await fetch(viewPath);
+      // Resolve viewPath relative to the SPA base path
+      let resolvedViewPath = viewPath;
+      if (viewPath.startsWith('./')) {
+        resolvedViewPath = this.basePath + viewPath.slice(2);
+      } else if (viewPath.startsWith('pages/')) {
+        resolvedViewPath = this.basePath + viewPath;
+      }
+
+      let response = await fetch(resolvedViewPath);
       if (!response.ok) {
         cleanPath = '/404';
-        response = await fetch('./pages/404.html');
+        const fallbackPath = this.basePath + 'pages/404.html';
+        response = await fetch(fallbackPath);
       }
       const htmlContent = await response.text();
 
       this.appContainer.innerHTML = htmlContent;
       this.updateMetadata(cleanPath);
       this.appContainer.focus();
+
+      // Dispatch PUSH_HISTORY to store
+      store.dispatch('PUSH_HISTORY', cleanPath);
 
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: fullPath, query: urlObj.search } 
