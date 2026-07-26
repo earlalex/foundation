@@ -1,4 +1,3 @@
-// core/config.js
 import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { errorHandler } from './error-handler.js';
 
@@ -48,13 +47,11 @@ class ConfigEngine {
     const fb = this.#activeConfig.firebase;
     const hasLocalKeys = fb && fb.projectId && fb.projectId !== "YOUR_PROJECT_ID" && fb.projectId !== "demo-foundation-app" && fb.apiKey && fb.apiKey !== "YOUR_API_KEY";
 
-    // Unconfigured environment
     if (!hasLocalKeys && !this.#activeConfig.isInstalled) {
       console.warn('[ConfigEngine]: Unconfigured environment. Setup Wizard required.');
       return false;
     }
 
-    // Try verifying master config from Firestore
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
@@ -67,10 +64,8 @@ class ConfigEngine {
       if (docSnap && docSnap.exists()) {
         const firestoreData = docSnap.data();
         this.#activeConfig = { ...defaultConfig, ...firestoreData, isInstalled: true };
-        
-        // Setup complete & verified in Firestore -> Clean up temporary LocalStorage credentials
         localStorage.removeItem('foundation_config');
-        console.log('[ConfigEngine]: Master configuration verified from Firestore. Local storage cleared.');
+        console.log('[ConfigEngine]: Master configuration verified from Firestore.');
         return true;
       } else if (hasLocalKeys) {
         console.log('[ConfigEngine]: Local setup credentials loaded. Attempting initial sync to Firestore...');
@@ -89,6 +84,10 @@ class ConfigEngine {
     return this.#activeConfig || defaultConfig;
   }
 
+  async saveToFirebase(configPayload) {
+    return await this.saveSetupCredentials(configPayload);
+  }
+
   async saveSetupCredentials(configPayload) {
     this.#activeConfig = {
       ...this.#activeConfig,
@@ -97,11 +96,9 @@ class ConfigEngine {
       updatedAt: new Date().toISOString()
     };
 
-    // 1. Persist setup credentials to LocalStorage for recovery on page reload
     localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
     console.log('[ConfigEngine]: Credentials saved to LocalStorage.');
 
-    // 2. Attempt background sync to Firestore
     await this.syncToFirestore();
     return true;
   }
@@ -113,15 +110,14 @@ class ConfigEngine {
 
       await Promise.race([
         setDoc(configRef, this.#activeConfig, { merge: true }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 1500))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 2000))
       ]);
 
       console.log('[ConfigEngine]: Configuration synced to Firestore successfully.');
-      // Cleanup LocalStorage after successful Firestore sync
       localStorage.removeItem('foundation_config');
       return true;
     } catch (err) {
-      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending admin login/database rules.');
+      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.');
       return true;
     }
   }
