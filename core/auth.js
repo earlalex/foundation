@@ -1,5 +1,5 @@
 // core/auth.js
-import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { 
   getAuth, 
   GoogleAuthProvider, 
