@@ -1,5 +1,5 @@
 // core/auth.js
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -11,21 +11,28 @@ import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
 
-const currentFbConfig = configManager.current.firebase;
+export function getFirebaseApp() {
+  const currentFbConfig = configManager.current.firebase;
+  const isConfigured = currentFbConfig && 
+                       currentFbConfig.projectId && 
+                       currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
+                       currentFbConfig.projectId !== "demo-foundation-app" &&
+                       currentFbConfig.apiKey !== "" &&
+                       currentFbConfig.apiKey !== "YOUR_API_KEY";
 
-// Validate that Firebase credentials are not unconfigured placeholders
-const isConfigured = currentFbConfig && 
-                     currentFbConfig.projectId && 
-                     currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
-                     currentFbConfig.apiKey !== "YOUR_API_KEY";
+  const firebaseConfig = isConfigured ? currentFbConfig : {
+    apiKey: "AIzaSy_DEMO_KEY_FOUNDATION",
+    authDomain: "demo.firebaseapp.com",
+    projectId: "demo-foundation-app"
+  };
 
-const firebaseConfig = isConfigured ? currentFbConfig : {
-  apiKey: "AIzaSy_DEMO_KEY_FOUNDATION",
-  authDomain: "demo.firebaseapp.com",
-  projectId: "demo-foundation-app"
-};
+  if (!getApps().length) {
+    return initializeApp(firebaseConfig);
+  }
+  return getApp();
+}
 
-const app = initializeApp(firebaseConfig);
+const app = getFirebaseApp();
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
@@ -39,7 +46,6 @@ export class AuthManager {
       if (user) {
         const adminEmails = configManager.current.adminEmails || [];
         const isAdmin = adminEmails.includes(user.email);
-
         store.dispatch('SET_USER', {
           uid: user.uid,
           email: user.email,

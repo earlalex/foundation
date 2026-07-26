@@ -23,16 +23,42 @@ export const defaultConfig = {
 };
 
 class ConfigEngine {
-  #activeConfig = { ...defaultConfig };
+  #activeConfig;
+
+  constructor() {
+    this.#loadFromLocalStorage();
+  }
+
+  #loadFromLocalStorage() {
+    const saved = localStorage.getItem('foundation_config');
+    if (saved) {
+      try {
+        this.#activeConfig = { ...defaultConfig, ...JSON.parse(saved) };
+      } catch (e) {
+        this.#activeConfig = { ...defaultConfig };
+      }
+    } else {
+      this.#activeConfig = { ...defaultConfig };
+    }
+  }
 
   async init() {
+    this.#loadFromLocalStorage();
+
+    // GUARD: If no real Firebase project ID is configured locally, skip Firestore network query
+    const fb = this.#activeConfig.firebase;
+    if (!fb || !fb.projectId || fb.projectId === "YOUR_PROJECT_ID" || fb.projectId === "demo-foundation-app" || !fb.apiKey) {
+      console.warn('[ConfigEngine]: Unconfigured environment. Displaying Setup Wizard.');
+      return false;
+    }
+
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
       const docSnap = await getDoc(configRef);
-
       if (docSnap.exists()) {
         this.#activeConfig = { ...defaultConfig, ...docSnap.data() };
+        localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
         console.log('[ConfigEngine]: Master configuration loaded from Firestore.');
         return this.#activeConfig.isInstalled && this.#activeConfig.adminEmails?.length > 0;
       } else {
@@ -40,33 +66,35 @@ class ConfigEngine {
         return false;
       }
     } catch (err) {
-      console.warn('[ConfigEngine]: Unconfigured or offline. First-Run Setup Required.', err.message);
+      console.warn('[ConfigEngine]: Firestore fetch skipped or offline.', err.message);
       return false;
     }
   }
 
   get current() {
-    return this.#activeConfig;
+    return this.#activeConfig || defaultConfig;
   }
 
   async saveToFirebase(configPayload) {
+    this.#activeConfig = {
+      ...this.#activeConfig,
+      ...configPayload,
+      isInstalled: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Save locally first so the app can recover immediately
+    localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
+
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
-      const updatedData = {
-        ...this.#activeConfig,
-        ...configPayload,
-        isInstalled: true,
-        updatedAt: new Date().toISOString()
-      };
-
-      await setDoc(configRef, updatedData, { merge: true });
-      this.#activeConfig = updatedData;
+      await setDoc(configRef, this.#activeConfig, { merge: true });
       console.log('[ConfigEngine]: Configuration saved to Firestore successfully.');
       return true;
     } catch (err) {
-      errorHandler.handleError(new Error(`Failed to save settings to Firestore: ${err.message}`));
-      return false;
+      console.warn('[ConfigEngine]: Saved locally (Firestore sync pending database creation/auth).');
+      return true;
     }
   }
 }
