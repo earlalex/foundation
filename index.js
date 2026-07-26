@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logger.groupEnd();
   }
 
-  // 3. Mount Router
+  // 3. Mount Router Instance
   window.router = new Router({
     '/home': {
       title: 'Home',
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. Initialize Top Global Navbar Header
   initNavbar();
 
-  // 5. Hard Guard: If uninstalled, render Setup Wizard. Otherwise, start router.
+  // 5. Hard Guard: If uninstalled, render Setup Wizard. Otherwise, initialize route cleanly.
   if (!isInstalled && !window.__FOUNDATION_DEV_BYPASS__) {
     logger.warn('[Core]: Platform unconfigured. Intercepting route to render Setup Wizard.');
     window.router.renderSetupWizard();
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
   
-  // Guard: Skip controller execution if Setup Wizard is rendering
+  // Guard: Skip page controllers if platform is unconfigured / running setup wizard
   const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
   if (!isConfigured && !window.__FOUNDATION_DEV_BYPASS__) return;
 

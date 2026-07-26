@@ -1,5 +1,5 @@
-// sw.js - Production Service Worker with Safe Navigation Fallback
-const CACHE_NAME = 'foundation-prod-v2';
+// sw.js - Production Service Worker v3
+const CACHE_NAME = 'foundation-prod-v3';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
@@ -41,7 +41,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // NEVER intercept Cloudflare Pages Edge API functions to prevent network loops
+  // Bypass API calls from Service Worker caching
   if (url.pathname.startsWith('/api/')) return;
 
   const isNavigation = event.request.mode === 'navigate';
@@ -59,7 +59,6 @@ self.addEventListener('fetch', (event) => {
         const cachedResponse = await caches.match(event.request);
         if (cachedResponse) return cachedResponse;
 
-        // Offline Single Page Application Navigation Fallback
         if (isNavigation) {
           return caches.match('./index.html');
         }
