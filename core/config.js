@@ -55,8 +55,13 @@ class ConfigEngine {
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
-      const docSnap = await getDoc(configRef);
-      if (docSnap.exists()) {
+      
+      const docSnap = await Promise.race([
+        getDoc(configRef),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore fetch timeout')), 2500))
+      ]);
+
+      if (docSnap && docSnap.exists()) {
         this.#activeConfig = { ...defaultConfig, ...docSnap.data() };
         localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
         console.log('[ConfigEngine]: Master configuration loaded from Firestore.');
@@ -83,17 +88,23 @@ class ConfigEngine {
       updatedAt: new Date().toISOString()
     };
 
-    // Save locally first so the app can recover immediately
+    // Save locally first so the app can recover and re-initialize Firebase on reload
     localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
 
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
-      await setDoc(configRef, this.#activeConfig, { merge: true });
+
+      // Use a timeout so network hangs on dummy/unauthenticated Firebase instances never freeze the UI button
+      await Promise.race([
+        setDoc(configRef, this.#activeConfig, { merge: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 1500))
+      ]);
+
       console.log('[ConfigEngine]: Configuration saved to Firestore successfully.');
       return true;
     } catch (err) {
-      console.warn('[ConfigEngine]: Saved locally (Firestore sync pending database creation/auth).');
+      console.warn('[ConfigEngine]: Configuration persisted locally. Firestore sync pending reload/auth.');
       return true;
     }
   }

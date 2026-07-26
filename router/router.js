@@ -121,6 +121,7 @@ export class Router {
           </button>
         </section>
       `;
+
       document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
         await authManager.loginWithGoogle();
         this.loadRoute('/admin');
@@ -147,8 +148,8 @@ export class Router {
         cleanPath = '/404';
         response = await fetch('./pages/404.html');
       }
-
       const htmlContent = await response.text();
+
       this.appContainer.innerHTML = htmlContent;
       this.updateMetadata(cleanPath);
       this.appContainer.focus();
@@ -196,7 +197,7 @@ export class Router {
               <input type="text" id="wizard-fb-project" placeholder="my-app-id" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
           </div>
-          <button type="submit" class="btn-primary" style="padding: 12px; font-size: 1rem; background: #38a169; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 1rem;">
+          <button type="submit" id="btn-submit-wizard" class="btn-primary" style="padding: 12px; font-size: 1rem; background: #38a169; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 1rem;">
             Complete Setup & Initialize Platform
           </button>
         </form>
@@ -205,6 +206,9 @@ export class Router {
 
     document.getElementById('setup-wizard-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = document.getElementById('btn-submit-wizard');
+      if (submitBtn) submitBtn.textContent = 'Saving & Initializing...';
+
       const adminEmail = document.getElementById('wizard-admin-email').value.trim();
       const siteTitle = document.getElementById('wizard-site-title').value.trim();
       const siteDomain = document.getElementById('wizard-site-domain').value.trim();
@@ -219,11 +223,9 @@ export class Router {
         isInstalled: true
       };
 
-      const success = await configManager.saveToFirebase(payload);
-      if (success) {
-        alert('Setup Complete! Reloading Foundation Command Center...');
-        window.location.reload();
-      }
+      await configManager.saveToFirebase(payload);
+      alert('Setup Complete! Reloading Foundation Command Center...');
+      window.location.reload();
     });
   }
 
@@ -238,6 +240,7 @@ export class Router {
       const segments = path.split('/').filter(Boolean);
       const rawTitle = segments.pop() || 'Home';
       const formattedTitle = rawTitle.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
       document.title = `${formattedTitle} | Foundation`;
     }
   }
