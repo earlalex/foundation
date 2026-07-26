@@ -20,11 +20,16 @@ export function getFirebaseApp() {
                         currentFbConfig.apiKey !== "" &&
                         currentFbConfig.apiKey !== "YOUR_API_KEY";
 
-  const firebaseConfig = isConfigured ? currentFbConfig : {
-    apiKey: "AIzaSy_DEMO_KEY_FOUNDATION",
-    authDomain: "demo.firebaseapp.com",
-    projectId: "demo-foundation-app"
-  };
+  const firebaseConfig = isConfigured
+    ? {
+        ...currentFbConfig,
+        authDomain: currentFbConfig.authDomain || `${currentFbConfig.projectId}.firebaseapp.com`
+      }
+    : {
+        apiKey: "AIzaSy_DEMO_KEY_FOUNDATION",
+        authDomain: "demo.firebaseapp.com",
+        projectId: "demo-foundation-app"
+      };
 
   if (!getApps().length) {
     return initializeApp(firebaseConfig);
