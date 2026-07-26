@@ -20,10 +20,10 @@ export async function runRouterTests() {
   }
 
   const testManifest = {
-    '/home': { title: 'Home', description: 'Welcome home' },
-    '/about': { title: 'About Us', description: 'Our story' },
-    '/admin': { title: 'Admin Dashboard', description: 'Gated admin panel' },
-    '/404': { title: 'Page Not Found', description: '404 Error' }
+    '/home': { title: 'Home', description: 'Welcome home', viewPath: './pages/home/home.html' },
+    '/about': { title: 'About Us', description: 'Our story', viewPath: './pages/about/about.html' },
+    '/admin': { title: 'Admin Dashboard', description: 'Gated admin panel', viewPath: './pages/admin/admin.html' },
+    '/404': { title: 'Page Not Found', description: '404 Error', viewPath: './pages/404.html' }
   };
 
   let appContainer = document.getElementById('app');

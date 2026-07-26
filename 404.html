@@ -5,9 +5,9 @@
   <title>Foundation Navigation</title>
   <script>
     const l = window.location;
-    // Handle GitHub Pages SPA subroute preservation without looping on Cloudflare or custom domains
+    // Handle SPA subroute preservation without looping on Cloudflare, GitHub Pages, or custom domains
+    const pathSegments = l.pathname.split('/').filter(Boolean);
     if (l.hostname.endsWith('github.io')) {
-      const pathSegments = l.pathname.split('/').filter(Boolean);
       const repoName = pathSegments[0] || '';
       const targetRoute = '/' + pathSegments.slice(1).join('/');
       if (targetRoute && targetRoute !== '/') {
@@ -15,6 +15,10 @@
       }
       window.location.replace(l.origin + '/' + repoName + '/');
     } else {
+      const targetRoute = l.pathname + l.search;
+      if (targetRoute && targetRoute !== '/' && !targetRoute.endsWith('/index.html')) {
+        sessionStorage.setItem('foundation_spa_route', targetRoute);
+      }
       window.location.replace(l.origin + '/index.html');
     }
   </script>

@@ -9,7 +9,7 @@ export class AuthorCard extends HTMLElement {
     const name = profile.name || 'Admin Author';
     const role = profile.role || 'Lead Architect';
     const tagline = profile.tagline || 'Building the zero-build web.';
-    const defaultAvatar = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%232b6cb0"/><text x="50%" y="60%" font-size="40" text-anchor="middle" fill="%23ffffff">👤</text></svg>';
+    const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%232b6cb0'/><text x='50%' y='60%' font-size='40' text-anchor='middle' fill='%23ffffff'>👤</text></svg>";
     const avatar = profile.avatarUrl || defaultAvatar;
     
     const bio = layout === 'full' 
