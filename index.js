@@ -39,10 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Initialize Firestore Master Configuration
   const isInstalled = await configManager.init();
 
-  // 2. Initialize Top Global Navbar Header
-  initNavbar();
-
-  // 3. Boot Test Suites in Dev Mode
+  // 2. Boot Test Suites in Dev Mode
   if (store.state.devMode) {
     logger.group('Dev Mode Test Suite Execution');
     window.store = store;
@@ -56,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logger.groupEnd();
   }
 
-  // 4. Mount Router
+  // 3. Mount Router
   window.router = new Router({
     '/home': {
       title: 'Home',
@@ -95,10 +92,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 5. Hard Guard: If platform is unconfigured/uninstalled, force Setup Wizard immediately
+  // 4. Initialize Top Global Navbar Header
+  initNavbar();
+
+  // 5. Trigger Route or Setup Wizard after configManager completes
   if (!isInstalled && !window.__FOUNDATION_DEV_BYPASS__) {
     logger.warn('[Core]: Platform unconfigured. Intercepting route to render Setup Wizard.');
     window.router.renderSetupWizard();
+  } else {
+    await window.router.init();
   }
 });
 

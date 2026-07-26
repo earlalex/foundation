@@ -17,7 +17,7 @@ export class Router {
     this.isTestInstance = isTestInstance;
     
     this.validateManifest();
-    this.init();
+    this.bindClickEvents();
   }
 
   validateManifest() {
@@ -30,7 +30,7 @@ export class Router {
     }
   }
 
-  init() {
+  bindClickEvents() {
     document.body.addEventListener('click', (e) => {
       const anchor = e.target.closest('a');
       if (
@@ -47,16 +47,18 @@ export class Router {
     window.addEventListener('popstate', () => {
       this.loadRoute(window.location.pathname + window.location.search);
     });
+  }
 
+  async init() {
     const storedRoute = sessionStorage.getItem('foundation_spa_route');
     if (storedRoute) {
       sessionStorage.removeItem('foundation_spa_route');
       const repoPrefix = window.location.pathname.replace(/\/$/, '');
       const fullUrl = repoPrefix + storedRoute;
       window.history.replaceState({}, '', fullUrl);
-      this.loadRoute(storedRoute);
+      await this.loadRoute(storedRoute);
     } else {
-      this.loadRoute(window.location.pathname + window.location.search);
+      await this.loadRoute(window.location.pathname + window.location.search);
     }
   }
 
