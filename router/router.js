@@ -11,6 +11,8 @@ const RouteMetaSchema = {
 };
 
 export class Router {
+  #isLoading = false;
+
   constructor(routesManifest = {}, isTestInstance = false) {
     this.appContainer = document.getElementById('app');
     this.routesManifest = routesManifest;
@@ -70,81 +72,86 @@ export class Router {
   }
 
   async loadRoute(fullPath) {
-    // 0. FIRST-RUN SETUP WIZARD GUARD
-    const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
-    if (!isConfigured && !this.isTestInstance && !window.__FOUNDATION_DEV_BYPASS__) {
-      this.renderSetupWizard();
-      return;
-    }
-
-    // 1. Normalize path
-    const urlObj = new URL(fullPath, window.location.origin);
-    let rawPath = urlObj.pathname || '/';
-
-    if (rawPath.endsWith('/index.html')) {
-      rawPath = rawPath.replace(/\/index\.html$/, '');
-    }
-    if (rawPath.length > 1 && rawPath.endsWith('/')) {
-      rawPath = rawPath.slice(0, -1);
-    }
-
-    const segments = rawPath.split('/').filter(Boolean);
-    let cleanPath = '/home';
-
-    if (segments.length === 0 || rawPath === '/' || rawPath === './') {
-      cleanPath = '/home';
-    } else {
-      const lastSegment = `/${segments[segments.length - 1]}`;
-      if (this.routesManifest[rawPath]) {
-        cleanPath = rawPath;
-      } else if (this.routesManifest[lastSegment]) {
-        cleanPath = lastSegment;
-      } else {
-        cleanPath = '/404';
-      }
-    }
-
-    // 2. HARDENED ADMIN GUARD CHECK
-    const isAdminAuth = authManager.isAdminAuthenticated();
-    const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
-
-    if (cleanPath === '/admin' && !isAdminAuth && !isDevConsoleBypass) {
-      console.warn('[Router Guard]: Security Access Denied to /admin.');
-      
-      this.appContainer.innerHTML = `
-        <section class="admin-lock-screen" style="max-width: 500px; margin: 4rem auto; padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
-          <h1 style="font-size: 1.5rem; color: #1a202c; margin-bottom: 0.5rem;">Administrator Authentication Required</h1>
-          <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
-            Access to the Command Center is restricted strictly to the connected Google Workspace primary administrator.
-          </p>
-          <button id="admin-login-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-            Sign In with Google Workspace
-          </button>
-        </section>
-      `;
-
-      document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
-        await authManager.loginWithGoogle();
-        this.loadRoute('/admin');
-      });
-      return;
-    }
-
-    // 3. Determine view HTML template location
-    const manifestEntry = this.routesManifest[cleanPath];
-    let viewPath = manifestEntry?.viewPath;
-    if (!viewPath) {
-      if (cleanPath === '/admin') {
-        viewPath = './pages/admin/admin.html';
-      } else if (cleanPath === '/home') {
-        viewPath = './pages/home/home.html';
-      } else {
-        viewPath = `./pages${cleanPath}.html`;
-      }
-    }
+    if (this.#isLoading) return;
+    this.#isLoading = true;
 
     try {
+      // 0. FIRST-RUN SETUP WIZARD GUARD
+      const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
+      if (!isConfigured && !this.isTestInstance && !window.__FOUNDATION_DEV_BYPASS__) {
+        this.renderSetupWizard();
+        return;
+      }
+
+      // 1. Normalize path
+      const urlObj = new URL(fullPath, window.location.origin);
+      let rawPath = urlObj.pathname || '/';
+
+      if (rawPath.endsWith('/index.html')) {
+        rawPath = rawPath.replace(/\/index\.html$/, '');
+      }
+      
+      // Clean up multiple trailing slashes like /home/
+      while (rawPath.length > 1 && rawPath.endsWith('/')) {
+        rawPath = rawPath.slice(0, -1);
+      }
+
+      const segments = rawPath.split('/').filter(Boolean);
+      let cleanPath = '/home';
+
+      if (segments.length === 0 || rawPath === '/' || rawPath === './') {
+        cleanPath = '/home';
+      } else {
+        const lastSegment = `/${segments[segments.length - 1]}`;
+        if (this.routesManifest[rawPath]) {
+          cleanPath = rawPath;
+        } else if (this.routesManifest[lastSegment]) {
+          cleanPath = lastSegment;
+        } else {
+          cleanPath = '/404';
+        }
+      }
+
+      // 2. HARDENED ADMIN GUARD CHECK
+      const isAdminAuth = authManager.isAdminAuthenticated();
+      const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
+
+      if (cleanPath === '/admin' && !isAdminAuth && !isDevConsoleBypass) {
+        console.warn('[Router Guard]: Security Access Denied to /admin.');
+        
+        this.appContainer.innerHTML = `
+          <section class="admin-lock-screen" style="max-width: 500px; margin: 4rem auto; padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
+            <h1 style="font-size: 1.5rem; color: #1a202c; margin-bottom: 0.5rem;">Administrator Authentication Required</h1>
+            <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
+              Access to the Command Center is restricted strictly to the connected Google Workspace primary administrator.
+            </p>
+            <button id="admin-login-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+              Sign In with Google Workspace
+            </button>
+          </section>
+        `;
+
+        document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
+          await authManager.loginWithGoogle();
+          this.loadRoute('/admin');
+        });
+        return;
+      }
+
+      // 3. Determine view HTML template location
+      const manifestEntry = this.routesManifest[cleanPath];
+      let viewPath = manifestEntry?.viewPath;
+      if (!viewPath) {
+        if (cleanPath === '/admin') {
+          viewPath = './pages/admin/admin.html';
+        } else if (cleanPath === '/home') {
+          viewPath = './pages/home/home.html';
+        } else {
+          viewPath = `./pages${cleanPath}.html`;
+        }
+      }
+
       let response = await fetch(viewPath);
       if (!response.ok) {
         cleanPath = '/404';
@@ -163,6 +170,8 @@ export class Router {
       this.appContainer.innerHTML = '<section style="padding: 2rem; text-align: center;"><h1>404 - Page Not Found</h1></section>';
       this.updateMetadata('/404');
       window.dispatchEvent(new CustomEvent('pageLoaded', { detail: { path: '/404', fullPath: fullPath } }));
+    } finally {
+      this.#isLoading = false;
     }
   }
 
@@ -227,7 +236,7 @@ export class Router {
 
       await configManager.saveToFirebase(payload);
       alert('Setup Complete! Reloading Foundation Command Center...');
-      window.location.reload();
+      window.location.href = window.location.origin + '/home';
     });
   }
 

@@ -1,5 +1,5 @@
-// sw.js - Production Service Worker with Cache-First & Network Fallback Strategy
-const CACHE_NAME = 'foundation-prod-v1';
+// sw.js - Production Service Worker with Safe Navigation Fallback
+const CACHE_NAME = 'foundation-prod-v2';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
@@ -13,10 +13,7 @@ const PRECACHE_ASSETS = [
   './core/navbar.js',
   './router/router.js',
   './components/global/ContentCard.js',
-  './components/global/AuthorCard.js',
-  './pages/home/home.html',
-  './pages/detail/detail.html',
-  './pages/404.html'
+  './components/global/AuthorCard.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -41,6 +38,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+
+  // NEVER intercept Cloudflare Pages Edge API functions to prevent network loops
+  if (url.pathname.startsWith('/api/')) return;
 
   const isNavigation = event.request.mode === 'navigate';
 
