@@ -18,6 +18,25 @@ export const defaultConfig = {
   cloudflare: {
     workflowUrl: "/api/workflow-trigger",
     vtUrl: "/api/virustotal-scan"
+  },
+  seoMyRankAddr: {
+    apiKey: "E4462175E8369240D133B6C4F3CD288C",
+    costPerRequest: 0.01,
+    totalSpent: 0,
+    requestCount: 0
+  },
+  chatbot: {
+    enabled: true,
+    name: "Foundation Assistant",
+    systemPrompt: "You are a helpful customer support agent for Foundation Framework.",
+    welcomeMessage: "Hello! How can I help you today?",
+    openaiApiKey: "",
+    telnyxApiKey: "",
+    telnyxPhoneNumber: "",
+    twilioAccountSid: "",
+    twilioAuthToken: "",
+    twilioPhoneNumber: "",
+    voiceWelcomeMessage: "Thank you for calling Foundation support. How can I help you today?"
   }
 };
 
