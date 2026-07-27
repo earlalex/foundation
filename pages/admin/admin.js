@@ -114,14 +114,37 @@ export function initAdminPage() {
   const tabButtons = document.querySelectorAll('.admin-tab');
   const panels = document.querySelectorAll('.admin-panel');
 
+  // Load and display the current logged in email and notification count in top header
+  const headerEmailEl = document.getElementById('admin-header-email');
+  const headerNotifsEl = document.getElementById('admin-header-notifs');
+  const activeAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@example.com';
+  if (headerEmailEl) {
+    headerEmailEl.textContent = activeAdminEmail;
+  }
+
+  // Dynamically estimate notification alert count (e.g. if GA4, VT, etc. setup issues exist)
+  if (headerNotifsEl) {
+    let alertCount = 0;
+    if (!configManager.current.thirdParty?.ga4PropertyId || !configManager.current.thirdParty?.lookerStudioEmbedUrl) {
+      alertCount++;
+    }
+    if (!configManager.current.virustotal?.apiKey) {
+      alertCount++;
+    }
+    headerNotifsEl.textContent = `${alertCount} Alert${alertCount !== 1 ? 's' : ''}`;
+    headerNotifsEl.style.background = alertCount > 0 ? 'var(--theme-color-danger, #e53e3e)' : 'var(--theme-color-success, #38a169)';
+  }
+
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
       tabButtons.forEach((b) => {
-        b.style.borderBottom = 'none';
+        b.style.borderLeft = '3px solid transparent';
+        b.style.paddingLeft = '13px';
         b.style.color = 'var(--theme-color-text-secondary, #4a5568)';
       });
-      btn.style.borderBottom = '3px solid var(--theme-color-primary, #2b6cb0)';
+      btn.style.borderLeft = '3px solid var(--theme-color-primary, #2b6cb0)';
+      btn.style.paddingLeft = '13px';
       btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
 
       panels.forEach((p) => {
