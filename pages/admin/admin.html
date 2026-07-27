@@ -13,35 +13,35 @@
   </div>
 
   <!-- Admin Sub-Navigation Tabs -->
-  <nav style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--theme-color-border, #e2e8f0); margin-bottom: 1.5rem; overflow-x: auto;">
-    <button class="admin-tab active" data-tab="site" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; border-bottom: 3px solid var(--theme-color-primary, #2b6cb0); color: var(--theme-color-primary, #2b6cb0);">
+  <nav style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--theme-color-border, #e2e8f0); margin-bottom: 1.5rem; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+    <button class="admin-tab active" data-tab="site" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; border-bottom: 3px solid var(--theme-color-primary, #2b6cb0); color: var(--theme-color-primary, #2b6cb0); white-space: nowrap; flex-shrink: 0;">
       Site & Brand
     </button>
-    <button class="admin-tab" data-tab="business" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="business" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       Business & Legal
     </button>
-    <button class="admin-tab" data-tab="profile" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="profile" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       Public Profile
     </button>
-    <button class="admin-tab" data-tab="config" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="config" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       API Keys & Cloud
     </button>
-    <button class="admin-tab" data-tab="users" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="users" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       Users & Affiliates
     </button>
-    <button class="admin-tab" data-tab="cms" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="cms" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       CMS Publisher
     </button>
-    <button class="admin-tab" data-tab="seo" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="seo" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       SEO & Analytics
     </button>
-    <button class="admin-tab" data-tab="performance" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="performance" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       Performance (Lighthouse)
     </button>
-    <button class="admin-tab" data-tab="security" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="security" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       Security & Ops
     </button>
-    <button class="admin-tab" data-tab="chatbot" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568);">
+    <button class="admin-tab" data-tab="chatbot" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
       AI Chatbot & Voice
     </button>
   </nav>
@@ -1173,4 +1173,134 @@
       </div>
     </div>
   </div>
+
+  <!-- TAB 10: AI CHATBOT, SMS, AND VOICE SERVICE ENDPOINT -->
+  <div id="tab-chatbot" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- AI Chatbot & Telephony Setup Instructions Guide -->
+      <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">AI Chatbot & Voice Telephony Setup Guide</h2>
+        <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #2c5282;">Follow these steps to wire up the zero-build chatbot widget and messaging webhooks:</p>
+        <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #2c5282; line-height: 1.5;">
+          <li><strong>OpenAI Setup:</strong> Visit the <a href="https://platform.openai.com/api-keys" target="_blank" style="font-weight: bold; color: #2b6cb0;">OpenAI Dashboard</a> to retrieve an API Key. Note: Cloudflare Edge endpoints will use <code>gpt-4o-mini</code> for highly performant, ultra low-cost completions. If a <code>GEMINI_API_KEY</code> is bound in Cloudflare Secrets, the endpoints will automatically route through Gemini 2.5 Flash at zero token costs!</li>
+          <li><strong>SMS Webhook (Telnyx / Twilio):</strong>
+            <br>&bull; <em>Telnyx:</em> Point your inbound messages webhook to <code>https://yourdomain.com/api/sms-webhook</code>. Ensure <code>TELNYX_API_KEY</code> and <code>TELNYX_PHONE_NUMBER</code> are set.
+            <br>&bull; <em>Twilio:</em> Point your phone number webhook to <code>https://yourdomain.com/api/sms-webhook</code>. Ensure <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, and <code>TWILIO_PHONE_NUMBER</code> are set in Cloudflare secrets.
+          </li>
+          <li><strong>Voice Telephony Webhook:</strong> Set your voice platform call routing webhook (Vapi.ai, Telnyx, or Twilio) to <code>https://yourdomain.com/api/voice-webhook</code>. It responds with valid TwiML/TeXML instructions dynamic voice dialog.</li>
+          <li><strong>Frontend Web Widget:</strong> The chatbot widget automatically mounts on the lower-right corner of the site. You can toggle its visibility on/off using the "Chatbot Enabled" switch below.</li>
+        </ul>
+      </div>
+
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem;">AI Chatbot, SMS & Voice Customization</h2>
+        <p style="color: #718096; font-size: 0.85rem; margin-bottom: 1.25rem;">Configure chatbot welcome settings, openai system context prompt triggers, and voice routing options.</p>
+
+        <form id="chatbot-settings-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Chatbot Enabled:</label>
+              <select id="chat-enabled" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="true">Yes, Enable Chat Widget</option>
+                <option value="false">No, Hide Chat Widget</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Bot Display Name:</label>
+              <input type="text" id="chat-name" placeholder="Foundation Assistant" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Welcome Initial Text Message:</label>
+              <input type="text" id="chat-welcome" placeholder="Hello! How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">AI System Prompt Context (Configured context instructions):</label>
+            <textarea id="chat-system-prompt" placeholder="You are a helpful customer support assistant for Foundation Framework..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+          <h3 style="margin: 0; font-size: 1.05rem;">Voice Telephony Welcomes</h3>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Voice Welcome Saying Text (TeXML/TwiML Speech):</label>
+            <input type="text" id="chat-voice-welcome" placeholder="Thank you for calling Foundation support. How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+          <h3 style="margin: 0; font-size: 1.05rem;">Telnyx & Twilio Integrations Settings (Edges Webhooks Key Bindings)</h3>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">OpenAI API Key (gpt-4o-mini):</label>
+              <input type="password" id="chat-openai-key" placeholder="sk-..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx API Key:</label>
+              <input type="password" id="chat-telnyx-key" placeholder="KEY..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Account SID:</label>
+              <input type="text" id="chat-twilio-sid" placeholder="AC..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Auth Token:</label>
+              <input type="password" id="chat-twilio-token" placeholder="Token..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx Phone Number:</label>
+              <input type="text" id="chat-telnyx-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Phone Number:</label>
+              <input type="text" id="chat-twilio-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+            Save Chatbot & Keys Config
+          </button>
+        </form>
+      </div>
+
+      <!-- Live Chat Audit Trails Logging Monitor Panel -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">Live Support Conversations Logging Audit Trails</h2>
+            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Displays live web, SMS, and voice assistant communication events.</p>
+          </div>
+          <button id="btn-refresh-chat-logs" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Refresh Logs</button>
+        </div>
+
+        <div style="overflow-y: auto; max-height: 250px; background: var(--theme-color-background, #f7fafc); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
+                <th style="padding: 8px;">Timestamp</th>
+                <th style="padding: 8px;">Sender</th>
+                <th style="padding: 8px;">Type</th>
+                <th style="padding: 8px;">Message Content</th>
+              </tr>
+            </thead>
+            <tbody id="chat-logs-tbody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 </section>
