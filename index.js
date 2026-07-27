@@ -11,6 +11,7 @@ import { initNavbar } from './core/navbar.js';
 // Web Components
 import './components/global/ContentCard.js';
 import './components/global/AuthorCard.js';
+import './components/global/ChatWidget.js';
 
 // Automated Test Suites
 import { runAllSchemaTests } from './schemas/test-runner.js';
@@ -101,6 +102,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.router.renderSetupWizard();
   } else {
     await window.router.init();
+  }
+
+  // Mount Chat Widget globally if enabled and available
+  const chatbotEnabled = configManager.current.chatbot?.enabled !== false;
+  if (chatbotEnabled) {
+    const chatWidget = document.createElement('chat-widget');
+    document.body.appendChild(chatWidget);
   }
 });
 

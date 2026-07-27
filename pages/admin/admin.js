@@ -114,14 +114,37 @@ export function initAdminPage() {
   const tabButtons = document.querySelectorAll('.admin-tab');
   const panels = document.querySelectorAll('.admin-panel');
 
+  // Load and display the current logged in email and notification count in top header
+  const headerEmailEl = document.getElementById('admin-header-email');
+  const headerNotifsEl = document.getElementById('admin-header-notifs');
+  const activeAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@example.com';
+  if (headerEmailEl) {
+    headerEmailEl.textContent = activeAdminEmail;
+  }
+
+  // Dynamically estimate notification alert count (e.g. if GA4, VT, etc. setup issues exist)
+  if (headerNotifsEl) {
+    let alertCount = 0;
+    if (!configManager.current.thirdParty?.ga4PropertyId || !configManager.current.thirdParty?.lookerStudioEmbedUrl) {
+      alertCount++;
+    }
+    if (!configManager.current.virustotal?.apiKey) {
+      alertCount++;
+    }
+    headerNotifsEl.textContent = `${alertCount} Alert${alertCount !== 1 ? 's' : ''}`;
+    headerNotifsEl.style.background = alertCount > 0 ? 'var(--theme-color-danger, #e53e3e)' : 'var(--theme-color-success, #38a169)';
+  }
+
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
       tabButtons.forEach((b) => {
-        b.style.borderBottom = 'none';
+        b.style.borderLeft = '3px solid transparent';
+        b.style.paddingLeft = '13px';
         b.style.color = 'var(--theme-color-text-secondary, #4a5568)';
       });
-      btn.style.borderBottom = '3px solid var(--theme-color-primary, #2b6cb0)';
+      btn.style.borderLeft = '3px solid var(--theme-color-primary, #2b6cb0)';
+      btn.style.paddingLeft = '13px';
       btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
 
       panels.forEach((p) => {
@@ -136,6 +159,8 @@ export function initAdminPage() {
         loadPerformanceTab();
       } else if (targetTab === 'security') {
         loadGscSecurityThreats();
+      } else if (targetTab === 'chatbot') {
+        loadChatbotAndVoiceTab();
       }
     });
   });
@@ -1093,6 +1118,42 @@ export function initAdminPage() {
       seoBanner.style.display = (hasGA4 && hasLooker) ? 'none' : 'block';
     }
 
+    // Load initial values for SEO-My-Rank-ADDR and total spent tracker
+    const rankApiKeyInput = document.getElementById('seo-rank-api-key');
+    const rankCostInput = document.getElementById('seo-rank-cost');
+    const totalRequestsEl = document.getElementById('seo-total-requests');
+    const totalSpendEl = document.getElementById('seo-total-spend');
+
+    const activeSeoCfg = configManager.current.seoMyRankAddr || {
+      apiKey: "E4462175E8369240D133B6C4F3CD288C",
+      costPerRequest: 0.01,
+      totalSpent: 0,
+      requestCount: 0
+    };
+
+    if (rankApiKeyInput) rankApiKeyInput.value = activeSeoCfg.apiKey || '';
+    if (rankCostInput) rankCostInput.value = activeSeoCfg.costPerRequest !== undefined ? activeSeoCfg.costPerRequest : 0.01;
+    if (totalRequestsEl) totalRequestsEl.textContent = activeSeoCfg.requestCount || 0;
+    if (totalSpendEl) totalSpendEl.textContent = `$${(activeSeoCfg.totalSpent || 0).toFixed(2)}`;
+
+    document.getElementById('seo-rank-config-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const updatedSeoMyRankAddr = {
+        ...configManager.current.seoMyRankAddr,
+        apiKey: rankApiKeyInput.value,
+        costPerRequest: Number(rankCostInput.value)
+      };
+
+      const success = await configManager.saveToFirebase({
+        ...configManager.current,
+        seoMyRankAddr: updatedSeoMyRankAddr
+      });
+
+      if (success) {
+        alert('SEO-My-Rank-ADDR settings saved successfully!');
+      }
+    });
+
     const rankBtn = document.getElementById('btn-fetch-seo-rank');
     if (rankBtn) {
       rankBtn.onclick = async () => {
@@ -1104,6 +1165,11 @@ export function initAdminPage() {
         document.getElementById('rank-alexa').textContent = `#${telemetry.globalAlexaRank}`;
         document.getElementById('rank-backlinks').textContent = Number(telemetry.backlinksCount).toLocaleString();
         rankBtn.textContent = 'Refresh Rank Telemetry';
+
+        // Refresh total counter UI values instantly
+        const updatedCfg = configManager.current.seoMyRankAddr || {};
+        if (totalRequestsEl) totalRequestsEl.textContent = updatedCfg.requestCount || 0;
+        if (totalSpendEl) totalSpendEl.textContent = `$${(updatedCfg.totalSpent || 0).toFixed(2)}`;
       };
     }
 
@@ -1418,6 +1484,99 @@ export function initAdminPage() {
       scanVtBtn.textContent = 'Run Live Edge Scan';
     }
   });
+
+  // --- 11. TAB 10: AI CHATBOT & VOICE SERVICE ENDPOINT CONTROLLER ---
+  async function loadChatbotAndVoiceTab() {
+    const chatEnabledSel = document.getElementById('chat-enabled');
+    const chatNameInput = document.getElementById('chat-name');
+    const chatWelcomeInput = document.getElementById('chat-welcome');
+    const chatSystemPromptInput = document.getElementById('chat-system-prompt');
+    const chatVoiceWelcomeInput = document.getElementById('chat-voice-welcome');
+
+    const chatOpenaiKeyInput = document.getElementById('chat-openai-key');
+    const chatTelnyxKeyInput = document.getElementById('chat-telnyx-key');
+    const chatTwilioSidInput = document.getElementById('chat-twilio-sid');
+    const chatTwilioTokenInput = document.getElementById('chat-twilio-token');
+    const chatTelnyxNumInput = document.getElementById('chat-telnyx-num');
+    const chatTwilioNumInput = document.getElementById('chat-twilio-num');
+
+    const chatbotCfg = configManager.current.chatbot || {};
+
+    if (chatEnabledSel) chatEnabledSel.value = chatbotCfg.enabled !== false ? "true" : "false";
+    if (chatNameInput) chatNameInput.value = chatbotCfg.name || "Foundation Assistant";
+    if (chatWelcomeInput) chatWelcomeInput.value = chatbotCfg.welcomeMessage || "Hello! How can I help you today?";
+    if (chatSystemPromptInput) chatSystemPromptInput.value = chatbotCfg.systemPrompt || "You are a helpful customer support agent.";
+    if (chatVoiceWelcomeInput) chatVoiceWelcomeInput.value = chatbotCfg.voiceWelcomeMessage || "Thank you for calling Foundation support. How can I help you today?";
+
+    if (chatOpenaiKeyInput) chatOpenaiKeyInput.value = chatbotCfg.openaiApiKey || "";
+    if (chatTelnyxKeyInput) chatTelnyxKeyInput.value = chatbotCfg.telnyxApiKey || "";
+    if (chatTwilioSidInput) chatTwilioSidInput.value = chatbotCfg.twilioAccountSid || "";
+    if (chatTwilioTokenInput) chatTwilioTokenInput.value = chatbotCfg.twilioAuthToken || "";
+    if (chatTelnyxNumInput) chatTelnyxNumInput.value = chatbotCfg.telnyxPhoneNumber || "";
+    if (chatTwilioNumInput) chatTwilioNumInput.value = chatbotCfg.twilioPhoneNumber || "";
+
+    document.getElementById('chatbot-settings-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const updatedChatbotConfig = {
+        ...configManager.current,
+        chatbot: {
+          enabled: chatEnabledSel.value === "true",
+          name: chatNameInput.value,
+          welcomeMessage: chatWelcomeInput.value,
+          systemPrompt: chatSystemPromptInput.value,
+          voiceWelcomeMessage: chatVoiceWelcomeInput.value,
+          openaiApiKey: chatOpenaiKeyInput.value,
+          telnyxApiKey: chatTelnyxKeyInput.value,
+          twilioAccountSid: chatTwilioSidInput.value,
+          twilioAuthToken: chatTwilioTokenInput.value,
+          telnyxPhoneNumber: chatTelnyxNumInput.value,
+          twilioPhoneNumber: chatTwilioNumInput.value
+        }
+      };
+
+      const success = await configManager.saveToFirebase(updatedChatbotConfig);
+      if (success) {
+        alert('AI Chatbot & Voice settings saved to Firestore!');
+      }
+    });
+
+    // Logging Monitor Render Helper
+    const tbody = document.getElementById('chat-logs-tbody');
+    const refreshBtn = document.getElementById('btn-refresh-chat-logs');
+
+    async function renderChatLogs() {
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">Fetching interaction logs...</td></tr>';
+
+      const logs = await contentDB.getChatLogs(50);
+      if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = logs.map(log => {
+        const localTime = new Date(log.timestamp).toLocaleString();
+        const typeBadgeColor = log.type === 'sms' ? '#2b6cb0' : log.type === 'voice' ? '#dd6b20' : '#319795';
+        const typeBgColor = log.type === 'sms' ? '#ebf8ff' : log.type === 'voice' ? '#fffaf0' : '#e6fffa';
+
+        return `
+          <tr style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 8px; font-size: 0.8rem; color: #718096; white-space: nowrap;">${localTime}</td>
+            <td style="padding: 8px;"><strong>${log.sender}</strong></td>
+            <td style="padding: 8px;">
+              <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; background: ${typeBgColor}; color: ${typeBadgeColor}; text-transform: uppercase;">
+                ${log.type}
+              </span>
+            </td>
+            <td style="padding: 8px; color: #2d3748; max-width: 300px; word-break: break-all;">${log.message}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    if (refreshBtn) refreshBtn.onclick = renderChatLogs;
+    renderChatLogs();
+  }
 
   const runTestsBtn = document.getElementById('btn-run-tests');
   runTestsBtn?.addEventListener('click', async () => {
