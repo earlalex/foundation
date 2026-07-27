@@ -117,25 +117,31 @@ export async function uploadFileToDrive(file) {
 
     const result = await response.json();
 
-    // Make individual file publicly readable
-    await fetch(`https://www.googleapis.com/drive/v3/files/${result.id}/permissions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${googleAccessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
+    // Make individual file publicly readable, EXCEPT for private documents
+    const isPrivate = file.isPrivateDoc === true;
+    if (!isPrivate) {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${result.id}/permissions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${googleAccessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+    } else {
+      console.log(`[Drive Engine]: Saved file "${file.name}" as PRIVATE (no public reader access).`);
+    }
 
     const directCdnUrl = `https://lh3.googleusercontent.com/d/${result.id}`;
 
     return {
       id: result.id,
-      src: directCdnUrl,
+      src: isPrivate ? `https://drive.google.com/open?id=${result.id}` : directCdnUrl,
       localPath: relativePath,
       category,
       year,
       month,
+      isPrivate: isPrivate,
       uploadedAt: new Date().toISOString()
     };
   } catch (err) {
