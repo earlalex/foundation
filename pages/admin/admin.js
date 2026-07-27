@@ -139,12 +139,12 @@ export function initAdminPage() {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
       tabButtons.forEach((b) => {
-        b.style.borderLeft = '3px solid transparent';
-        b.style.paddingLeft = '13px';
+        b.classList.remove('active');
+        b.style.borderLeft = '';
+        b.style.paddingLeft = '';
         b.style.color = 'var(--theme-color-text-secondary, #4a5568)';
       });
-      btn.style.borderLeft = '3px solid var(--theme-color-primary, #2b6cb0)';
-      btn.style.paddingLeft = '13px';
+      btn.classList.add('active');
       btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
 
       panels.forEach((p) => {
@@ -602,6 +602,11 @@ export function initAdminPage() {
   const cfgGoogleClientSecret = document.getElementById('cfg-google-client-secret');
   const cfgFbAdmins = document.getElementById('cfg-fb-admins');
 
+  // AI Centralized Config Elements
+  const cfgGeminiKey = document.getElementById('cfg-gemini-key');
+  const cfgOpenaiKey = document.getElementById('cfg-openai-key');
+  const cfgAiProvider = document.getElementById('cfg-ai-provider');
+
   const cfgStripeKey = document.getElementById('cfg-stripe-key');
   const cfgStripePriceId = document.getElementById('cfg-stripe-price-id');
   const cfgGa4Property = document.getElementById('cfg-ga4-property');
@@ -614,6 +619,11 @@ export function initAdminPage() {
   if (cfgGoogleClientId) cfgGoogleClientId.value = configManager.current.google?.clientId || '';
   if (cfgGoogleClientSecret) cfgGoogleClientSecret.value = configManager.current.google?.clientSecret || '';
   if (cfgFbAdmins) cfgFbAdmins.value = (configManager.current.adminEmails || []).join(', ');
+
+  // Load AI config values
+  if (cfgGeminiKey) cfgGeminiKey.value = configManager.current.aiConfig?.geminiApiKey || '';
+  if (cfgOpenaiKey) cfgOpenaiKey.value = configManager.current.aiConfig?.openaiApiKey || '';
+  if (cfgAiProvider) cfgAiProvider.value = configManager.current.aiConfig?.preferredProvider || 'gemini';
 
   if (cfgStripeKey) cfgStripeKey.value = configManager.current.stripe?.secretKey || '';
   if (cfgStripePriceId) cfgStripePriceId.value = configManager.current.stripe?.priceId || '';
@@ -637,11 +647,16 @@ export function initAdminPage() {
         clientId: cfgGoogleClientId.value,
         clientSecret: cfgGoogleClientSecret.value
       },
+      aiConfig: {
+        geminiApiKey: cfgGeminiKey?.value || '',
+        openaiApiKey: cfgOpenaiKey?.value || '',
+        preferredProvider: cfgAiProvider?.value || 'gemini'
+      },
       adminEmails: adminList
     };
     const success = await configManager.saveToFirebase(updated);
     if (success) {
-      alert('API and Identity Credentials successfully synced to Firestore!');
+      alert('API, Identity, and AI Credentials successfully synced to Firestore!');
     }
   });
 

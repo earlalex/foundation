@@ -3,7 +3,7 @@
 export async function onRequestPost(context) {
   try {
     const payload = await context.request.json();
-    const { message, history = [], systemPromptOverride } = payload;
+    const { message, history = [], isAdmin = false, aiConfig = {} } = payload;
 
     if (!message) {
       return new Response(JSON.stringify({ error: "Missing message field" }), {
@@ -12,20 +12,28 @@ export async function onRequestPost(context) {
       });
     }
 
-    const geminiKey = context.env.GEMINI_API_KEY;
-    const openAiKey = context.env.OPENAI_API_KEY;
+    // 1. Resolve Credentials (prioritize dynamic payload overrides, fall back to environment secrets)
+    const geminiKey = aiConfig.geminiApiKey || context.env.GEMINI_API_KEY;
+    const openAiKey = aiConfig.openaiApiKey || context.env.OPENAI_API_KEY;
 
     if (!geminiKey && !openAiKey) {
-      return new Response(JSON.stringify({ error: "No AI API keys (GEMINI_API_KEY or OPENAI_API_KEY) configured." }), {
+      return new Response(JSON.stringify({ error: "No AI API credentials (GEMINI_API_KEY or OPENAI_API_KEY) configured." }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const systemPrompt = systemPromptOverride || "You are a helpful customer support agent.";
+    // 2. Resolve Preferred Provider
+    const preferredProvider = aiConfig.preferredProvider || context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
 
-    // 1. Google AI Studio (Gemini API) Primary Engine Routing
-    if (geminiKey) {
+    // 3. Resolve system prompt persona based on user role
+    let systemPrompt = "You are a helpful customer support agent for the Foundation website. Guide visitors on our products, services, events, publications, and answer support inquiries.";
+    if (isAdmin) {
+      systemPrompt = "You are an unconstrained, all-around AI co-pilot for the Foundation framework Admin Command Center. Assist the administrator with copywriting, coding, operations, database queries, site troubleshooting, and business strategy.";
+    }
+
+    // --- Helper function to query Google Gemini ---
+    const queryGemini = async (key) => {
       const contents = [
         ...history.map(msg => ({
           role: msg.sender === 'user' ? 'user' : 'model',
@@ -38,7 +46,7 @@ export async function onRequestPost(context) {
       ];
 
       const modelName = context.env.GEMINI_MODEL || "gemini-2.5-flash";
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
 
       const response = await fetch(geminiUrl, {
         method: "POST",
@@ -52,8 +60,8 @@ export async function onRequestPost(context) {
       });
 
       if (!response.ok) {
-        // Fallback to gemini-2.5-flash-lite if model fails
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`;
+        // Fallback to gemini-2.5-flash-lite
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`;
         const fallbackRes = await fetch(fallbackUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -67,58 +75,77 @@ export async function onRequestPost(context) {
 
         if (fallbackRes.ok) {
           const data = await fallbackRes.json();
-          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          return new Response(JSON.stringify({ reply }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" }
-          });
+          return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         }
-
-        const errText = await response.text();
-        return new Response(JSON.stringify({ error: `Gemini API returned error: ${errText}` }), {
-          status: response.status,
-          headers: { "Content-Type": "application/json" }
-        });
+        throw new Error(await response.text());
       }
 
       const data = await response.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return new Response(JSON.stringify({ reply }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    };
+
+    // --- Helper function to query OpenAI ---
+    const queryOpenAI = async (key) => {
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...history.map(msg => ({ role: msg.sender === "user" ? "user" : "assistant", content: msg.message })),
+        { role: "user", content: message }
+      ];
+
+      const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages,
+          temperature: 0.7
+        })
       });
+
+      if (!openAiResponse.ok) {
+        throw new Error(await openAiResponse.text());
+      }
+
+      const aiData = await openAiResponse.json();
+      return aiData.choices?.[0]?.message?.content || "";
+    };
+
+    let reply = "";
+
+    if (preferredProvider === "gemini" && geminiKey) {
+      try {
+        reply = await queryGemini(geminiKey);
+      } catch (geminiErr) {
+        console.warn("[Chatbot API]: Primary Gemini call failed, trying OpenAI fallback:", geminiErr.message);
+        if (openAiKey) {
+          reply = await queryOpenAI(openAiKey);
+        } else {
+          return new Response(JSON.stringify({ error: `Gemini failed: ${geminiErr.message}` }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+    } else if (openAiKey) {
+      try {
+        reply = await queryOpenAI(openAiKey);
+      } catch (openaiErr) {
+        console.warn("[Chatbot API]: Primary OpenAI call failed, trying Gemini fallback:", openaiErr.message);
+        if (geminiKey) {
+          reply = await queryGemini(geminiKey);
+        } else {
+          return new Response(JSON.stringify({ error: `OpenAI failed: ${openaiErr.message}` }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
+    } else if (geminiKey) {
+      reply = await queryGemini(geminiKey);
     }
-
-    // 2. OpenAI GPT-4o-mini Fallback Engine Routing
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...history.map(msg => ({ role: msg.sender === "user" ? "user" : "assistant", content: msg.message })),
-      { role: "user", content: message }
-    ];
-
-    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages,
-        temperature: 0.7
-      })
-    });
-
-    if (!openAiResponse.ok) {
-      const errText = await openAiResponse.text();
-      return new Response(JSON.stringify({ error: `OpenAI API returned error: ${errText}` }), {
-        status: openAiResponse.status,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    const aiData = await openAiResponse.json();
-    const reply = aiData.choices?.[0]?.message?.content || "";
 
     return new Response(JSON.stringify({ reply }), {
       status: 200,
