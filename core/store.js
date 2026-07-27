@@ -92,6 +92,14 @@ const UserSchema = {
   isAdmin: Type.boolean
 };
 
+const ChatLogSchema = {
+  id: Type.string,
+  timestamp: Type.string,
+  sender: Type.string,
+  message: Type.string,
+  type: Type.string // "web", "sms", "voice"
+};
+
 const stateSchemas = {
   user: Type.optional((val) => {
     if (val === null || val === undefined) return true;
@@ -102,7 +110,11 @@ const stateSchemas = {
   activeBrandGuide: Type.optional(Type.object),
   devMode: Type.boolean,
   contentFeed: Type.optional(Type.array()),
-  history: Type.optional(Type.array())
+  history: Type.optional(Type.array()),
+  chatLogs: Type.optional(Type.array((val) => {
+    validateSchema(ChatLogSchema, val, 'store.state.chatLogs.item');
+    return true;
+  }))
 };
 
 const initialDevMode = localStorage.getItem('foundation_dev_mode') === 'true';
@@ -113,7 +125,8 @@ export const store = new Store({
   activeBrandGuide: null,
   devMode: initialDevMode,
   contentFeed: [],
-  history: []
+  history: [],
+  chatLogs: []
 }, stateSchemas);
 
 // --- REGISTER STORE ACTIONS ---
@@ -135,6 +148,10 @@ store.registerAction('SET_DEV_MODE', (state, enabled) => {
 store.registerAction('SET_CONTENT_FEED', (state, items) => ({
   ...state,
   contentFeed: Array.isArray(items) ? items : []
+}));
+store.registerAction('SET_CHAT_LOGS', (state, logs) => ({
+  ...state,
+  chatLogs: Array.isArray(logs) ? logs : []
 }));
 store.registerAction('PUSH_HISTORY', (state, path) => {
   if (!path) return state;
