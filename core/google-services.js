@@ -30,11 +30,15 @@ export async function authenticateGoogleServices() {
   }
 }
 
-async function getAccessToken(interactive = false) {
+export async function getGoogleAccessToken(interactive = false) {
   if (!googleAccessToken && interactive) {
     await authenticateGoogleServices();
   }
   return googleAccessToken;
+}
+
+async function getAccessToken(interactive = false) {
+  return await getGoogleAccessToken(interactive);
 }
 
 /* -------------------------------------------------------------------------- */
