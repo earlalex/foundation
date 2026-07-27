@@ -37,34 +37,84 @@ export async function onRequestPost(context) {
       });
     }
 
+    const geminiKey = context.env.GEMINI_API_KEY;
     const openAiKey = context.env.OPENAI_API_KEY;
-    if (!openAiKey) {
-      return new Response("Missing OPENAI_API_KEY environment binding.", { status: 500 });
+
+    if (!geminiKey && !openAiKey) {
+      return new Response("Missing API key environment bindings (GEMINI_API_KEY or OPENAI_API_KEY).", { status: 500 });
     }
 
-    // 2. Query GPT-4o-mini to get response
-    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a customer helper replying via SMS. Keep replies very brief, friendly and helpful, strictly within 160 characters." },
-          { role: "user", content: userMsg }
-        ],
-        temperature: 0.7
-      })
-    });
+    let replyText = "Thanks for your message.";
+    const smsSystemPrompt = "You are a customer helper replying via SMS. Keep replies very brief, friendly and helpful, strictly within 160 characters.";
 
-    if (!openAiResponse.ok) {
-      throw new Error(`OpenAI API failed: ${await openAiResponse.text()}`);
+    // 2. Query dynamic AI Engine (Gemini with OpenAI fallback)
+    if (geminiKey) {
+      // Query Google AI Studio Gemini API (allow fallback to gemini-2.5-flash-lite for low latency / high-volume SMS)
+      const modelName = context.env.GEMINI_SMS_MODEL || "gemini-2.5-flash-lite"; // Preferred flash-lite for SMS latency
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+
+      const response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [{ text: userMsg }]
+          }],
+          systemInstruction: {
+            parts: [{ text: smsSystemPrompt }]
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || replyText;
+      } else {
+        // Fallback to gemini-2.5-flash-lite explicitly
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`;
+        const fallbackRes = await fetch(fallbackUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              role: "user",
+              parts: [{ text: userMsg }]
+            }],
+            systemInstruction: {
+              parts: [{ text: smsSystemPrompt }]
+            }
+          })
+        });
+
+        if (fallbackRes.ok) {
+          const data = await fallbackRes.json();
+          replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || replyText;
+        }
+      }
+    } else if (openAiKey) {
+      // Query GPT-4o-mini
+      const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openAiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: smsSystemPrompt },
+            { role: "user", content: userMsg }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (openAiResponse.ok) {
+        const aiData = await openAiResponse.json();
+        replyText = aiData.choices?.[0]?.message?.content || replyText;
+      }
     }
-
-    const aiData = await openAiResponse.json();
-    const replyText = aiData.choices?.[0]?.message?.content || "Thanks for your message.";
 
     // 3. Dispatch SMS response back
     const telnyxKey = context.env.TELNYX_API_KEY;
@@ -109,7 +159,6 @@ export async function onRequestPost(context) {
     }
 
     // 4. Perform Google Workspace Integrations dynamically using context helper credentials
-    // Note: We use environmental GOOGLE_SERVICE_ACCOUNT_TOKEN or secure OAuth configurations when available.
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
     if (serviceToken) {
       try {
@@ -132,26 +181,42 @@ export async function onRequestPost(context) {
           token: serviceToken
         });
 
-        // Query GPT-4o-mini to get a brief 1-sentence summary of the conversation
+        // Query Gemini/OpenAI to get a brief 1-sentence summary of the conversation
         let summaryText = "SMS support conversation thread completed.";
-        const summaryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${openAiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: "Summarize this 1-turn interaction in exactly 1 brief sentence." },
-              { role: "user", content: `User said: ${userMsg}\nAI answered: ${replyText}` }
-            ]
-          })
-        });
-
-        if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json();
-          summaryText = summaryData.choices?.[0]?.message?.content || summaryText;
+        if (geminiKey) {
+          const summaryResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                role: "user",
+                parts: [{ text: `Summarize this 1-turn interaction in exactly 1 brief sentence:\nUser said: ${userMsg}\nAI answered: ${replyText}` }]
+              }]
+            })
+          });
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            summaryText = summaryData.candidates?.[0]?.content?.parts?.[0]?.text || summaryText;
+          }
+        } else if (openAiKey) {
+          const summaryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${openAiKey}`
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [
+                { role: "system", content: "Summarize this 1-turn interaction in exactly 1 brief sentence." },
+                { role: "user", content: `User said: ${userMsg}\nAI answered: ${replyText}` }
+              ]
+            })
+          });
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            summaryText = summaryData.choices?.[0]?.message?.content || summaryText;
+          }
         }
 
         // Email summary dispatch via Gmail

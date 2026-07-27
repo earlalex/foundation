@@ -20,42 +20,90 @@ export async function onRequestPost(context) {
       callText = params.get("SpeechResult") || params.get("TranscriptionText") || "";
     }
 
+    const geminiKey = context.env.GEMINI_API_KEY;
     const openAiKey = context.env.OPENAI_API_KEY;
-    if (!openAiKey) {
-      return new Response("Missing OPENAI_API_KEY environment binding.", { status: 500 });
+
+    if (!geminiKey && !openAiKey) {
+      return new Response("Missing API key environment bindings (GEMINI_API_KEY or OPENAI_API_KEY).", { status: 500 });
     }
 
-    // 2. Default initial support greeting response if no voice transcription exists yet
+    // Default initial support greeting response if no voice transcription exists yet
     let responseSpeech = "Hello! Thanks for calling. We are analyzing your request. How can I help you today?";
+    const voiceSystemPrompt = "You are a customer voice assistant replying over a telephone. Keep answers extremely short, friendly, and conversational.";
 
     if (callText) {
-      // Query GPT-4o-mini to get dynamic support response for voice calls
-      const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${openAiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "You are a customer voice assistant replying over a telephone. Keep answers extremely short, friendly, and conversational." },
-            { role: "user", content: callText }
-          ],
-          temperature: 0.6
-        })
-      });
+      // 2. Query dynamic AI Engine (Gemini with OpenAI fallback)
+      if (geminiKey) {
+        // Query Google AI Studio Gemini API
+        const modelName = context.env.GEMINI_VOICE_MODEL || "gemini-2.5-flash";
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
 
-      if (openAiResponse.ok) {
-        const aiData = await openAiResponse.json();
-        responseSpeech = aiData.choices?.[0]?.message?.content || responseSpeech;
+        const response = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              role: "user",
+              parts: [{ text: callText }]
+            }],
+            systemInstruction: {
+              parts: [{ text: voiceSystemPrompt }]
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          responseSpeech = data.candidates?.[0]?.content?.parts?.[0]?.text || responseSpeech;
+        } else {
+          // Fallback to gemini-2.5-flash-lite
+          const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`;
+          const fallbackRes = await fetch(fallbackUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                role: "user",
+                parts: [{ text: callText }]
+              }],
+              systemInstruction: {
+                parts: [{ text: voiceSystemPrompt }]
+              }
+            })
+          });
+
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            responseSpeech = data.candidates?.[0]?.content?.parts?.[0]?.text || responseSpeech;
+          }
+        }
+      } else if (openAiKey) {
+        // Query GPT-4o-mini
+        const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openAiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: voiceSystemPrompt },
+              { role: "user", content: callText }
+            ],
+            temperature: 0.6
+          })
+        });
+
+        if (openAiResponse.ok) {
+          const aiData = await openAiResponse.json();
+          responseSpeech = aiData.choices?.[0]?.message?.content || responseSpeech;
+        }
       }
     }
 
     // 3. Perform Google Workspace Integrations dynamically using context helper credentials
-    // Note: We use environmental GOOGLE_SERVICE_ACCOUNT_TOKEN or secure OAuth configurations when available.
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
-    const fromPhone = "Voice Call"; // Placeholder, can be parsed from incoming headers/parameters when available
     if (serviceToken && callText) {
       try {
         const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google.js');
@@ -68,7 +116,7 @@ export async function onRequestPost(context) {
         // Save Transcript to Google Drive
         await uploadCommunicationLogToDrive(serviceToken, siteName, fileName, mdTranscript);
 
-        // Record interaction under Google Contacts if a phone was present
+        // Record interaction under Google Contacts
         await syncGoogleContactCommunication({
           phone: "Voice session",
           name: "Voice Call Customer",
@@ -77,26 +125,42 @@ export async function onRequestPost(context) {
           token: serviceToken
         });
 
-        // Query GPT-4o-mini to get a brief 1-sentence summary of the conversation
+        // Query Gemini/OpenAI to get a brief 1-sentence summary of the conversation
         let summaryText = "Voice support conversation session completed.";
-        const summaryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${openAiKey}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: "Summarize this 1-turn interaction in exactly 1 brief sentence." },
-              { role: "user", content: `User said: ${callText}\nAI answered: ${responseSpeech}` }
-            ]
-          })
-        });
-
-        if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json();
-          summaryText = summaryData.choices?.[0]?.message?.content || summaryText;
+        if (geminiKey) {
+          const summaryResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                role: "user",
+                parts: [{ text: `Summarize this 1-turn voice call in exactly 1 brief sentence:\nUser said: ${callText}\nAI answered: ${responseSpeech}` }]
+              }]
+            })
+          });
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            summaryText = summaryData.candidates?.[0]?.content?.parts?.[0]?.text || summaryText;
+          }
+        } else if (openAiKey) {
+          const summaryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${openAiKey}`
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [
+                { role: "system", content: "Summarize this 1-turn interaction in exactly 1 brief sentence." },
+                { role: "user", content: `User said: ${callText}\nAI answered: ${responseSpeech}` }
+              ]
+            })
+          });
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            summaryText = summaryData.choices?.[0]?.message?.content || summaryText;
+          }
         }
 
         // Email summary dispatch via Gmail
