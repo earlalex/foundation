@@ -67,7 +67,7 @@ export class Router {
         repoPrefix = repoPrefix.replace(/\/index\.html$/, '');
       }
       repoPrefix = repoPrefix.replace(/\/$/, '');
-      
+
       const fullUrl = repoPrefix + storedRoute;
       window.history.replaceState({}, '', fullUrl);
       await this.loadRoute(storedRoute);
@@ -77,14 +77,14 @@ export class Router {
       let urlObj = new URL(currentPath, window.location.origin);
       let pathname = urlObj.pathname || '/';
       let originalPathname = pathname;
-      
+
       if (pathname.endsWith('/index.html')) {
         pathname = pathname.replace(/\/index\.html$/, '');
       }
       while (pathname.length > 1 && pathname.endsWith('/')) {
         pathname = pathname.slice(0, -1);
       }
-      
+
       if (pathname !== originalPathname) {
         const cleanUrl = pathname + urlObj.search;
         window.history.replaceState({}, '', cleanUrl);
