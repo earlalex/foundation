@@ -108,7 +108,69 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 4. Return XML or JSON success depending on provider
+    // 4. Perform Google Workspace Integrations dynamically using context helper credentials
+    // Note: We use environmental GOOGLE_SERVICE_ACCOUNT_TOKEN or secure OAuth configurations when available.
+    const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
+    if (serviceToken) {
+      try {
+        const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google.js');
+
+        // Create Transcript Markdown
+        const siteName = "Foundation Framework";
+        const fileName = `sms_log_${fromNumber.replace(/[+]/g, '') || 'unknown'}_${Date.now()}.md`;
+        const mdTranscript = `## SMS Communication Thread\n\n- **From**: ${fromNumber}\n- **Date**: ${new Date().toLocaleString()}\n\n### Transcript:\n- **User**: ${userMsg}\n- **AI**: ${replyText}`;
+
+        // Save Transcript to Google Drive
+        await uploadCommunicationLogToDrive(serviceToken, siteName, fileName, mdTranscript);
+
+        // Record interaction under Google Contacts
+        await syncGoogleContactCommunication({
+          phone: fromNumber,
+          name: `SMS User (${fromNumber})`,
+          type: "sms",
+          timestamp: new Date().toISOString(),
+          token: serviceToken
+        });
+
+        // Query GPT-4o-mini to get a brief 1-sentence summary of the conversation
+        let summaryText = "SMS support conversation thread completed.";
+        const summaryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openAiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: "Summarize this 1-turn interaction in exactly 1 brief sentence." },
+              { role: "user", content: `User said: ${userMsg}\nAI answered: ${replyText}` }
+            ]
+          })
+        });
+
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+          summaryText = summaryData.choices?.[0]?.message?.content || summaryText;
+        }
+
+        // Email summary dispatch via Gmail
+        const adminEmail = context.env.ADMIN_EMAIL || "admin@foundation.dev";
+        await sendCommunicationSummaryEmail({
+          toEmail: adminEmail,
+          summary: summaryText,
+          duration: "1 Message exchange",
+          query: userMsg,
+          response: replyText,
+          token: serviceToken
+        });
+
+      } catch (wsErr) {
+        console.warn('[SMS Webhook]: Google Workspace background logging failed:', wsErr.message);
+      }
+    }
+
+    // 5. Return XML or JSON success depending on provider
     if (provider.startsWith("twilio")) {
       const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${replyText}</Message></Response>`;
       return new Response(twiml, {
