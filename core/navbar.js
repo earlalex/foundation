@@ -102,23 +102,28 @@ export function initNavbar() {
 
   function updateActiveLink(currentPath) {
     const navLinks = document.querySelectorAll('.nav-link');
-    const activeRoute = (currentPath === '/' || currentPath === '') ? '/home' : currentPath;
+    // Normalize path by stripping base path prefix and trailing slashes
+    let activeRoute = currentPath || window.location.pathname;
+    if (activeRoute.endsWith('/index.html')) {
+      activeRoute = activeRoute.replace(/\/index\.html$/, '');
+    }
+    const segments = activeRoute.split('/').filter(Boolean);
+    const cleanRoute = segments.length > 0 ? '/' + segments[segments.length - 1] : '/home';
 
     navLinks.forEach((link) => {
       const linkPath = link.getAttribute('data-path') || link.getAttribute('href');
-      
-      if (activeRoute.startsWith(linkPath)) {
+      const isMatch = (cleanRoute === linkPath) || (cleanRoute === '/' && linkPath === '/home');
+
+      if (isMatch) {
         link.style.color = 'var(--theme-color-primary, #2b6cb0)';
-        if (window.innerWidth > 768) {
-          link.style.borderBottom = '2px solid var(--theme-color-primary, #2b6cb0)';
-        } else {
-          link.style.borderBottom = 'none';
-        }
+        link.style.borderBottom = '2px solid var(--theme-color-primary, #2b6cb0)';
         link.style.fontWeight = 'bold';
+        link.style.opacity = '1';
       } else {
         link.style.color = 'var(--theme-color-text-secondary, #4a5568)';
-        link.style.borderBottom = 'none';
+        link.style.borderBottom = '2px solid transparent';
         link.style.fontWeight = '600';
+        link.style.opacity = '0.85';
       }
     });
   }
