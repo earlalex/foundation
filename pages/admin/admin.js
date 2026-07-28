@@ -23,6 +23,7 @@ import { initBusinessProfileTab } from './admin-business-profile.js';
 import { initPublicProfileTab } from './admin-public-profile.js';
 import { initIntegrationsTab } from './admin-integrations.js';
 import { initUserDirectoryTab } from './admin-user-directory.js';
+import { initProductsTab } from './admin-products.js';
 
 export function initAdminPage() {
   // --- 0. LOG OUT BUTTON ---
@@ -51,6 +52,8 @@ export function initAdminPage() {
     
     if (targetTab === 'users') {
       initUserDirectoryTab();
+    } else if (targetTab === 'products') {
+      initProductsTab();
     } else if (targetTab === 'seo') {
       loadSeoAndAnalyticsTab();
     } else if (targetTab === 'performance') {

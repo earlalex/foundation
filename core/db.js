@@ -18,6 +18,7 @@ import { configManager } from './config.js';
 const CONTENT_COLLECTION = 'content';
 const USERS_COLLECTION = 'users';
 const CHAT_LOGS_COLLECTION = 'chat_logs';
+const INVOICES_COLLECTION = 'invoices';
 
 /**
  * Get Firestore database instance
@@ -361,6 +362,179 @@ export class ContentDB {
       delete local[userId];
       this.#saveLocalUsers(local);
       return true;
+    }
+  }
+
+  /**
+   * Save invoice to Firestore or localStorage fallback
+   * @param {Object} invoice - Invoice object to save
+   * @returns {Promise<Object>} Saved invoice
+   */
+  async saveInvoice(invoice) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalInvoices();
+      local[invoice.id] = invoice;
+      this.#saveLocalInvoices(local);
+      return invoice;
+    }
+
+    try {
+      const docRef = doc(db, INVOICES_COLLECTION, invoice.id);
+      await setDoc(docRef, invoice, { merge: true });
+      return invoice;
+    } catch (err) {
+      console.warn('[DB]: Firestore invoice save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalInvoices();
+      local[invoice.id] = invoice;
+      this.#saveLocalInvoices(local);
+      return invoice;
+    }
+  }
+
+  /**
+   * Get invoice by ID from Firestore or localStorage fallback
+   * @param {string} invoiceId - Invoice ID
+   * @returns {Promise<Object|null>} Invoice object or null
+   */
+  async getInvoice(invoiceId) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalInvoices();
+      return local[invoiceId] || null;
+    }
+
+    try {
+      const docRef = doc(db, INVOICES_COLLECTION, invoiceId);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : null;
+    } catch (err) {
+      console.warn('[DB]: Firestore invoice get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalInvoices();
+      return local[invoiceId] || null;
+    }
+  }
+
+  /**
+   * Get all invoices from Firestore or localStorage fallback
+   * @returns {Promise<Array>} Array of invoice objects
+   */
+  async getAllInvoices() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalInvoices();
+      return Object.values(local);
+    }
+
+    try {
+      const collectionRef = collection(db, INVOICES_COLLECTION);
+      const querySnapshot = await getDocs(collectionRef);
+      return querySnapshot.docs.map(doc => doc.data());
+    } catch (err) {
+      console.warn('[DB]: Firestore invoices get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalInvoices();
+      return Object.values(local);
+    }
+  }
+
+  /**
+   * Get invoices by customer email from Firestore or localStorage fallback
+   * @param {string} customerEmail - Customer email
+   * @returns {Promise<Array>} Array of invoice objects
+   */
+  async getInvoicesByCustomer(customerEmail) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalInvoices();
+      return Object.values(local).filter(inv => inv.customerEmail === customerEmail);
+    }
+
+    try {
+      const collectionRef = collection(db, INVOICES_COLLECTION);
+      const q = query(collectionRef, where('customerEmail', '==', customerEmail));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => doc.data());
+    } catch (err) {
+      console.warn('[DB]: Firestore customer invoices get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalInvoices();
+      return Object.values(local).filter(inv => inv.customerEmail === customerEmail);
+    }
+  }
+
+  /**
+   * Get invoices by Google Contact ID from Firestore or localStorage fallback
+   * @param {string} googleContactId - Google Contact ID
+   * @returns {Promise<Array>} Array of invoice objects
+   */
+  async getInvoicesByGoogleContact(googleContactId) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalInvoices();
+      return Object.values(local).filter(inv => inv.googleContactId === googleContactId);
+    }
+
+    try {
+      const collectionRef = collection(db, INVOICES_COLLECTION);
+      const q = query(collectionRef, where('googleContactId', '==', googleContactId));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => doc.data());
+    } catch (err) {
+      console.warn('[DB]: Firestore Google Contact invoices get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalInvoices();
+      return Object.values(local).filter(inv => inv.googleContactId === googleContactId);
+    }
+  }
+
+  /**
+   * Delete invoice from Firestore or localStorage fallback
+   * @param {string} invoiceId - Invoice ID to delete
+   * @returns {Promise<boolean>} True if deletion was successful
+   */
+  async deleteInvoice(invoiceId) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalInvoices();
+      delete local[invoiceId];
+      this.#saveLocalInvoices(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, INVOICES_COLLECTION, invoiceId);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore invoice delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalInvoices();
+      delete local[invoiceId];
+      this.#saveLocalInvoices(local);
+      return true;
+    }
+  }
+
+  /**
+   * Get invoices from localStorage fallback
+   * @private
+   * @returns {Object} Object of invoice objects keyed by ID
+   */
+  #getLocalInvoices() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_invoices') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /**
+   * Save invoices to localStorage fallback
+   * @private
+   * @param {Object} invoices - Object of invoice objects keyed by ID
+   */
+  #saveLocalInvoices(invoices) {
+    try {
+      localStorage.setItem('foundation_local_invoices', JSON.stringify(invoices));
+    } catch (e) {
+      console.error('[DB]: Failed to save invoices to localStorage', e);
     }
   }
 }

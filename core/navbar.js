@@ -104,14 +104,18 @@ export function initNavbar() {
     const navLinks = document.querySelectorAll('.nav-link');
     // Normalize path by stripping base path prefix and trailing slashes
     let activeRoute = currentPath || window.location.pathname;
+    
+    // Remove index.html suffix
     if (activeRoute.endsWith('/index.html')) {
       activeRoute = activeRoute.replace(/\/index\.html$/, '');
     }
+    
+    // Remove trailing slashes
     while (activeRoute.length > 1 && activeRoute.endsWith('/')) {
       activeRoute = activeRoute.slice(0, -1);
     }
     
-    // Handle root path
+    // Handle root path - convert to /home
     if (activeRoute === '/' || activeRoute === '') {
       activeRoute = '/home';
     }
