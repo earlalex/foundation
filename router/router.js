@@ -23,7 +23,39 @@ export class Router {
     if (path.endsWith('/index.html')) {
       path = path.replace(/\/index\.html$/, '');
     }
-    this.basePath = path.endsWith('/') ? path : path + '/';
+
+    // Normalize trailing slash for route matching
+    let cleanPath = path;
+    if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+      cleanPath = cleanPath.slice(0, -1);
+    }
+
+    // Find if the path ends with any of our defined routes in routesManifest
+    let matchedRoute = '';
+    for (const route of Object.keys(this.routesManifest)) {
+      if (route !== '/' && (cleanPath === route || cleanPath.endsWith(route))) {
+        matchedRoute = route;
+        break;
+      }
+    }
+
+    let base = '/';
+    if (matchedRoute) {
+      // Strip matchedRoute from the end of cleanPath to find the subdirectory/basePath prefix
+      const index = cleanPath.lastIndexOf(matchedRoute);
+      base = cleanPath.slice(0, index);
+    } else {
+      base = cleanPath;
+    }
+
+    // Ensure basePath ends with a single slash and is correctly formatted
+    if (!base.endsWith('/')) {
+      base = base + '/';
+    }
+    if (!base.startsWith('/')) {
+      base = '/' + base;
+    }
+    this.basePath = base;
     
     this.validateManifest();
     this.bindClickEvents();
