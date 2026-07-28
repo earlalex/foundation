@@ -537,6 +537,309 @@ export class ContentDB {
       console.error('[DB]: Failed to save invoices to localStorage', e);
     }
   }
+
+  /**
+   * Delete content from Firestore or localStorage fallback
+   * @param {string} id - Content ID to delete
+   * @returns {Promise<boolean>} True if deletion was successful
+   */
+  async deleteContent(id) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalContent();
+      delete local[id];
+      this.#saveLocalContent(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, CONTENT_COLLECTION, id);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore content delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalContent();
+      delete local[id];
+      this.#saveLocalContent(local);
+      return true;
+    }
+  }
+
+  // --- Financial Persistence Helpers ---
+
+  #getLocalExpenses() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalExpenses(expenses) {
+    try {
+      localStorage.setItem('foundation_local_expenses', JSON.stringify(expenses));
+    } catch (e) {
+      console.error('[DB]: Failed to save expenses to localStorage', e);
+    }
+  }
+
+  #getLocalPayroll() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalPayroll(payroll) {
+    try {
+      localStorage.setItem('foundation_local_payroll', JSON.stringify(payroll));
+    } catch (e) {
+      console.error('[DB]: Failed to save payroll to localStorage', e);
+    }
+  }
+
+  #getLocalBudgets() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_budgets') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalBudgets(budgets) {
+    try {
+      localStorage.setItem('foundation_local_budgets', JSON.stringify(budgets));
+    } catch (e) {
+      console.error('[DB]: Failed to save budgets to localStorage', e);
+    }
+  }
+
+  #getLocalEmployees() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_employees') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalEmployees(employees) {
+    try {
+      localStorage.setItem('foundation_local_employees', JSON.stringify(employees));
+    } catch (e) {
+      console.error('[DB]: Failed to save employees to localStorage', e);
+    }
+  }
+
+  async saveExpense(data) {
+    const db = getFirestoreDB();
+    const id = data.id || `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = { ...data, id, updatedAt: new Date().toISOString() };
+
+    if (!db) {
+      const local = this.#getLocalExpenses();
+      local[id] = payload;
+      this.#saveLocalExpenses(local);
+      return payload;
+    }
+
+    try {
+      const docRef = doc(db, 'finances_expenses', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore expense save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalExpenses();
+      local[id] = payload;
+      this.#saveLocalExpenses(local);
+      return payload;
+    }
+  }
+
+  async getExpenses(filter = {}) {
+    let results = [];
+    const db = getFirestoreDB();
+    if (db) {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
+        querySnapshot.forEach((docSnap) => {
+          results.push(docSnap.data());
+        });
+      } catch (err) {
+        console.warn('[DB]: Could not fetch expenses from Firestore.', err.message);
+      }
+    }
+
+    if (results.length === 0) {
+      results = Object.values(this.#getLocalExpenses());
+    }
+
+    if (filter.category && filter.category !== 'all') {
+      results = results.filter(item => item.category === filter.category);
+    }
+    results.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return results;
+  }
+
+  async savePayrollRecord(data) {
+    const db = getFirestoreDB();
+    const id = data.id || `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = { ...data, id, createdAt: data.createdAt || new Date().toISOString() };
+
+    if (!db) {
+      const local = this.#getLocalPayroll();
+      local[id] = payload;
+      this.#saveLocalPayroll(local);
+      return payload;
+    }
+
+    try {
+      const docRef = doc(db, 'finances_payroll', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore payroll save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalPayroll();
+      local[id] = payload;
+      this.#saveLocalPayroll(local);
+      return payload;
+    }
+  }
+
+  async getPayrollRecords() {
+    let results = [];
+    const db = getFirestoreDB();
+    if (db) {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
+        querySnapshot.forEach((docSnap) => {
+          results.push(docSnap.data());
+        });
+      } catch (err) {
+        console.warn('[DB]: Could not fetch payroll records from Firestore.', err.message);
+      }
+    }
+
+    if (results.length === 0) {
+      results = Object.values(this.#getLocalPayroll());
+    }
+
+    results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return results;
+  }
+
+  async saveBudgetTargets(targets) {
+    const db = getFirestoreDB();
+    const id = 'monthly_budget_targets';
+    const payload = { ...targets, id, updatedAt: new Date().toISOString() };
+
+    if (!db) {
+      const local = this.#getLocalBudgets();
+      local[id] = payload;
+      this.#saveLocalBudgets(local);
+      return payload;
+    }
+
+    try {
+      const docRef = doc(db, 'finances_budgets', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore budget save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalBudgets();
+      local[id] = payload;
+      this.#saveLocalBudgets(local);
+      return payload;
+    }
+  }
+
+  async getBudgets() {
+    const db = getFirestoreDB();
+    const id = 'monthly_budget_targets';
+    if (db) {
+      try {
+        const docRef = doc(db, 'finances_budgets', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          return docSnap.data();
+        }
+      } catch (err) {
+        console.warn('[DB]: Could not fetch budgets from Firestore.', err.message);
+      }
+    }
+
+    const local = this.#getLocalBudgets();
+    return local[id] || { totalExpensesBudget: 5000, payrollBudget: 10000 };
+  }
+
+  async saveEmployee(data) {
+    const db = getFirestoreDB();
+    const id = data.id || `emp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = { ...data, id, updatedAt: new Date().toISOString() };
+
+    if (!db) {
+      const local = this.#getLocalEmployees();
+      local[id] = payload;
+      this.#saveLocalEmployees(local);
+      return payload;
+    }
+
+    try {
+      const docRef = doc(db, 'finances_employees', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore employee save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalEmployees();
+      local[id] = payload;
+      this.#saveLocalEmployees(local);
+      return payload;
+    }
+  }
+
+  async getEmployees() {
+    let results = [];
+    const db = getFirestoreDB();
+    if (db) {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'finances_employees'));
+        querySnapshot.forEach((docSnap) => {
+          results.push(docSnap.data());
+        });
+      } catch (err) {
+        console.warn('[DB]: Could not fetch employees from Firestore.', err.message);
+      }
+    }
+
+    if (results.length === 0) {
+      results = Object.values(this.#getLocalEmployees());
+    }
+
+    results.sort((a, b) => a.name.localeCompare(b.name));
+    return results;
+  }
+
+  async deleteEmployee(id) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalEmployees();
+      delete local[id];
+      this.#saveLocalEmployees(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, 'finances_employees', id);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore employee delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalEmployees();
+      delete local[id];
+      this.#saveLocalEmployees(local);
+      return true;
+    }
+  }
 }
 
 /**
