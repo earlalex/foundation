@@ -3,6 +3,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/fir
 import { auth } from './auth.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { scanFileLocally } from '../utils/securityScanner.js';
 
 let googleAccessToken = null;
 let rootFolderId = null;
@@ -88,6 +89,15 @@ function getAssetCategory(file) {
  * Uploads a file inside [Site Name] / assets / [category] / YYYY / MM /
  */
 export async function uploadFileToDrive(file) {
+  // Run Tier 1 browser-native security scan guardrail
+  const scanResult = await scanFileLocally(file);
+  if (!scanResult.isClean) {
+    const errorMsg = `Upload blocked: Local signature scan detected malicious patterns: ${scanResult.detectedSignatures.join(', ')}`;
+    console.warn(`[Security Scanner]: ${errorMsg}`);
+    errorHandler.handleError(new Error(errorMsg), 'Security Block');
+    return null;
+  }
+
   if (!googleAccessToken) await authenticateGoogleDrive();
   const parentFolderId = await getOrCreateSiteRootFolder();
 
