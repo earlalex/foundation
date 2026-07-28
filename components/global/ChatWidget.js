@@ -9,6 +9,7 @@ export class ChatWidget extends HTMLElement {
     this.history = [];
     this.isOpen = false;
     this.isAdmin = false;
+    this.storageKey = 'foundation_chat_history';
   }
 
   connectedCallback() {
@@ -24,6 +25,9 @@ export class ChatWidget extends HTMLElement {
       return;
     }
 
+    // Load chat history from localStorage
+    this.loadHistoryFromStorage();
+
     // Subscribe to store updates to dynamically adjust persona when auth / dev bypass state changes
     store.subscribe((state) => {
       const currentlyAdmin = !!(state.user?.isAdmin || state.devMode || window.__FOUNDATION_DEV_BYPASS__);
@@ -38,6 +42,37 @@ export class ChatWidget extends HTMLElement {
     this.render(chatbotCfg);
     this.setupEventListeners();
     this.updatePersona();
+    this.renderHistory();
+  }
+
+  loadHistoryFromStorage() {
+    try {
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) {
+        this.history = JSON.parse(stored);
+        // Limit history to 20 messages
+        if (this.history.length > 20) {
+          this.history = this.history.slice(-20);
+        }
+      }
+    } catch (err) {
+      console.warn('[ChatWidget]: Failed to load history from localStorage:', err.message);
+      this.history = [];
+    }
+  }
+
+  saveHistoryToStorage() {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.history));
+    } catch (err) {
+      console.warn('[ChatWidget]: Failed to save history to localStorage:', err.message);
+    }
+  }
+
+  clearHistory() {
+    this.history = [];
+    this.saveHistoryToStorage();
+    this.renderHistory();
   }
 
   render(cfg) {
@@ -123,6 +158,11 @@ export class ChatWidget extends HTMLElement {
             </div>
           </div>
 
+          <!-- Clear History Button -->
+          <button id="chat-clear-history" style="display: none; padding: 6px 12px; background: transparent; border: 1px solid ${borderColor}; color: ${textSecColor}; font-size: 0.75rem; cursor: pointer; border-radius: 4px; margin: 0 15px 5px 15px; align-self: flex-start;">
+            Clear History
+          </button>
+
           <!-- Loading Indicator -->
           <div id="chat-loading" style="display: none; padding: 10px 15px; font-size: 0.8rem; color: ${textSecColor}; align-self: flex-start;">
             Assistant is typing...
@@ -173,6 +213,7 @@ export class ChatWidget extends HTMLElement {
     const iconClose = this.querySelector('#chat-icon-close');
     const form = this.querySelector('#chat-form');
     const input = this.querySelector('#chat-input');
+    const clearHistoryBtn = this.querySelector('#chat-clear-history');
 
     const toggleChat = () => {
       this.isOpen = !this.isOpen;
@@ -181,6 +222,10 @@ export class ChatWidget extends HTMLElement {
         iconOpen.style.display = 'none';
         iconClose.style.display = 'block';
         input.focus();
+        // Show/hide clear history button based on history
+        if (clearHistoryBtn) {
+          clearHistoryBtn.style.display = this.history.length > 0 ? 'block' : 'none';
+        }
       } else {
         chatWindow.style.display = 'none';
         iconOpen.style.display = 'block';
@@ -190,6 +235,12 @@ export class ChatWidget extends HTMLElement {
 
     toggleBtn?.addEventListener('click', toggleChat);
     closeWindowBtn?.addEventListener('click', toggleChat);
+
+    clearHistoryBtn?.addEventListener('click', () => {
+      if (confirm('Clear all chat history? This cannot be undone.')) {
+        this.clearHistory();
+      }
+    });
 
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -258,7 +309,39 @@ export class ChatWidget extends HTMLElement {
     });
   }
 
+  renderHistory() {
+    const messagesContainer = this.querySelector('#chat-messages');
+    const welcomeBox = this.querySelector('#chat-welcome-box');
+    const clearHistoryBtn = this.querySelector('#chat-clear-history');
+    
+    if (!messagesContainer) return;
+
+    // Clear existing messages except welcome
+    while (messagesContainer.children.length > 1) {
+      messagesContainer.removeChild(messagesContainer.lastChild);
+    }
+
+    // Hide welcome if there's history
+    if (welcomeBox) {
+      welcomeBox.style.display = this.history.length > 0 ? 'none' : 'block';
+    }
+
+    // Render history messages
+    this.history.forEach(msg => {
+      this.appendMessageToDOM(msg.sender, msg.message, false);
+    });
+
+    // Show/hide clear history button
+    if (clearHistoryBtn) {
+      clearHistoryBtn.style.display = this.history.length > 0 ? 'block' : 'none';
+    }
+  }
+
   appendMessage(sender, text) {
+    this.appendMessageToDOM(sender, text, true);
+  }
+
+  appendMessageToDOM(sender, text, saveToStorage) {
     const messagesContainer = this.querySelector('#chat-messages');
     if (!messagesContainer) return;
 
@@ -288,6 +371,23 @@ export class ChatWidget extends HTMLElement {
     this.history.push({ sender, message: text });
     if (this.history.length > 20) {
       this.history.shift();
+    }
+
+    // Save to localStorage if requested
+    if (saveToStorage) {
+      this.saveHistoryToStorage();
+      
+      // Update clear history button visibility
+      const clearHistoryBtn = this.querySelector('#chat-clear-history');
+      if (clearHistoryBtn) {
+        clearHistoryBtn.style.display = 'block';
+      }
+      
+      // Hide welcome message on first user message
+      const welcomeBox = this.querySelector('#chat-welcome-box');
+      if (welcomeBox) {
+        welcomeBox.style.display = 'none';
+      }
     }
   }
 

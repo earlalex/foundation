@@ -2,12 +2,20 @@
 import { Type, validateSchema } from './validator.js';
 import { errorHandler } from './error-handler.js';
 
+/**
+ * Store manages application state with schema validation, immutable state, action dispatch, and subscription support
+ */
 class Store {
   #state;
   #actions = new Map();
   #listeners = new Set();
   #schemas = {};
 
+  /**
+   * Initialize Store with initial state and optional schemas
+   * @param {Object} initialState - Initial state object
+   * @param {Object} schemas - Schema definitions for state validation
+   */
   constructor(initialState = {}, schemas = {}) {
     this.#schemas = schemas;
     if (Object.keys(schemas).length > 0) {
@@ -16,10 +24,19 @@ class Store {
     this.#state = DeepFreeze(initialState);
   }
 
+  /**
+   * Get current immutable state
+   * @returns {Object} Current state
+   */
   get state() {
     return this.#state;
   }
 
+  /**
+   * Register an action handler
+   * @param {string} actionName - Name of the action
+   * @param {Function} actionFn - Action handler function
+   */
   registerAction(actionName, actionFn) {
     if (this.#actions.has(actionName)) {
       console.warn(`[Store]: Overwriting action "${actionName}"`);
@@ -27,6 +44,11 @@ class Store {
     this.#actions.set(actionName, actionFn);
   }
 
+  /**
+   * Dispatch an action with payload
+   * @param {string} actionName - Name of the action to dispatch
+   * @param {*} payload - Payload to pass to action handler
+   */
   dispatch(actionName, payload) {
     const action = this.#actions.get(actionName);
     if (!action) {
@@ -51,6 +73,11 @@ class Store {
     }
   }
 
+  /**
+   * Subscribe to state changes
+   * @param {Function} listener - Callback function to receive state updates
+   * @returns {Function} Unsubscribe function
+   */
   subscribe(listener) {
     this.#listeners.add(listener);
     return () => {
@@ -58,6 +85,10 @@ class Store {
     };
   }
 
+  /**
+   * Notify all listeners of state changes
+   * @private
+   */
   #notify() {
     this.#listeners.forEach((listener) => {
       try {
@@ -69,6 +100,11 @@ class Store {
   }
 }
 
+/**
+ * Deep freeze an object to make it immutable
+ * @param {*} obj - Object to freeze
+ * @returns {*} Frozen object
+ */
 function DeepFreeze(obj) {
   if (obj === null || typeof obj !== 'object') return obj;
   Object.freeze(obj);

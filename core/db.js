@@ -19,6 +19,10 @@ const CONTENT_COLLECTION = 'content';
 const USERS_COLLECTION = 'users';
 const CHAT_LOGS_COLLECTION = 'chat_logs';
 
+/**
+ * Get Firestore database instance
+ * @returns {Object|null} Firestore instance or null if uninitialized
+ */
 function getFirestoreDB() {
   try {
     return getFirestore();
@@ -28,8 +32,16 @@ function getFirestoreDB() {
   }
 }
 
+/**
+ * ContentDB class abstracts Firestore interactions for content, users, and chat logs
+ * Includes localStorage fallback for chat logs when Firestore is unavailable
+ */
 export class ContentDB {
-  // LocalStorage fallback engines
+  /**
+   * Get chat logs from localStorage fallback
+   * @private
+   * @returns {Array} Array of chat log objects
+   */
   #getLocalChatLogs() {
     try {
       return JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
@@ -38,10 +50,20 @@ export class ContentDB {
     }
   }
 
+  /**
+   * Save chat logs to localStorage fallback
+   * @private
+   * @param {Array} data - Array of chat log objects
+   */
   #saveLocalChatLogs(data) {
     localStorage.setItem('foundation_local_chat_logs', JSON.stringify(data));
   }
 
+  /**
+   * Save a chat log entry to Firestore or localStorage fallback
+   * @param {Object} logData - Chat log data with timestamp, sender, message, type
+   * @returns {Promise<boolean>} True if save was successful
+   */
   async saveChatLog(logData) {
     // Basic validation matching schema guidelines (timestamp, sender, message, type)
     if (!logData.timestamp || !logData.sender || !logData.message) {
@@ -75,6 +97,11 @@ export class ContentDB {
     }
   }
 
+  /**
+   * Get chat logs from Firestore or localStorage fallback
+   * @param {number} limitCount - Maximum number of logs to return
+   * @returns {Promise<Array>} Array of chat log objects sorted by date
+   */
   async getChatLogs(limitCount = 50) {
     const db = getFirestoreDB();
     if (db) {
@@ -96,7 +123,11 @@ export class ContentDB {
     return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
   }
 
-  // LocalStorage fallback engines
+  /**
+   * Get content from localStorage fallback
+   * @private
+   * @returns {Object} Content object from localStorage
+   */
   #getLocalContent() {
     try {
       return JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
@@ -105,10 +136,20 @@ export class ContentDB {
     }
   }
 
+  /**
+   * Save content to localStorage fallback
+   * @private
+   * @param {Object} data - Content object to save
+   */
   #saveLocalContent(data) {
     localStorage.setItem('foundation_local_content', JSON.stringify(data));
   }
 
+  /**
+   * Get users from localStorage fallback
+   * @private
+   * @returns {Object} Users object from localStorage
+   */
   #getLocalUsers() {
     try {
       return JSON.parse(localStorage.getItem('foundation_local_users') || '{}');
@@ -117,10 +158,20 @@ export class ContentDB {
     }
   }
 
+  /**
+   * Save users to localStorage fallback
+   * @private
+   * @param {Object} data - Users object to save
+   */
   #saveLocalUsers(data) {
     localStorage.setItem('foundation_local_users', JSON.stringify(data));
   }
 
+  /**
+   * Save content to Firestore or localStorage fallback
+   * @param {Object} contentData - Content data to save
+   * @returns {Promise<boolean>} True if save was successful
+   */
   async saveContent(contentData) {
     schemaRegistry.validate(contentData);
     const db = getFirestoreDB();
@@ -147,6 +198,11 @@ export class ContentDB {
     }
   }
 
+  /**
+   * Get content by ID from Firestore or localStorage fallback
+   * @param {string} id - Content ID
+   * @returns {Promise<Object|null>} Content object or null if not found
+   */
   async getContentById(id) {
     const db = getFirestoreDB();
     if (!db) {
@@ -180,6 +236,12 @@ export class ContentDB {
     return null;
   }
 
+  /**
+   * Get content by type from Firestore or localStorage fallback
+   * @param {string} type - Content type to filter by
+   * @param {number} maxItems - Maximum number of items to return
+   * @returns {Promise<Array>} Array of content objects
+   */
   async getContentByType(type, maxItems = 12) {
     const results = [];
     const db = getFirestoreDB();
@@ -217,6 +279,10 @@ export class ContentDB {
     return results;
   }
 
+  /**
+   * Get all users from Firestore or localStorage fallback
+   * @returns {Promise<Array>} Array of user objects
+   */
   async getAllUsers() {
     const users = [];
     const db = getFirestoreDB();
@@ -237,6 +303,11 @@ export class ContentDB {
     return Object.values(local);
   }
 
+  /**
+   * Save user data to Firestore or localStorage fallback
+   * @param {Object} userData - User data to save
+   * @returns {Promise<boolean>} True if save was successful
+   */
   async saveUser(userData) {
     const userId = userData.id || userData.email.replace(/[@.]/g, '_');
     const payload = {
@@ -266,6 +337,11 @@ export class ContentDB {
     }
   }
 
+  /**
+   * Delete user from Firestore or localStorage fallback
+   * @param {string} userId - User ID to delete
+   * @returns {Promise<boolean>} True if deletion was successful
+   */
   async deleteUser(userId) {
     const db = getFirestoreDB();
     if (!db) {
@@ -289,4 +365,8 @@ export class ContentDB {
   }
 }
 
+/**
+ * Singleton instance of ContentDB
+ * @type {ContentDB}
+ */
 export const contentDB = new ContentDB();

@@ -11,6 +11,10 @@ import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
 
+/**
+ * Get or initialize Firebase app instance
+ * @returns {Object} Firebase app instance
+ */
 export function getFirebaseApp() {
   const currentFbConfig = configManager.current.firebase;
   const isConfigured = currentFbConfig && 
@@ -41,11 +45,19 @@ const app = getFirebaseApp();
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+/**
+ * AuthManager handles Firebase authentication with Google sign-in
+ * Manages user state in the store, including admin status based on configured admin emails
+ */
 export class AuthManager {
   constructor() {
     this.initAuthObserver();
   }
 
+  /**
+   * Initialize Firebase auth state observer
+   * Updates store when user authentication state changes
+   */
   initAuthObserver() {
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -66,6 +78,11 @@ export class AuthManager {
     });
   }
 
+  /**
+   * Sign in with Google popup
+   * @returns {Promise<Object>} Firebase user object
+   * @throws {Error} If sign-in fails
+   */
   async loginWithGoogle() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -84,6 +101,10 @@ export class AuthManager {
     }
   }
 
+  /**
+   * Sign out current user
+   * @returns {Promise<void>}
+   */
   async logout() {
     try {
       await signOut(auth);
@@ -92,6 +113,10 @@ export class AuthManager {
     }
   }
 
+  /**
+   * Check if current user is authenticated as admin
+   * @returns {boolean} True if user is authenticated and has admin privileges
+   */
   isAdminAuthenticated() {
     const user = store.state.user;
     return !!(user && user.isAdmin);

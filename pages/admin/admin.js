@@ -1,4 +1,5 @@
-// pages/admin/admin.js
+// pages/admin/admin.js - Main admin page controller
+import { authManager } from '../../core/auth.js';
 import { store } from '../../core/store.js';
 import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
@@ -9,94 +10,19 @@ import {
   getSearchConsoleSecurityIssues,
   getAnalyticsOverview, 
   fetchSeoMyRankAddr,
-  runLighthouseAudit,
-  syncGoogleContactRole,
-  sendBulkGmail
+  runLighthouseAudit
 } from '../../core/google-services.js';
-import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
+import { toast } from '../../utils/toast.js';
+import { FormValidator, validationRules } from '../../utils/validation.js';
 
-const MONTHLY_MEMBERSHIP_FEE = 29.00;
-const REFERRAL_COMMISSION_RATE = 0.10;
-
-// Preset Brand Guide Definitions
-const THEME_PRESETS = {
-  default: defaultBrandTheme,
-  emerald: {
-    name: "Emerald Modern",
-    colors: {
-      primary: "#059669",
-      primaryHover: "#047857",
-      surface: "#ffffff",
-      background: "#f0fdf4",
-      textPrimary: "#064e3b",
-      textSecondary: "#047857",
-      border: "#a7f3d0",
-      accent: "#10b981",
-      danger: "#ef4444"
-    },
-    typography: {
-      fontFamily: "system-ui, -apple-system, sans-serif",
-      fontSizeBase: "16px",
-      headingWeight: "800"
-    },
-    layout: {
-      borderRadius: "12px",
-      containerMaxWidth: "1000px",
-      boxShadow: "0 4px 6px 1px rgba(0, 0, 0, 0.05)"
-    }
-  },
-  midnight: {
-    name: "Midnight Dark",
-    colors: {
-      primary: "#3b82f6",
-      primaryHover: "#2563eb",
-      surface: "#1f2937",
-      background: "#111827",
-      textPrimary: "#f9fafb",
-      textSecondary: "#9ca3af",
-      border: "#374151",
-      accent: "#60a5fa",
-      danger: "#f87171"
-    },
-    typography: {
-      fontFamily: "system-ui, -apple-system, sans-serif",
-      fontSizeBase: "16px",
-      headingWeight: "700"
-    },
-    layout: {
-      borderRadius: "8px",
-      containerMaxWidth: "1000px",
-      boxShadow: "0 10px 15px 3px rgba(0, 0, 0, 0.3)"
-    }
-  },
-  cyberpunk: {
-    name: "Cyberpunk Neon",
-    colors: {
-      primary: "#d946ef",
-      primaryHover: "#c026d3",
-      surface: "#18181b",
-      background: "#09090b",
-      textPrimary: "#f4f4f5",
-      textSecondary: "#a1a1aa",
-      border: "#27272a",
-      accent: "#06b6d4",
-      danger: "#f43f5e"
-    },
-    typography: {
-      fontFamily: "Consolas, Monaco, monospace",
-      fontSizeBase: "15px",
-      headingWeight: "900"
-    },
-    layout: {
-      borderRadius: "2px",
-      containerMaxWidth: "1000px",
-      boxShadow: "0 0 10px rgba(217, 70, 239, 0.2)"
-    }
-  }
-};
-
-import { authManager } from '../../core/auth.js';
+// Import modular tab controllers
+import { initTabController } from './admin-tabs-controller.js';
+import { initSiteSettingsTab } from './admin-site-settings.js';
+import { initBusinessProfileTab } from './admin-business-profile.js';
+import { initPublicProfileTab } from './admin-public-profile.js';
+import { initIntegrationsTab } from './admin-integrations.js';
+import { initUserDirectoryTab } from './admin-user-directory.js';
 
 export function initAdminPage() {
   // --- 0. LOG OUT BUTTON ---
@@ -111,891 +37,38 @@ export function initAdminPage() {
   }
 
   // --- 1. TAB ROUTING CONTROLLER ---
-  const tabButtons = document.querySelectorAll('.admin-tab');
-  const panels = document.querySelectorAll('.admin-panel');
+  initTabController();
 
-  // Load and display the current logged in email and notification count in top header
-  const headerEmailEl = document.getElementById('admin-header-email');
-  const headerNotifsEl = document.getElementById('admin-header-notifs');
-  const activeAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@example.com';
-  if (headerEmailEl) {
-    headerEmailEl.textContent = activeAdminEmail;
-  }
+  // --- 2. INITIALIZE TAB MODULES ---
+  initSiteSettingsTab();
+  initBusinessProfileTab();
+  initPublicProfileTab();
+  initIntegrationsTab();
 
-  // Dynamically estimate notification alert count (e.g. if GA4, VT, etc. setup issues exist)
-  if (headerNotifsEl) {
-    let alertCount = 0;
-    if (!configManager.current.thirdParty?.ga4PropertyId || !configManager.current.thirdParty?.lookerStudioEmbedUrl) {
-      alertCount++;
-    }
-    if (!configManager.current.virustotal?.apiKey) {
-      alertCount++;
-    }
-    headerNotifsEl.textContent = `${alertCount} Alert${alertCount !== 1 ? 's' : ''}`;
-    headerNotifsEl.style.background = alertCount > 0 ? 'var(--theme-color-danger, #e53e3e)' : 'var(--theme-color-success, #38a169)';
-  }
-
-  tabButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.getAttribute('data-tab');
-      tabButtons.forEach((b) => {
-        b.classList.remove('active');
-        b.style.borderLeft = '';
-        b.style.paddingLeft = '';
-        b.style.color = 'var(--theme-color-text-secondary, #4a5568)';
-      });
-      btn.classList.add('active');
-      btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
-
-      panels.forEach((p) => {
-        p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
-      });
-
-      if (targetTab === 'users') {
-        loadUserDirectoryTab();
-      } else if (targetTab === 'seo') {
-        loadSeoAndAnalyticsTab();
-      } else if (targetTab === 'performance') {
-        loadPerformanceTab();
-      } else if (targetTab === 'security') {
-        loadGscSecurityThreats();
-      } else if (targetTab === 'chatbot') {
-        loadChatbotAndVoiceTab();
-      }
-    });
-  });
-
-  // --- 2. TAB 1: SITE & BRAND SETTINGS ---
-  const siteTitleInput = document.getElementById('site-title');
-  const siteTaglineInput = document.getElementById('site-tagline');
-  const siteDomainInput = document.getElementById('site-domain');
-  const siteDescriptionInput = document.getElementById('site-description');
-  const lookerUrlInput = document.getElementById('looker-studio-url');
-  const headerScriptsInput = document.getElementById('header-scripts');
-
-  const currentCfg = configManager.current || {};
-  if (siteTitleInput) siteTitleInput.value = currentCfg.siteTitle || '';
-  if (siteTaglineInput) siteTaglineInput.value = currentCfg.siteTagline || '';
-  if (siteDomainInput) siteDomainInput.value = currentCfg.siteDomain || '';
-  if (siteDescriptionInput) siteDescriptionInput.value = currentCfg.siteDescription || '';
-  if (lookerUrlInput) lookerUrlInput.value = currentCfg.thirdParty?.lookerStudioEmbedUrl || '';
-  if (headerScriptsInput) headerScriptsInput.value = currentCfg.headerScripts || '';
-
-  document.getElementById('site-settings-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const siteLogoInput = document.getElementById('site-logo');
-    const siteFaviconInput = document.getElementById('site-favicon');
-    let logoAsset = currentCfg.siteLogo || null;
-    let faviconAsset = currentCfg.siteFavicon || null;
-
-    if (siteLogoInput && siteLogoInput.files.length > 0) {
-      logoAsset = await uploadFileToDrive(siteLogoInput.files[0]);
-    }
-    if (siteFaviconInput && siteFaviconInput.files.length > 0) {
-      faviconAsset = await uploadFileToDrive(siteFaviconInput.files[0]);
-    }
-
-    const updatedSiteConfig = {
-      ...currentCfg,
-      siteTitle: siteTitleInput.value,
-      siteTagline: siteTaglineInput.value,
-      siteDomain: siteDomainInput.value,
-      siteDescription: siteDescriptionInput.value,
-      siteLogo: logoAsset,
-      siteFavicon: faviconAsset
-    };
-
-    const success = await configManager.saveToFirebase(updatedSiteConfig);
-    if (success) {
-      alert(`Site Identity settings saved to Firestore for "${siteTitleInput.value}"!`);
+  // --- 3. TAB-SPECIFIC INITIALIZATION VIA EVENT LISTENERS ---
+  window.addEventListener('adminTabChanged', (e) => {
+    const targetTab = e.detail.tab;
+    
+    if (targetTab === 'users') {
+      initUserDirectoryTab();
+    } else if (targetTab === 'seo') {
+      loadSeoAndAnalyticsTab();
+    } else if (targetTab === 'performance') {
+      loadPerformanceTab();
+    } else if (targetTab === 'security') {
+      loadGscSecurityThreats();
+    } else if (targetTab === 'chatbot') {
+      loadChatbotAndVoiceTab();
     }
   });
 
-  document.getElementById('site-embeds-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const updatedEmbedsConfig = {
-      ...configManager.current,
-      thirdParty: {
-        ...(configManager.current.thirdParty || {}),
-        lookerStudioEmbedUrl: lookerUrlInput.value
-      },
-      headerScripts: headerScriptsInput.value
-    };
-    const success = await configManager.saveToFirebase(updatedEmbedsConfig);
-    if (success) {
-      alert('Integration embeds and custom header scripts saved to Firestore!');
-    }
-  });
-
-  // Theme Engine
-  const themeJsonInput = document.getElementById('theme-json-input');
-  const themeForm = document.getElementById('theme-json-form');
-  const presetSelect = document.getElementById('theme-preset-select');
-  const resetBtn = document.getElementById('btn-reset-theme');
-
-  // Individual theme controls elements
-  const ctrlPrimary = document.getElementById('theme-ctrl-primary');
-  const ctrlPrimaryHover = document.getElementById('theme-ctrl-primary-hover');
-  const ctrlSurface = document.getElementById('theme-ctrl-surface');
-  const ctrlBackground = document.getElementById('theme-ctrl-background');
-  const ctrlTextPrimary = document.getElementById('theme-ctrl-text-primary');
-  const ctrlTextSecondary = document.getElementById('theme-ctrl-text-secondary');
-  const ctrlBorder = document.getElementById('theme-ctrl-border');
-  const ctrlAccent = document.getElementById('theme-ctrl-accent');
-  const ctrlFont = document.getElementById('theme-ctrl-font');
-  const ctrlFontSize = document.getElementById('theme-ctrl-font-size');
-  const ctrlRadius = document.getElementById('theme-ctrl-radius');
-
-  function updateInputControlsFromTheme(theme) {
-    if (!theme) return;
-    if (ctrlPrimary && theme.colors?.primary) ctrlPrimary.value = theme.colors.primary;
-    if (ctrlPrimaryHover && theme.colors?.primaryHover) ctrlPrimaryHover.value = theme.colors.primaryHover;
-    if (ctrlSurface && theme.colors?.surface) ctrlSurface.value = theme.colors.surface;
-    if (ctrlBackground && theme.colors?.background) ctrlBackground.value = theme.colors.background;
-    if (ctrlTextPrimary && theme.colors?.textPrimary) ctrlTextPrimary.value = theme.colors.textPrimary;
-    if (ctrlTextSecondary && theme.colors?.textSecondary) ctrlTextSecondary.value = theme.colors.textSecondary;
-    if (ctrlBorder && theme.colors?.border) ctrlBorder.value = theme.colors.border;
-    if (ctrlAccent && theme.colors?.accent) ctrlAccent.value = theme.colors.accent;
-    if (ctrlFont && theme.typography?.fontFamily) ctrlFont.value = theme.typography.fontFamily;
-    if (ctrlFontSize && theme.typography?.fontSizeBase) ctrlFontSize.value = theme.typography.fontSizeBase;
-    if (ctrlRadius && theme.layout?.borderRadius) ctrlRadius.value = theme.layout.borderRadius;
-  }
-
-  function getThemeObjectFromInputs() {
-    const currentTheme = store.state.activeBrandGuide || defaultBrandTheme;
-    return {
-      name: currentTheme.name || "Custom Theme",
-      colors: {
-        primary: ctrlPrimary?.value || "#2b6cb0",
-        primaryHover: ctrlPrimaryHover?.value || "#2c5282",
-        surface: ctrlSurface?.value || "#ffffff",
-        background: ctrlBackground?.value || "#f7fafc",
-        textPrimary: ctrlTextPrimary?.value || "#1a202c",
-        textSecondary: ctrlTextSecondary?.value || "#4a5568",
-        border: ctrlBorder?.value || "#e2e8f0",
-        accent: ctrlAccent?.value || "#38a169",
-        danger: currentTheme.colors?.danger || "#e53e3e"
-      },
-      typography: {
-        fontFamily: ctrlFont?.value || "system-ui, -apple-system, sans-serif",
-        fontSizeBase: ctrlFontSize?.value || "16px",
-        headingWeight: currentTheme.typography?.headingWeight || "700"
-      },
-      layout: {
-        borderRadius: ctrlRadius?.value || "8px",
-        containerMaxWidth: currentTheme.layout?.containerMaxWidth || "1000px",
-        boxShadow: currentTheme.layout?.boxShadow || "0 1px 3px rgba(0,0,0,0.08)"
-      }
-    };
-  }
-
-  function updateJSONTextarea() {
-    const customTheme = getThemeObjectFromInputs();
-    if (themeJsonInput) {
-      themeJsonInput.value = JSON.stringify(customTheme, null, 2);
-    }
-    themeEngine.applyTheme(customTheme);
-  }
-
-  // Bind events to the interactive inputs to update the theme instantly
-  const inputsToBind = [
-    ctrlPrimary, ctrlPrimaryHover, ctrlSurface, ctrlBackground,
-    ctrlTextPrimary, ctrlTextSecondary, ctrlBorder, ctrlAccent,
-    ctrlFont, ctrlFontSize, ctrlRadius
-  ];
-  inputsToBind.forEach(input => {
-    if (input) {
-      input.addEventListener('input', updateJSONTextarea);
-      input.addEventListener('change', updateJSONTextarea);
-    }
-  });
-
-  function loadActiveThemeIntoTextarea() {
-    if (!themeJsonInput) return;
-    const currentTheme = store.state.activeBrandGuide || defaultBrandTheme;
-    themeJsonInput.value = JSON.stringify(currentTheme, null, 2);
-    updateInputControlsFromTheme(currentTheme);
-  }
-
-  loadActiveThemeIntoTextarea();
-
-  themeForm?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    try {
-      const parsedTheme = JSON.parse(themeJsonInput.value);
-      themeEngine.applyTheme(parsedTheme);
-      updateInputControlsFromTheme(parsedTheme);
-      alert(`Successfully applied "${parsedTheme.name || 'Custom Theme'}" design system!`);
-    } catch (err) {
-      alert(`Invalid Theme JSON: ${err.message}`);
-    }
-  });
-
-  presetSelect?.addEventListener('change', (e) => {
-    const selectedKey = e.target.value;
-    const presetTheme = THEME_PRESETS[selectedKey] || defaultBrandTheme;
-    themeEngine.applyTheme(presetTheme);
-    themeJsonInput.value = JSON.stringify(presetTheme, null, 2);
-    updateInputControlsFromTheme(presetTheme);
-  });
-
-  resetBtn?.addEventListener('click', () => {
-    if (confirm('Reset theme back to Foundation Default?')) {
-      themeEngine.applyTheme(defaultBrandTheme);
-      themeJsonInput.value = JSON.stringify(defaultBrandTheme, null, 2);
-      updateInputControlsFromTheme(defaultBrandTheme);
-      if (presetSelect) presetSelect.value = 'default';
-    }
-  });
-
-  // --- 3. TAB 2: BUSINESS & LEGAL PROFILE ---
-  const bizLegalNameInput = document.getElementById('biz-legal-name');
-  const bizDbaInput = document.getElementById('biz-dba');
-  const bizEinInput = document.getElementById('biz-ein');
-  const bizEntityTypeInput = document.getElementById('biz-entity-type');
-  const bizAddressInput = document.getElementById('biz-address');
-  const bizCityInput = document.getElementById('biz-city');
-  const bizStateInput = document.getElementById('biz-state');
-  const bizZipInput = document.getElementById('biz-zip');
-  const bizCountryInput = document.getElementById('biz-country');
-  const bizEmailInput = document.getElementById('biz-email');
-  const bizSupportEmailInput = document.getElementById('biz-support-email');
-  const bizPhoneInput = document.getElementById('biz-phone');
-  const bizPrivacyUrlInput = document.getElementById('biz-privacy-url');
-  const bizTermsUrlInput = document.getElementById('biz-terms-url');
-  const bizRefundUrlInput = document.getElementById('biz-refund-url');
-
-  // financial & regulatory
-  const bizDunsInput = document.getElementById('biz-duns');
-  const bizBankNameInput = document.getElementById('biz-bank-name');
-  const bizBankRoutingInput = document.getElementById('biz-bank-routing');
-  const bizBankAccountInput = document.getElementById('biz-bank-account');
-
-  // document status divs
-  const docArticlesStatus = document.getElementById('biz-doc-articles-status');
-  const docOperatingStatus = document.getElementById('biz-doc-operating-status');
-  const docEinStatus = document.getElementById('biz-doc-ein-status');
-
-  const bizProfile = currentCfg.businessProfile || {};
-  if (bizLegalNameInput) bizLegalNameInput.value = bizProfile.legalName || '';
-  if (bizDbaInput) bizDbaInput.value = bizProfile.dba || '';
-  if (bizEinInput) bizEinInput.value = bizProfile.ein || '';
-  if (bizEntityTypeInput) bizEntityTypeInput.value = bizProfile.entityType || 'llc';
-  if (bizAddressInput) bizAddressInput.value = bizProfile.address || '';
-  if (bizCityInput) bizCityInput.value = bizProfile.city || '';
-  if (bizStateInput) bizStateInput.value = bizProfile.state || '';
-  if (bizZipInput) bizZipInput.value = bizProfile.zip || '';
-  if (bizCountryInput) bizCountryInput.value = bizProfile.country || '';
-  if (bizEmailInput) bizEmailInput.value = bizProfile.email || '';
-  if (bizSupportEmailInput) bizSupportEmailInput.value = bizProfile.supportEmail || '';
-  if (bizPhoneInput) bizPhoneInput.value = bizProfile.phone || '';
-  if (bizPrivacyUrlInput) bizPrivacyUrlInput.value = bizProfile.privacyUrl || '/privacy';
-  if (bizTermsUrlInput) bizTermsUrlInput.value = bizProfile.termsUrl || '/terms';
-  if (bizRefundUrlInput) bizRefundUrlInput.value = bizProfile.refundUrl || '/refunds';
-
-  if (bizDunsInput) bizDunsInput.value = bizProfile.duns || '';
-  if (bizBankNameInput) bizBankNameInput.value = bizProfile.bankName || '';
-  if (bizBankRoutingInput) bizBankRoutingInput.value = bizProfile.bankRouting || '';
-  if (bizBankAccountInput) bizBankAccountInput.value = bizProfile.bankAccount || '';
-
-  // Show verified presence for existing documents
-  if (docArticlesStatus && bizProfile.articlesDocId) {
-    docArticlesStatus.innerHTML = `Presence Verified ✅ (Drive ID: <code>${bizProfile.articlesDocId}</code>)`;
-  }
-  if (docOperatingStatus && bizProfile.operatingDocId) {
-    docOperatingStatus.innerHTML = `Presence Verified ✅ (Drive ID: <code>${bizProfile.operatingDocId}</code>)`;
-  }
-  if (docEinStatus && bizProfile.einDocId) {
-    docEinStatus.innerHTML = `Presence Verified ✅ (Drive ID: <code>${bizProfile.einDocId}</code>)`;
-  }
-
-  document.getElementById('business-profile-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const articlesFile = document.getElementById('biz-doc-articles')?.files[0];
-    const operatingFile = document.getElementById('biz-doc-operating')?.files[0];
-    const einFile = document.getElementById('biz-doc-ein')?.files[0];
-
-    let articlesDocId = bizProfile.articlesDocId || null;
-    let operatingDocId = bizProfile.operatingDocId || null;
-    let einDocId = bizProfile.einDocId || null;
-
-    if (articlesFile) {
-      articlesFile.isPrivateDoc = true;
-      const res = await uploadFileToDrive(articlesFile);
-      if (res) {
-        articlesDocId = res.id;
-        if (docArticlesStatus) docArticlesStatus.innerHTML = `Presence Verified ✅ (Drive ID: <code>${res.id}</code>)`;
-      }
-    }
-    if (operatingFile) {
-      operatingFile.isPrivateDoc = true;
-      const res = await uploadFileToDrive(operatingFile);
-      if (res) {
-        operatingDocId = res.id;
-        if (docOperatingStatus) docOperatingStatus.innerHTML = `Presence Verified ✅ (Drive ID: <code>${res.id}</code>)`;
-      }
-    }
-    if (einFile) {
-      einFile.isPrivateDoc = true;
-      const res = await uploadFileToDrive(einFile);
-      if (res) {
-        einDocId = res.id;
-        if (docEinStatus) docEinStatus.innerHTML = `Presence Verified ✅ (Drive ID: <code>${res.id}</code>)`;
-      }
-    }
-
-    const updatedBizConfig = {
-      ...configManager.current,
-      businessProfile: {
-        legalName: bizLegalNameInput.value,
-        dba: bizDbaInput.value,
-        ein: bizEinInput.value,
-        entityType: bizEntityTypeInput.value,
-        address: bizAddressInput.value,
-        city: bizCityInput.value,
-        state: bizStateInput.value,
-        zip: bizZipInput.value,
-        country: bizCountryInput.value,
-        email: bizEmailInput.value,
-        supportEmail: bizSupportEmailInput.value,
-        phone: bizPhoneInput.value,
-        privacyUrl: bizPrivacyUrlInput.value,
-        termsUrl: bizTermsUrlInput.value,
-        refundUrl: bizRefundUrlInput.value,
-        duns: bizDunsInput.value,
-        bankName: bizBankNameInput.value,
-        bankRouting: bizBankRoutingInput.value,
-        bankAccount: bizBankAccountInput.value,
-        articlesDocId,
-        operatingDocId,
-        einDocId
-      }
-    };
-    const success = await configManager.saveToFirebase(updatedBizConfig);
-    if (success) {
-      alert(`Business & Legal Profile updated in Firestore for "${bizLegalNameInput.value}"!`);
-    }
-  });
-
-  // --- 4. TAB 3: PUBLIC PROFILE / AUTHOR MANAGER ---
-  const authorProfile = currentCfg.authorProfile || {};
-  const authorNameInput = document.getElementById('author-name');
-  const authorRoleInput = document.getElementById('author-role');
-  const authorTaglineInput = document.getElementById('author-tagline');
-  const authorShortBioInput = document.getElementById('author-short-bio');
-  const authorFullBioInput = document.getElementById('author-full-bio');
-  const authorGithubInput = document.getElementById('author-github');
-  const authorTwitterInput = document.getElementById('author-twitter');
-  const authorLinkedinInput = document.getElementById('author-linkedin');
-
-  // New social media links
-  const authorFacebookInput = document.getElementById('author-facebook');
-  const authorInstagramInput = document.getElementById('author-instagram');
-  const authorTiktokInput = document.getElementById('author-tiktok');
-  const authorYoutubeInput = document.getElementById('author-youtube');
-
-  // Custom links element
-  const customLinksContainer = document.getElementById('author-custom-links-container');
-  const addCustomLinkBtn = document.getElementById('btn-add-custom-link');
-
-  if (authorNameInput) authorNameInput.value = authorProfile.name || '';
-  if (authorRoleInput) authorRoleInput.value = authorProfile.role || '';
-  if (authorTaglineInput) authorTaglineInput.value = authorProfile.tagline || '';
-  if (authorShortBioInput) authorShortBioInput.value = authorProfile.shortBio || '';
-  if (authorFullBioInput) authorFullBioInput.value = authorProfile.fullBio || '';
-  if (authorGithubInput) authorGithubInput.value = authorProfile.socials?.github || '';
-  if (authorTwitterInput) authorTwitterInput.value = authorProfile.socials?.twitter || '';
-  if (authorLinkedinInput) authorLinkedinInput.value = authorProfile.socials?.linkedin || '';
-
-  if (authorFacebookInput) authorFacebookInput.value = authorProfile.socials?.facebook || '';
-  if (authorInstagramInput) authorInstagramInput.value = authorProfile.socials?.instagram || '';
-  if (authorTiktokInput) authorTiktokInput.value = authorProfile.socials?.tiktok || '';
-  if (authorYoutubeInput) authorYoutubeInput.value = authorProfile.socials?.youtube || '';
-
-  // Render pre-existing custom links
-  const initialCustomLinks = authorProfile.customLinks || [];
-  if (customLinksContainer) {
-    customLinksContainer.innerHTML = '';
-    initialCustomLinks.forEach(link => {
-      addCustomLinkRow(link.label, link.url);
-    });
-  }
-
-  function addCustomLinkRow(label = '', url = '') {
-    if (!customLinksContainer) return;
-    const div = document.createElement('div');
-    div.className = 'custom-link-row';
-    div.style.display = 'flex';
-    div.style.gap = '0.5rem';
-    div.style.alignItems = 'center';
-    div.innerHTML = `
-      <input type="text" placeholder="Link Label (e.g., Substack)" value="${label}" class="custom-link-label" style="flex: 1; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
-      <input type="url" placeholder="URL (e.g., https://substack.com/...)" value="${url}" class="custom-link-url" style="flex: 2; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
-      <button type="button" class="btn-delete-custom-link" style="padding: 6px 12px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
-    `;
-    div.querySelector('.btn-delete-custom-link').addEventListener('click', () => div.remove());
-    customLinksContainer.appendChild(div);
-  }
-
-  addCustomLinkBtn?.addEventListener('click', () => addCustomLinkRow());
-
-  document.getElementById('author-profile-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const avatarInput = document.getElementById('author-avatar-file');
-    const signatureInput = document.getElementById('author-signature-file');
-    let avatarUrl = authorProfile.avatarUrl || null;
-    let signatureUrl = authorProfile.signatureUrl || null;
-
-    if (avatarInput && avatarInput.files.length > 0) {
-      const res = await uploadFileToDrive(avatarInput.files[0]);
-      if (res) avatarUrl = res.src;
-    }
-    if (signatureInput && signatureInput.files.length > 0) {
-      const res = await uploadFileToDrive(signatureInput.files[0]);
-      if (res) signatureUrl = res.src;
-    }
-
-    // Assemble custom links
-    const customLinkRows = document.querySelectorAll('.custom-link-row');
-    const customLinks = [];
-    customLinkRows.forEach(row => {
-      const labelVal = row.querySelector('.custom-link-label').value.trim();
-      const urlVal = row.querySelector('.custom-link-url').value.trim();
-      if (labelVal && urlVal) {
-        customLinks.push({ label: labelVal, url: urlVal, icon: 'link' });
-      }
-    });
-
-    const updatedProfile = {
-      ...configManager.current,
-      authorProfile: {
-        name: authorNameInput.value,
-        role: authorRoleInput.value,
-        tagline: authorTaglineInput.value,
-        avatarUrl,
-        signatureUrl,
-        shortBio: authorShortBioInput.value,
-        fullBio: authorFullBioInput.value,
-        socials: {
-          github: authorGithubInput.value,
-          twitter: authorTwitterInput.value,
-          linkedin: authorLinkedinInput.value,
-          facebook: authorFacebookInput?.value || '',
-          instagram: authorInstagramInput?.value || '',
-          tiktok: authorTiktokInput?.value || '',
-          youtube: authorYoutubeInput?.value || ''
-        },
-        customLinks
-      }
-    };
-    const success = await configManager.saveToFirebase(updatedProfile);
-    if (success) {
-      alert(`Public Author Profile saved for "${authorNameInput.value}"! Component widgets updated.`);
-    }
-  });
-
-  // --- 5. TAB 4: FIREBASE & CLOUD CONFIGURATION ---
-  const cfgFbKey = document.getElementById('cfg-fb-key');
-  const cfgFbProject = document.getElementById('cfg-fb-project');
-  const cfgGoogleClientId = document.getElementById('cfg-google-client-id');
-  const cfgGoogleClientSecret = document.getElementById('cfg-google-client-secret');
-  const cfgFbAdmins = document.getElementById('cfg-fb-admins');
-
-  // AI Centralized Config Elements
-  const cfgGeminiKey = document.getElementById('cfg-gemini-key');
-  const cfgOpenaiKey = document.getElementById('cfg-openai-key');
-  const cfgAiProvider = document.getElementById('cfg-ai-provider');
-
-  const cfgStripeKey = document.getElementById('cfg-stripe-key');
-  const cfgStripePriceId = document.getElementById('cfg-stripe-price-id');
-  const cfgGa4Property = document.getElementById('cfg-ga4-property');
-  const cfgVtApiKey = document.getElementById('cfg-vt-apikey');
-  const cfgCfWorkflowUrl = document.getElementById('cfg-cf-workflow-url');
-  const cfgCfVtUrl = document.getElementById('cfg-cf-vt-url');
-
-  if (cfgFbKey) cfgFbKey.value = configManager.current.firebase?.apiKey || '';
-  if (cfgFbProject) cfgFbProject.value = configManager.current.firebase?.projectId || '';
-  if (cfgGoogleClientId) cfgGoogleClientId.value = configManager.current.google?.clientId || '';
-  if (cfgGoogleClientSecret) cfgGoogleClientSecret.value = configManager.current.google?.clientSecret || '';
-  if (cfgFbAdmins) cfgFbAdmins.value = (configManager.current.adminEmails || []).join(', ');
-
-  // Load AI config values
-  if (cfgGeminiKey) cfgGeminiKey.value = configManager.current.aiConfig?.geminiApiKey || '';
-  if (cfgOpenaiKey) cfgOpenaiKey.value = configManager.current.aiConfig?.openaiApiKey || '';
-  if (cfgAiProvider) cfgAiProvider.value = configManager.current.aiConfig?.preferredProvider || 'gemini';
-
-  if (cfgStripeKey) cfgStripeKey.value = configManager.current.stripe?.secretKey || '';
-  if (cfgStripePriceId) cfgStripePriceId.value = configManager.current.stripe?.priceId || '';
-  if (cfgGa4Property) cfgGa4Property.value = configManager.current.thirdParty?.ga4PropertyId || '';
-  if (cfgVtApiKey) cfgVtApiKey.value = configManager.current.virustotal?.apiKey || '';
-  if (cfgCfWorkflowUrl) cfgCfWorkflowUrl.value = configManager.current.cloudflare?.workflowUrl || '/api/workflow-trigger';
-  if (cfgCfVtUrl) cfgCfVtUrl.value = configManager.current.cloudflare?.vtUrl || '/api/virustotal-scan';
-
-  document.getElementById('firebase-config-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const adminList = cfgFbAdmins.value.split(',').map(a => a.trim()).filter(Boolean);
-    const updated = {
-      ...configManager.current,
-      firebase: {
-        ...configManager.current.firebase,
-        apiKey: cfgFbKey.value,
-        projectId: cfgFbProject.value
-      },
-      google: {
-        ...(configManager.current.google || {}),
-        clientId: cfgGoogleClientId.value,
-        clientSecret: cfgGoogleClientSecret.value
-      },
-      aiConfig: {
-        geminiApiKey: cfgGeminiKey?.value || '',
-        openaiApiKey: cfgOpenaiKey?.value || '',
-        preferredProvider: cfgAiProvider?.value || 'gemini'
-      },
-      adminEmails: adminList
-    };
-    const success = await configManager.saveToFirebase(updated);
-    if (success) {
-      alert('API, Identity, and AI Credentials successfully synced to Firestore!');
-    }
-  });
-
-  document.getElementById('stripe-cloudflare-config-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const updated = {
-      ...configManager.current,
-      stripe: {
-        secretKey: cfgStripeKey.value,
-        priceId: cfgStripePriceId.value
-      },
-      thirdParty: {
-        ...(configManager.current.thirdParty || {}),
-        ga4PropertyId: cfgGa4Property.value
-      },
-      virustotal: {
-        apiKey: cfgVtApiKey.value
-      },
-      cloudflare: {
-        workflowUrl: cfgCfWorkflowUrl.value,
-        vtUrl: cfgCfVtUrl.value
-      }
-    };
-    const success = await configManager.saveToFirebase(updated);
-    if (success) {
-      alert('Stripe & Cloudflare Platform Keys successfully updated!');
-    }
-  });
-
-  // --- 6. TAB 5: USER DIRECTORY, DUES & AFFILIATE CONTROLLER ---
-  async function loadUserDirectoryTab() {
-    const adminEmailBadge = document.getElementById('connected-admin-email');
-    const connectedAdminEmail = store.state.user?.email || configManager.current.adminEmails?.[0] || 'admin@foundation.dev';
-    if (adminEmailBadge) adminEmailBadge.textContent = connectedAdminEmail;
-
-    const tbody = document.getElementById('user-directory-tbody');
-    const refreshBtn = document.getElementById('btn-refresh-users');
-    const syncContactsBtn = document.getElementById('btn-sync-google-contacts');
-    const convertLateBtn = document.getElementById('btn-convert-late-users');
-    const massEmailForm = document.getElementById('mass-email-form');
-    let cachedUsers = [];
-
-    async function renderUsersList() {
-      if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: #a0aec0;">Fetching user records...</td></tr>';
-      
-      cachedUsers = await contentDB.getAllUsers();
-      const hasAdminInList = cachedUsers.some(u => u.email === connectedAdminEmail);
-      if (!hasAdminInList) {
-        cachedUsers.unshift({
-          id: 'primary-admin-root',
-          name: store.state.user?.displayName || 'Primary System Administrator',
-          email: connectedAdminEmail,
-          role: 'admin',
-          status: 'Active',
-          paymentStatus: 'Active',
-          affiliateCode: 'FOUNDATION_ROOT',
-          referredCount: 0
-        });
-      }
-
-      const referralMap = {};
-      cachedUsers.forEach(u => {
-        if (u.referredBy) {
-          referralMap[u.referredBy] = (referralMap[u.referredBy] || 0) + 1;
-        }
-      });
-
-      tbody.innerHTML = cachedUsers.map((u) => {
-        const isPrimary = u.email === connectedAdminEmail || u.role === 'admin';
-        const activeReferrals = referralMap[u.affiliateCode || u.id] || u.referredCount || 0;
-        
-        const monthlyEarnings = u.role === 'affiliate' ? (activeReferrals * (MONTHLY_MEMBERSHIP_FEE * REFERRAL_COMMISSION_RATE)) : 0;
-        const netCost = u.role === 'subscriber' ? 0 : Math.max(0, MONTHLY_MEMBERSHIP_FEE - monthlyEarnings);
-        const isFullyCovered = u.role === 'affiliate' && monthlyEarnings >= MONTHLY_MEMBERSHIP_FEE;
-        
-        const roleBadgeColor = isPrimary ? '#c05621' : u.role === 'affiliate' ? '#2b6cb0' : u.role === 'member' ? '#2f855a' : u.role === 'prospect' ? '#718096' : '#4a5568';
-        const roleBgColor = isPrimary ? '#feebc8' : u.role === 'affiliate' ? '#ebf8ff' : u.role === 'member' ? '#f0fdf4' : u.role === 'prospect' ? '#edf2f7' : '#f7fafc';
-        const roleLabel = isPrimary ? '👑 Admin (Locked)' : u.role === 'affiliate' ? '🤝 Affiliate Member' : u.role === 'member' ? '💳 Member (Paid)' : u.role === 'prospect' ? '👤 Prospect (Google Sync)' : '👤 Subscriber (Free)';
-
-        const paymentStatus = u.paymentStatus || 'Active';
-        const isDelinquent = paymentStatus.includes('Past Due') || paymentStatus.includes('Delinquent') || paymentStatus.includes('Converted');
-        const paymentBadgeColor = isDelinquent ? '#c53030' : '#2f855a';
-        const paymentBgColor = isDelinquent ? '#fff5f5' : '#f0fdf4';
-
-        return `
-          <tr style="border-bottom: 1px solid #edf2f7;">
-            <td style="padding: 10px;">
-              <strong>${u.name || 'Platform User'}</strong>
-              <div style="font-size: 0.75rem; color: #718096;">${u.email}</div>
-              ${u.affiliateCode ? `<code style="font-size: 0.7rem; background: #edf2f7; padding: 2px 4px; border-radius: 3px; color: #4a5568;">Ref Code: ${u.affiliateCode}</code>` : ''}
-            </td>
-            <td style="padding: 10px;">
-              <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${roleBgColor}; color: ${roleBadgeColor};">
-                ${roleLabel}
-              </span>
-            </td>
-            <td style="padding: 10px;">
-              <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${paymentBgColor}; color: ${paymentBadgeColor};">
-                ${paymentStatus}
-              </span>
-            </td>
-            <td style="padding: 10px;">
-              ${u.role === 'affiliate' ? `
-                <div style="font-size: 0.8rem;">
-                  <div>Referred: <strong>${activeReferrals} members</strong></div>
-                  <div>10% Monthly Credit: <strong style="color: #38a169;">+$${monthlyEarnings.toFixed(2)}/mo</strong></div>
-                  <div style="font-size: 0.75rem; color: ${isFullyCovered ? '#2b6cb0' : '#718096'}; font-weight: bold;">
-                    ${isFullyCovered ? '🎉 Membership 100% Offset (Profitable)' : `Net Monthly Cost: $${netCost.toFixed(2)}/mo`}
-                  </div>
-                </div>
-              ` : `<span style="color: #a0aec0; font-size: 0.8rem;">N/A (Standard Role)</span>`}
-            </td>
-            <td style="padding: 10px; text-align: right;">
-              ${isPrimary ? `<span style="font-size: 0.75rem; color: #a0aec0; font-style: italic;">Google Workspace Owner</span>` : `
-                <select class="select-role-change" data-id="${u.id}" style="padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #cbd5e0; margin-right: 4px;">
-                  <option value="subscriber" ${u.role === 'subscriber' ? 'selected' : ''}>Subscriber (Free)</option>
-                  <option value="member" ${u.role === 'member' ? 'selected' : ''}>Member ($29/mo)</option>
-                  <option value="affiliate" ${u.role === 'affiliate' ? 'selected' : ''}>Affiliate Member (10% Ref)</option>
-                  <option value="prospect" ${u.role === 'prospect' ? 'selected' : ''}>Prospect (Google Sync)</option>
-                </select>
-                <button class="btn-user-delete" data-id="${u.id}" data-name="${u.name || u.email}" style="padding: 4px 8px; font-size: 0.75rem; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                  Delete
-                </button>
-              `}
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      // Wire Role Switcher Listeners
-      document.querySelectorAll('.select-role-change').forEach((select) => {
-        select.addEventListener('change', async (e) => {
-          const uId = e.target.getAttribute('data-id');
-          const newRole = e.target.value;
-          
-          const affiliateCode = newRole === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
-          const updated = await contentDB.saveUser({ id: uId, role: newRole, affiliateCode });
-          
-          if (updated) {
-            await syncGoogleContactRole({ name: updated.name, email: updated.email, role: newRole });
-            alert(`User role updated to "${newRole.toUpperCase()}" & synced to Google Contacts!`);
-            renderUsersList();
-          }
-        });
-      });
-
-      // Wire Delete User Listeners
-      document.querySelectorAll('.btn-user-delete').forEach((btn) => {
-        btn.addEventListener('click', async (e) => {
-          const uId = e.target.getAttribute('data-id');
-          const name = e.target.getAttribute('data-name');
-          if (confirm(`Are you sure you want to delete user account for "${name}"?`)) {
-            const success = await contentDB.deleteUser(uId);
-            if (success) {
-              alert(`User "${name}" deleted.`);
-              renderUsersList();
-            }
-          }
-        });
-      });
-    }
-
-    // Delinquency Converter Button
-    if (convertLateBtn) {
-      convertLateBtn.onclick = async () => {
-        convertLateBtn.textContent = 'Checking Payment Statuses...';
-        const users = await contentDB.getAllUsers();
-        let convertedCount = 0;
-
-        for (const user of users) {
-          const isPastDue = user.paymentStatus?.includes('Past Due') || user.paymentStatus === 'Delinquent';
-          if (isPastDue && user.role !== 'subscriber' && user.role !== 'admin') {
-            await contentDB.saveUser({
-              id: user.id,
-              role: 'subscriber',
-              paymentStatus: 'Past Due (Converted to Free)'
-            });
-            convertedCount++;
-          }
-        }
-
-        alert(`Delinquency Sweep Complete!\n\n${convertedCount} accounts converted to Free Subscriber tier due to unpaid dues.`);
-        convertLateBtn.textContent = 'Convert Late Dues to Subscribers';
-        renderUsersList();
-      };
-    }
-
-    // Google Contacts Bulk Sync Button
-    if (syncContactsBtn) {
-      syncContactsBtn.onclick = async () => {
-        syncContactsBtn.textContent = 'Syncing Google Contacts...';
-        let syncedCount = 0;
-        for (const user of cachedUsers) {
-          if (user.email && user.role !== 'admin') {
-            const res = await syncGoogleContactRole(user);
-            if (res) syncedCount++;
-          }
-        }
-        alert(`Successfully synced ${syncedCount} platform users to Google Contacts with role labels!`);
-        syncContactsBtn.textContent = 'Sync All to Google Contacts';
-      };
-    }
-
-    // Import Google Prospects Button
-    const importProspectsBtn = document.getElementById('btn-import-google-prospects');
-    if (importProspectsBtn) {
-      importProspectsBtn.onclick = async () => {
-        importProspectsBtn.textContent = 'Accessing Google Contacts...';
-        try {
-          // Import contacts using Google People API with clean fallback
-          let fetchedProspects = [];
-          try {
-            const { getGoogleAccessToken } = await import('../../core/google-services.js');
-            const token = await getGoogleAccessToken(true);
-            if (token) {
-              const res = await fetch('https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses', {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.connections) {
-                  fetchedProspects = data.connections.map(conn => {
-                    const name = conn.names?.[0]?.displayName || 'Google Contact';
-                    const email = conn.emailAddresses?.[0]?.value || '';
-                    return { name, email, role: 'prospect' };
-                  }).filter(p => p.email);
-                }
-              }
-            }
-          } catch (e) {
-            console.warn('[Prospect Import]: Real Google Contacts call failed, using compliance mocks.', e.message);
-          }
-
-          // Use compliance mock contacts as fallback if no direct access / unauthorized
-          if (fetchedProspects.length === 0) {
-            fetchedProspects = [
-              { name: "John Prospect", email: "john_prospect@example.com", role: "prospect" },
-              { name: "Sarah Prospect", email: "sarah_prospect@example.com", role: "prospect" }
-            ];
-          }
-
-          let importedCount = 0;
-          for (const p of fetchedProspects) {
-            const success = await contentDB.saveUser({
-              name: p.name,
-              email: p.email,
-              role: p.role,
-              paymentStatus: "Unsubscribed"
-            });
-            if (success) importedCount++;
-          }
-
-          alert(`Import Complete!\n\nSuccessfully imported ${importedCount} non-subscribed contacts from Google Contacts as Prospects.`);
-          renderUsersList();
-        } catch (err) {
-          alert(`Prospect Import failed: ${err.message}`);
-        } finally {
-          importProspectsBtn.textContent = 'Import Prospects (Google Contacts)';
-        }
-      };
-    }
-
-    // Mass Email Form Submitter
-    massEmailForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const targetRole = document.getElementById('mass-email-target-role').value;
-      const subject = document.getElementById('mass-email-subject').value;
-      let messageBody = document.getElementById('mass-email-body').value;
-
-      const recipients = cachedUsers.filter(u => {
-        if (targetRole === 'all') return u.email && u.role !== 'admin';
-        return u.role === targetRole;
-      });
-
-      if (recipients.length === 0) {
-        alert(`No users found matching the selected tier ("${targetRole.toUpperCase()}").`);
-        return;
-      }
-
-      // Compliance Auto-Footer Enforcement
-      const bizProfile = configManager.current.businessProfile || {};
-      const companyName = bizProfile.legalName || 'Foundation';
-      const companyAddress = bizProfile.address
-        ? `${bizProfile.address}, ${bizProfile.city || ''} ${bizProfile.state || ''} ${bizProfile.zip || ''}`
-        : '123 Enterprise Blvd, Suite 100';
-
-      const isProspectTarget = targetRole === 'prospect' || targetRole === 'all';
-      if (isProspectTarget) {
-        messageBody += `\n\n---\nThis email is sent to you on behalf of ${companyName} under standard industry mass-mailing regulations. You are receiving this because your contact profile was synchronized. To stop receiving promotional material, click here to unsubscribe or reply with "REMOVE".\n\nPhysical Office: ${companyAddress}`;
-      }
-
-      if (confirm(`Dispatch Gmail broadcast to ${recipients.length} recipients in the "${targetRole.toUpperCase()}" group?`)) {
-        const sendBtn = document.getElementById('btn-send-mass-email');
-        if (sendBtn) sendBtn.textContent = `Broadcasting to ${recipients.length} users...`;
-
-        const { sentCount, failedCount } = await sendBulkGmail({
-          recipientList: recipients,
-          subject,
-          messageBody
-        });
-
-        alert(`Mass Email Broadcast Complete!\n\nSuccessful: ${sentCount}\nFailed: ${failedCount}`);
-        if (sendBtn) sendBtn.textContent = 'Dispatch Mass Email via Gmail';
-        e.target.reset();
-      }
-    });
-
-    if (refreshBtn) refreshBtn.onclick = renderUsersList;
-    renderUsersList();
-
-    // Create User Handler
-    const createUserForm = document.getElementById('create-user-form');
-    createUserForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('new-user-name').value;
-      const email = document.getElementById('new-user-email').value;
-      const role = document.getElementById('new-user-role').value;
-      const referredBy = document.getElementById('new-user-referrer')?.value || null;
-
-      if (role === 'admin') {
-        alert('System Policy Error: Admin privileges are locked uniquely to the Google Workspace owner.');
-        return;
-      }
-
-      const affiliateCode = role === 'affiliate' ? `AFF_${Math.random().toString(36).substring(2, 8).toUpperCase()}` : null;
-      const newUser = { name, email, role, referredBy, affiliateCode, paymentStatus: 'Active', status: 'Active' };
-      const res = await contentDB.saveUser(newUser);
-
-      if (res) {
-        await syncGoogleContactRole(newUser);
-        alert(`Account created for ${name} as ${role.toUpperCase()} and added to Google Contacts!`);
-        e.target.reset();
-        renderUsersList();
-      }
-    });
-  }
-
-  // --- 7. TAB 6: CMS PUBLISHER CONTROLLER ---
+  // --- REMOVED: Site & Brand Settings (now in admin-site-settings.js) ---
+  // --- REMOVED: Business & Legal Profile (now in admin-business-profile.js) ---
+  // --- REMOVED: Public Profile (now in admin-public-profile.js) ---
+  // --- REMOVED: Integrations (now in admin-integrations.js) ---
+  // --- REMOVED: User Directory (now in admin-user-directory.js) ---
+
+  // --- 6. CMS PUBLISHER CONTROLLER ---
   const contentTypeSelect = document.getElementById('content-type');
   const eventFieldsContainer = document.getElementById('event-fields');
   const livePreviewBox = document.getElementById('cms-live-preview-box');
@@ -1006,6 +79,17 @@ export function initAdminPage() {
     }
     updateLivePreview();
   });
+
+  // Initialize CMS form validator
+  const cmsForm = document.getElementById('cms-form');
+  let cmsValidator = null;
+  if (cmsForm) {
+    cmsValidator = new FormValidator(cmsForm, {
+      'content-title': [validationRules.required, validationRules.minLength(3)],
+      'content-description': [validationRules.required],
+      'content-body': [validationRules.required]
+    });
+  }
 
   // Dynamic live-preview render helper
   function updateLivePreview() {
@@ -1035,9 +119,15 @@ export function initAdminPage() {
     document.getElementById(fId)?.addEventListener('input', updateLivePreview);
   });
 
-  const cmsForm = document.getElementById('cms-form');
   cmsForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (cmsValidator && !cmsValidator.validateAll()) {
+      toast.error('Please fix the validation errors before publishing content.');
+      return;
+    }
+    
     const contentType = document.getElementById('content-type').value;
     const contentId = document.getElementById('content-id').value;
     const title = document.getElementById('content-title').value;
@@ -1116,10 +206,12 @@ export function initAdminPage() {
 
     const success = await contentDB.saveContent(payload);
     if (success) {
-      alert(`Successfully published "${title}"!`);
+      toast.success(`Successfully published "${title}"!`);
       e.target.reset();
       if (eventFieldsContainer) eventFieldsContainer.style.display = 'none';
       updateLivePreview();
+    } else {
+      toast.error('Failed to publish content. Please try again.');
     }
   });
 
@@ -1165,7 +257,9 @@ export function initAdminPage() {
       });
 
       if (success) {
-        alert('SEO-My-Rank-ADDR settings saved successfully!');
+        toast.success('SEO-My-Rank-ADDR settings saved successfully!');
+      } else {
+        toast.error('Failed to save SEO settings. Please try again.');
       }
     });
 
@@ -1407,7 +501,7 @@ export function initAdminPage() {
     if (scanBtn) scanBtn.onclick = renderThreatReport;
     if (reconsiderBtn) {
       reconsiderBtn.onclick = () => {
-        alert('Reconsideration / Clean Review Request submitted to Google Search Quality Team. Review usually completes within 3-7 business days.');
+        toast.info('Reconsideration / Clean Review Request submitted to Google Search Quality Team. Review usually completes within 3-7 business days.');
       };
     }
     renderThreatReport();
@@ -1488,13 +582,13 @@ export function initAdminPage() {
       const resData = await response.json().catch(() => ({}));
       
       if (resData.error) {
-        alert(`[VirusTotal Edge Scan Note]: ${resData.error}`);
+        toast.warning(`[VirusTotal Edge Scan Note]: ${resData.error}`);
       } else {
-        alert(`[VirusTotal Analysis Complete]: 0/90 Engines Flagged Clean for ${domain}!`);
+        toast.success(`[VirusTotal Analysis Complete]: 0/90 Engines Flagged Clean for ${domain}!`);
       }
     } catch (err) {
       console.warn('VirusTotal edge scan failed:', err);
-      alert(`[VirusTotal Simulation Note]: 0/90 Engines Flagged Clean for ${domain}. (Edge response unavailable on local domain)`);
+      toast.info(`[VirusTotal Simulation Note]: 0/90 Engines Flagged Clean for ${domain}. (Edge response unavailable on local domain)`);
     } finally {
       scanVtBtn.textContent = 'Run Live Edge Scan';
     }
@@ -1530,8 +624,24 @@ export function initAdminPage() {
     if (chatTelnyxNumInput) chatTelnyxNumInput.value = chatbotCfg.telnyxPhoneNumber || "";
     if (chatTwilioNumInput) chatTwilioNumInput.value = chatbotCfg.twilioPhoneNumber || "";
 
+    // Initialize chatbot form validator
+    const chatbotForm = document.getElementById('chatbot-settings-form');
+    let chatbotValidator = null;
+    if (chatbotForm) {
+      chatbotValidator = new FormValidator(chatbotForm, {
+        'chat-name': [validationRules.required],
+        'chat-welcome': [validationRules.required]
+      });
+    }
+
     document.getElementById('chatbot-settings-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Validate form before submission
+      if (chatbotValidator && !chatbotValidator.validateAll()) {
+        toast.error('Please fix the validation errors before saving.');
+        return;
+      }
       const updatedChatbotConfig = {
         ...configManager.current,
         chatbot: {
@@ -1551,7 +661,9 @@ export function initAdminPage() {
 
       const success = await configManager.saveToFirebase(updatedChatbotConfig);
       if (success) {
-        alert('AI Chatbot & Voice settings saved to Firestore!');
+        toast.success('AI Chatbot & Voice settings saved to Firestore!');
+      } else {
+        toast.error('Failed to save chatbot settings. Please try again.');
       }
     });
 

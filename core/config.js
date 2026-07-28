@@ -1,6 +1,10 @@
 import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { errorHandler } from './error-handler.js';
 
+/**
+ * Default configuration object for the Foundation Framework
+ * @type {Object}
+ */
 export const defaultConfig = {
   siteTitle: "Foundation Framework",
   siteTagline: "A zero-build web framework",
@@ -40,13 +44,24 @@ export const defaultConfig = {
   }
 };
 
+/**
+ * ConfigEngine manages application configuration state
+ * Handles loading from localStorage, syncing with Firestore, and providing centralized config access
+ */
 class ConfigEngine {
   #activeConfig;
 
+  /**
+   * Initialize ConfigEngine and load configuration from localStorage
+   */
   constructor() {
     this.#loadFromLocalStorage();
   }
 
+  /**
+   * Load configuration from localStorage
+   * @private
+   */
   #loadFromLocalStorage() {
     const saved = localStorage.getItem('foundation_config');
     if (saved) {
@@ -60,6 +75,10 @@ class ConfigEngine {
     }
   }
 
+  /**
+   * Initialize configuration by loading from localStorage and syncing with Firestore
+   * @returns {Promise<boolean>} True if configuration is valid, false otherwise
+   */
   async init() {
     this.#loadFromLocalStorage();
 
@@ -99,14 +118,28 @@ class ConfigEngine {
     }
   }
 
+  /**
+   * Get current configuration object
+   * @returns {Object} Current active configuration
+   */
   get current() {
     return this.#activeConfig || defaultConfig;
   }
 
+  /**
+   * Save configuration to Firestore
+   * @param {Object} configPayload - Configuration object to save
+   * @returns {Promise<boolean>} True if save was successful
+   */
   async saveToFirebase(configPayload) {
     return await this.saveSetupCredentials(configPayload);
   }
 
+  /**
+   * Save setup credentials to localStorage and sync to Firestore
+   * @param {Object} configPayload - Configuration object to save
+   * @returns {Promise<boolean>} True if save was successful
+   */
   async saveSetupCredentials(configPayload) {
     this.#activeConfig = {
       ...this.#activeConfig,
@@ -122,6 +155,10 @@ class ConfigEngine {
     return true;
   }
 
+  /**
+   * Sync current configuration to Firestore
+   * @returns {Promise<boolean>} True if sync was successful
+   */
   async syncToFirestore() {
     try {
       const db = getFirestore();
