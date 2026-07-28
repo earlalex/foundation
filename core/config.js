@@ -41,6 +41,11 @@ export const defaultConfig = {
     twilioAuthToken: "",
     twilioPhoneNumber: "",
     voiceWelcomeMessage: "Thank you for calling Foundation support. How can I help you today?"
+  },
+  lastpass: {
+    provisioningHash: "",
+    companyId: "",
+    apiEndpoint: "https://lastpass.com/enterprise/api.php"
   }
 };
 

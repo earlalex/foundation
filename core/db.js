@@ -19,6 +19,9 @@ const CONTENT_COLLECTION = 'content';
 const USERS_COLLECTION = 'users';
 const CHAT_LOGS_COLLECTION = 'chat_logs';
 const INVOICES_COLLECTION = 'invoices';
+const MARKETING_WORKFLOWS_COLLECTION = 'marketing_workflows';
+const KANBAN_TASKS_COLLECTION = 'kanban_tasks';
+const VAULT_CREDENTIALS_COLLECTION = 'vault_credentials';
 
 /**
  * Get Firestore database instance
@@ -535,6 +538,309 @@ export class ContentDB {
       localStorage.setItem('foundation_local_invoices', JSON.stringify(invoices));
     } catch (e) {
       console.error('[DB]: Failed to save invoices to localStorage', e);
+    }
+  }
+
+  /**
+   * Get marketing workflows from localStorage fallback
+   * @private
+   * @returns {Object} Object of workflow objects keyed by ID
+   */
+  #getLocalMarketingWorkflows() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_marketing_workflows') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /**
+   * Save marketing workflows to localStorage fallback
+   * @private
+   * @param {Object} workflows - Object of workflow objects keyed by ID
+   */
+  #saveLocalMarketingWorkflows(workflows) {
+    try {
+      localStorage.setItem('foundation_local_marketing_workflows', JSON.stringify(workflows));
+    } catch (e) {
+      console.error('[DB]: Failed to save marketing workflows to localStorage', e);
+    }
+  }
+
+  /**
+   * Save marketing workflow to Firestore or localStorage fallback
+   * @param {Object} workflow - Workflow object to save
+   * @returns {Promise<Object>} Saved workflow
+   */
+  async saveMarketingWorkflow(workflow) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalMarketingWorkflows();
+      local[workflow.id] = { ...workflow, updatedAt: new Date().toISOString() };
+      this.#saveLocalMarketingWorkflows(local);
+      return workflow;
+    }
+
+    try {
+      const docRef = doc(db, MARKETING_WORKFLOWS_COLLECTION, workflow.id);
+      await setDoc(docRef, { ...workflow, updatedAt: new Date().toISOString() }, { merge: true });
+      return workflow;
+    } catch (err) {
+      console.warn('[DB]: Firestore marketing workflow save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalMarketingWorkflows();
+      local[workflow.id] = { ...workflow, updatedAt: new Date().toISOString() };
+      this.#saveLocalMarketingWorkflows(local);
+      return workflow;
+    }
+  }
+
+  /**
+   * Get all marketing workflows from Firestore or localStorage fallback
+   * @returns {Promise<Array>} Array of workflow objects
+   */
+  async getMarketingWorkflows() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalMarketingWorkflows();
+      return Object.values(local);
+    }
+
+    try {
+      const querySnapshot = await getDocs(collection(db, MARKETING_WORKFLOWS_COLLECTION));
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn('[DB]: Firestore marketing workflows get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalMarketingWorkflows();
+      return Object.values(local);
+    }
+  }
+
+  /**
+   * Delete marketing workflow from Firestore or localStorage fallback
+   * @param {string} workflowId - Workflow ID to delete
+   * @returns {Promise<boolean>} True if deletion was successful
+   */
+  async deleteMarketingWorkflow(workflowId) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalMarketingWorkflows();
+      delete local[workflowId];
+      this.#saveLocalMarketingWorkflows(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, MARKETING_WORKFLOWS_COLLECTION, workflowId);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore marketing workflow delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalMarketingWorkflows();
+      delete local[workflowId];
+      this.#saveLocalMarketingWorkflows(local);
+      return true;
+    }
+  }
+
+  /**
+   * Get kanban tasks from localStorage fallback
+   * @private
+   * @returns {Object} Object of task objects keyed by ID
+   */
+  #getLocalKanbanTasks() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_kanban_tasks') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /**
+   * Save kanban tasks to localStorage fallback
+   * @private
+   * @param {Object} tasks - Object of task objects keyed by ID
+   */
+  #saveLocalKanbanTasks(tasks) {
+    try {
+      localStorage.setItem('foundation_local_kanban_tasks', JSON.stringify(tasks));
+    } catch (e) {
+      console.error('[DB]: Failed to save kanban tasks to localStorage', e);
+    }
+  }
+
+  /**
+   * Save kanban task to Firestore or localStorage fallback
+   * @param {Object} task - Task object to save
+   * @returns {Promise<Object>} Saved task
+   */
+  async saveKanbanTask(task) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalKanbanTasks();
+      local[task.id] = { ...task, updatedAt: new Date().toISOString() };
+      this.#saveLocalKanbanTasks(local);
+      return task;
+    }
+
+    try {
+      const docRef = doc(db, KANBAN_TASKS_COLLECTION, task.id);
+      await setDoc(docRef, { ...task, updatedAt: new Date().toISOString() }, { merge: true });
+      return task;
+    } catch (err) {
+      console.warn('[DB]: Firestore kanban task save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalKanbanTasks();
+      local[task.id] = { ...task, updatedAt: new Date().toISOString() };
+      this.#saveLocalKanbanTasks(local);
+      return task;
+    }
+  }
+
+  /**
+   * Get all kanban tasks from Firestore or localStorage fallback
+   * @returns {Promise<Array>} Array of task objects
+   */
+  async getKanbanTasks() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalKanbanTasks();
+      return Object.values(local);
+    }
+
+    try {
+      const querySnapshot = await getDocs(collection(db, KANBAN_TASKS_COLLECTION));
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn('[DB]: Firestore kanban tasks get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalKanbanTasks();
+      return Object.values(local);
+    }
+  }
+
+  /**
+   * Delete kanban task from Firestore or localStorage fallback
+   * @param {string} taskId - Task ID to delete
+   * @returns {Promise<boolean>} True if deletion was successful
+   */
+  async deleteKanbanTask(taskId) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalKanbanTasks();
+      delete local[taskId];
+      this.#saveLocalKanbanTasks(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, KANBAN_TASKS_COLLECTION, taskId);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore kanban task delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalKanbanTasks();
+      delete local[taskId];
+      this.#saveLocalKanbanTasks(local);
+      return true;
+    }
+  }
+
+  /**
+   * Get vault credentials from localStorage fallback
+   * @private
+   * @returns {Object} Object of credential objects keyed by ID
+   */
+  #getLocalVaultCredentials() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_vault_credentials') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /**
+   * Save vault credentials to localStorage fallback
+   * @private
+   * @param {Object} credentials - Object of credential objects keyed by ID
+   */
+  #saveLocalVaultCredentials(credentials) {
+    try {
+      localStorage.setItem('foundation_local_vault_credentials', JSON.stringify(credentials));
+    } catch (e) {
+      console.error('[DB]: Failed to save vault credentials to localStorage', e);
+    }
+  }
+
+  /**
+   * Save vault credential to Firestore or localStorage fallback
+   * @param {Object} credential - Credential object to save
+   * @returns {Promise<Object>} Saved credential
+   */
+  async saveVaultCredential(credential) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalVaultCredentials();
+      local[credential.id] = { ...credential, updatedAt: new Date().toISOString() };
+      this.#saveLocalVaultCredentials(local);
+      return credential;
+    }
+
+    try {
+      const docRef = doc(db, VAULT_CREDENTIALS_COLLECTION, credential.id);
+      await setDoc(docRef, { ...credential, updatedAt: new Date().toISOString() }, { merge: true });
+      return credential;
+    } catch (err) {
+      console.warn('[DB]: Firestore vault credential save error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalVaultCredentials();
+      local[credential.id] = { ...credential, updatedAt: new Date().toISOString() };
+      this.#saveLocalVaultCredentials(local);
+      return credential;
+    }
+  }
+
+  /**
+   * Get all vault credentials from Firestore or localStorage fallback
+   * @returns {Promise<Array>} Array of credential objects
+   */
+  async getVaultCredentials() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalVaultCredentials();
+      return Object.values(local);
+    }
+
+    try {
+      const querySnapshot = await getDocs(collection(db, VAULT_CREDENTIALS_COLLECTION));
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn('[DB]: Firestore vault credentials get error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalVaultCredentials();
+      return Object.values(local);
+    }
+  }
+
+  /**
+   * Delete vault credential from Firestore or localStorage fallback
+   * @param {string} credentialId - Credential ID to delete
+   * @returns {Promise<boolean>} True if deletion was successful
+   */
+  async deleteVaultCredential(credentialId) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalVaultCredentials();
+      delete local[credentialId];
+      this.#saveLocalVaultCredentials(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, VAULT_CREDENTIALS_COLLECTION, credentialId);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore vault credential delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalVaultCredentials();
+      delete local[credentialId];
+      this.#saveLocalVaultCredentials(local);
+      return true;
     }
   }
 }
