@@ -163,7 +163,8 @@ function setupTaskForm() {
     e.preventDefault();
     
     const title = document.getElementById('task-title').value;
-    const description = document.getElementById('task-description').value;
+    const descriptionEl = document.getElementById('task-description');
+    const description = descriptionEl ? descriptionEl.value : '';
     const priority = document.getElementById('task-priority').value;
     const dueDate = document.getElementById('task-due-date').value;
     const assigneeId = document.getElementById('task-assignee').value;

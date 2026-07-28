@@ -1592,24 +1592,29 @@
         </div>
 
         <!-- Task Creation Form -->
-        <form id="task-form" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
-          <div>
-            <input type="text" id="task-title" placeholder="Task title..." required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+        <form id="task-form" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.75rem;">
+            <div>
+              <input type="text" id="task-title" placeholder="Task title..." required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <select id="task-priority" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="">Priority</option>
+              </select>
+            </div>
+            <div>
+              <input type="date" id="task-due-date" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <select id="task-assignee" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="">Assignee</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary" style="padding: 8px 16px;">Add Task</button>
           </div>
           <div>
-            <select id="task-priority" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-              <option value="">Priority</option>
-            </select>
+            <textarea id="task-description" placeholder="Task description (optional)..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
           </div>
-          <div>
-            <input type="date" id="task-due-date" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-          </div>
-          <div>
-            <select id="task-assignee" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-              <option value="">Assignee</option>
-            </select>
-          </div>
-          <button type="submit" class="btn-primary" style="padding: 8px 16px;">Add Task</button>
         </form>
 
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
