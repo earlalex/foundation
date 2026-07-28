@@ -23,6 +23,9 @@ export const defaultConfig = {
     workflowUrl: "/api/workflow-trigger",
     vtUrl: "/api/virustotal-scan"
   },
+  security: {
+    monthlyScanEnabled: false
+  },
   seoMyRankAddr: {
     apiKey: "E4462175E8369240D133B6C4F3CD288C",
     costPerRequest: 0.01,

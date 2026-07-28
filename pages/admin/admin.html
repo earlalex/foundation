@@ -1263,51 +1263,87 @@
           </div>
         </div>
       </div>
-      <!-- Dual-Tier File Scanning System -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
-        <!-- Tier 1 Panel: Local Drag & Drop -->
-        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column;">
-          <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 0.5rem;">
-            <span>🛡️</span> Tier 1: Local Signature & Pattern Scanner
-          </h3>
-          <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
-            Instantly compute SHA-256 and scan text assets (.js, .html, .txt, .json, .md) for webshells, eval execution, or iframe/script injection patterns.
-          </p>
+      <!-- Site-Wide Threat Scanner & Edge lookup -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem; width: 100%; box-sizing: border-box;">
 
-          <div id="security-drag-drop-zone" style="border: 2px dashed var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem 1rem; text-align: center; cursor: pointer; background: var(--theme-color-background, #f7fafc); transition: background 0.2s, border-color 0.2s; margin-bottom: 1rem;">
-            <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">📁</span>
-            <span style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px; color: var(--theme-color-text-primary, #1a202c);">Drag & Drop File Here</span>
-            <span style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #a0aec0);">or click to select file from your system</span>
-            <input type="file" id="security-local-scan-file-input" style="display: none;" />
-          </div>
-
-          <!-- Scan Results Area -->
-          <div id="security-local-scan-results" style="display: none; padding: 1rem; border-radius: var(--theme-layout-border-radius, 8px); font-size: 0.85rem; line-height: 1.4;">
-            <!-- Dynamic local results -->
-          </div>
-        </div>
-
-        <!-- Tier 2 Panel: Multi-Engine & VirusTotal Edge Scanner -->
-        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column;">
+        <!-- Global Threat Lookup Panel -->
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; width: 100%; box-sizing: border-box;">
           <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-danger, #e53e3e); display: flex; align-items: center; gap: 0.5rem;">
-            <span>🌐</span> Tier 2: Multi-Engine & VirusTotal Edge Scanner
+            <span>🌐</span> Global Threat Lookups (VirusTotal / ClamAV)
           </h3>
           <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
-            Query 70+ global antivirus engines (including ClamAV) on Cloudflare serverless edge to verify file signatures or domains.
+            Query 70+ global antivirus engines on Cloudflare serverless edge to instantly verify arbitrary file signatures or domain names.
           </p>
 
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-            <input type="text" id="security-edge-scan-input" placeholder="Enter file SHA-256 hash or domain..." style="flex: 1; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;" />
-            <button id="btn-run-security-edge-scan" class="btn-primary" style="background: var(--theme-color-danger, #e53e3e); font-weight: bold; font-size: 0.85rem; border: none; white-space: nowrap; cursor: pointer;">
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%; box-sizing: border-box; margin-bottom: 1rem;">
+            <input type="text" id="security-edge-scan-input" placeholder="Enter file SHA-256 hash or domain..." style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-size: 0.9rem; max-width: 100%; box-sizing: border-box;" />
+            <button id="btn-run-security-edge-scan" class="btn-primary" style="background: var(--theme-color-danger, #e53e3e); font-weight: bold; font-size: 0.85rem; border: none; white-space: nowrap; cursor: pointer; max-width: 100%; box-sizing: border-box;">
               Edge Threat Scan
             </button>
           </div>
 
           <!-- Edge Scan Results Area -->
-          <div id="security-edge-scan-results" style="display: none; padding: 1rem; border-radius: var(--theme-layout-border-radius, 8px); font-size: 0.85rem; line-height: 1.4;">
+          <div id="security-edge-scan-results" style="display: none; padding: 1rem; border-radius: var(--theme-layout-border-radius, 8px); font-size: 0.85rem; line-height: 1.4; width: 100%; box-sizing: border-box;">
             <!-- Dynamic edge results -->
           </div>
         </div>
+
+        <!-- Site-Wide Threat Scanner Panel -->
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; width: 100%; box-sizing: border-box;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem; margin-bottom: 1rem;">
+            <div>
+              <h3 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 0.5rem;">
+                <span>🛡️</span> Site-Wide File Threat Scanner
+              </h3>
+              <p style="margin: 0.25rem 0 0 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
+                Audits all core framework files and database public media assets against global security signatures.
+              </p>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+              <!-- Monthly Cron Toggle -->
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); background: var(--theme-color-background, #f7fafc); padding: 6px 12px; border-radius: 4px; border: 1px solid var(--theme-color-border, #e2e8f0);">
+                <input type="checkbox" id="security-monthly-scan-toggle" style="cursor: pointer;" />
+                Enable Automated Silent Monthly Security Scan
+              </label>
+
+              <button id="btn-run-site-audit" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">
+                Run Live Site Audit
+              </button>
+              <button id="btn-email-site-audit" style="padding: 6px 14px; font-size: 0.85rem; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                <span>📧</span> Email Report
+              </button>
+            </div>
+          </div>
+
+          <!-- Overall Audit Info Banner -->
+          <div id="site-audit-overview-banner" style="display: none; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border: 1px solid transparent; font-size: 0.9rem;">
+            <!-- Overall rating info -->
+          </div>
+
+          <!-- Dynamic Report Table -->
+          <div style="overflow-x: auto; width: 100%; box-sizing: border-box;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 750px;">
+              <thead>
+                <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
+                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); width: 30%;">Asset Path / Name</th>
+                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); width: 30%;">SHA-256 Signature Hash</th>
+                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: center; width: 16%; min-width: 100px;">ClamAV Status</th>
+                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: center; width: 14%; min-width: 90px;">Multi-Engine</th>
+                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: right; width: 10%; min-width: 60px;">Rating</th>
+                </tr>
+              </thead>
+              <tbody id="site-audit-report-tbody">
+                <tr>
+                  <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--theme-color-text-secondary, #a0aec0); font-style: italic;">
+                    No site threat audit has been run. Click "Run Live Site Audit" above to analyze your framework files.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
       <div style="background: #1a202c; color: #fff; border: 1px solid #2d3748; padding: 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
         <div>
