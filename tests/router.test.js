@@ -1,5 +1,5 @@
-// router/test-router.js
-import { Router } from './router.js';
+// tests/router.test.js
+import { Router } from '../router/router.js';
 import { authManager } from '../core/auth.js';
 import { store } from '../core/store.js';
 

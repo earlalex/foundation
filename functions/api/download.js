@@ -8,11 +8,17 @@ export async function onRequestGet(context) {
   const token = url.searchParams.get('token');
 
   if (!fileId || !userEmail || !token) {
+    console.error('[Download API]: Missing required parameters');
     return new Response('Invalid or missing download parameters.', { status: 400 });
   }
 
   const firebaseProjectId = env.FIREBASE_PROJECT_ID;
   const firestoreApiKey = env.FIREBASE_API_KEY;
+
+  if (!firebaseProjectId || !firestoreApiKey) {
+    console.error('[Download API]: Firebase configuration missing');
+    return new Response('Server configuration error.', { status: 500 });
+  }
 
   try {
     // 1. Fetch file directly from Google Drive API
@@ -21,6 +27,7 @@ export async function onRequestGet(context) {
     });
 
     if (!driveRes.ok) {
+      console.error('[Download API]: Drive fetch failed:', driveRes.status);
       return new Response('Download link expired or file unavailable.', { status: 403 });
     }
 
@@ -28,24 +35,34 @@ export async function onRequestGet(context) {
     const docId = `dl_${fileId}_${userEmail.replace(/[@.]/g, '_')}`;
     const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/downloads/${docId}?key=${firestoreApiKey}`;
 
-    await fetch(firestoreUrl, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: {
-          fileId: { stringValue: fileId },
-          userEmail: { stringValue: userEmail },
-          downloadedAt: { stringValue: new Date().toISOString() },
-          status: { stringValue: 'COMPLETED_AND_REVOKED' }
-        }
-      })
-    });
+    try {
+      await fetch(firestoreUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            fileId: { stringValue: fileId },
+            userEmail: { stringValue: userEmail },
+            downloadedAt: { stringValue: new Date().toISOString() },
+            status: { stringValue: 'COMPLETED_AND_REVOKED' }
+          }
+        })
+      });
+    } catch (firestoreErr) {
+      console.error('[Download API]: Firestore audit log failed:', firestoreErr);
+      // Continue with download even if audit fails
+    }
 
     // 3. Auto-Revoke: Strips specific user permission from Drive file
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions/user:${encodeURIComponent(userEmail)}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${env.GOOGLE_SERVICE_ACCOUNT_TOKEN}` }
-    });
+    try {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions/user:${encodeURIComponent(userEmail)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${env.GOOGLE_SERVICE_ACCOUNT_TOKEN}` }
+      });
+    } catch (revokeErr) {
+      console.error('[Download API]: Permission revocation failed:', revokeErr);
+      // Continue with download even if revocation fails
+    }
 
     // 4. Force browser auto-download via Content-Disposition header
     const responseHeaders = new Headers(driveRes.headers);
@@ -56,6 +73,7 @@ export async function onRequestGet(context) {
       headers: responseHeaders
     });
   } catch (err) {
-    return new Response(`Fulfillment Error: ${err.message}`, { status: 500 });
+    console.error('[Download API]: Unhandled error:', err);
+    return new Response(`Fulfillment Error: ${err.message || 'Internal server error'}`, { status: 500 });
   }
 }

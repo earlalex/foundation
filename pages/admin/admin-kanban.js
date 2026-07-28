@@ -1,6 +1,7 @@
 // pages/admin/admin-kanban.js - Kanban Task Board Controller
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 let tasks = [];
 let users = [];
@@ -30,13 +31,23 @@ export function initKanbanTab() {
 }
 
 async function loadTasks() {
-  tasks = await contentDB.getKanbanTasks();
-  renderKanbanBoard();
+  try {
+    tasks = await contentDB.getKanbanTasks();
+    renderKanbanBoard();
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Kanban - Load Tasks');
+    console.error('Failed to load tasks:', err);
+  }
 }
 
 async function loadUsers() {
-  users = await contentDB.getAllUsers();
-  populateAssigneeSelect();
+  try {
+    users = await contentDB.getAllUsers();
+    populateAssigneeSelect();
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Kanban - Load Users');
+    console.error('Failed to load users:', err);
+  }
 }
 
 function populateAssigneeSelect() {
@@ -132,22 +143,32 @@ function getAssigneeName(assigneeId) {
 }
 
 async function updateTaskStatus(taskId, newStatus) {
-  const task = tasks.find(t => t.id === taskId);
-  if (task) {
-    task.status = newStatus;
-    task.updatedAt = new Date().toISOString();
-    await contentDB.saveKanbanTask(task);
-    renderKanbanBoard();
+  try {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      task.status = newStatus;
+      task.updatedAt = new Date().toISOString();
+      await contentDB.saveKanbanTask(task);
+      renderKanbanBoard();
+    }
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Kanban - Update Task Status');
+    toast.error('Failed to update task status');
   }
 }
 
 window.deleteTask = async function(taskId) {
   if (!confirm('Are you sure you want to delete this task?')) return;
   
-  await contentDB.deleteKanbanTask(taskId);
-  tasks = tasks.filter(t => t.id !== taskId);
-  renderKanbanBoard();
-  toast.success('Task deleted successfully');
+  try {
+    await contentDB.deleteKanbanTask(taskId);
+    tasks = tasks.filter(t => t.id !== taskId);
+    renderKanbanBoard();
+    toast.success('Task deleted successfully');
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Kanban - Delete Task');
+    toast.error('Failed to delete task');
+  }
 };
 
 function setupTaskForm() {
@@ -181,10 +202,15 @@ function setupTaskForm() {
       updatedAt: new Date().toISOString()
     };
 
-    await contentDB.saveKanbanTask(newTask);
-    tasks.push(newTask);
-    renderKanbanBoard();
-    form.reset();
-    toast.success('Task created successfully');
+    try {
+      await contentDB.saveKanbanTask(newTask);
+      tasks.push(newTask);
+      renderKanbanBoard();
+      form.reset();
+      toast.success('Task created successfully');
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Kanban - Create Task');
+      toast.error('Failed to create task');
+    }
   });
 }

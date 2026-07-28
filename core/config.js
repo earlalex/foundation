@@ -185,6 +185,119 @@ class ConfigEngine {
       return true;
     }
   }
+
+  /**
+   * Check if a specific module is properly configured
+   * @param {string} moduleName - Name of the module to check
+   * @returns {boolean} True if module is configured, false otherwise
+   */
+  isModuleConfigured(moduleName) {
+    const config = this.#activeConfig;
+    
+    const moduleConfigs = {
+      'site-brand': () => {
+        return !!(config.siteTitle && config.siteDomain && config.siteTitle !== 'Foundation Framework');
+      },
+      'api-keys': () => {
+        const fb = config.firebase || {};
+        return !!(fb.apiKey && fb.projectId && fb.apiKey !== 'YOUR_API_KEY' && fb.projectId !== 'YOUR_PROJECT_ID');
+      },
+      'business-legal': () => {
+        const biz = config.businessProfile || {};
+        return !!(biz.businessName && biz.businessAddress && biz.phone);
+      },
+      'finances-ach': () => {
+        const stripe = config.stripe || {};
+        return !!(stripe.secretKey && stripe.publishableKey && stripe.secretKey !== '');
+      },
+      'chatbot-voice': () => {
+        const chat = config.chatbot || {};
+        const hasTelnyx = !!(chat.telnyxApiKey && chat.telnyxPhoneNumber);
+        const hasTwilio = !!(chat.twilioAccountSid && chat.twilioAuthToken && chat.twilioPhoneNumber);
+        return !!(chat.enabled && (hasTelnyx || hasTwilio));
+      },
+      'security-ops': () => {
+        const sec = config.security || {};
+        const seo = config.seoMyRankAddr || {};
+        return !!(sec.monthlyScanEnabled !== undefined && seo.apiKey);
+      },
+      'seo-analytics': () => {
+        const third = config.thirdParty || {};
+        return !!(third.ga4PropertyId || third.lookerStudioEmbedUrl);
+      }
+    };
+
+    const checker = moduleConfigs[moduleName];
+    if (!checker) {
+      console.warn(`[ConfigEngine]: Unknown module "${moduleName}" in configuration check`);
+      return false;
+    }
+
+    try {
+      return checker();
+    } catch (err) {
+      console.error(`[ConfigEngine]: Error checking module "${moduleName}":`, err);
+      return false;
+    }
+  }
+
+  /**
+   * Get missing configuration keys for a module
+   * @param {string} moduleName - Name of the module to check
+   * @returns {Array<string>} Array of missing configuration keys
+   */
+  getMissingConfigKeys(moduleName) {
+    const config = this.#activeConfig;
+    const missing = [];
+
+    const moduleRequirements = {
+      'site-brand': [
+        { key: 'siteTitle', path: 'siteTitle', label: 'Site Title' },
+        { key: 'siteDomain', path: 'siteDomain', label: 'Site Domain' }
+      ],
+      'api-keys': [
+        { key: 'firebase.apiKey', path: 'firebase.apiKey', label: 'Firebase API Key' },
+        { key: 'firebase.projectId', path: 'firebase.projectId', label: 'Firebase Project ID' }
+      ],
+      'business-legal': [
+        { key: 'businessProfile.businessName', path: 'businessProfile.businessName', label: 'Business Name' },
+        { key: 'businessProfile.businessAddress', path: 'businessProfile.businessAddress', label: 'Business Address' },
+        { key: 'businessProfile.phone', path: 'businessProfile.phone', label: 'Phone Number' }
+      ],
+      'finances-ach': [
+        { key: 'stripe.secretKey', path: 'stripe.secretKey', label: 'Stripe Secret Key' },
+        { key: 'stripe.publishableKey', path: 'stripe.publishableKey', label: 'Stripe Publishable Key' }
+      ],
+      'chatbot-voice': [
+        { key: 'chatbot.enabled', path: 'chatbot.enabled', label: 'Chatbot Enabled' },
+        { key: 'chatbot.telnyxApiKey', path: 'chatbot.telnyxApiKey', label: 'Telnyx API Key (or Twilio)' }
+      ],
+      'security-ops': [
+        { key: 'security.monthlyScanEnabled', path: 'security.monthlyScanEnabled', label: 'Monthly Scan Enabled' },
+        { key: 'seoMyRankAddr.apiKey', path: 'seoMyRankAddr.apiKey', label: 'SEO API Key' }
+      ],
+      'seo-analytics': [
+        { key: 'thirdParty.ga4PropertyId', path: 'thirdParty.ga4PropertyId', label: 'GA4 Property ID' },
+        { key: 'thirdParty.lookerStudioEmbedUrl', path: 'thirdParty.lookerStudioEmbedUrl', label: 'Looker Studio URL' }
+      ]
+    };
+
+    const requirements = moduleRequirements[moduleName];
+    if (!requirements) return missing;
+
+    for (const req of requirements) {
+      const keys = req.path.split('.');
+      let value = config;
+      for (const key of keys) {
+        value = value?.[key];
+      }
+      if (!value || value === '' || value === 'YOUR_API_KEY' || value === 'YOUR_PROJECT_ID') {
+        missing.push(req.label);
+      }
+    }
+
+    return missing;
+  }
 }
 
 export const configManager = new ConfigEngine();

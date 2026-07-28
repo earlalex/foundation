@@ -1,5 +1,6 @@
 // core/stripe.js - Stripe payment integration
 import { configManager } from './config.js';
+import { errorHandler } from './error-handler.js';
 
 /**
  * Stripe Service for payment processing
@@ -18,7 +19,9 @@ export class StripeService {
    */
   async createProduct(productData) {
     if (!this.apiKey) {
-      throw new Error('Stripe API key not configured');
+      const error = new Error('Stripe API key not configured');
+      errorHandler.handleError(error, 'Stripe Configuration');
+      throw error;
     }
 
     try {
@@ -39,13 +42,15 @@ export class StripeService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to create Stripe product');
+        const errorData = await response.json();
+        const error = new Error(errorData.error?.message || 'Failed to create Stripe product');
+        errorHandler.handleError(error, 'Stripe Product Creation');
+        throw error;
       }
 
       return await response.json();
     } catch (err) {
-      console.error('[StripeService] Error creating product:', err);
+      errorHandler.handleError(err, 'Stripe Product Creation');
       throw err;
     }
   }
@@ -59,7 +64,9 @@ export class StripeService {
    */
   async createPrice(productId, amount, currency = 'usd') {
     if (!this.apiKey) {
-      throw new Error('Stripe API key not configured');
+      const error = new Error('Stripe API key not configured');
+      errorHandler.handleError(error, 'Stripe Configuration');
+      throw error;
     }
 
     try {
@@ -80,13 +87,15 @@ export class StripeService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to create Stripe price');
+        const errorData = await response.json();
+        const error = new Error(errorData.error?.message || 'Failed to create Stripe price');
+        errorHandler.handleError(error, 'Stripe Price Creation');
+        throw error;
       }
 
       return await response.json();
     } catch (err) {
-      console.error('[StripeService] Error creating price:', err);
+      errorHandler.handleError(err, 'Stripe Price Creation');
       throw err;
     }
   }
@@ -100,7 +109,9 @@ export class StripeService {
    */
   async createPaymentIntent(amount, currency = 'usd', metadata = {}) {
     if (!this.apiKey) {
-      throw new Error('Stripe API key not configured');
+      const error = new Error('Stripe API key not configured');
+      errorHandler.handleError(error, 'Stripe Configuration');
+      throw error;
     }
 
     try {
@@ -118,13 +129,15 @@ export class StripeService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to create payment intent');
+        const errorData = await response.json();
+        const error = new Error(errorData.error?.message || 'Failed to create payment intent');
+        errorHandler.handleError(error, 'Stripe Payment Intent');
+        throw error;
       }
 
       return await response.json();
     } catch (err) {
-      console.error('[StripeService] Error creating payment intent:', err);
+      errorHandler.handleError(err, 'Stripe Payment Intent');
       throw err;
     }
   }
@@ -137,7 +150,9 @@ export class StripeService {
    */
   async createInvoice(customerId, invoiceData) {
     if (!this.apiKey) {
-      throw new Error('Stripe API key not configured');
+      const error = new Error('Stripe API key not configured');
+      errorHandler.handleError(error, 'Stripe Configuration');
+      throw error;
     }
 
     try {
@@ -156,13 +171,15 @@ export class StripeService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to create invoice');
+        const errorData = await response.json();
+        const error = new Error(errorData.error?.message || 'Failed to create invoice');
+        errorHandler.handleError(error, 'Stripe Invoice Creation');
+        throw error;
       }
 
       return await response.json();
     } catch (err) {
-      console.error('[StripeService] Error creating invoice:', err);
+      errorHandler.handleError(err, 'Stripe Invoice Creation');
       throw err;
     }
   }
@@ -174,7 +191,9 @@ export class StripeService {
    */
   async createCustomer(customerData) {
     if (!this.apiKey) {
-      throw new Error('Stripe API key not configured');
+      const error = new Error('Stripe API key not configured');
+      errorHandler.handleError(error, 'Stripe Configuration');
+      throw error;
     }
 
     try {
@@ -192,13 +211,15 @@ export class StripeService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to create customer');
+        const errorData = await response.json();
+        const error = new Error(errorData.error?.message || 'Failed to create customer');
+        errorHandler.handleError(error, 'Stripe Customer Creation');
+        throw error;
       }
 
       return await response.json();
     } catch (err) {
-      console.error('[StripeService] Error creating customer:', err);
+      errorHandler.handleError(err, 'Stripe Customer Creation');
       throw err;
     }
   }

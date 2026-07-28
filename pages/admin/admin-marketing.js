@@ -2,6 +2,7 @@
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { sendGmailNotification } from '../../core/google-services.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 let workflows = [];
 let currentWorkflow = null;
@@ -28,8 +29,13 @@ export function initMarketingTab() {
 }
 
 async function loadWorkflows() {
-  workflows = await contentDB.getMarketingWorkflows();
-  renderWorkflowsList();
+  try {
+    workflows = await contentDB.getMarketingWorkflows();
+    renderWorkflowsList();
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Marketing - Load Workflows');
+    console.error('Failed to load workflows:', err);
+  }
 }
 
 function renderWorkflowsList() {
@@ -70,10 +76,15 @@ window.selectWorkflow = function(workflowId) {
 window.deleteWorkflow = async function(workflowId) {
   if (!confirm('Are you sure you want to delete this workflow?')) return;
   
-  await contentDB.deleteMarketingWorkflow(workflowId);
-  workflows = workflows.filter(wf => wf.id !== workflowId);
-  renderWorkflowsList();
-  toast.success('Workflow deleted successfully');
+  try {
+    await contentDB.deleteMarketingWorkflow(workflowId);
+    workflows = workflows.filter(wf => wf.id !== workflowId);
+    renderWorkflowsList();
+    toast.success('Workflow deleted successfully');
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Marketing - Delete Workflow');
+    toast.error('Failed to delete workflow');
+  }
 };
 
 function setupWorkflowBuilder() {
@@ -234,10 +245,15 @@ function setupWorkflowForm() {
       currentWorkflow.active = active;
     }
 
-    await contentDB.saveMarketingWorkflow(currentWorkflow);
-    workflows = await contentDB.getMarketingWorkflows();
-    renderWorkflowsList();
-    toast.success('Workflow saved successfully');
+    try {
+      await contentDB.saveMarketingWorkflow(currentWorkflow);
+      workflows = await contentDB.getMarketingWorkflows();
+      renderWorkflowsList();
+      toast.success('Workflow saved successfully');
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Marketing - Save Workflow');
+      toast.error('Failed to save workflow');
+    }
   });
 
   document.getElementById('btn-new-workflow')?.addEventListener('click', () => {
@@ -263,30 +279,35 @@ export async function triggerWorkflow(triggerType, userData) {
 
 async function executeWorkflowNodes(workflow, userData) {
   for (const node of workflow.nodes) {
-    switch (node.type) {
-      case 'SEND_GMAIL_TEMPLATE':
-        await sendGmailNotification({
-          to: userData.email,
-          subject: node.config.subject || 'Automated Message',
-          body: node.config.body || ''
-        });
-        break;
-      case 'WAIT_DELAY':
-        const delayMs = (node.config.hours || 0) * 60 * 60 * 1000 + (node.config.days || 0) * 24 * 60 * 60 * 1000;
-        if (delayMs > 0) {
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-        break;
-      case 'UPDATE_USER_ROLE':
-        if (node.config.role) {
-          userData.role = node.config.role;
-          await contentDB.saveUser(userData);
-        }
-        break;
-      case 'CREATE_GOOGLE_CONTACT_NOTE':
-        // Integration with Google Contacts would go here
-        console.log('Creating contact note for:', userData.email);
-        break;
+    try {
+      switch (node.type) {
+        case 'SEND_GMAIL_TEMPLATE':
+          await sendGmailNotification({
+            to: userData.email,
+            subject: node.config.subject || 'Automated Message',
+            body: node.config.body || ''
+          });
+          break;
+        case 'WAIT_DELAY':
+          const delayMs = (node.config.hours || 0) * 60 * 60 * 1000 + (node.config.days || 0) * 24 * 60 * 60 * 1000;
+          if (delayMs > 0) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+          break;
+        case 'UPDATE_USER_ROLE':
+          if (node.config.role) {
+            userData.role = node.config.role;
+            await contentDB.saveUser(userData);
+          }
+          break;
+        case 'CREATE_GOOGLE_CONTACT_NOTE':
+          // Integration with Google Contacts would go here
+          console.log('Creating contact note for:', userData.email);
+          break;
+      }
+    } catch (err) {
+      errorHandler.handleError(err, `Admin Marketing - Execute Node ${node.type}`);
+      console.error(`Failed to execute workflow node ${node.type}:`, err);
     }
   }
 }

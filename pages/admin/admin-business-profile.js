@@ -3,6 +3,7 @@ import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 export function initBusinessProfileTab() {
   const currentCfg = configManager.current || {};
@@ -160,6 +161,7 @@ export function initBusinessProfileTab() {
         toast.error('Failed to save business profile. Please try again.');
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Business Profile - Form Submission');
       toast.error(`Error saving business profile: ${err.message}`);
     } finally {
       if (submitBtn) {

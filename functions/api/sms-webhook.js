@@ -31,6 +31,7 @@ export async function onRequestPost(context) {
     }
 
     if (!userMsg) {
+      console.error('[SMS Webhook]: No user message found in payload');
       return new Response(JSON.stringify({ error: "No user message found in incoming SMS payload." }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
@@ -43,6 +44,7 @@ export async function onRequestPost(context) {
     const preferredProvider = context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
 
     if (!geminiKey && !openAiKey) {
+      console.error('[SMS Webhook]: No AI credentials configured');
       return new Response("Missing API key environment bindings (GEMINI_API_KEY or OPENAI_API_KEY).", { status: 500 });
     }
 
@@ -69,6 +71,7 @@ export async function onRequestPost(context) {
       });
 
       if (!response.ok) {
+        console.warn('[SMS Webhook]: Primary Gemini model failed, trying fallback');
         // Fallback to gemini-2.5-flash-lite explicitly
         const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`;
         const fallbackRes = await fetch(fallbackUrl, {
@@ -89,7 +92,9 @@ export async function onRequestPost(context) {
           const data = await fallbackRes.json();
           return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         }
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        console.error('[SMS Webhook]: Gemini fallback also failed:', errorText);
+        throw new Error(errorText);
       }
 
       const data = await response.json();
@@ -115,7 +120,9 @@ export async function onRequestPost(context) {
       });
 
       if (!openAiResponse.ok) {
-        throw new Error(await openAiResponse.text());
+        const errorText = await openAiResponse.text();
+        console.error('[SMS Webhook]: OpenAI API call failed:', errorText);
+        throw new Error(errorText);
       }
 
       const aiData = await openAiResponse.json();
@@ -127,28 +134,34 @@ export async function onRequestPost(context) {
       try {
         replyText = await queryGemini(geminiKey);
       } catch (geminiErr) {
-        console.warn("[SMS API]: Primary Gemini call failed, trying OpenAI fallback:", geminiErr.message);
+        console.error('[SMS Webhook]: Primary Gemini call failed, trying OpenAI fallback:', geminiErr);
         if (openAiKey) {
           try {
             replyText = await queryOpenAI(openAiKey);
-          } catch (err) {}
+          } catch (err) {
+            console.error('[SMS Webhook]: OpenAI fallback also failed:', err);
+          }
         }
       }
     } else if (openAiKey) {
       try {
         replyText = await queryOpenAI(openAiKey);
       } catch (openaiErr) {
-        console.warn("[SMS API]: Primary OpenAI call failed, trying Gemini fallback:", openaiErr.message);
+        console.error('[SMS Webhook]: Primary OpenAI call failed, trying Gemini fallback:', openaiErr);
         if (geminiKey) {
           try {
             replyText = await queryGemini(geminiKey);
-          } catch (err) {}
+          } catch (err) {
+            console.error('[SMS Webhook]: Gemini fallback also failed:', err);
+          }
         }
       }
     } else if (geminiKey) {
       try {
         replyText = await queryGemini(geminiKey);
-      } catch (err) {}
+      } catch (err) {
+        console.error('[SMS Webhook]: Gemini call failed:', err);
+      }
     }
 
     // 4. Dispatch SMS response back
@@ -268,7 +281,7 @@ export async function onRequestPost(context) {
         });
 
       } catch (wsErr) {
-        console.warn('[SMS Webhook]: Google Workspace background logging failed:', wsErr.message);
+        console.error('[SMS Webhook]: Google Workspace background logging failed:', wsErr);
       }
     }
 
@@ -287,7 +300,8 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error('[SMS Webhook]: Unhandled error:', err);
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });

@@ -2,6 +2,7 @@
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator } from '../../utils/validation.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 export function initProductsTab() {
   const productForm = document.getElementById('product-form');
@@ -73,6 +74,7 @@ export function initProductsTab() {
       // Attach event handlers
       attachProductHandlers();
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Products - Load Products');
       console.error('Failed to load products:', err);
       productsTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #e53e3e; padding: 1rem;">Error loading products.</td></tr>';
     }
@@ -88,6 +90,7 @@ export function initProductsTab() {
             toast.success('Product deleted successfully.');
             loadProducts();
           } catch (err) {
+            errorHandler.handleError(err, 'Admin Products - Delete Product');
             toast.error(`Failed to delete product: ${err.message}`);
           }
         }
@@ -176,6 +179,7 @@ export function initProductsTab() {
       // Reload products list
       loadProducts();
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Products - Create Product');
       toast.error(`Failed to create product: ${err.message}`);
     } finally {
       if (submitBtn) {

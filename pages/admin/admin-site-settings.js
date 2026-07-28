@@ -5,6 +5,7 @@ import { themeEngine, defaultBrandTheme } from '../../core/theme.js';
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 const THEME_PRESETS = {
   default: defaultBrandTheme,
@@ -153,6 +154,7 @@ export function initSiteSettingsTab() {
         toast.error('Failed to save site settings. Please try again.');
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Site Settings - Site Identity Form');
       toast.error(`Error saving site settings: ${err.message}`);
     } finally {
       if (submitBtn) {
@@ -188,6 +190,7 @@ export function initSiteSettingsTab() {
         toast.error('Failed to save embed settings. Please try again.');
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Site Settings - Embeds Form');
       toast.error(`Error saving embed settings: ${err.message}`);
     } finally {
       if (submitBtn) {
@@ -300,6 +303,7 @@ function initThemeEngine() {
       updateInputControlsFromTheme(parsedTheme);
       toast.success(`Successfully applied "${parsedTheme.name || 'Custom Theme'}" design system!`);
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Site Settings - Theme JSON');
       toast.error(`Invalid Theme JSON: ${err.message}`);
     }
   });

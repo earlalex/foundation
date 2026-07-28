@@ -1,4 +1,5 @@
 // utils/securityScanner.js
+import { errorHandler } from '../core/error-handler.js';
 
 /**
  * Calculates SHA-256 hash of a file using browser-native Web Crypto API
@@ -6,9 +7,14 @@
  * @returns {Promise<string>}
  */
 export async function calculateSHA256(buffer) {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (err) {
+    errorHandler.handleError(err, 'SHA-256 Calculation');
+    throw err;
+  }
 }
 
 /**
@@ -85,7 +91,7 @@ export async function scanFileLocally(file) {
       detectedSignatures
     };
   } catch (err) {
-    console.error('[Security Scanner]: Local scan failed:', err);
+    errorHandler.handleError(err, 'Local File Scan');
     return {
       isClean: true, // Fail open, but log error
       hash: '',

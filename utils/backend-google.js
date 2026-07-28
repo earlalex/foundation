@@ -1,11 +1,15 @@
 // utils/backend-google.js
+import { errorHandler } from '../core/error-handler.js';
 
 /**
  * Uploads a transcript or communication log to Google Drive from Cloudflare Pages Environment:
  * [Site Name] / Communication Logs / YYYY / MM /
  */
 export async function uploadCommunicationLogToDrive(token, siteName, fileName, content) {
-  if (!token) return null;
+  if (!token) {
+    errorHandler.handleError(new Error('Google access token not provided'), 'Drive Upload');
+    return null;
+  }
 
   try {
     // 1. Search or create the Root siteName folder
@@ -136,7 +140,7 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
 
     return await response.json();
   } catch (err) {
-    console.warn('[Drive Engine]: Communication Log Upload failed:', err.message);
+    errorHandler.handleError(err, 'Drive Upload');
     return null;
   }
 }
@@ -145,7 +149,10 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
  * Creates or updates Google Contacts during communication interactions
  */
 export async function syncGoogleContactCommunication({ phone, name, type, timestamp, token }) {
-  if (!token || !phone) return false;
+  if (!token || !phone) {
+    errorHandler.handleError(new Error('Missing required parameters for contact sync'), 'Google Contacts Sync');
+    return false;
+  }
 
   try {
     const searchRes = await fetch(`https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(phone)}&readMask=names,phoneNumbers,userDefined`, {
@@ -198,7 +205,7 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
     }
     return true;
   } catch (err) {
-    console.warn('[Google Services]: Contacts communication sync failed:', err.message);
+    errorHandler.handleError(err, 'Google Contacts Sync');
     return false;
   }
 }
@@ -207,35 +214,38 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
  * Dispatch automated summary email via Gmail API
  */
 export async function sendCommunicationSummaryEmail({ toEmail, summary, duration, query, response, token }) {
-  if (!token || !toEmail) return false;
-
-  const subject = `[AI Telephony Log] Summary: ${summary.substring(0, 50)}...`;
-  const messageBody = [
-    `AI Telephony Interaction Log`,
-    `=============================`,
-    `Summary: ${summary}`,
-    `Duration/Session: ${duration || 'N/A'}`,
-    `User Query: ${query}`,
-    `AI Response: ${response}`,
-    `Timestamp: ${new Date().toLocaleString()}`,
-    `=============================`,
-    `Delivered automatically by Foundation System Support.`
-  ].join('\r\n');
-
-  const rawEmail = [
-    `To: ${toEmail}`,
-    `Subject: ${subject}`,
-    'Content-Type: text/plain; charset=utf-8',
-    '',
-    messageBody
-  ].join('\r\n');
-
-  const encodedEmail = btoa(unescape(encodeURIComponent(rawEmail)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  if (!token || !toEmail) {
+    errorHandler.handleError(new Error('Missing required parameters for email send'), 'Gmail Send');
+    return false;
+  }
 
   try {
+    const subject = `[AI Telephony Log] Summary: ${summary.substring(0, 50)}...`;
+    const messageBody = [
+      `AI Telephony Interaction Log`,
+      `=============================`,
+      `Summary: ${summary}`,
+      `Duration/Session: ${duration || 'N/A'}`,
+      `User Query: ${query}`,
+      `AI Response: ${response}`,
+      `Timestamp: ${new Date().toLocaleString()}`,
+      `=============================`,
+      `Delivered automatically by Foundation System Support.`
+    ].join('\r\n');
+
+    const rawEmail = [
+      `To: ${toEmail}`,
+      `Subject: ${subject}`,
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      messageBody
+    ].join('\r\n');
+
+    const encodedEmail = btoa(unescape(encodeURIComponent(rawEmail)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
     await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
       headers: {
@@ -246,7 +256,7 @@ export async function sendCommunicationSummaryEmail({ toEmail, summary, duration
     });
     return true;
   } catch (err) {
-    console.warn('[Google Services]: Failed to dispatch Gmail summary notification:', err.message);
+    errorHandler.handleError(err, 'Gmail Send');
     return false;
   }
 }

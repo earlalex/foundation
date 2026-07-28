@@ -1,5 +1,5 @@
-// core/test-store.js
-import { store } from './store.js';
+// tests/store.test.js
+import { store } from '../core/store.js';
 
 export function runStoreTests() {
   console.group('  Running Global Store State Tests...');

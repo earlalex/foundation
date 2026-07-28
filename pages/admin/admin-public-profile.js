@@ -2,6 +2,7 @@
 import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 export function initPublicProfileTab() {
   const currentCfg = configManager.current || {};
@@ -134,6 +135,7 @@ export function initPublicProfileTab() {
         toast.error('Failed to save author profile. Please try again.');
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Public Profile - Form Submission');
       toast.error(`Error saving author profile: ${err.message}`);
     } finally {
       if (submitBtn) {

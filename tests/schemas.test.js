@@ -1,8 +1,8 @@
-// schemas/test-runner.js
+// tests/schemas.test.js
 import { validateSchema, Type } from '../core/validator.js';
-import { schemaRegistry } from './registry.js';
+import { schemaRegistry } from '../schemas/registry.js';
 
-export function runAllSchemaTests() {
+export function runSchemaTests() {
   console.group('  Running Foundation Schema Test Suite...');
   let totalTests = 0;
   let passedTests = 0;

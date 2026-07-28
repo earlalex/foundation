@@ -17,6 +17,7 @@ import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, validationRules } from '../../utils/validation.js';
 import { scanFileLocally } from '../../utils/securityScanner.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 // Import modular tab controllers
 import { initTabController } from './admin-tabs-controller.js';
@@ -144,90 +145,95 @@ export function initAdminPage() {
       return;
     }
     
-    const contentType = document.getElementById('content-type').value;
-    const contentId = document.getElementById('content-id').value;
-    const title = document.getElementById('content-title').value;
-    const description = document.getElementById('content-description').value;
-    const visibility = document.getElementById('content-visibility').value;
-    const rawBody = document.getElementById('content-body').value;
-    const affiliateAdCode = document.getElementById('content-affiliate-code')?.value || '';
-    const fileInput = document.getElementById('media-file');
+    try {
+      const contentType = document.getElementById('content-type').value;
+      const contentId = document.getElementById('content-id').value;
+      const title = document.getElementById('content-title').value;
+      const description = document.getElementById('content-description').value;
+      const visibility = document.getElementById('content-visibility').value;
+      const rawBody = document.getElementById('content-body').value;
+      const affiliateAdCode = document.getElementById('content-affiliate-code')?.value || '';
+      const fileInput = document.getElementById('media-file');
 
-    let assetData = null;
-    if (fileInput && fileInput.files.length > 0) {
-      assetData = await uploadFileToDrive(fileInput.files[0]);
-    }
-
-    const currentDate = new Date().toISOString().split('T')[0];
-    const paragraphs = rawBody ? rawBody.split('\n').filter((p) => p.trim().length > 0) : [];
-
-    const payload = {
-      type: contentType,
-      id: contentId,
-      title: title,
-      description: description,
-      author: store.state.user?.displayName || 'Admin',
-      date: currentDate,
-      longFormText: paragraphs.length > 0 ? paragraphs : [description],
-      access: { visibility: visibility },
-      affiliateAdCode,
-      preview: {
-        teaserText: description,
-        featuredImage: assetData
-          ? {
-              type: assetData.category,
-              src: assetData.src,
-              localPath: assetData.localPath
-            }
-          : null
+      let assetData = null;
+      if (fileInput && fileInput.files.length > 0) {
+        assetData = await uploadFileToDrive(fileInput.files[0]);
       }
-    };
 
-    if (contentType === 'event') {
-      const locationVal = document.getElementById('event-location')?.value || '';
-      const startTimeVal = document.getElementById('event-start-time')?.value || '14:00';
-      const endTimeVal = document.getElementById('event-end-time')?.value || '15:00';
+      const currentDate = new Date().toISOString().split('T')[0];
+      const paragraphs = rawBody ? rawBody.split('\n').filter((p) => p.trim().length > 0) : [];
 
-      const eventDetails = {
+      const payload = {
+        type: contentType,
+        id: contentId,
         title: title,
         description: description,
-        eventType: document.getElementById('event-type').value,
-        location: locationVal,
-        date: document.getElementById('event-date')?.value || currentDate,
-        startTime: startTimeVal,
-        endTime: endTimeVal
+        author: store.state.user?.displayName || 'Admin',
+        date: currentDate,
+        longFormText: paragraphs.length > 0 ? paragraphs : [description],
+        access: { visibility: visibility },
+        affiliateAdCode,
+        preview: {
+          teaserText: description,
+          featuredImage: assetData
+            ? {
+                type: assetData.category,
+                src: assetData.src,
+                localPath: assetData.localPath
+              }
+            : null
+        }
       };
 
-      const calResult = await createGoogleCalendarEvent(eventDetails);
-      payload.eventType = eventDetails.eventType;
-      payload.location = eventDetails.location;
-      payload.date = eventDetails.date;
-      payload.startTime = eventDetails.startTime;
-      payload.endTime = eventDetails.endTime;
+      if (contentType === 'event') {
+        const locationVal = document.getElementById('event-location')?.value || '';
+        const startTimeVal = document.getElementById('event-start-time')?.value || '14:00';
+        const endTimeVal = document.getElementById('event-end-time')?.value || '15:00';
 
-      if (calResult) {
-        payload.meetUrl = calResult.meetUrl;
-        payload.calendarEventId = calResult.calendarEventId;
-      }
-    } else if (contentType === 'podcast' && assetData) {
-      payload.audioUrl = assetData.src;
-    } else if (contentType === 'education' && assetData) {
-      payload.worksheets = [
-        {
-          title: fileInput.files[0].name,
-          pdfUrl: assetData.src
+        const eventDetails = {
+          title: title,
+          description: description,
+          eventType: document.getElementById('event-type').value,
+          location: locationVal,
+          date: document.getElementById('event-date')?.value || currentDate,
+          startTime: startTimeVal,
+          endTime: endTimeVal
+        };
+
+        const calResult = await createGoogleCalendarEvent(eventDetails);
+        payload.eventType = eventDetails.eventType;
+        payload.location = eventDetails.location;
+        payload.date = eventDetails.date;
+        payload.startTime = eventDetails.startTime;
+        payload.endTime = eventDetails.endTime;
+
+        if (calResult) {
+          payload.meetUrl = calResult.meetUrl;
+          payload.calendarEventId = calResult.calendarEventId;
         }
-      ];
-    }
+      } else if (contentType === 'podcast' && assetData) {
+        payload.audioUrl = assetData.src;
+      } else if (contentType === 'education' && assetData) {
+        payload.worksheets = [
+          {
+            title: fileInput.files[0].name,
+            pdfUrl: assetData.src
+          }
+        ];
+      }
 
-    const success = await contentDB.saveContent(payload);
-    if (success) {
-      toast.success(`Successfully published "${title}"!`);
-      e.target.reset();
-      if (eventFieldsContainer) eventFieldsContainer.style.display = 'none';
-      updateLivePreview();
-    } else {
-      toast.error('Failed to publish content. Please try again.');
+      const success = await contentDB.saveContent(payload);
+      if (success) {
+        toast.success(`Successfully published "${title}"!`);
+        e.target.reset();
+        if (eventFieldsContainer) eventFieldsContainer.style.display = 'none';
+        updateLivePreview();
+      } else {
+        toast.error('Failed to publish content. Please try again.');
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin - CMS Form Submission');
+      toast.error(`Failed to publish content: ${err.message}`);
     }
   });
 
@@ -261,40 +267,51 @@ export function initAdminPage() {
 
     document.getElementById('seo-rank-config-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const updatedSeoMyRankAddr = {
-        ...configManager.current.seoMyRankAddr,
-        apiKey: rankApiKeyInput.value,
-        costPerRequest: Number(rankCostInput.value)
-      };
+      try {
+        const updatedSeoMyRankAddr = {
+          ...configManager.current.seoMyRankAddr,
+          apiKey: rankApiKeyInput.value,
+          costPerRequest: Number(rankCostInput.value)
+        };
 
-      const success = await configManager.saveToFirebase({
-        ...configManager.current,
-        seoMyRankAddr: updatedSeoMyRankAddr
-      });
+        const success = await configManager.saveToFirebase({
+          ...configManager.current,
+          seoMyRankAddr: updatedSeoMyRankAddr
+        });
 
-      if (success) {
-        toast.success('SEO-My-Rank-ADDR settings saved successfully!');
-      } else {
-        toast.error('Failed to save SEO settings. Please try again.');
+        if (success) {
+          toast.success('SEO-My-Rank-ADDR settings saved successfully!');
+        } else {
+          toast.error('Failed to save SEO settings. Please try again.');
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - SEO Config Form');
+        toast.error(`Failed to save SEO settings: ${err.message}`);
       }
     });
 
     const rankBtn = document.getElementById('btn-fetch-seo-rank');
     if (rankBtn) {
       rankBtn.onclick = async () => {
-        rankBtn.textContent = 'Querying My-Addr...';
-        const telemetry = await fetchSeoMyRankAddr(window.location.hostname);
-        document.getElementById('rank-google').textContent = telemetry.googleRank;
-        document.getElementById('rank-moz-da').textContent = `${telemetry.mozDomainAuthority} / 100`;
-        document.getElementById('rank-moz-pa').textContent = `${telemetry.mozPageAuthority} / 100`;
-        document.getElementById('rank-alexa').textContent = `#${telemetry.globalAlexaRank}`;
-        document.getElementById('rank-backlinks').textContent = Number(telemetry.backlinksCount).toLocaleString();
-        rankBtn.textContent = 'Refresh Rank Telemetry';
+        try {
+          rankBtn.textContent = 'Querying My-Addr...';
+          const telemetry = await fetchSeoMyRankAddr(window.location.hostname);
+          document.getElementById('rank-google').textContent = telemetry.googleRank;
+          document.getElementById('rank-moz-da').textContent = `${telemetry.mozDomainAuthority} / 100`;
+          document.getElementById('rank-moz-pa').textContent = `${telemetry.mozPageAuthority} / 100`;
+          document.getElementById('rank-alexa').textContent = `#${telemetry.globalAlexaRank}`;
+          document.getElementById('rank-backlinks').textContent = Number(telemetry.backlinksCount).toLocaleString();
+          rankBtn.textContent = 'Refresh Rank Telemetry';
 
-        // Refresh total counter UI values instantly
-        const updatedCfg = configManager.current.seoMyRankAddr || {};
-        if (totalRequestsEl) totalRequestsEl.textContent = updatedCfg.requestCount || 0;
-        if (totalSpendEl) totalSpendEl.textContent = `$${(updatedCfg.totalSpent || 0).toFixed(2)}`;
+          // Refresh total counter UI values instantly
+          const updatedCfg = configManager.current.seoMyRankAddr || {};
+          if (totalRequestsEl) totalRequestsEl.textContent = updatedCfg.requestCount || 0;
+          if (totalSpendEl) totalSpendEl.textContent = `$${(updatedCfg.totalSpent || 0).toFixed(2)}`;
+        } catch (err) {
+          errorHandler.handleError(err, 'Admin - Fetch SEO Rank');
+          toast.error('Failed to fetch SEO rank data');
+          rankBtn.textContent = 'Refresh Rank Telemetry';
+        }
       };
     }
 
@@ -308,16 +325,25 @@ export function initAdminPage() {
         feedback.style.display = 'block';
         feedback.textContent = `Submitting "${crawlUrl}" to Search Console crawler...`;
       }
-      const res = await requestSearchConsoleCrawl(crawlUrl);
-      if (feedback) {
-        if (res.success) {
-          feedback.style.background = '#f0fdf4';
-          feedback.style.color = '#166534';
-          feedback.textContent = `Success: ${crawlUrl} was submitted to Google index queue.`;
-        } else {
+      try {
+        const res = await requestSearchConsoleCrawl(crawlUrl);
+        if (feedback) {
+          if (res.success) {
+            feedback.style.background = '#f0fdf4';
+            feedback.style.color = '#166534';
+            feedback.textContent = `Success: ${crawlUrl} was submitted to Google index queue.`;
+          } else {
+            feedback.style.background = '#fff5f5';
+            feedback.style.color = '#c53030';
+            feedback.textContent = `Crawl Request Error: ${res.error || 'Check OAuth permissions'}`;
+          }
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - GSC Crawl Request');
+        if (feedback) {
           feedback.style.background = '#fff5f5';
           feedback.style.color = '#c53030';
-          feedback.textContent = `Crawl Request Error: ${res.error || 'Check OAuth permissions'}`;
+          feedback.textContent = 'Crawl Request Error: Failed to submit to Search Console';
         }
       }
     });
@@ -328,21 +354,26 @@ export function initAdminPage() {
     async function renderGscNotifs() {
       if (!notifsContainer) return;
       notifsContainer.innerHTML = '<p style="color:#a0aec0; font-size:0.8rem;">Fetching messages...</p>';
-      const alerts = await getSearchConsoleNotifications();
-      
-      if (!alerts || alerts.length === 0) {
-        notifsContainer.innerHTML = '<p style="color:#718096; font-size:0.8rem;">No unread Search Console alerts.</p>';
-        return;
-      }
-      notifsContainer.innerHTML = alerts.map(item => `
-        <div style="padding: 8px 10px; border-left: 3px solid ${item.type === 'warning' ? '#dd6b20' : '#38a169'}; background: #f7fafc; border-radius: 4px;">
-          <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.8rem;">
-            <span>${item.title}</span>
-            <span style="color: #a0aec0; font-weight: normal;">${item.date}</span>
+      try {
+        const alerts = await getSearchConsoleNotifications();
+        
+        if (!alerts || alerts.length === 0) {
+          notifsContainer.innerHTML = '<p style="color:#718096; font-size:0.8rem;">No unread Search Console alerts.</p>';
+          return;
+        }
+        notifsContainer.innerHTML = alerts.map(item => `
+          <div style="padding: 8px 10px; border-left: 3px solid ${item.type === 'warning' ? '#dd6b20' : '#38a169'}; background: #f7fafc; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.8rem;">
+              <span>${item.title}</span>
+              <span style="color: #a0aec0; font-weight: normal;">${item.date}</span>
+            </div>
+            <p style="margin: 2px 0 0 0; color: #4a5568; font-size: 0.75rem;">${item.message}</p>
           </div>
-          <p style="margin: 2px 0 0 0; color: #4a5568; font-size: 0.75rem;">${item.message}</p>
-        </div>
-      `).join('');
+        `).join('');
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - GSC Notifications');
+        notifsContainer.innerHTML = '<p style="color:#e53e3e; font-size:0.8rem;">Failed to load Search Console notifications.</p>';
+      }
     }
 
     if (refreshNotifsBtn) refreshNotifsBtn.onclick = renderGscNotifs;
@@ -352,23 +383,28 @@ export function initAdminPage() {
     const rangeSelect = document.getElementById('select-ga4-range');
 
     async function renderGa4Data() {
-      const range = rangeSelect?.value || '30daysAgo';
-      const stats = await getAnalyticsOverview(null, range);
-      if (stats) {
-        document.getElementById('ga4-users').textContent = stats.activeUsers;
-        document.getElementById('ga4-views').textContent = stats.screenPageViews;
-        document.getElementById('ga4-duration').textContent = stats.avgSessionDuration;
-        document.getElementById('ga4-bounce').textContent = stats.bounceRate;
+      try {
+        const range = rangeSelect?.value || '30daysAgo';
+        const stats = await getAnalyticsOverview(null, range);
+        if (stats) {
+          document.getElementById('ga4-users').textContent = stats.activeUsers;
+          document.getElementById('ga4-views').textContent = stats.screenPageViews;
+          document.getElementById('ga4-duration').textContent = stats.avgSessionDuration;
+          document.getElementById('ga4-bounce').textContent = stats.bounceRate;
 
-        const topPagesBox = document.getElementById('ga4-top-pages');
-        if (topPagesBox && Array.isArray(stats.topPages)) {
-          topPagesBox.innerHTML = stats.topPages.map(p => `
-            <div style="display:flex; justify-content:space-between; padding: 4px 8px; background:#f7fafc; border-radius: 4px;">
-              <code style="color:#2b6cb0;">${p.path}</code>
-              <strong>${p.views} views</strong>
-            </div>
-          `).join('');
+          const topPagesBox = document.getElementById('ga4-top-pages');
+          if (topPagesBox && Array.isArray(stats.topPages)) {
+            topPagesBox.innerHTML = stats.topPages.map(p => `
+              <div style="display:flex; justify-content:space-between; padding: 4px 8px; background:#f7fafc; border-radius: 4px;">
+                <code style="color:#2b6cb0;">${p.path}</code>
+                <strong>${p.views} views</strong>
+              </div>
+            `).join('');
+          }
         }
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - GA4 Analytics');
+        console.error('Failed to load GA4 data:', err);
       }
     }
 
@@ -401,35 +437,41 @@ export function initAdminPage() {
     const strategySelect = document.getElementById('lh-strategy-select');
 
     async function executeAudit() {
-      if (runBtn) runBtn.textContent = 'Running PageSpeed Audit...';
-      const strategy = strategySelect?.value || 'mobile';
-      const audit = await runLighthouseAudit(window.location.href, strategy);
+      try {
+        if (runBtn) runBtn.textContent = 'Running PageSpeed Audit...';
+        const strategy = strategySelect?.value || 'mobile';
+        const audit = await runLighthouseAudit(window.location.href, strategy);
 
-      if (audit) {
-        document.getElementById('lh-score-perf').textContent = audit.scores.performance;
-        document.getElementById('lh-score-access').textContent = audit.scores.accessibility;
-        document.getElementById('lh-score-bp').textContent = audit.scores.bestPractices;
-        document.getElementById('lh-score-seo').textContent = audit.scores.seo;
+        if (audit) {
+          document.getElementById('lh-score-perf').textContent = audit.scores.performance;
+          document.getElementById('lh-score-access').textContent = audit.scores.accessibility;
+          document.getElementById('lh-score-bp').textContent = audit.scores.bestPractices;
+          document.getElementById('lh-score-seo').textContent = audit.scores.seo;
 
-        document.getElementById('lh-fcp').textContent = audit.metrics.fcp;
-        document.getElementById('lh-lcp').textContent = audit.metrics.lcp;
-        document.getElementById('lh-cls').textContent = audit.metrics.cls;
-        document.getElementById('lh-tbt').textContent = audit.metrics.tbt;
+          document.getElementById('lh-fcp').textContent = audit.metrics.fcp;
+          document.getElementById('lh-lcp').textContent = audit.metrics.lcp;
+          document.getElementById('lh-cls').textContent = audit.metrics.cls;
+          document.getElementById('lh-tbt').textContent = audit.metrics.tbt;
 
-        const diagBox = document.getElementById('lh-diagnostics-container');
-        if (diagBox && Array.isArray(audit.diagnostics)) {
-          diagBox.innerHTML = audit.diagnostics.map(item => `
-            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f7fafc; border-radius: 4px; border-left: 3px solid #38a169;">
-              <div>
-                <strong>${item.title}</strong>
-                <p style="margin: 2px 0 0 0; color: #718096; font-size: 0.75rem;">${item.details}</p>
+          const diagBox = document.getElementById('lh-diagnostics-container');
+          if (diagBox && Array.isArray(audit.diagnostics)) {
+            diagBox.innerHTML = audit.diagnostics.map(item => `
+              <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f7fafc; border-radius: 4px; border-left: 3px solid #38a169;">
+                <div>
+                  <strong>${item.title}</strong>
+                  <p style="margin: 2px 0 0 0; color: #718096; font-size: 0.75rem;">${item.details}</p>
+                </div>
+                <span style="font-weight: bold; color: #15803d;">${item.score}</span>
               </div>
-              <span style="font-weight: bold; color: #15803d;">${item.score}</span>
-            </div>
-          `).join('');
+            `).join('');
+          }
         }
+        if (runBtn) runBtn.textContent = 'Run Lighthouse Audit';
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - Lighthouse Audit');
+        toast.error('Failed to run Lighthouse audit');
+        if (runBtn) runBtn.textContent = 'Run Lighthouse Audit';
       }
-      if (runBtn) runBtn.textContent = 'Run Lighthouse Audit';
     }
 
     if (runBtn) runBtn.onclick = executeAudit;
@@ -449,69 +491,75 @@ export function initAdminPage() {
     const reconsiderBtn = document.getElementById('btn-request-reconsideration');
 
     async function renderThreatReport() {
-      if (scanBtn) scanBtn.textContent = 'Querying Search Console Security...';
-      const secData = await getSearchConsoleSecurityIssues();
+      try {
+        if (scanBtn) scanBtn.textContent = 'Querying Search Console Security...';
+        const secData = await getSearchConsoleSecurityIssues();
 
-      if (secData) {
-        const banner = document.getElementById('gsc-security-banner');
-        const icon = document.getElementById('gsc-status-icon');
-        const title = document.getElementById('gsc-status-title');
-        const sub = document.getElementById('gsc-status-sub');
-        const lastScanned = document.getElementById('gsc-last-scanned');
+        if (secData) {
+          const banner = document.getElementById('gsc-security-banner');
+          const icon = document.getElementById('gsc-status-icon');
+          const title = document.getElementById('gsc-status-title');
+          const sub = document.getElementById('gsc-status-sub');
+          const lastScanned = document.getElementById('gsc-last-scanned');
 
-        if (lastScanned) lastScanned.textContent = `Last Scanned: ${secData.lastScanned}`;
+          if (lastScanned) lastScanned.textContent = `Last Scanned: ${secData.lastScanned}`;
 
-        if (secData.hasThreats) {
-          if (banner) {
-            banner.style.background = '#fff5f5';
-            banner.style.borderColor = '#fed7d7';
+          if (secData.hasThreats) {
+            if (banner) {
+              banner.style.background = '#fff5f5';
+              banner.style.borderColor = '#fed7d7';
+            }
+            if (icon) icon.textContent = '⚠️';
+            if (title) {
+              title.textContent = 'Security Threats / Negative Action Flagged';
+              title.style.color = '#c53030';
+            }
+            if (sub) {
+              sub.textContent = 'Google Search Console has flagged security issues or manual action penalties against this site.';
+              sub.style.color = '#9b2c2c';
+            }
+          } else {
+            if (banner) {
+              banner.style.background = '#f0fdf4';
+              banner.style.borderColor = '#bbf7d0';
+            }
+            if (icon) icon.textContent = '🛡️';
+            if (title) {
+              title.textContent = 'No Negative Security Issues Detected';
+              title.style.color = '#166534';
+            }
+            if (sub) {
+              sub.textContent = 'Domain is clean of phishing, defacement, malware, and unnatural links in Google Search Console.';
+              sub.style.color = '#15803d';
+            }
           }
-          if (icon) icon.textContent = '⚠️';
-          if (title) {
-            title.textContent = 'Security Threats / Negative Action Flagged';
-            title.style.color = '#c53030';
-          }
-          if (sub) {
-            sub.textContent = 'Google Search Console has flagged security issues or manual action penalties against this site.';
-            sub.style.color = '#9b2c2c';
-          }
-        } else {
-          if (banner) {
-            banner.style.background = '#f0fdf4';
-            banner.style.borderColor = '#bbf7d0';
-          }
-          if (icon) icon.textContent = '🛡️';
-          if (title) {
-            title.textContent = 'No Negative Security Issues Detected';
-            title.style.color = '#166534';
-          }
-          if (sub) {
-            sub.textContent = 'Domain is clean of phishing, defacement, malware, and unnatural links in Google Search Console.';
-            sub.style.color = '#15803d';
-          }
+
+          const p = secData.categories.phishingSocialEngineering;
+          document.getElementById('gsc-flag-phishing').textContent = p.flagged ? 'FLAGGED THREAT' : 'CLEAN';
+          document.getElementById('gsc-flag-phishing').style.color = p.flagged ? '#e53e3e' : '#38a169';
+          document.getElementById('gsc-desc-phishing').textContent = p.status;
+
+          const h = secData.categories.hackedContentDefacement;
+          document.getElementById('gsc-flag-hacked').textContent = h.flagged ? 'FLAGGED THREAT' : 'CLEAN';
+          document.getElementById('gsc-flag-hacked').style.color = h.flagged ? '#e53e3e' : '#38a169';
+          document.getElementById('gsc-desc-hacked').textContent = h.status;
+
+          const l = secData.categories.unnaturalLinksSpam;
+          document.getElementById('gsc-flag-links').textContent = l.flagged ? 'PENALTY ACTIVE' : 'CLEAN';
+          document.getElementById('gsc-flag-links').style.color = l.flagged ? '#e53e3e' : '#38a169';
+          document.getElementById('gsc-desc-links').textContent = l.status;
+
+          const m = secData.categories.malwareHarmfulDownloads;
+          document.getElementById('gsc-flag-malware').textContent = m.flagged ? 'MALWARE FOUND' : 'CLEAN';
+          document.getElementById('gsc-flag-malware').style.color = m.flagged ? '#e53e3e' : '#38a169';
+          document.getElementById('gsc-desc-malware').textContent = m.status;
         }
-
-        const p = secData.categories.phishingSocialEngineering;
-        document.getElementById('gsc-flag-phishing').textContent = p.flagged ? 'FLAGGED THREAT' : 'CLEAN';
-        document.getElementById('gsc-flag-phishing').style.color = p.flagged ? '#e53e3e' : '#38a169';
-        document.getElementById('gsc-desc-phishing').textContent = p.status;
-
-        const h = secData.categories.hackedContentDefacement;
-        document.getElementById('gsc-flag-hacked').textContent = h.flagged ? 'FLAGGED THREAT' : 'CLEAN';
-        document.getElementById('gsc-flag-hacked').style.color = h.flagged ? '#e53e3e' : '#38a169';
-        document.getElementById('gsc-desc-hacked').textContent = h.status;
-
-        const l = secData.categories.unnaturalLinksSpam;
-        document.getElementById('gsc-flag-links').textContent = l.flagged ? 'PENALTY ACTIVE' : 'CLEAN';
-        document.getElementById('gsc-flag-links').style.color = l.flagged ? '#e53e3e' : '#38a169';
-        document.getElementById('gsc-desc-links').textContent = l.status;
-
-        const m = secData.categories.malwareHarmfulDownloads;
-        document.getElementById('gsc-flag-malware').textContent = m.flagged ? 'MALWARE FOUND' : 'CLEAN';
-        document.getElementById('gsc-flag-malware').style.color = m.flagged ? '#e53e3e' : '#38a169';
-        document.getElementById('gsc-desc-malware').textContent = m.status;
+        if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - GSC Security Threats');
+        toast.error('Failed to load security threat report');
+        if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
       }
-      if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
     }
 
     if (scanBtn) scanBtn.onclick = renderThreatReport;
@@ -527,17 +575,22 @@ export function initAdminPage() {
     if (monthlyScanToggle) {
       monthlyScanToggle.checked = !!configManager.current.security?.monthlyScanEnabled;
       monthlyScanToggle.onchange = async (e) => {
-        const updatedConfig = {
-          ...configManager.current,
-          security: {
-            ...configManager.current.security,
-            monthlyScanEnabled: e.target.checked
+        try {
+          const updatedConfig = {
+            ...configManager.current,
+            security: {
+              ...configManager.current.security,
+              monthlyScanEnabled: e.target.checked
+            }
+          };
+          const success = await configManager.saveToFirebase(updatedConfig);
+          if (success) {
+            toast.success(`Automated monthly background scans ${e.target.checked ? 'enabled' : 'disabled'}.`);
+          } else {
+            toast.error('Failed to save scheduling preference.');
           }
-        };
-        const success = await configManager.saveToFirebase(updatedConfig);
-        if (success) {
-          toast.success(`Automated monthly background scans ${e.target.checked ? 'enabled' : 'disabled'}.`);
-        } else {
+        } catch (err) {
+          errorHandler.handleError(err, 'Admin - Security Scan Toggle');
           toast.error('Failed to save scheduling preference.');
         }
       };
@@ -720,6 +773,7 @@ export function initAdminPage() {
           toast.success(`Site threat audit complete! ${compiledReportData.cleanCount} assets safe.`);
 
         } catch (err) {
+          errorHandler.handleError(err, 'Admin - Site Audit');
           console.error('[Site Audit Error]:', err);
           toast.error(`Site audit failed: ${err.message}`);
           reportTbody.innerHTML = `
@@ -768,6 +822,7 @@ export function initAdminPage() {
             toast.warning('Gmail OAuth token offline. Saved report log silently to database. Log in to Gmail to enable email dispatch.');
           }
         } catch (e) {
+          errorHandler.handleError(e, 'Admin - Email Site Audit');
           console.error('[Email Dispatch Error]:', e);
           toast.error('Failed to email security report.');
         } finally {
@@ -992,6 +1047,7 @@ export function initAdminPage() {
       }
 
     } catch (err) {
+      errorHandler.handleError(err, 'Admin - VirusTotal Edge Scan');
       console.warn('VirusTotal edge scan failed:', err);
       // Friendly simulation/fallback note if key is missing or offline
       edgeResultsBox.style.background = 'var(--theme-color-background, #f7fafc)';
@@ -1073,28 +1129,34 @@ export function initAdminPage() {
         toast.error('Please fix the validation errors before saving.');
         return;
       }
-      const updatedChatbotConfig = {
-        ...configManager.current,
-        chatbot: {
-          enabled: chatEnabledSel.value === "true",
-          name: chatNameInput.value,
-          welcomeMessage: chatWelcomeInput.value,
-          systemPrompt: chatSystemPromptInput.value,
-          voiceWelcomeMessage: chatVoiceWelcomeInput.value,
-          openaiApiKey: chatOpenaiKeyInput.value,
-          telnyxApiKey: chatTelnyxKeyInput.value,
-          twilioAccountSid: chatTwilioSidInput.value,
-          twilioAuthToken: chatTwilioTokenInput.value,
-          telnyxPhoneNumber: chatTelnyxNumInput.value,
-          twilioPhoneNumber: chatTwilioNumInput.value
-        }
-      };
+      
+      try {
+        const updatedChatbotConfig = {
+          ...configManager.current,
+          chatbot: {
+            enabled: chatEnabledSel.value === "true",
+            name: chatNameInput.value,
+            welcomeMessage: chatWelcomeInput.value,
+            systemPrompt: chatSystemPromptInput.value,
+            voiceWelcomeMessage: chatVoiceWelcomeInput.value,
+            openaiApiKey: chatOpenaiKeyInput.value,
+            telnyxApiKey: chatTelnyxKeyInput.value,
+            twilioAccountSid: chatTwilioSidInput.value,
+            twilioAuthToken: chatTwilioTokenInput.value,
+            telnyxPhoneNumber: chatTelnyxNumInput.value,
+            twilioPhoneNumber: chatTwilioNumInput.value
+          }
+        };
 
-      const success = await configManager.saveToFirebase(updatedChatbotConfig);
-      if (success) {
-        toast.success('AI Chatbot & Voice settings saved to Firestore!');
-      } else {
-        toast.error('Failed to save chatbot settings. Please try again.');
+        const success = await configManager.saveToFirebase(updatedChatbotConfig);
+        if (success) {
+          toast.success('AI Chatbot & Voice settings saved to Firestore!');
+        } else {
+          toast.error('Failed to save chatbot settings. Please try again.');
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - Chatbot Settings Form');
+        toast.error(`Failed to save chatbot settings: ${err.message}`);
       }
     });
 
@@ -1106,30 +1168,35 @@ export function initAdminPage() {
       if (!tbody) return;
       tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">Fetching interaction logs...</td></tr>';
 
-      const logs = await contentDB.getChatLogs(50);
-      if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td></tr>';
-        return;
+      try {
+        const logs = await contentDB.getChatLogs(50);
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = logs.map(log => {
+          const localTime = new Date(log.timestamp).toLocaleString();
+          const typeBadgeColor = log.type === 'sms' ? '#2b6cb0' : log.type === 'voice' ? '#dd6b20' : '#319795';
+          const typeBgColor = log.type === 'sms' ? '#ebf8ff' : log.type === 'voice' ? '#fffaf0' : '#e6fffa';
+
+          return `
+            <tr style="border-bottom: 1px solid #edf2f7;">
+              <td style="padding: 8px; font-size: 0.8rem; color: #718096; white-space: nowrap;">${localTime}</td>
+              <td style="padding: 8px;"><strong>${log.sender}</strong></td>
+              <td style="padding: 8px;">
+                <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; background: ${typeBgColor}; color: ${typeBadgeColor}; text-transform: uppercase;">
+                  ${log.type}
+                </span>
+              </td>
+              <td style="padding: 8px; color: #2d3748; max-width: 300px; word-break: break-all;">${log.message}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin - Chat Logs');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #e53e3e; padding: 1rem;">Failed to load chat logs.</td></tr>';
       }
-
-      tbody.innerHTML = logs.map(log => {
-        const localTime = new Date(log.timestamp).toLocaleString();
-        const typeBadgeColor = log.type === 'sms' ? '#2b6cb0' : log.type === 'voice' ? '#dd6b20' : '#319795';
-        const typeBgColor = log.type === 'sms' ? '#ebf8ff' : log.type === 'voice' ? '#fffaf0' : '#e6fffa';
-
-        return `
-          <tr style="border-bottom: 1px solid #edf2f7;">
-            <td style="padding: 8px; font-size: 0.8rem; color: #718096; white-space: nowrap;">${localTime}</td>
-            <td style="padding: 8px;"><strong>${log.sender}</strong></td>
-            <td style="padding: 8px;">
-              <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; background: ${typeBgColor}; color: ${typeBadgeColor}; text-transform: uppercase;">
-                ${log.type}
-              </span>
-            </td>
-            <td style="padding: 8px; color: #2d3748; max-width: 300px; word-break: break-all;">${log.message}</td>
-          </tr>
-        `;
-      }).join('');
     }
 
     if (refreshBtn) refreshBtn.onclick = renderChatLogs;
@@ -1142,7 +1209,9 @@ export function initAdminPage() {
       const { runAllSchemaTests } = await import('../../schemas/test-runner.js');
       runAllSchemaTests();
     } catch (err) {
+      errorHandler.handleError(err, 'Admin - Run Tests');
       console.error('Failed to execute test runner module:', err);
+      toast.error('Failed to run tests');
     }
   });
 }

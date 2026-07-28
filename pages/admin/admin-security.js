@@ -3,6 +3,7 @@ import { contentDB } from '../../core/db.js';
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { authManager } from '../../core/auth.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 let credentials = [];
 let isAdminPrimary = false;
@@ -29,8 +30,13 @@ function checkAdminRole() {
 }
 
 async function loadCredentials() {
-  credentials = await contentDB.getVaultCredentials();
-  renderCredentialsList();
+  try {
+    credentials = await contentDB.getVaultCredentials();
+    renderCredentialsList();
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Security - Load Credentials');
+    console.error('Failed to load credentials:', err);
+  }
 }
 
 function renderCredentialsList() {
@@ -139,6 +145,7 @@ window.launchLastPassAutofill = function(credentialId) {
       toast.info('LastPass browser extension not detected. Please ensure it is installed.');
     }
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Security - LastPass Autofill');
     console.error('LastPass autofill error:', err);
     toast.warning('Could not trigger LastPass autofill. Manual entry required.');
   }
@@ -152,10 +159,15 @@ window.deleteCredential = async function(credentialId) {
 
   if (!confirm('Are you sure you want to delete this credential?')) return;
   
-  await contentDB.deleteVaultCredential(credentialId);
-  credentials = credentials.filter(c => c.id !== credentialId);
-  renderCredentialsList();
-  toast.success('Credential deleted successfully');
+  try {
+    await contentDB.deleteVaultCredential(credentialId);
+    credentials = credentials.filter(c => c.id !== credentialId);
+    renderCredentialsList();
+    toast.success('Credential deleted successfully');
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Security - Delete Credential');
+    toast.error('Failed to delete credential');
+  }
 };
 
 function setupVaultForm() {
@@ -185,11 +197,16 @@ function setupVaultForm() {
       updatedAt: new Date().toISOString()
     };
 
-    await contentDB.saveVaultCredential(newCredential);
-    credentials.push(newCredential);
-    renderCredentialsList();
-    form.reset();
-    toast.success('Credential added to vault successfully');
+    try {
+      await contentDB.saveVaultCredential(newCredential);
+      credentials.push(newCredential);
+      renderCredentialsList();
+      form.reset();
+      toast.success('Credential added to vault successfully');
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Security - Add Credential');
+      toast.error('Failed to add credential');
+    }
   });
 }
 
@@ -220,10 +237,15 @@ function setupLastPassConfig() {
       }
     };
 
-    const success = await configManager.saveToFirebase(updatedConfig);
-    if (success) {
-      toast.success('LastPass configuration saved successfully');
-    } else {
+    try {
+      const success = await configManager.saveToFirebase(updatedConfig);
+      if (success) {
+        toast.success('LastPass configuration saved successfully');
+      } else {
+        toast.error('Failed to save LastPass configuration');
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Security - Save LastPass Config');
       toast.error('Failed to save LastPass configuration');
     }
   });

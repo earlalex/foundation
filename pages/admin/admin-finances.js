@@ -3,6 +3,7 @@ import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { invoiceTracker } from '../../core/invoice-tracker.js';
 import { toast } from '../../utils/toast.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 export function initFinancesTab() {
   setupSubTabs();
@@ -114,6 +115,7 @@ function initExpensesTracker() {
         await loadExpensesList();
         initBudgetAndCashflow();
       } catch (err) {
+        errorHandler.handleError(err, 'Admin Finances - Save Expense');
         console.error('[ExpensesTracker] Save Error:', err);
         toast.error(`Failed to save expense: ${err.message}`);
       } finally {
@@ -199,6 +201,7 @@ async function loadExpensesList() {
       totalBadge.textContent = `$${totalMonthlyAmount.toFixed(2)}`;
     }
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Load Expenses List');
     console.error('[ExpensesTracker] Load List Error:', err);
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--theme-color-danger, #e53e3e); padding: 1.5rem;">Failed to load expenses list.</td></tr>';
   }
@@ -241,6 +244,7 @@ async function exportExpensesToCsv() {
 
     toast.success('CSV exported successfully!');
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Export CSV');
     toast.error(`Export failed: ${err.message}`);
   }
 }
@@ -276,6 +280,7 @@ function initPayrollManager() {
 
         await loadEmployeeDirectory();
       } catch (err) {
+        errorHandler.handleError(err, 'Admin Finances - Add Employee');
         toast.error(`Failed to add team member: ${err.message}`);
       } finally {
         if (submitBtn) submitBtn.disabled = false;
@@ -326,6 +331,7 @@ function initPayrollManager() {
         await loadPayRunsList();
         initBudgetAndCashflow();
       } catch (err) {
+        errorHandler.handleError(err, 'Admin Finances - Log Pay Run');
         toast.error(`Failed to log pay run: ${err.message}`);
       } finally {
         if (submitBtn) submitBtn.disabled = false;
@@ -382,6 +388,7 @@ async function calculateLiveCompensation() {
       }
     }
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Calculate Compensation');
     console.error(err);
   }
 }
@@ -437,6 +444,7 @@ async function loadEmployeeDirectory() {
     });
 
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Load Employee Directory');
     console.error(err);
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--theme-color-danger, #e53e3e); padding: 1rem;">Failed to load team directory.</td></tr>';
   }
@@ -467,6 +475,7 @@ async function loadPayRunsList() {
       `;
     }).join('');
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Load Pay Runs');
     console.error(err);
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--theme-color-danger, #e53e3e); padding: 1rem;">Error loading pay runs.</td></tr>';
   }
@@ -495,6 +504,7 @@ async function initBudgetAndCashflow() {
   try {
     targets = await contentDB.getBudgets();
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Init Budget');
     console.warn(err);
   }
 
@@ -516,6 +526,7 @@ async function initBudgetAndCashflow() {
 
         initBudgetAndCashflow();
       } catch (err) {
+        errorHandler.handleError(err, 'Admin Finances - Save Budget Targets');
         toast.error(`Failed to sync budget targets: ${err.message}`);
       } finally {
         if (submitBtn) submitBtn.disabled = false;
@@ -617,6 +628,7 @@ async function initBudgetAndCashflow() {
     }
 
   } catch (err) {
+    errorHandler.handleError(err, 'Admin Finances - Budget Dashboard');
     console.error('[BudgetAndCashflow] Init Dashboard Error:', err);
   }
 }
