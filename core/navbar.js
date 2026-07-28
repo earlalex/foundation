@@ -102,9 +102,18 @@ export function initNavbar() {
 
   function updateActiveLink(currentPath) {
     const navLinks = document.querySelectorAll('.nav-link');
-    // Normalize path by stripping base path prefix and trailing slashes
     let activeRoute = currentPath || window.location.pathname;
     
+    // Normalize path by stripping base path prefix
+    const basePath = window.router?.basePath || '/';
+    if (basePath !== '/' && activeRoute.startsWith(basePath.slice(0, -1))) {
+      activeRoute = activeRoute.slice(basePath.length - 1);
+    }
+
+    if (!activeRoute.startsWith('/')) {
+      activeRoute = '/' + activeRoute;
+    }
+
     // Remove index.html suffix
     if (activeRoute.endsWith('/index.html')) {
       activeRoute = activeRoute.replace(/\/index\.html$/, '');
@@ -147,7 +156,7 @@ export function initNavbar() {
     }
   }
 
-  document.addEventListener('pageLoaded', (e) => {
+  window.addEventListener('pageLoaded', (e) => {
     const currentPath = e.detail?.path || window.location.pathname;
     updateActiveLink(currentPath);
     // Auto-close hamburger menu on path transitions
