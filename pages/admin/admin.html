@@ -1185,34 +1185,34 @@
 
         <form id="chatbot-settings-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Chatbot Enabled:</label>
               <select id="chat-enabled" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
                 <option value="true">Yes, Enable Chat Widget</option>
                 <option value="false">No, Hide Chat Widget</option>
               </select>
             </div>
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Bot Display Name:</label>
               <input type="text" id="chat-name" placeholder="Foundation Assistant" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Welcome Initial Text Message:</label>
               <input type="text" id="chat-welcome" placeholder="Hello! How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
 
-          <div>
+          <div style="min-width: 0;">
             <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">AI System Prompt Context (Configured context instructions):</label>
             <textarea id="chat-system-prompt" placeholder="You are a helpful customer support assistant for Foundation Framework..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
           </div>
 
           <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
           <h3 style="margin: 0; font-size: 1.05rem;">Voice Telephony Welcomes</h3>
-          <div>
+          <div style="min-width: 0;">
             <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Voice Welcome Saying Text (TeXML/TwiML Speech):</label>
             <input type="text" id="chat-voice-welcome" placeholder="Thank you for calling Foundation support. How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
           </div>
@@ -1221,33 +1221,33 @@
           <h3 style="margin: 0; font-size: 1.05rem;">Telnyx & Twilio Integrations Settings (Edges Webhooks Key Bindings)</h3>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">OpenAI API Key (gpt-4o-mini):</label>
               <input type="password" id="chat-openai-key" placeholder="sk-..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx API Key:</label>
               <input type="password" id="chat-telnyx-key" placeholder="KEY..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Account SID:</label>
               <input type="text" id="chat-twilio-sid" placeholder="AC..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Auth Token:</label>
               <input type="password" id="chat-twilio-token" placeholder="Token..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx Phone Number:</label>
               <input type="text" id="chat-telnyx-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>
-            <div>
+            <div style="min-width: 0;">
               <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Phone Number:</label>
               <input type="text" id="chat-twilio-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
             </div>

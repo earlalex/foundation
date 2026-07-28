@@ -250,6 +250,7 @@ export class Router {
       // Dispatch PUSH_HISTORY to store
       store.dispatch('PUSH_HISTORY', cleanPath);
 
+      // Dispatch pageLoaded event with the clean path for navbar to use
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: fullPath, query: urlObj.search } 
       }));

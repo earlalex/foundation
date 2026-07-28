@@ -107,12 +107,19 @@ export function initNavbar() {
     if (activeRoute.endsWith('/index.html')) {
       activeRoute = activeRoute.replace(/\/index\.html$/, '');
     }
-    const segments = activeRoute.split('/').filter(Boolean);
-    const cleanRoute = segments.length > 0 ? '/' + segments[segments.length - 1] : '/home';
+    while (activeRoute.length > 1 && activeRoute.endsWith('/')) {
+      activeRoute = activeRoute.slice(0, -1);
+    }
+    
+    // Handle root path
+    if (activeRoute === '/' || activeRoute === '') {
+      activeRoute = '/home';
+    }
 
     navLinks.forEach((link) => {
       const linkPath = link.getAttribute('data-path') || link.getAttribute('href');
-      const isMatch = (cleanRoute === linkPath) || (cleanRoute === '/' && linkPath === '/home');
+      // Exact match for the path
+      const isMatch = activeRoute === linkPath;
 
       if (isMatch) {
         link.style.color = 'var(--theme-color-primary, #2b6cb0)';

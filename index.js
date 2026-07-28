@@ -102,6 +102,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.router.renderSetupWizard();
   } else {
     await window.router.init();
+    // Ensure navbar is updated after initial route load on refresh
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('pageLoaded', { 
+        detail: { path: window.location.pathname } 
+      }));
+    }, 100);
   }
 
   // Mount Chat Widget globally if enabled and available
