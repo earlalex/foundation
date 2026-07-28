@@ -16,6 +16,7 @@ import {
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, validationRules } from '../../utils/validation.js';
+import { scanFileLocally } from '../../utils/securityScanner.js';
 
 // Import modular tab controllers
 import { initTabController } from './admin-tabs-controller.js';
