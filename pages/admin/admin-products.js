@@ -46,6 +46,9 @@ export function initProductsTab() {
           'invoice_only': 'Invoice Only'
         };
         const paymentTypeLabel = paymentTypeLabels[product.pricing?.paymentType] || product.pricing?.paymentType;
+        const achBadge = product.stripe?.enableAch
+          ? `<span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e6fffa; color: #319795; margin-left: 4px;">ACH Enabled</span>`
+          : '';
         
         return `
           <tr style="border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
@@ -57,6 +60,7 @@ export function initProductsTab() {
             <td style="padding: 12px;">${product.pricing?.currency || 'USD'} $${(product.pricing?.basePrice / 100).toFixed(2)}</td>
             <td style="padding: 12px;">
               <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #ebf8ff; color: #2b6cb0;">${paymentTypeLabel}</span>
+              ${achBadge}
             </td>
             <td style="padding: 12px;">
               <button class="btn-edit-product" data-product-id="${product.id}" style="padding: 6px 12px; background: #2b6cb0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 4px;">Edit</button>
@@ -125,6 +129,7 @@ export function initProductsTab() {
       const retainerPercentage = document.getElementById('product-retainer-percentage').value;
       const stripeProductId = document.getElementById('product-stripe-id').value;
       const stripePriceId = document.getElementById('product-stripe-price-id').value;
+      const enableAch = document.getElementById('product-enable-ach')?.checked || false;
       const invoiceDays = parseInt(document.getElementById('product-invoice-days').value) || 30;
       const googleContact = document.getElementById('product-google-contact').value;
       const paymentTerms = document.getElementById('product-payment-terms').value;
@@ -150,7 +155,8 @@ export function initProductsTab() {
         },
         stripe: {
           productId: stripeProductId || null,
-          priceId: stripePriceId || null
+          priceId: stripePriceId || null,
+          enableAch: enableAch
         },
         invoiceSettings: {
           autoGenerateInvoice: paymentType !== 'full_upfront',

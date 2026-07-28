@@ -22,6 +22,7 @@ export const ProductSchema = {
     productId: Type.string,                 // Stripe Product ID
     priceId: Type.string,                   // Stripe Price ID
     invoiceTemplateId: Type.optional(Type.string), // Stripe Invoice template ID
+    enableAch: Type.optional(Type.boolean), // Enable ACH Direct Debit Payment ($5 Platform Fee Applied)
   })),
   
   // Product details

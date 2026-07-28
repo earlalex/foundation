@@ -26,6 +26,7 @@ import { initPublicProfileTab } from './admin-public-profile.js';
 import { initIntegrationsTab } from './admin-integrations.js';
 import { initUserDirectoryTab } from './admin-user-directory.js';
 import { initProductsTab } from './admin-products.js';
+import { initFinancesTab } from './admin-finances.js';
 
 export function initAdminPage() {
   // --- 0. LOG OUT BUTTON ---
@@ -56,6 +57,8 @@ export function initAdminPage() {
       initUserDirectoryTab();
     } else if (targetTab === 'products') {
       initProductsTab();
+    } else if (targetTab === 'finances') {
+      initFinancesTab();
     } else if (targetTab === 'seo') {
       loadSeoAndAnalyticsTab();
     } else if (targetTab === 'performance') {
