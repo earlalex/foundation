@@ -1,4 +1,6 @@
 // core/error-handler.js
+import { logger } from './logger.js';
+import { toast } from '../utils/toast.js';
 
 export class ErrorHandler {
   constructor() {
@@ -7,73 +9,61 @@ export class ErrorHandler {
     }
   }
 
+  /**
+   * Listens for uncaught DOM exceptions and unhandled Promise rejections
+   */
   initGlobalListeners() {
     window.addEventListener('error', (event) => {
-      this.handleError(event.error || new Error(event.message));
+      this.handleError(event.error || new Error(event.message), 'Unhandled Error');
     });
 
     window.addEventListener('unhandledrejection', (event) => {
       const reason = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
-      this.handleError(reason);
+      this.handleError(reason, 'Unhandled Promise Rejection');
     });
   }
 
-  handleError(error) {
-    console.error('[Foundation Monitor Captured Error]:', error);
+  /**
+   * Central error processing pipeline
+   * @param {Error|string} error - The caught error
+   * @param {string} [context='Application Error'] - Operational category context
+   * @param {boolean} [showToast=true] - Whether to render a toast notification
+   */
+  handleError(error, context = 'Application Error', showToast = true) {
+    const errObj = error instanceof Error ? error : new Error(String(error));
+    const message = errObj.message || 'An unexpected runtime error occurred.';
 
-    if (error?.name === 'ValidationError') {
-      this.showToast(`Data Error: ${error.message}`, 'warning');
-    } else {
-      this.showToast('Something unexpected happened. We are working on it!', 'error');
+    // 1. Log structured trace using system Logger
+    try {
+      logger.error(`[${context}]:`, errObj);
+    } catch (e) {
+      console.error(`[${context}]:`, errObj);
     }
 
-    this.logToServer(error);
-  }
-
-  showToast(message, type = 'info') {
-    if (typeof document === 'undefined' || !document.body) return;
-
-    let container = document.getElementById('toast-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'toast-container';
-      container.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      `;
-      document.body.appendChild(container);
+    // 2. Dispatch user notification using unified Toast system
+    if (showToast && typeof document !== 'undefined' && document.body) {
+      try {
+        if (errObj.name === 'ValidationError') {
+          toast.warning(`Data Error: ${message}`);
+        } else {
+          toast.error(`${context}: ${message}`);
+        }
+      } catch (toastErr) {
+        console.error('[ErrorHandler]: Failed to render toast UI:', toastErr);
+      }
     }
 
-    const toast = document.createElement('div');
-    const bgColor = type === 'error' ? '#e53e3e' : type === 'warning' ? '#dd6b20' : '#3182ce';
-    
-    toast.style.cssText = `
-      background: ${bgColor};
-      color: white;
-      padding: 12px 18px;
-      border-radius: 6px;
-      font-family: system-ui, sans-serif;
-      font-size: 14px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      transition: opacity 0.3s ease;
-    `;
-    toast.textContent = message;
+    // 3. Dispatch hook for server-side remote telemetry
+    this.logToServer(errObj, context);
 
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    return errObj;
   }
 
-  logToServer(error) {
-    // External error log hook
+  /**
+   * Hook for streaming telemetry to Cloudflare Workers or Firestore
+   */
+  logToServer(error, context) {
+    // Cloudflare Edge or remote logging endpoint integration point
   }
 }
 
