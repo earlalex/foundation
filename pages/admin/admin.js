@@ -26,6 +26,7 @@ import { initPublicProfileTab } from './admin-public-profile.js';
 import { initIntegrationsTab } from './admin-integrations.js';
 import { initUserDirectoryTab } from './admin-user-directory.js';
 import { initProductsTab } from './admin-products.js';
+import { initFinancesTab } from './admin-finances.js';
 import { initMarketingTab } from './admin-marketing.js';
 import { initKanbanTab } from './admin-kanban.js';
 import { initSecurityTab } from './admin-security.js';
@@ -59,6 +60,8 @@ export function initAdminPage() {
       initUserDirectoryTab();
     } else if (targetTab === 'products') {
       initProductsTab();
+    } else if (targetTab === 'finances') {
+      initFinancesTab();
     } else if (targetTab === 'seo') {
       loadSeoAndAnalyticsTab();
     } else if (targetTab === 'performance') {

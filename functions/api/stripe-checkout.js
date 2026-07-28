@@ -9,8 +9,19 @@ export async function onRequestPost(context) {
   }
 
   try {
-    const { email, role, action } = await request.json();
-    const priceId = env.STRIPE_MEMBERSHIP_PRICE_ID || 'price_1234567890';
+    const body = await request.json();
+    const {
+      email,
+      role,
+      action,
+      productId,
+      amount,
+      currency,
+      enableAch,
+      priceId,
+      mode
+    } = body;
+
     const domain = new URL(request.url).origin;
 
     if (action === 'portal') {
@@ -31,15 +42,58 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ url: session.url }), { status: 200 });
     }
 
-    // Default: Create Checkout Session
+    // Determine Mode & Line Items
     const params = new URLSearchParams();
-    params.append('mode', 'subscription');
-    params.append('customer_email', email);
-    params.append('line_items[0][price]', priceId);
-    params.append('line_items[0][quantity]', '1');
+    const finalMode = mode || (enableAch || productId ? 'payment' : 'subscription');
+    params.append('mode', finalMode);
+
+    if (email) {
+      params.append('customer_email', email);
+    }
+
+    if (priceId) {
+      params.append('line_items[0][price]', priceId);
+      params.append('line_items[0][quantity]', '1');
+    } else if (amount) {
+      params.append('line_items[0][price_data][unit_amount]', String(amount));
+      params.append('line_items[0][price_data][currency]', (currency || 'USD').toLowerCase());
+      params.append('line_items[0][price_data][product_data][name]', productId || 'Product Purchase');
+      params.append('line_items[0][quantity]', '1');
+    } else {
+      // Default: Create Checkout Session for membership price
+      const fallbackPriceId = env.STRIPE_MEMBERSHIP_PRICE_ID || 'price_1234567890';
+      params.append('line_items[0][price]', fallbackPriceId);
+      params.append('line_items[0][quantity]', '1');
+    }
+
     params.append('success_url', `${domain}/home?session_id={CHECKOUT_SESSION_ID}`);
     params.append('cancel_url', `${domain}/contact`);
+
+    // Add Metadata
     params.append('metadata[role]', role || 'member');
+    if (productId) {
+      params.append('metadata[productId]', productId);
+    }
+    if (enableAch) {
+      params.append('metadata[enableAch]', 'true');
+    }
+
+    // Handle ACH Direct Debit Payment option
+    if (enableAch) {
+      params.append('payment_method_types[0]', 'us_bank_account');
+
+      // Charge a flat platform application fee parameter using Stripe Connect's application_fee_amount
+      if (finalMode === 'payment') {
+        params.append('payment_intent_data[application_fee_amount]', '500'); // $5.00 platform fee in cents
+
+        // Define destination connected account to pass remaining customer payment net of standard fees
+        const connectedAccountId = env.STRIPE_CONNECTED_ACCOUNT_ID || 'acct_1234567890';
+        params.append('payment_intent_data[transfer_data][destination]', connectedAccountId);
+      }
+    } else {
+      // Fallback to card if ACH is not requested/enabled
+      params.append('payment_method_types[0]', 'card');
+    }
 
     const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
@@ -51,8 +105,15 @@ export async function onRequestPost(context) {
     });
 
     const session = await res.json();
+
+    if (session.error) {
+      console.error('[Stripe Checkout Error]:', session.error);
+      return new Response(JSON.stringify({ error: session.error.message }), { status: 400 });
+    }
+
     return new Response(JSON.stringify({ url: session.url }), { status: 200 });
   } catch (err) {
+    console.error('[Stripe Endpoint Exception]:', err);
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
