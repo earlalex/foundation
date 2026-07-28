@@ -27,6 +27,9 @@ import { initIntegrationsTab } from './admin-integrations.js';
 import { initUserDirectoryTab } from './admin-user-directory.js';
 import { initProductsTab } from './admin-products.js';
 import { initFinancesTab } from './admin-finances.js';
+import { initMarketingTab } from './admin-marketing.js';
+import { initKanbanTab } from './admin-kanban.js';
+import { initSecurityTab } from './admin-security.js';
 
 export function initAdminPage() {
   // --- 0. LOG OUT BUTTON ---
@@ -64,9 +67,14 @@ export function initAdminPage() {
     } else if (targetTab === 'performance') {
       loadPerformanceTab();
     } else if (targetTab === 'security') {
+      initSecurityTab();
       loadGscSecurityThreats();
     } else if (targetTab === 'chatbot') {
       loadChatbotAndVoiceTab();
+    } else if (targetTab === 'marketing') {
+      initMarketingTab();
+    } else if (targetTab === 'kanban') {
+      initKanbanTab();
     }
   });
 
