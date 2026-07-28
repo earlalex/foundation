@@ -543,6 +543,72 @@ export async function fetchSeoMyRankAddr(domain) {
 /* -------------------------------------------------------------------------- */
 /*                 7. GOOGLE PAGESPEED / LIGHTHOUSE AUDIT ENGINE              */
 /* -------------------------------------------------------------------------- */
+
+// Rate limiting and caching for PageSpeed API
+const PAGE_SPEED_CACHE_KEY = 'foundation_pagespeed_cache';
+const PAGE_SPEED_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const PAGE_SPEED_RATE_LIMIT_DELAY = 2000; // 2 seconds between requests
+let lastPageSpeedRequestTime = 0;
+
+/**
+ * Get cached PageSpeed results if available and not expired
+ * @param {string} url - URL to check cache for
+ * @param {string} strategy - Strategy (mobile/desktop)
+ * @returns {Object|null} Cached results or null
+ */
+function getCachedPageSpeedResults(url, strategy) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(PAGE_SPEED_CACHE_KEY) || '{}');
+    const cacheKey = `${url}_${strategy}`;
+    const cached = cache[cacheKey];
+    
+    if (cached && Date.now() - cached.timestamp < PAGE_SPEED_CACHE_DURATION) {
+      console.log('[Lighthouse Engine]: Using cached results for', url, strategy);
+      return cached.data;
+    }
+  } catch (e) {
+    console.warn('[Lighthouse Engine]: Cache read error', e);
+  }
+  return null;
+}
+
+/**
+ * Cache PageSpeed results
+ * @param {string} url - URL being audited
+ * @param {string} strategy - Strategy (mobile/desktop)
+ * @param {Object} data - Results to cache
+ */
+function cachePageSpeedResults(url, strategy, data) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(PAGE_SPEED_CACHE_KEY) || '{}');
+    const cacheKey = `${url}_${strategy}`;
+    cache[cacheKey] = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(PAGE_SPEED_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    console.warn('[Lighthouse Engine]: Cache write error', e);
+  }
+}
+
+/**
+ * Wait for rate limit delay
+ * @returns {Promise<void>}
+ */
+async function waitForRateLimit() {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastPageSpeedRequestTime;
+  
+  if (timeSinceLastRequest < PAGE_SPEED_RATE_LIMIT_DELAY) {
+    const delay = PAGE_SPEED_RATE_LIMIT_DELAY - timeSinceLastRequest;
+    console.log(`[Lighthouse Engine]: Rate limit delay: ${delay}ms`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
+  lastPageSpeedRequestTime = Date.now();
+}
+
 export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -577,16 +643,28 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
   }
 
   const urlToAudit = targetUrl || window.location.href;
+  
+  // Check cache first
+  const cachedResults = getCachedPageSpeedResults(urlToAudit, strategy);
+  if (cachedResults) {
+    return cachedResults;
+  }
+
+  // Apply rate limiting
+  await waitForRateLimit();
+
   const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(urlToAudit)}&strategy=${strategy}&category=performance&category=accessibility&category=best-practices&category=seo`;
 
   try {
+    console.log('[Lighthouse Engine]: Fetching PageSpeed API for', urlToAudit, strategy);
     const response = await fetch(endpoint);
+    
     if (response.ok) {
       const data = await response.json();
       const categories = data.lighthouseResult?.categories || {};
       const audits = data.lighthouseResult?.audits || {};
 
-      return {
+      const results = {
         scores: {
           performance: Math.round((categories.performance?.score || 0.98) * 100),
           accessibility: Math.round((categories.accessibility?.score || 1.0) * 100),
@@ -606,17 +684,50 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
           { title: 'Efficient Cache Policy', score: 'Pass', details: 'Service worker caching engine active.' }
         ]
       };
+
+      // Cache the results
+      cachePageSpeedResults(urlToAudit, strategy, results);
+      
+      return results;
+    } else if (response.status === 429) {
+      console.warn('[Lighthouse Engine]: Rate limit exceeded (429). Using fallback data.');
+      // Return cached data if available, even if expired
+      const staleCache = getCachedPageSpeedResults(urlToAudit, strategy);
+      if (staleCache) {
+        return staleCache;
+      }
+      // Fallback to default values
+      return getFallbackLighthouseResults(strategy);
+    } else {
+      console.warn('[Lighthouse Engine]: API error', response.status, response.statusText);
+      return getFallbackLighthouseResults(strategy);
     }
   } catch (err) {
-    // Serving baseline telemetry
+    console.error('[Lighthouse Engine]: Request failed', err);
+    return getFallbackLighthouseResults(strategy);
   }
+}
 
+/**
+ * Get fallback Lighthouse results when API is unavailable
+ * @param {string} strategy - Strategy being used
+ * @returns {Object} Fallback results
+ */
+function getFallbackLighthouseResults(strategy) {
+  console.log('[Lighthouse Engine]: Using fallback results for', strategy);
   return {
-    scores: { performance: 98, accessibility: 100, bestPractices: 96, seo: 100 },
-    metrics: { fcp: '0.6 s', lcp: '1.1 s', cls: '0.00', tbt: '0 ms', speedIndex: '0.9 s' },
+    scores: { performance: 92, accessibility: 95, bestPractices: 90, seo: 95 },
+    metrics: {
+      fcp: '1.2 s',
+      lcp: '2.1 s',
+      cls: '0.05',
+      tbt: '150 ms',
+      speedIndex: '2.3 s'
+    },
     diagnostics: [
-      { title: 'Serves images in next-gen formats', score: 'Pass', details: 'WebP assets loaded from Drive.' },
-      { title: 'Preconnect to required origins', score: 'Pass', details: 'Firebase & Google gstatic origin tags preloaded.' }
-    ]
+      { title: 'API Rate Limited', score: 'Warning', details: 'PageSpeed API rate limit reached. Using cached or estimated values.' },
+      { title: 'Recommendation', score: 'Info', details: 'Wait a few minutes before running another audit, or use Google PageSpeed Insights directly.' }
+    ],
+    isFallback: true
   };
 }
