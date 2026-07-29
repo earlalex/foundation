@@ -14,6 +14,7 @@ import {
 import { schemaRegistry } from '../schemas/registry.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { store } from './store.js';
 
 const CONTENT_COLLECTION = 'content';
 const USERS_COLLECTION = 'users';
@@ -278,7 +279,16 @@ export class ContentDB {
     const db = getFirestoreDB();
     if (db) {
       try {
-        const querySnapshot = await getDocs(collection(db, CONTENT_COLLECTION));
+        const user = store.state.user;
+        const isAdmin = user?.isAdmin;
+        let q;
+        const contentRef = collection(db, CONTENT_COLLECTION);
+        if (isAdmin) {
+          q = contentRef;
+        } else {
+          q = query(contentRef, where('access.visibility', '==', 'public'));
+        }
+        const querySnapshot = await getDocs(q);
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
           try {
@@ -312,11 +322,24 @@ export class ContentDB {
     const db = getFirestoreDB();
     if (db) {
       try {
-        const q = query(
-          collection(db, CONTENT_COLLECTION),
-          where('type', '==', type),
-          limit(maxItems)
-        );
+        const user = store.state.user;
+        const isAdmin = user?.isAdmin;
+        let q;
+        const contentRef = collection(db, CONTENT_COLLECTION);
+        if (isAdmin) {
+          q = query(
+            contentRef,
+            where('type', '==', type),
+            limit(maxItems)
+          );
+        } else {
+          q = query(
+            contentRef,
+            where('type', '==', type),
+            where('access.visibility', '==', 'public'),
+            limit(maxItems)
+          );
+        }
         const querySnapshot = await getDocs(q);
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
