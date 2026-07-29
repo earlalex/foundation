@@ -446,6 +446,29 @@
             </div>
           </div>
           <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+          <h3 style="margin: 0; font-size: 1.05rem;">NAICS Industry Code Classification</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">NAICS Industry Classification:</label>
+              <select id="biz-naics-select" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="">-- Select NAICS Code --</option>
+                <option value="541511">541511 - Custom Computer Programming Services</option>
+                <option value="541512">541512 - Computer Systems Design Services</option>
+                <option value="541611">541611 - Administrative Management Consulting</option>
+                <option value="454110">454110 - Electronic Shopping and Mail-Order Houses</option>
+                <option value="custom">-- Custom Override / Niche Code --</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Custom NAICS Code Override:</label>
+              <input type="text" id="biz-naics-custom" placeholder="e.g., 541513" disabled style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">NAICS Industry Definition:</label>
+            <input type="text" id="biz-naics-definition" placeholder="Official business or regulatory definition" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
           <h3 style="margin: 0; font-size: 1.05rem;">Private Corporate Documents (Securely Uplinks to Google Drive)</h3>
           <p style="margin: 0; font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096);">Documents uploaded here are kept strictly private inside Google Drive.</p>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
@@ -672,6 +695,27 @@
             </div>
           </div>
           <button type="submit" class="btn-primary" style="align-self: flex-start;">Save Platform Keys</button>
+        </form>
+      </div>
+
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem;">LastPass Password Manager Integration</h2>
+        <form id="lastpass-integrations-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1rem; border-radius: 6px; font-size: 0.85rem; color: #2c5282;">
+            <strong>Setup Instructions:</strong><br>
+            To retrieve your LastPass API Key: Log into the LastPass Admin Console -> Navigate to User Provisioning -> Select API Tokens -> Create New Token. Copy the Token and Company ID below to securely bridge your business credentials.
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">LastPass Provisioning / API Key:</label>
+              <input type="password" id="cfg-lastpass-provisioning" placeholder="Enter LastPass provisioning key" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Company ID / Account Hash:</label>
+              <input type="text" id="cfg-lastpass-company" placeholder="Enter Company ID / Account Hash" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="align-self: flex-start;">Save LastPass Integration</button>
         </form>
       </div>
     </div>

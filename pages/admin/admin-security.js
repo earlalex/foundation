@@ -66,19 +66,27 @@ function renderCredentialsList() {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.85rem;">
         <div>
           <label style="font-weight: 600; color: #718096; font-size: 0.75rem;">Username:</label>
-          <div style="padding: 4px 8px; background: #f7fafc; border-radius: 4px; margin-top: 2px;">${cred.username}</div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 2px;">
+            <div style="flex: 1; padding: 4px 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 0.8rem; min-height: 28px; display: flex; align-items: center;">${cred.username}</div>
+            <button onclick="window.copyToClipboard('${cred.username}', 'Username')"
+                    style="padding: 4px 8px; background: #edf2f7; color: #4a5568; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+              Copy
+            </button>
+          </div>
         </div>
         <div>
           <label style="font-weight: 600; color: #718096; font-size: 0.75rem;">Password:</label>
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 2px;">
             <input type="password" id="password-${cred.id}" value="${'•'.repeat(12)}" readonly
-                   style="flex: 1; padding: 4px 8px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.8rem;" />
-            ${isAdminPrimary ? `
-              <button onclick="window.togglePasswordVisibility('${cred.id}')" 
-                      style="padding: 4px 8px; background: #ebf8ff; color: #2b6cb0; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
-                Show
-              </button>
-            ` : ''}
+                   style="flex: 1; padding: 4px 8px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.8rem; height: 28px;" />
+            <button onclick="window.copyPassword('${cred.id}')"
+                    style="padding: 4px 8px; background: #edf2f7; color: #4a5568; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+              Copy
+            </button>
+            <button onclick="window.togglePasswordVisibility('${cred.id}')"
+                    style="padding: 4px 8px; background: #ebf8ff; color: #2b6cb0; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+              Show
+            </button>
           </div>
         </div>
       </div>
@@ -86,16 +94,35 @@ function renderCredentialsList() {
         <a href="${cred.loginUrl}" target="_blank" 
            style="flex: 1; padding: 6px 12px; background: #48bb78; color: white; text-align: center; text-decoration: none; 
                   border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
-          Open Login Page
+          Launch URL
         </a>
         <button onclick="window.launchLastPassAutofill('${cred.id}')" 
                 style="flex: 1; padding: 6px 12px; background: #ed8936; color: white; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
-          Log In via LastPass
+          Launch & Autofill (LastPass Bridge)
         </button>
       </div>
     </div>
   `).join('');
 }
+
+window.copyToClipboard = function(text, label) {
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success(`${label} copied to clipboard`);
+  }).catch(() => {
+    toast.error(`Failed to copy ${label}`);
+  });
+};
+
+window.copyPassword = function(credentialId) {
+  if (!isAdminPrimary) {
+    toast.error('Only Primary Admins can copy passwords');
+    return;
+  }
+  const credential = credentials.find(c => c.id === credentialId);
+  if (credential) {
+    window.copyToClipboard(credential.encryptedPassKey, 'Password');
+  }
+};
 
 window.togglePasswordVisibility = function(credentialId) {
   if (!isAdminPrimary) {
