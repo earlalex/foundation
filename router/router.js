@@ -1,6 +1,5 @@
 // router/router.js
 import { validateSchema, Type } from '../core/validator.js';
-import { authManager } from '../core/auth.js';
 import { store } from '../core/store.js';
 import { configManager } from '../core/config.js';
 
@@ -17,6 +16,11 @@ export class Router {
     this.appContainer = document.getElementById('app');
     this.routesManifest = routesManifest;
     this.isTestInstance = isTestInstance;
+
+    // Dynamically map /login for unit test instances to prevent 404 falling back on redirecting
+    if (this.isTestInstance && !this.routesManifest['/login']) {
+      this.routesManifest['/login'] = { title: 'Login', viewPath: './pages/login.html' };
+    }
 
     // Calculate the repository or base path prefix of the SPA
     let path = window.location.pathname;
@@ -230,9 +234,10 @@ export class Router {
       const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
       const hasUserSession = simulatedTier ? (simulatedTier !== 'prospect') : !!currentUser;
 
-      // Unauthenticated / Prospect Persona gatekeeping
-      if (!hasUserSession && (cleanPath === '/account' || cleanPath === '/admin')) {
+      // Unauthenticated / Prospect Persona gatekeeping (Bypass if developer mode/bypass is active)
+      if (!hasUserSession && !isDevConsoleBypass && (cleanPath === '/account' || cleanPath === '/admin')) {
         this.#isLoading = false;
+        sessionStorage.setItem('intended_destination', cleanPath);
         await this.loadRoute('/login');
         return;
       }
@@ -253,6 +258,7 @@ export class Router {
         const hasAccess = isPrimaryAdmin || isEditor || isDevConsoleBypass;
         if (!hasAccess) {
           console.warn('[Router Guard]: Access Denied to /admin for role:', currentRole);
+          sessionStorage.setItem('intended_destination', '/admin');
           this.appContainer.innerHTML = `
             <section class="admin-lock-screen" style="max-width: 500px; margin: 4rem auto; padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
               <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
@@ -260,11 +266,27 @@ export class Router {
               <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
                 Access to the Admin Dashboard requires an Administrator or Content Editor account.
               </p>
-              <button onclick="window.router.navigateTo('/home')" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+              <button onclick="window.router.navigateTo('/home')" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 1rem;">
                 Return Home
+              </button>
+              <button id="admin-lock-signin-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Sign In with Google
               </button>
             </section>
           `;
+          setTimeout(() => {
+            const lockBtn = document.getElementById('admin-lock-signin-btn');
+            lockBtn?.addEventListener('click', async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                const { authManager } = await import('../core/auth.js');
+                await authManager.loginWithGoogle();
+              } catch (err) {
+                console.error('[Admin Lock]: Login failed:', err);
+              }
+            });
+          }, 0);
           return;
         }
       }

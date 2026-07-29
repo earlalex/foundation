@@ -10,6 +10,7 @@ import {
 import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { toast } from '../utils/toast.js';
 
 /**
  * Get or initialize Firebase app instance
@@ -108,6 +109,46 @@ export class AuthManager {
           referredBy: profile.referredBy
         });
         console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role})`);
+
+        // Smoothly redirect and update UI elements on status changes
+        if (window.router) {
+          const currentPath = window.location.pathname;
+          let relPath = currentPath;
+          const basePath = window.router.basePath || '/';
+          if (basePath !== '/' && currentPath.startsWith(basePath.slice(0, -1))) {
+            relPath = currentPath.slice(basePath.length - 1);
+          }
+          if (relPath.endsWith('/index.html')) {
+            relPath = relPath.replace(/\/index\.html$/, '');
+          }
+          while (relPath.length > 1 && relPath.endsWith('/')) {
+            relPath = relPath.slice(0, -1);
+          }
+          if (relPath === '' || relPath === '/') {
+            relPath = '/home';
+          }
+
+          const intendedDest = sessionStorage.getItem('intended_destination');
+          sessionStorage.removeItem('intended_destination');
+
+          if (intendedDest) {
+            const hasAdminAccess = isAdmin || profile.role === 'admin' || profile.role === 'editor';
+            if (intendedDest === '/admin') {
+              if (hasAdminAccess) {
+                window.router.loadRoute('/admin');
+              } else {
+                window.router.loadRoute('/home');
+              }
+            } else {
+              window.router.loadRoute(intendedDest);
+            }
+          } else if (relPath === '/login') {
+            window.router.loadRoute('/account');
+          } else {
+            // Reload the current active route to update paywall views and interactive components
+            window.router.loadRoute(currentPath);
+          }
+        }
       } else {
         store.dispatch('LOGOUT');
         console.log('[Auth]: Signed out.');
@@ -121,17 +162,51 @@ export class AuthManager {
    * @throws {Error} If sign-in fails
    */
   async loginWithGoogle() {
+    // Check if Firebase is running on demo/unconfigured credentials
+    const currentFbConfig = configManager.current.firebase;
+    const isConfigured = currentFbConfig &&
+                          currentFbConfig.projectId &&
+                          currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
+                          currentFbConfig.projectId !== "demo-foundation-app" &&
+                          currentFbConfig.apiKey !== "" &&
+                          currentFbConfig.apiKey !== "YOUR_API_KEY";
+
+    if (!isConfigured) {
+      const warningMsg = "Firebase is running on demo/unconfigured credentials. Please run the Setup Wizard or update API keys.";
+      toast.warning(warningMsg);
+      // Fallback/Demo Key warning behavior
+      const customError = new Error(warningMsg);
+      errorHandler.handleError(customError);
+      throw customError;
+    }
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
+      const errorCode = err.code || '';
+      const errorMessage = err.message || '';
+
+      if (errorCode === 'auth/popup-blocked') {
+        toast.error("Sign-in popup was blocked by your browser. Please allow popups for this site and try again.");
+      } else if (errorCode === 'auth/popup-closed-by-user') {
+        // Suppress aggressive error alerts if the user simply closed the popup window manually.
+        console.log('[Auth]: Sign-in popup closed by user.');
+      } else if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('auth/unauthorized-domain')) {
+        toast.error(`Domain authorization error: Please add 'https://' + window.location.hostname + ' to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      } else if (errorCode === 'auth/configuration-not-found' || errorMessage.includes('configuration-not-found')) {
+        toast.error("Firebase is running on demo/unconfigured credentials. Please run the Setup Wizard or update API keys.");
+      } else {
+        toast.error(`Google Sign-In Failed: ${errorMessage}`);
+      }
+
       let customError;
-      if (err.code === 'auth/unauthorized-domain' || (err.message && err.message.includes('auth/unauthorized-domain'))) {
+      if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('auth/unauthorized-domain')) {
         customError = new Error(
           `Unauthorized Domain: Please add "${window.location.hostname}" (or your base domain "foundation-5b8.pages.dev") to your Firebase Console -> Authentication -> Settings -> Authorized Domains list.`
         );
       } else {
-        customError = new Error(`Google Sign-In Failed: ${err.message}`);
+        customError = err;
       }
       errorHandler.handleError(customError);
       throw customError;

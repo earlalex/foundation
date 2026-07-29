@@ -120,3 +120,20 @@ export function renderContent(contentData) {
     </article>
   `;
 }
+
+// Global delegated event listener for fail-safe paywall gate login triggers
+if (typeof document !== 'undefined') {
+  document.body.addEventListener('click', async (e) => {
+    const btn = e.target.closest('#btn-paywall-login');
+    if (btn) {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        const { authManager } = await import('../core/auth.js');
+        await authManager.loginWithGoogle();
+      } catch (err) {
+        console.error('[Delegated Paywall Login]: Login failed:', err);
+      }
+    }
+  });
+}
