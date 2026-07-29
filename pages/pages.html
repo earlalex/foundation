@@ -1,0 +1,99 @@
+<!-- pages/pages.html - Custom Dynamic Resolved Pages View Template -->
+<section style="max-width: var(--theme-layout-container-max-width, 800px); margin: 3rem auto; padding: 1.5rem; font-family: system-ui, sans-serif;">
+  <div id="dynamic-page-content">
+    <div style="text-align: center; padding: 3rem 1rem;">
+      <p style="color: var(--theme-color-text-secondary, #718096); font-style: italic;">Loading custom dynamic page blocks...</p>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+  import { contentDB } from '../core/db.js';
+  import { store } from '../core/store.js';
+
+  async function renderCustomPage() {
+    const container = document.getElementById('dynamic-page-content');
+    if (!container) return;
+
+    // Determine current route slug from path
+    let relPath = window.location.pathname;
+    const basePath = window.router?.basePath || '/';
+    if (basePath !== '/' && relPath.startsWith(basePath.slice(0, -1))) {
+      relPath = relPath.slice(basePath.length - 1);
+    }
+
+    const slug = relPath.replace('/pages/', '');
+
+    try {
+      const pageData = await contentDB.getCustomPageBySlug(slug);
+      if (!pageData) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 4rem 1rem;">
+            <h1 style="font-size: 2.25rem; color: var(--theme-color-text-primary, #1a202c);">404 - Page Not Found</h1>
+            <p style="color: var(--theme-color-text-secondary, #718096); margin-top: 0.5rem;">This custom route does not map to any active published content.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const blocks = pageData.blocks || [];
+      const blocksHtml = blocks.map(b => {
+        if (b.type === 'heading') {
+          return `<h2 style="font-size: 2rem; color: var(--theme-color-primary, #2b6cb0); margin-top: 2rem; margin-bottom: 0.75rem; font-weight: 800; border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem;">${b.value}</h2>`;
+        } else if (b.type === 'paragraph') {
+          return `<p style="line-height: 1.75; font-size: 1.05rem; color: var(--theme-color-text-secondary, #2d3748); margin-bottom: 1.25rem;">${b.value}</p>`;
+        } else if (b.type === 'image') {
+          return `<div style="text-align: center; margin: 2rem 0;"><img src="${b.value}" alt="${pageData.title}" style="max-width: 100%; border-radius: 8px; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.1));" /></div>`;
+        } else if (b.type === 'cta') {
+          return `
+            <div style="background: var(--theme-color-background, #ebf8ff); border: 1px solid var(--theme-color-border, #bee3f8); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem; text-align: center; margin: 2.5rem 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <h3 style="font-size: 1.35rem; color: var(--theme-color-primary, #2b6cb0); margin-top: 0; margin-bottom: 0.75rem;">Premium Resource Callout</h3>
+              <p style="color: var(--theme-color-text-secondary, #2d3748); margin-bottom: 1.25rem; font-size: 0.95rem;">Tap into our community ecosystem with professional guidance resources.</p>
+              <button onclick="window.router.navigateTo('/account')" class="btn-primary" style="padding: 10px 24px; font-weight: bold; border-radius: 6px;">${b.value || 'Get Instant Access'}</button>
+            </div>
+          `;
+        } else if (b.type === 'video') {
+          return `
+            <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <iframe src="${b.value}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
+            </div>
+          `;
+        } else if (b.type === 'button') {
+          return `
+            <div style="text-align: center; margin: 1.5rem 0;">
+              <button onclick="window.router.navigateTo('/account')" class="btn-primary" style="padding: 12px 28px; font-weight: bold; font-size: 1rem; border-radius: 6px;">${b.value || 'Launch Access Portal'}</button>
+            </div>
+          `;
+        }
+        return '';
+      }).join('');
+
+      container.innerHTML = `
+        <article style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem; box-shadow: var(--theme-layout-box-shadow, 0 1px 3px rgba(0,0,0,0.08));">
+          <header style="border-bottom: 2px solid var(--theme-color-border, #edf2f7); padding-bottom: 1.5rem; margin-bottom: 2rem;">
+            <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 0.5rem 0; line-height: 1.25;">${pageData.title}</h1>
+            <div style="display: flex; gap: 0.75rem; align-items: center; font-size: 0.85rem; color: var(--theme-color-text-secondary, #718096);">
+              <span>Published by <strong>${pageData.author || 'Staff'}</strong></span>
+              <span>•</span>
+              <span>Published: ${pageData.date}</span>
+            </div>
+          </header>
+          <div>
+            ${blocksHtml || '<p style="color: #718096; font-style: italic; text-align: center; padding: 2rem;">This page has no content blocks yet.</p>'}
+          </div>
+        </article>
+      `;
+
+    } catch (err) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 3rem 1rem; color: var(--theme-color-danger, #e53e3e);">
+          <h3>Error loading custom route details</h3>
+          <p>${err.message}</p>
+        </div>
+      `;
+    }
+  }
+
+  // Bind execution
+  renderCustomPage();
+</script>

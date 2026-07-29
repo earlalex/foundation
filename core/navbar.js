@@ -86,6 +86,9 @@ export function initNavbar() {
           <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #ebf8ff; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
             Command Center
           </a>
+          <a href="/login" id="nav-auth-link" class="nav-link" data-path="/login" style="color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #edf2f7; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
+            Sign In / Register
+          </a>
         </div>
       </div>
     </nav>
@@ -148,11 +151,24 @@ export function initNavbar() {
     });
   }
 
-  function syncAdminLinkVisibility(state) {
+  function syncNavbarVisibility(state) {
     const adminLink = document.getElementById('nav-admin-link');
     if (adminLink) {
-      const isDevOrAdmin = state.user?.isAdmin || state.devMode || window.__FOUNDATION_DEV_BYPASS__;
+      const isDevOrAdmin = state.user?.role === 'admin' || state.user?.role === 'editor' || state.user?.isAdmin || state.devMode || window.__FOUNDATION_DEV_BYPASS__;
       adminLink.style.display = isDevOrAdmin ? 'inline-block' : 'none';
+    }
+
+    const authLink = document.getElementById('nav-auth-link');
+    if (authLink) {
+      if (state.user) {
+        authLink.textContent = 'My Dashboard';
+        authLink.setAttribute('href', '/account');
+        authLink.setAttribute('data-path', '/account');
+      } else {
+        authLink.textContent = 'Sign In / Register';
+        authLink.setAttribute('href', '/login');
+        authLink.setAttribute('data-path', '/login');
+      }
     }
   }
 
@@ -166,9 +182,9 @@ export function initNavbar() {
   });
 
   store.subscribe((state) => {
-    syncAdminLinkVisibility(state);
+    syncNavbarVisibility(state);
   });
 
   updateActiveLink(window.location.pathname);
-  syncAdminLinkVisibility(store.state);
+  syncNavbarVisibility(store.state);
 }

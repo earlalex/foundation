@@ -125,7 +125,11 @@ const UserSchema = {
   email: Type.string,
   displayName: Type.optional(Type.string),
   photoURL: Type.optional(Type.string),
-  isAdmin: Type.boolean
+  isAdmin: Type.boolean,
+  role: Type.optional(Type.string),           // "prospect", "subscriber", "member", "affiliate", "editor", "admin"
+  paymentStatus: Type.optional(Type.string),   // "Active", "Past Due", "Delinquent", "Converted", "None"
+  affiliateCode: Type.optional(Type.string),
+  referredBy: Type.optional(Type.string)
 };
 
 const ChatLogSchema = {

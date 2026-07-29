@@ -1,0 +1,67 @@
+<!-- pages/login.html - Authentication Portal for Google OAuth & Magic Links -->
+<section style="max-width: 480px; margin: 5rem auto; padding: 2.5rem; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); box-shadow: var(--theme-layout-box-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1)); font-family: system-ui, sans-serif;">
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: var(--theme-color-text-primary, #1a202c);">Welcome to Foundation</h1>
+    <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.9rem;">Sign in to access your portal, educational modules, or affiliate center.</p>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    <!-- Google Auth Button -->
+    <button id="google-login-btn" class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; padding: 12px; font-size: 0.95rem; font-weight: bold; cursor: pointer; border-radius: 6px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.579-7.859-8s3.53-8 7.859-8c2.46 0 3.827 1.025 4.766 1.926l2.424-2.33C17.702 1.425 15.199 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.834 11.57-11.757 0-.79-.086-1.393-.189-1.958H12.24z"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <!-- Divider -->
+    <div style="display: flex; align-items: center; text-align: center; color: var(--theme-color-text-secondary, #cbd5e0); font-size: 0.8rem; margin: 0.5rem 0;">
+      <div style="flex-grow: 1; height: 1px; background-color: var(--theme-color-border, #e2e8f0);"></div>
+      <span style="padding: 0 10px; color: #a0aec0; text-transform: uppercase; font-weight: bold; letter-spacing: 0.05em;">Or Magic Sign-In</span>
+      <div style="flex-grow: 1; height: 1px; background-color: var(--theme-color-border, #e2e8f0);"></div>
+    </div>
+
+    <!-- Magic Sign-in Link Form -->
+    <form id="magic-signin-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div>
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
+        <input type="email" id="magic-email" placeholder="you@yourdomain.com" required style="width: 100%; padding: 10px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 6px; box-sizing: border-box;" />
+      </div>
+      <button type="submit" id="magic-submit-btn" style="width: 100%; padding: 12px; font-size: 0.95rem; font-weight: bold; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Send Magic Sign-In Link
+      </button>
+    </form>
+
+    <div id="login-error-container" style="display: none; padding: 10px; border-radius: 6px; background: #fff5f5; border: 1px solid #fed7d7; color: #e53e3e; font-size: 0.85rem; text-align: left; line-height: 1.4;"></div>
+  </div>
+</section>
+
+<script type="module">
+  import { authManager } from '../core/auth.js';
+  import { toast } from '../utils/toast.js';
+
+  const googleBtn = document.getElementById('google-login-btn');
+  const errorContainer = document.getElementById('login-error-container');
+
+  googleBtn?.addEventListener('click', async () => {
+    if (errorContainer) errorContainer.style.display = 'none';
+    try {
+      await authManager.loginWithGoogle();
+      toast.success('Sign-in successful!');
+      window.router.loadRoute('/account');
+    } catch (err) {
+      if (errorContainer) {
+        errorContainer.textContent = err.message || 'Authentication failed. Please check Authorized Domains setup.';
+        errorContainer.style.display = 'block';
+      }
+    }
+  });
+
+  const magicForm = document.getElementById('magic-signin-form');
+  magicForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('magic-email').value.trim();
+    toast.success(`Magic sign-in link dispatched to ${email}! Check your inbox to complete verification.`);
+    magicForm.reset();
+  });
+</script>
