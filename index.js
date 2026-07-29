@@ -14,7 +14,7 @@ import './components/global/AuthorCard.js';
 import './components/global/ChatWidget.js';
 
 // Automated Test Suites
-import { runAllSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
+import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
 
 // Page Controllers
 import { initAdminPage } from './pages/admin/admin.js';
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.store = store;
     window.logger = logger;
     
-    runAllSchemaTests();
+    runSchemaTests();
     runStoreTests();
     await runRouterTests();
     await runServicesTests();
