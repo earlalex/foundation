@@ -83,12 +83,61 @@ export function initIntegrationsTab() {
   // Setup API key masking for sensitive fields
   [cfgFbKey, cfgGoogleClientSecret, cfgGeminiKey, cfgOpenaiKey, cfgStripeKey, cfgVtApiKey].forEach(setupApiKeyMasking);
 
+  // LastPass config elements setup
+  const cfgLastPassProv = document.getElementById('cfg-lastpass-provisioning');
+  const cfgLastPassComp = document.getElementById('cfg-lastpass-company');
+
+  if (cfgLastPassProv) {
+    cfgLastPassProv.value = currentCfg.lastpass?.provisioningHash || '';
+    setupApiKeyMasking(cfgLastPassProv);
+  }
+  if (cfgLastPassComp) {
+    cfgLastPassComp.value = currentCfg.lastpass?.companyId || '';
+  }
+
   // Initialize form validator
   const firebaseConfigForm = document.getElementById('firebase-config-form');
   let firebaseConfigValidator = null;
   if (firebaseConfigForm) {
     firebaseConfigValidator = new FormValidator(firebaseConfigForm, adminFormRules.integrations);
   }
+
+  // LastPass integrations form submit listener
+  document.getElementById('lastpass-integrations-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.textContent;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const provKeyValue = cfgLastPassProv.dataset.originalValue || cfgLastPassProv.value;
+      const updated = {
+        ...configManager.current,
+        lastpass: {
+          ...(configManager.current.lastpass || {}),
+          provisioningHash: provKeyValue,
+          companyId: cfgLastPassComp ? cfgLastPassComp.value : ''
+        }
+      };
+      const success = await configManager.saveToFirebase(updated);
+      if (success) {
+        toast.success('LastPass Integration successfully updated!');
+      } else {
+        toast.error('Failed to save LastPass Integration. Please try again.');
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Integrations - LastPass Config Form');
+      toast.error(`Error saving LastPass Integration: ${err.message}`);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    }
+  });
 
   // Firebase & Google config form
   document.getElementById('firebase-config-form')?.addEventListener('submit', async (e) => {

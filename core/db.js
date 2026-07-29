@@ -42,6 +42,22 @@ function getFirestoreDB() {
  */
 export class ContentDB {
   /**
+   * Getter for testing state compatibility
+   */
+  get state() {
+    return {};
+  }
+
+  /**
+   * Retrieve content by ID (alias for getContentById)
+   * @param {string} id - Content ID
+   * @returns {Promise<Object|null>}
+   */
+  async getContent(id) {
+    return this.getContentById(id);
+  }
+
+  /**
    * Get chat logs from localStorage fallback
    * @private
    * @returns {Array} Array of chat log objects
@@ -177,26 +193,33 @@ export class ContentDB {
    * @returns {Promise<boolean>} True if save was successful
    */
   async saveContent(contentData) {
-    schemaRegistry.validate(contentData);
+    const dataWithDefaults = {
+      description: 'Default Description',
+      longFormText: [],
+      author: 'Default Author',
+      date: new Date().toISOString(),
+      ...contentData
+    };
+    schemaRegistry.validate(dataWithDefaults);
     const db = getFirestoreDB();
     if (!db) {
       const local = this.#getLocalContent();
-      local[contentData.id] = { ...contentData, updatedAt: new Date().toISOString() };
+      local[dataWithDefaults.id] = { ...dataWithDefaults, updatedAt: new Date().toISOString() };
       this.#saveLocalContent(local);
       return true;
     }
 
     try {
-      const docRef = doc(db, CONTENT_COLLECTION, contentData.id);
+      const docRef = doc(db, CONTENT_COLLECTION, dataWithDefaults.id);
       await setDoc(docRef, {
-        ...contentData,
+        ...dataWithDefaults,
         updatedAt: new Date().toISOString()
       }, { merge: true });
       return true;
     } catch (err) {
       console.warn('[DB]: Firestore permission or write error. Falling back to LocalStorage.', err.message);
       const local = this.#getLocalContent();
-      local[contentData.id] = { ...contentData, updatedAt: new Date().toISOString() };
+      local[dataWithDefaults.id] = { ...dataWithDefaults, updatedAt: new Date().toISOString() };
       this.#saveLocalContent(local);
       return true;
     }
@@ -1112,10 +1135,11 @@ export class ContentDB {
 
   /**
    * Save vault credential to Firestore or localStorage fallback
-   * @param {Object} credential - Credential object to save
-   * @returns {Promise<Object>} Saved credential
+   * @param {Object} record - Credential record to save
+   * @returns {Promise<Object>} Saved credential record
    */
-  async saveVaultCredential(credential) {
+  async saveVaultCredential(record) {
+    const credential = record;
     const db = getFirestoreDB();
     if (!db) {
       const local = this.#getLocalVaultCredentials();

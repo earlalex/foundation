@@ -32,10 +32,22 @@ export function initBusinessProfileTab() {
   const bizBankRoutingInput = document.getElementById('biz-bank-routing');
   const bizBankAccountInput = document.getElementById('biz-bank-account');
 
+  // NAICS Elements
+  const bizNaicsSelect = document.getElementById('biz-naics-select');
+  const bizNaicsCustom = document.getElementById('biz-naics-custom');
+  const bizNaicsDefinition = document.getElementById('biz-naics-definition');
+
   // Document status divs
   const docArticlesStatus = document.getElementById('biz-doc-articles-status');
   const docOperatingStatus = document.getElementById('biz-doc-operating-status');
   const docEinStatus = document.getElementById('biz-doc-ein-status');
+
+  const naicsDefinitions = {
+    '541511': 'Custom Computer Programming Services',
+    '541512': 'Computer Systems Design Services',
+    '541611': 'Administrative Management Consulting',
+    '454110': 'Electronic Shopping and Mail-Order Houses'
+  };
 
   // Load existing values
   if (bizLegalNameInput) bizLegalNameInput.value = bizProfile.legalName || '';
@@ -58,6 +70,53 @@ export function initBusinessProfileTab() {
   if (bizBankNameInput) bizBankNameInput.value = bizProfile.bankName || '';
   if (bizBankRoutingInput) bizBankRoutingInput.value = bizProfile.bankRouting || '';
   if (bizBankAccountInput) bizBankAccountInput.value = bizProfile.bankAccount || '';
+
+  // Setup NAICS elements and select listeners
+  if (bizNaicsSelect) {
+    const savedCode = bizProfile.naicsCode || '';
+    if (naicsDefinitions[savedCode]) {
+      bizNaicsSelect.value = savedCode;
+    } else if (savedCode) {
+      bizNaicsSelect.value = 'custom';
+      if (bizNaicsCustom) {
+        bizNaicsCustom.value = savedCode;
+        bizNaicsCustom.disabled = false;
+      }
+    }
+
+    if (bizNaicsDefinition) {
+      bizNaicsDefinition.value = bizProfile.naicsDefinition || '';
+    }
+
+    bizNaicsSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'custom') {
+        if (bizNaicsCustom) {
+          bizNaicsCustom.disabled = false;
+          bizNaicsCustom.value = '';
+        }
+        if (bizNaicsDefinition) {
+          bizNaicsDefinition.value = '';
+        }
+      } else if (val) {
+        if (bizNaicsCustom) {
+          bizNaicsCustom.disabled = true;
+          bizNaicsCustom.value = '';
+        }
+        if (bizNaicsDefinition) {
+          bizNaicsDefinition.value = naicsDefinitions[val] || '';
+        }
+      } else {
+        if (bizNaicsCustom) {
+          bizNaicsCustom.disabled = true;
+          bizNaicsCustom.value = '';
+        }
+        if (bizNaicsDefinition) {
+          bizNaicsDefinition.value = '';
+        }
+      }
+    });
+  }
 
   // Show verified presence for existing documents
   if (docArticlesStatus && bizProfile.articlesDocId) {
@@ -127,6 +186,10 @@ export function initBusinessProfileTab() {
         }
       }
 
+      const naicsCodeVal = bizNaicsSelect && bizNaicsSelect.value === 'custom'
+        ? (bizNaicsCustom ? bizNaicsCustom.value : '')
+        : (bizNaicsSelect ? bizNaicsSelect.value : '');
+
       const updatedBizConfig = {
         ...configManager.current,
         businessProfile: {
@@ -149,6 +212,8 @@ export function initBusinessProfileTab() {
           bankName: bizBankNameInput.value,
           bankRouting: bizBankRoutingInput.value,
           bankAccount: bizBankAccountInput.value,
+          naicsCode: naicsCodeVal,
+          naicsDefinition: bizNaicsDefinition ? bizNaicsDefinition.value : '',
           articlesDocId,
           operatingDocId,
           einDocId
