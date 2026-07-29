@@ -150,3 +150,21 @@ h3 {
   outline: 2px solid var(--theme-color-primary);
   outline-offset: 2px;
 }
+
+/* --- ADMIN PAGE LAYOUT OVERRIDES --- */
+#app:has(.admin-layout) {
+  max-width: 100% !important;
+  padding: 1.5rem 2rem !important;
+}
+
+/* Ensure settings panels, forms, and cards stretch properly */
+.admin-panel {
+  width: 100% !important;
+}
+.admin-panel form,
+.admin-panel table,
+.admin-panel textarea,
+.admin-panel input,
+.admin-panel select {
+  max-width: 100% !important;
+}
