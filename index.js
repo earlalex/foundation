@@ -103,6 +103,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. Initialize Top Global Navbar Header
   initNavbar();
 
+  // Active Simulation Mode Observer and Sticky Bottom-Right Badge
+  store.subscribe((state) => {
+    let badge = document.getElementById('simulation-active-badge');
+    if (state.simulatedUserTier) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'simulation-active-badge';
+        badge.style.position = 'fixed';
+        badge.style.bottom = '20px';
+        badge.style.right = '20px';
+        badge.style.background = '#e53e3e';
+        badge.style.color = '#ffffff';
+        badge.style.padding = '12px 20px';
+        badge.style.borderRadius = '8px';
+        badge.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.3)';
+        badge.style.zIndex = '999999';
+        badge.style.fontFamily = 'system-ui, sans-serif';
+        badge.style.fontSize = '0.9rem';
+        badge.style.fontWeight = 'bold';
+        badge.style.display = 'flex';
+        badge.style.alignItems = 'center';
+        badge.style.gap = '0.75rem';
+        document.body.appendChild(badge);
+      }
+
+      const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
+      badge.innerHTML = `
+        <span>⚠️ SIMULATION MODE ACTIVE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
+        <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
+          Return to Admin Command Center
+        </button>
+      `;
+
+      // Bind listener
+      document.getElementById('btn-return-admin-sim')?.addEventListener('click', () => {
+        store.dispatch('SET_SIMULATED_USER_TIER', null);
+        window.router.navigateTo('/admin');
+      });
+    } else {
+      if (badge) {
+        badge.remove();
+      }
+    }
+  });
+
   // 5. Hard Guard: If uninstalled, render Setup Wizard. Otherwise, initialize route cleanly.
   if (!isInstalled && !window.__FOUNDATION_DEV_BYPASS__) {
     logger.warn('[Core]: Platform unconfigured. Intercepting route to render Setup Wizard.');

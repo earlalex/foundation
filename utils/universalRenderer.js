@@ -13,13 +13,15 @@ export function renderContent(contentData) {
   const visibility = contentData.access?.visibility || 'public';
 
   // 1. User Tier Rights Check
-  const userRole = user?.role || 'subscriber';
-  const isPaidMember = userRole === 'member' || userRole === 'affiliate' || user?.isAdmin;
+  const simulatedTier = store.state.simulatedUserTier;
+  const userRole = simulatedTier || user?.role || 'subscriber';
+  const isPaidMember = userRole === 'member' || userRole === 'affiliate' || userRole === 'admin' || (user?.isAdmin && !simulatedTier);
+  const hasUserSession = simulatedTier ? (simulatedTier !== 'prospect') : !!user;
 
   let hasPermission = false;
   if (visibility === 'public') {
     hasPermission = true;
-  } else if (visibility === 'authenticated' && !!user) {
+  } else if (visibility === 'authenticated' && hasUserSession) {
     hasPermission = true;
   } else if (visibility === 'paid' && isPaidMember) {
     hasPermission = true;

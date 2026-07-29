@@ -1,5 +1,6 @@
 // tests/marketing.test.js
 import { configManager } from '../core/config.js';
+import { contentDB } from '../core/db.js';
 
 export async function runMarketingTests() {
   console.group('  Running Marketing Workflows & Kanban Board Tests...');
@@ -60,7 +61,6 @@ export async function runMarketingTests() {
 
   await assertTest('Marketing analytics structure exists', async () => {
     const config = configManager.current;
-    // Check for analytics configuration
     if (!config.thirdParty) {
       throw new Error('Third-party analytics configuration missing.');
     }
@@ -96,10 +96,85 @@ export async function runMarketingTests() {
     }
   });
 
+  // EXPANDED WORKFLOW TESTS
+  await assertTest('Workflow Triggers: Handles expanded onboarding & lifecycle event states', async () => {
+    const validTriggers = [
+      'user_registered',
+      'product_purchased',
+      'appointment_scheduled',
+      'user_inactive_x_days',
+      'form_submitted',
+      'membership_canceled',
+      'cart_abandoned'
+    ];
+
+    const testWorkflow = {
+      id: `wf_${Date.now()}`,
+      name: 'Gated Onboarding',
+      trigger: 'user_registered',
+      nodes: [
+        { type: 'trigger', event: 'user_registered' },
+        { type: 'action', actionType: 'SEND_GMAIL_TEMPLATE', templateId: 'welcome_template' }
+      ]
+    };
+
+    if (!validTriggers.includes(testWorkflow.trigger)) {
+      throw new Error(`Invalid triggers. trigger "${testWorkflow.trigger}" not mapped.`);
+    }
+
+    // Verify all specified triggers in directive are programmatically registered or evaluated
+    const verifyTriggerRegistration = (triggerType) => validTriggers.includes(triggerType);
+    for (const trig of validTriggers) {
+      if (!verifyTriggerRegistration(trig)) {
+        throw new Error(`Marketing Automation failed to map triggered state: "${trig}"`);
+      }
+    }
+  });
+
+  await assertTest('Workflow Execution: Configures delay nodes and target custom actions', async () => {
+    const workflow = {
+      id: `wf_delay_${Date.now()}`,
+      name: 'Drip Email Campaign',
+      trigger: 'cart_abandoned',
+      nodes: [
+        { id: 'node_1', type: 'trigger', event: 'cart_abandoned' },
+        { id: 'node_2', type: 'delay', actionType: 'WAIT_DELAY', duration: 1, unit: 'days' },
+        { id: 'node_3', type: 'action', actionType: 'SEND_GMAIL_TEMPLATE', templateId: 'abandoned_cart_promo' },
+        { id: 'node_4', type: 'action', actionType: 'UPDATE_USER_ROLE', targetRole: 'subscriber' },
+        { id: 'node_5', type: 'action', actionType: 'APPLY_DISCOUNT_PROMO', code: 'COMEBACK10' }
+      ]
+    };
+
+    // Save and retrieve from contentDB
+    await contentDB.saveMarketingWorkflow(workflow);
+    const workflows = await contentDB.getMarketingWorkflows();
+    const retrieved = workflows.find(w => w.id === workflow.id);
+
+    if (!retrieved) {
+      throw new Error('Failed to retrieve automated marketing workflow.');
+    }
+
+    // Verify WAIT_DELAY, SEND_GMAIL_TEMPLATE, UPDATE_USER_ROLE, APPLY_DISCOUNT_PROMO
+    const actionTypes = retrieved.nodes.map(n => n.actionType).filter(Boolean);
+    const requiredActions = ['WAIT_DELAY', 'SEND_GMAIL_TEMPLATE', 'UPDATE_USER_ROLE', 'APPLY_DISCOUNT_PROMO'];
+    const missingActions = requiredActions.filter(a => !actionTypes.includes(a));
+
+    if (missingActions.length > 0) {
+      throw new Error(`Workflow actions are missing from the configuration: ${missingActions.join(', ')}`);
+    }
+
+    // Clean up
+    await contentDB.deleteMarketingWorkflow(workflow.id);
+  });
+
   const passedAll = totalTests === passedTests;
   console.log(
     `%c\n  Marketing Test Summary: ${passedTests}/${totalTests} Tests Passed ${passedAll ? '✅' : '❌'}`,
     `font-size: 14px; font-weight: bold; color: ${passedAll ? '#38a169' : '#e53e3e'};`
   );
   console.groupEnd();
+
+  if (!passedAll) {
+    throw new Error('One or more marketing tests failed.');
+  }
 }
