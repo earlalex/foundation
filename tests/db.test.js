@@ -1,5 +1,5 @@
 // tests/db.test.js
-import { db } from '../core/db.js';
+import { contentDB } from '../core/db.js';
 
 export async function runDbTests() {
   console.group('  Running ContentDB & LocalStorage Fallback Tests...');
@@ -18,7 +18,7 @@ export async function runDbTests() {
   }
 
   await assertTest('ContentDB initializes with empty state', async () => {
-    const state = db.state;
+    const state = contentDB.state;
     if (typeof state !== 'object' || state === null) {
       throw new Error('DB state is not an object.');
     }
@@ -32,15 +32,15 @@ export async function runDbTests() {
       content: 'Test content'
     };
     
-    await db.set('test-doc-1', testDoc);
-    const retrieved = await db.get('test-doc-1');
+    await contentDB.saveContent(testDoc);
+    const retrieved = await contentDB.getContent('test-doc-1');
     
     if (!retrieved || retrieved.title !== 'Test Document') {
       throw new Error('Failed to retrieve stored document.');
     }
     
     // Cleanup
-    await db.delete('test-doc-1');
+    await contentDB.deleteContent('test-doc-1');
   });
 
   await assertTest('ContentDB handles localStorage fallback gracefully', async () => {
@@ -66,10 +66,11 @@ export async function runDbTests() {
     ];
     
     for (const doc of testDocs) {
-      await db.set(doc.id, doc);
+      await contentDB.saveContent(doc);
     }
     
-    const blogs = await db.query(doc => doc.type === 'blog');
+    const allContent = await contentDB.getAllContent();
+    const blogs = allContent.filter(doc => doc.type === 'blog');
     
     if (blogs.length !== 2) {
       throw new Error(`Expected 2 blog documents, got ${blogs.length}`);
@@ -77,7 +78,7 @@ export async function runDbTests() {
     
     // Cleanup
     for (const doc of testDocs) {
-      await db.delete(doc.id);
+      await contentDB.deleteContent(doc.id);
     }
   });
 
