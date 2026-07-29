@@ -197,65 +197,123 @@ export class Router {
       }
 
       let cleanPath = '/home';
+      let isCustomDynamicPage = false;
+      let customPageData = null;
+
       if (relPath === '/' || relPath === '/home' || relPath === '') {
         cleanPath = '/home';
       } else if (this.routesManifest[relPath]) {
         cleanPath = relPath;
+      } else if (relPath.startsWith('/pages/')) {
+        const slug = relPath.substring(7); // strip '/pages/'
+        try {
+          const { contentDB } = await import('../core/db.js');
+          customPageData = await contentDB.getCustomPageBySlug(slug);
+          if (customPageData) {
+            isCustomDynamicPage = true;
+            cleanPath = relPath;
+          } else {
+            cleanPath = '/404';
+          }
+        } catch (dbErr) {
+          console.warn('[Router]: Dynamic page check error:', dbErr);
+          cleanPath = '/404';
+        }
       } else {
         cleanPath = '/404';
       }
 
-      // 2. HARDENED ADMIN GUARD CHECK
-      const isAdminAuth = authManager.isAdminAuthenticated();
+      // --- RBAC Access & Persona Checking ---
+      const currentUser = store.state.user;
+      const currentRole = currentUser?.role || 'prospect'; // fallback is prospect (guest)
       const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
 
-      if (cleanPath === '/admin' && !isAdminAuth && !isDevConsoleBypass) {
-        console.warn('[Router Guard]: Security Access Denied to /admin.');
-        
-        this.appContainer.innerHTML = `
-          <section class="admin-lock-screen" style="max-width: 500px; margin: 4rem auto; padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
-            <h1 style="font-size: 1.5rem; color: #1a202c; margin-bottom: 0.5rem;">Administrator Authentication Required</h1>
-            <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
-              Access to the Command Center is restricted strictly to the connected Google Workspace primary administrator.
-            </p>
-            <button id="admin-login-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-              Sign In with Google Workspace
-            </button>
-            <div id="admin-login-error" style="color: #e53e3e; font-size: 0.85rem; margin-top: 1rem; padding: 10px; border-radius: 6px; background: #fff5f5; border: 1px solid #fed7d7; display: none; text-align: left; line-height: 1.4;"></div>
-          </section>
-        `;
-
-        document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
-          const errorContainer = document.getElementById('admin-login-error');
-          if (errorContainer) {
-            errorContainer.style.display = 'none';
-            errorContainer.textContent = '';
-          }
-
-          try {
-            await authManager.loginWithGoogle();
-            this.loadRoute('/admin');
-          } catch (err) {
-            if (errorContainer) {
-              errorContainer.textContent = err.message || 'An unknown error occurred during sign-in.';
-              errorContainer.style.display = 'block';
-            }
-          }
-        });
+      // Unauthenticated / Prospect Persona gatekeeping
+      if (!currentUser && (cleanPath === '/account' || cleanPath === '/admin')) {
+        this.#isLoading = false;
+        await this.loadRoute('/login');
         return;
       }
 
+      // Subscriber Persona payload Paywall Gatekeeping: Upgrade notice
+      if (currentRole === 'subscriber' && cleanPath === '/admin') {
+        this.#isLoading = false;
+        await this.loadRoute('/home');
+        return;
+      }
+
+      // Editor Persona Access Constraints
+      const isEditor = currentRole === 'editor';
+      const isPrimaryAdmin = currentRole === 'admin' || (currentUser && configManager.current.adminEmails?.includes(currentUser.email));
+
+      // Hard gate check for Admin Panel
+      if (cleanPath === '/admin') {
+        const hasAccess = isPrimaryAdmin || isEditor || isDevConsoleBypass;
+        if (!hasAccess) {
+          console.warn('[Router Guard]: Access Denied to /admin for role:', currentRole);
+          this.appContainer.innerHTML = `
+            <section class="admin-lock-screen" style="max-width: 500px; margin: 4rem auto; padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
+              <h1 style="font-size: 1.5rem; color: #1a202c; margin-bottom: 0.5rem;">Access Restricted</h1>
+              <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
+                Access to the Admin Dashboard requires an Administrator or Content Editor account.
+              </p>
+              <button onclick="window.router.navigateTo('/home')" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; background: #2b6cb0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                Return Home
+              </button>
+            </section>
+          `;
+          return;
+        }
+      }
+
+      // Custom page access level evaluation
+      if (isCustomDynamicPage && customPageData) {
+        const requiredAccess = customPageData.access?.visibility || 'public';
+        let satisfiesGate = true;
+
+        if (requiredAccess === 'subscriber' && currentRole === 'prospect') {
+          satisfiesGate = false;
+        } else if ((requiredAccess === 'member' || requiredAccess === 'paid') && (currentRole === 'prospect' || currentRole === 'subscriber')) {
+          satisfiesGate = false;
+        }
+
+        if (!satisfiesGate) {
+          this.appContainer.innerHTML = `
+            <section style="max-width: 600px; margin: 4rem auto; padding: 3rem 2rem; text-align: center; border-radius: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-surface, #ffffff);">
+              <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+              <h2 style="font-size: 1.75rem; margin-bottom: 0.5rem;">Content Locked</h2>
+              <p style="color: var(--theme-color-text-secondary, #718096); margin-bottom: 1.5rem; line-height: 1.6;">
+                ${requiredAccess === 'subscriber'
+                  ? 'This page is reserved for our registered Free Subscribers.'
+                  : 'Upgrade to Member ($29/mo) to unlock full access to this course/publication.'}
+              </p>
+              ${currentRole === 'prospect'
+                ? `<button onclick="window.router.navigateTo('/login')" class="btn-primary" style="padding: 10px 24px; font-weight: bold;">Sign In / Create Account</button>`
+                : `<button onclick="window.router.navigateTo('/account')" class="btn-primary" style="padding: 10px 24px; font-weight: bold;">Upgrade in Account Dashboard</button>`}
+            </section>
+          `;
+          this.updateMetadata(cleanPath);
+          window.dispatchEvent(new CustomEvent('pageLoaded', { detail: { path: cleanPath, fullPath: fullPath } }));
+          return;
+        }
+      }
+
       // 3. Determine view HTML template location
-      const manifestEntry = this.routesManifest[cleanPath];
-      let viewPath = manifestEntry?.viewPath;
-      if (!viewPath) {
-        if (cleanPath === '/admin') {
-          viewPath = './pages/admin/admin.html';
-        } else if (cleanPath === '/home') {
-          viewPath = './pages/home/home.html';
-        } else {
-          viewPath = `./pages${cleanPath}.html`;
+      let viewPath = '';
+      if (isCustomDynamicPage) {
+        viewPath = './pages/pages.html';
+      } else {
+        const manifestEntry = this.routesManifest[cleanPath];
+        viewPath = manifestEntry?.viewPath;
+        if (!viewPath) {
+          if (cleanPath === '/admin') {
+            viewPath = './pages/admin/admin.html';
+          } else if (cleanPath === '/home') {
+            viewPath = './pages/home/home.html';
+          } else {
+            viewPath = `./pages${cleanPath}.html`;
+          }
         }
       }
 

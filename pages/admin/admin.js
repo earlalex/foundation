@@ -31,8 +31,56 @@ import { initFinancesTab } from './admin-finances.js';
 import { initMarketingTab } from './admin-marketing.js';
 import { initKanbanTab } from './admin-kanban.js';
 import { initSecurityTab } from './admin-security.js';
+import { initPagesTab } from './admin-pages.js';
 
 export function initAdminPage() {
+  // --- 0.1 ROLE-BASED ACCESS CONTROL (RBAC) DISPLAY GUARD ---
+  const currentUser = store.state.user;
+  const isEditor = currentUser?.role === 'editor';
+
+  if (isEditor) {
+    // Hide forbidden sidebar tabs
+    const forbiddenTabs = ['site', 'business', 'config', 'products', 'finances'];
+    forbiddenTabs.forEach(tab => {
+      const btn = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
+      if (btn) btn.style.display = 'none';
+    });
+
+    // Hide sidebar category headers
+    const headers = document.querySelectorAll('.sidebar-category-header');
+    headers.forEach(h => {
+      if (h.textContent.includes('Platform Setup') || h.textContent.includes('Business Operations')) {
+        h.style.display = 'none';
+      }
+    });
+
+    // Shift default active tab to cms
+    const activeBtn = document.querySelector('.admin-tab.active');
+    if (activeBtn && forbiddenTabs.includes(activeBtn.getAttribute('data-tab'))) {
+      activeBtn.classList.remove('active');
+      const cmsBtn = document.querySelector('.admin-tab[data-tab="cms"]');
+      if (cmsBtn) {
+        cmsBtn.classList.add('active');
+        const panels = document.querySelectorAll('.admin-panel');
+        panels.forEach(p => {
+          p.style.display = p.id === 'tab-cms' ? 'block' : 'none';
+        });
+      }
+    }
+
+    // Hide password vault cards inside security panel
+    const lastpassForm = document.getElementById('lastpass-config-form');
+    if (lastpassForm && lastpassForm.parentElement) {
+      lastpassForm.parentElement.style.display = 'none';
+    }
+
+    // Hide create user forms in directory panel
+    const createUserForm = document.getElementById('create-user-form');
+    if (createUserForm) {
+      createUserForm.style.display = 'none';
+    }
+  }
+
   // --- 0. LOG OUT BUTTON ---
   const logoutBtn = document.getElementById('btn-admin-logout');
   if (logoutBtn) {
@@ -59,6 +107,8 @@ export function initAdminPage() {
     
     if (targetTab === 'users') {
       initUserDirectoryTab();
+    } else if (targetTab === 'pages') {
+      initPagesTab();
     } else if (targetTab === 'products') {
       initProductsTab();
     } else if (targetTab === 'finances') {

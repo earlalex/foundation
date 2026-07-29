@@ -59,18 +59,55 @@ export class AuthManager {
    * Updates store when user authentication state changes
    */
   initAuthObserver() {
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
         const adminEmails = configManager.current.adminEmails || [];
         const isAdmin = adminEmails.includes(user.email);
+
+        let profile = {
+          role: isAdmin ? 'admin' : 'subscriber',
+          paymentStatus: 'None',
+          affiliateCode: `aff_${user.uid.substring(0, 5)}`
+        };
+
+        // Try syncing from ContentDB user profile if it exists
+        try {
+          const { contentDB } = await import('./db.js');
+          const syncedUser = await contentDB.getUser(user.email);
+          if (syncedUser) {
+            profile = {
+              role: syncedUser.role || profile.role,
+              paymentStatus: syncedUser.paymentStatus || profile.paymentStatus,
+              affiliateCode: syncedUser.affiliateCode || profile.affiliateCode,
+              referredBy: syncedUser.referredBy || null
+            };
+          } else {
+            // Save initial subscriber profile
+            await contentDB.saveUser({
+              id: user.uid,
+              name: user.displayName || 'Subscriber',
+              email: user.email,
+              role: profile.role,
+              paymentStatus: profile.paymentStatus,
+              affiliateCode: profile.affiliateCode
+            });
+          }
+        } catch (dbErr) {
+          console.warn('[Auth Sync]: DB profiling sync skipped or unavailable.', dbErr);
+        }
+
         store.dispatch('SET_USER', {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL,
-          isAdmin: isAdmin
+          isAdmin: isAdmin,
+          role: profile.role,
+          paymentStatus: profile.paymentStatus,
+          affiliateCode: profile.affiliateCode,
+          referredBy: profile.referredBy
         });
-        console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin})`);
+        console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role})`);
       } else {
         store.dispatch('LOGOUT');
         console.log('[Auth]: Signed out.');

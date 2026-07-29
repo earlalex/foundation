@@ -1208,6 +1208,49 @@ export class ContentDB {
       return true;
     }
   }
+
+  // --- Dynamic Custom Pages & User Interaction Helpers ---
+
+  async saveCustomPage(pageData) {
+    const payload = {
+      ...pageData,
+      type: 'page'
+    };
+    return this.saveContent(payload);
+  }
+
+  async getCustomPages() {
+    return this.getContentByType('page', 100);
+  }
+
+  async getCustomPageBySlug(slug) {
+    return this.getContentById(slug);
+  }
+
+  async getUser(userId) {
+    const users = await this.getAllUsers();
+    return users.find(u => u.id === userId || u.email === userId) || null;
+  }
+
+  async getUserPurchases(userId) {
+    const allInvoices = await this.getAllInvoices();
+    return allInvoices.filter(inv => inv.userId === userId || inv.customerEmail === userId);
+  }
+
+  async getUserNotifications(userId) {
+    try {
+      const announcements = await this.getContentByType('announcement');
+      return announcements.map(ann => ({
+        id: ann.id,
+        title: ann.title,
+        message: ann.description,
+        date: ann.date,
+        type: 'broadcast'
+      }));
+    } catch (e) {
+      return [];
+    }
+  }
 }
 
 /**

@@ -159,6 +159,9 @@
       <button class="admin-tab" data-tab="cms">
         CMS Publisher
       </button>
+      <button class="admin-tab" data-tab="pages">
+        Page Creator
+      </button>
 
       <!-- Group 3: Growth, Marketing & Tasks -->
       <div class="sidebar-category-header">Growth & Marketing</div>
@@ -1316,6 +1319,105 @@
   </div>
 
   <!-- TAB 6: PRODUCTS & SERVICES -->
+
+  <!-- TAB: PAGE CREATOR & EDITOR -->
+  <div id="tab-pages" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Visual Page Creator & Block Editor</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Build dynamic custom HTML routes seamlessly on the fly with custom visibility permissions.
+        </p>
+
+        <form id="page-creator-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Page Title:</label>
+              <input type="text" id="page-title" placeholder="Our Mission" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Route Slug (/pages/YOUR-SLUG):</label>
+              <input type="text" id="page-slug" placeholder="our-mission" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Meta Description:</label>
+              <input type="text" id="page-meta-desc" placeholder="Learn about our core design values and team philosophy..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Access Level Required:</label>
+              <select id="page-access" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="public" selected>Public (Everyone)</option>
+                <option value="subscriber">Subscriber (Free Registered)</option>
+                <option value="member">Member (Paid Subscriber)</option>
+                <option value="paid">Paid (Stripe Buyer)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Content Blocks Editor Builder -->
+          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+          <h3 style="margin: 0; font-size: 1.05rem; color: var(--theme-color-primary, #2b6cb0);">Design & Build Content Blocks</h3>
+
+          <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--theme-color-background, #f7fafc); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #cbd5e0);">
+            <label style="font-weight: 600; font-size: 0.85rem;">Block Type:</label>
+            <select id="page-block-type-select" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;">
+              <option value="heading">Heading Block</option>
+              <option value="paragraph" selected>Paragraph Block</option>
+              <option value="image">Image Block (URL)</option>
+              <option value="video">Video Embed (YouTube URL)</option>
+              <option value="cta">CTA Panel Box</option>
+              <option value="button">Action Button</option>
+            </select>
+            <button type="button" id="btn-add-page-block" style="padding: 6px 12px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+              + Add Block Element
+            </button>
+          </div>
+
+          <div id="page-blocks-container" style="display: flex; flex-direction: column; margin-top: 0.5rem;">
+            <!-- Added blocks list handles dynamically -->
+          </div>
+
+          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+            Publish Custom Route Page
+          </button>
+        </form>
+      </div>
+
+      <!-- Live Dynamic Instant Page Preview Side-by-Side -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Dynamic Layout Preview</h3>
+        <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.8rem;">Instant, real-time responsive preview of your blocks below.</p>
+        <div id="page-live-preview-box" style="border: 2px dashed var(--theme-color-border, #cbd5e0); border-radius: 8px; background: var(--theme-color-background, #f7fafc); padding: 1rem; overflow-y: auto; max-height: 400px;">
+          <!-- Live Preview canvas renders here -->
+        </div>
+      </div>
+
+      <!-- Existing Custom Pages Ledger -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Existing Custom Pages</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); text-align: left;">
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Page Title</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Route URL</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Access Required</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568); text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="existing-pages-tbody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1rem;">No custom pages built yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <div id="tab-cms" class="admin-panel" style="display: none;">
     <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">

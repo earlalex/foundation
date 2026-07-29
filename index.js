@@ -83,6 +83,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       description: 'Manage settings and site metadata.',
       viewPath: './pages/admin/admin.html'
     },
+    '/login': {
+      title: 'Sign In / Register',
+      description: 'Log in to your Foundation account portal.',
+      viewPath: './pages/login.html'
+    },
+    '/account': {
+      title: 'Customer Dashboard',
+      description: 'Manage your unlocked premium publications and subscription billing.',
+      viewPath: './pages/account.html'
+    },
     '/404': {
       title: 'Page Not Found',
       description: 'The page you requested could not be found.',
