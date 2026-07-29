@@ -62,8 +62,14 @@
   #chatbot-settings-form {
     width: 100%;
   }
+
+  /* Make #app container take full width when on admin page */
+  #app {
+    max-width: 100% !important;
+    padding: 0 1.5rem !important;
+  }
 </style>
-<section style="max-width: 1200px; margin: 2rem auto; padding: 1.5rem; font-family: system-ui, sans-serif;">
+<section style="max-width: 100%; margin: 2rem auto; padding: 1.5rem; font-family: system-ui, sans-serif;">
   <!-- Top header bar with log-in & notification information -->
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem;">
     <div>
