@@ -573,6 +573,12 @@ export class ContentDB {
   #getLocalExpenses() {
     try {
       return JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /**
    * Get marketing workflows from localStorage fallback
    * @private
    * @returns {Object} Object of workflow objects keyed by ID
@@ -628,6 +634,19 @@ export class ContentDB {
   #getLocalEmployees() {
     try {
       return JSON.parse(localStorage.getItem('foundation_local_employees') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalEmployees(employees) {
+    try {
+      localStorage.setItem('foundation_local_employees', JSON.stringify(employees));
+    } catch (e) {
+      console.error('[DB]: Failed to save employees to localStorage', e);
+    }
+  }
+
   /**
    * Save marketing workflows to localStorage fallback
    * @private
@@ -726,14 +745,6 @@ export class ContentDB {
       return JSON.parse(localStorage.getItem('foundation_local_kanban_tasks') || '{}');
     } catch (e) {
       return {};
-    }
-  }
-
-  #saveLocalEmployees(employees) {
-    try {
-      localStorage.setItem('foundation_local_employees', JSON.stringify(employees));
-    } catch (e) {
-      console.error('[DB]: Failed to save employees to localStorage', e);
     }
   }
 
@@ -931,6 +942,22 @@ export class ContentDB {
       const local = this.#getLocalEmployees();
       delete local[id];
       this.#saveLocalEmployees(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, 'finances_employees', id);
+      await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore employee delete error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalEmployees();
+      delete local[id];
+      this.#saveLocalEmployees(local);
+      return true;
+    }
+  }
+
   /**
    * Save kanban tasks to localStorage fallback
    * @private
@@ -1108,14 +1135,6 @@ export class ContentDB {
     }
 
     try {
-      const docRef = doc(db, 'finances_employees', id);
-      await deleteDoc(docRef);
-      return true;
-    } catch (err) {
-      console.warn('[DB]: Firestore employee delete error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalEmployees();
-      delete local[id];
-      this.#saveLocalEmployees(local);
       const docRef = doc(db, VAULT_CREDENTIALS_COLLECTION, credentialId);
       await deleteDoc(docRef);
       return true;
