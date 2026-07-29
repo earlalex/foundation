@@ -23,14 +23,43 @@
     display: none;
   }
   .admin-sidebar .admin-tab {
-    border-left: none !important;
+    padding: 10px 16px !important;
+    border: none !important;
+    background: none !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    text-align: left !important;
+    color: var(--theme-color-text-secondary, #4a5568);
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
     border-bottom: 3px solid transparent !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    border-left: none !important;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .admin-sidebar .admin-tab:hover {
+    color: var(--theme-color-primary, #2b6cb0) !important;
   }
   .admin-sidebar .admin-tab.active {
     border-bottom: 3px solid var(--theme-color-primary, #2b6cb0) !important;
     color: var(--theme-color-primary, #2b6cb0) !important;
+  }
+
+  .sidebar-category-header {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--theme-color-text-secondary, #718096);
+    margin-top: 1.25rem;
+    margin-bottom: 0.35rem;
+    padding: 0 10px;
+    letter-spacing: 0.05em;
+    user-select: none;
+  }
+
+  @media (max-width: 1023px) {
+    .sidebar-category-header {
+      display: none !important;
+    }
   }
 
   @media (min-width: 1024px) {
@@ -40,7 +69,7 @@
     }
     .admin-sidebar {
       flex-direction: column !important;
-      width: 220px !important;
+      width: 240px !important;
       border-right: 2px solid var(--theme-color-border, #e2e8f0) !important;
       border-bottom: none !important;
       padding-bottom: 0 !important;
@@ -51,6 +80,8 @@
       border-left: 3px solid transparent !important;
       border-bottom: none !important;
       padding-left: 13px !important;
+      text-align: left !important;
+      width: 100% !important;
     }
     .admin-sidebar .admin-tab.active {
       border-left: 3px solid var(--theme-color-primary, #2b6cb0) !important;
@@ -66,7 +97,7 @@
   /* Make #app container take full width when on admin page */
   #app {
     max-width: 100% !important;
-    padding: 0 1.5rem !important;
+    padding: 1.5rem 2rem !important;
   }
 </style>
 <section style="max-width: 100%; margin: 2rem auto; padding: 1.5rem; font-family: system-ui, sans-serif;">
@@ -98,55 +129,64 @@
   <!-- Two-column sidebar layout -->
   <div class="admin-layout">
     <!-- Left Sidebar Navigation -->
-    <nav class="admin-sidebar">
-      <button class="admin-tab active" data-tab="site" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-primary, #2b6cb0); white-space: nowrap; flex-shrink: 0;">
+        <nav class="admin-sidebar">
+      <!-- Group 1: Platform Setup & Identity -->
+      <div class="sidebar-category-header">Platform Setup & Identity</div>
+      <button class="admin-tab active" data-tab="site">
         Site & Brand
       </button>
-      <button class="admin-tab" data-tab="business" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+      <button class="admin-tab" data-tab="business">
         Business & Legal
       </button>
-      <button class="admin-tab" data-tab="profile" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+      <button class="admin-tab" data-tab="profile">
         Public Profile
       </button>
-      <button class="admin-tab" data-tab="config" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+      <button class="admin-tab" data-tab="config">
         API Keys & Cloud
       </button>
-      <button class="admin-tab" data-tab="users" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
-        Users & Affiliates
-      </button>
-      <button class="admin-tab" data-tab="products" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+
+      <!-- Group 2: Business Operations & Monetization -->
+      <div class="sidebar-category-header">Business Operations</div>
+      <button class="admin-tab" data-tab="products">
         Products & Services
       </button>
-      <button class="admin-tab" data-tab="finances" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+      <button class="admin-tab" data-tab="finances">
         Finances & Payroll
       </button>
-      <button class="admin-tab" data-tab="cms" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+      <button class="admin-tab" data-tab="users">
+        Users & Affiliates
+      </button>
+      <button class="admin-tab" data-tab="cms">
         CMS Publisher
       </button>
-      <button class="admin-tab" data-tab="seo" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
-        SEO & Analytics
+
+      <!-- Group 3: Growth, Marketing & Tasks -->
+      <div class="sidebar-category-header">Growth & Marketing</div>
+      <button class="admin-tab" data-tab="kanban">
+        Kanban Task Board
       </button>
-      <button class="admin-tab" data-tab="performance" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
-        Performance (Lighthouse)
+      <button class="admin-tab" data-tab="marketing">
+        Marketing Workflows
       </button>
-      <button class="admin-tab" data-tab="security" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
-        Security & Ops
-      </button>
-      <button class="admin-tab" data-tab="chatbot" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
+      <button class="admin-tab" data-tab="chatbot">
         AI Chatbot & Voice
       </button>
-      <button class="admin-tab" data-tab="marketing" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
-        Marketing Automation
+
+      <!-- Group 4: Growth, Health & Security -->
+      <div class="sidebar-category-header">Platform Operations</div>
+      <button class="admin-tab" data-tab="seo">
+        SEO & Analytics
       </button>
-      <button class="admin-tab" data-tab="kanban" style="padding: 10px 16px; border: none; background: none; font-weight: bold; cursor: pointer; text-align: left; color: var(--theme-color-text-secondary, #4a5568); white-space: nowrap; flex-shrink: 0;">
-        Kanban Board
+      <button class="admin-tab" data-tab="performance">
+        Performance (Lighthouse)
+      </button>
+      <button class="admin-tab" data-tab="security">
+        Security & Ops
       </button>
     </nav>
-
-    <!-- Right Content Column -->
+<!-- Right Content Column -->
     <div style="flex: 1; min-width: 300px;">
 
-  <!-- TAB 1: SITE & BRAND SETTINGS -->
   <div id="tab-site" class="admin-panel" style="display: block;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
@@ -299,7 +339,8 @@
   </div>
 
   <!-- TAB 2: BUSINESS & LEGAL PROFILE -->
-  <div id="tab-business" class="admin-panel" style="display: none;">
+
+<div id="tab-business" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
         <h2 style="margin-top: 0; font-size: 1.25rem;">Legal Entity Details</h2>
@@ -433,7 +474,8 @@
   </div>
 
   <!-- TAB 3: PUBLIC PROFILE & AUTHOR MANAGER -->
-  <div id="tab-profile" class="admin-panel" style="display: none;">
+
+<div id="tab-profile" class="admin-panel" style="display: none;">
     <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
       <h2 style="margin-top: 0; font-size: 1.25rem;">Administrator & Public Author Persona</h2>
       <p style="color: #718096; font-size: 0.85rem; margin-bottom: 1.25rem;">Powers the global <code>&lt;author-card&gt;</code> Web Component rendered across blog posts, the About page, and contact widgets.</p>
@@ -525,7 +567,8 @@
   </div>
 
   <!-- TAB 4: API KEYS & CLOUD CONFIGURATION -->
-  <div id="tab-config" class="admin-panel" style="display: none;">
+
+<div id="tab-config" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <!-- Integration Guide (Obtaining Keys Instructions) -->
       <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
@@ -635,128 +678,8 @@
   </div>
 
   <!-- TAB 5: USER DIRECTORY, GOOGLE CONTACTS & MASS EMAIL -->
-  <div id="tab-users" class="admin-panel" style="display: none;">
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.25rem; border-radius: 8px; display: flex; gap: 1rem; align-items: center;">
-        <div style="font-size: 1.75rem;">🔒</div>
-        <div>
-          <h3 style="margin: 0 0 0.25rem 0; font-size: 1rem; color: #2b6cb0;">Google Workspace System Admin Lock</h3>
-          <p style="margin: 0; font-size: 0.85rem; color: #2c5282;">
-            Sole System Administrator status is anchored to the connected Google Workspace owner (<strong id="connected-admin-email">--</strong>). Managed user tiers include <strong>Subscriber (Free)</strong>, <strong>Member (Paid)</strong>, and <strong>Affiliate Member (Paid + 10% Recurring Referral Commission)</strong>.
-          </p>
-        </div>
-      </div>
 
-      <!-- Create User Form -->
-      <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
-        <h2 style="margin-top: 0; font-size: 1.2rem;">Create / Invite Platform User</h2>
-        <form id="create-user-form" style="display: flex; flex-direction: column; gap: 1rem;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
-              <input type="text" id="new-user-name" placeholder="Alex Rivers" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
-              <input type="email" id="new-user-email" placeholder="alex@example.com" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Membership Role Tier:</label>
-              <select id="new-user-role" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
-                <option value="subscriber">Subscriber (Free Access)</option>
-                <option value="member" selected>Member (Paid Monthly - $29/mo)</option>
-                <option value="affiliate">Affiliate Member (Paid + 10% Referral Engine)</option>
-                <option value="prospect">Prospect (Google Contacts Sync)</option>
-              </select>
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Referred By (Affiliate Code):</label>
-              <input type="text" id="new-user-referrer" placeholder="OPTIONAL_AFFILIATE_ID" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-          <button type="submit" class="btn-primary" style="align-self: flex-start;">
-            Create User Account
-          </button>
-        </form>
-      </div>
-
-      <!-- User Directory Table with Stripe Payment Status & Delinquency Converter -->
-      <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">User Directory, Dues & Referral Telemetry</h2>
-            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Monitors membership dues, Stripe payment statuses, and automatic delinquency conversions.</p>
-          </div>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button id="btn-convert-late-users" style="padding: 6px 12px; font-size: 0.8rem; background: #e53e3e; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
-              Convert Late Dues to Subscribers
-            </button>
-            <button id="btn-sync-google-contacts" style="padding: 6px 12px; font-size: 0.8rem; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
-              Sync All to Google Contacts
-            </button>
-            <button id="btn-import-google-prospects" style="padding: 6px 12px; font-size: 0.8rem; background: #319795; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
-              Import Prospects (Google Contacts)
-            </button>
-            <button id="btn-refresh-users" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Refresh Directory</button>
-          </div>
-        </div>
-
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
-            <thead>
-              <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
-                <th style="padding: 10px;">User & Email</th>
-                <th style="padding: 10px;">Membership Tier</th>
-                <th style="padding: 10px;">Payment Status / Dues</th>
-                <th style="padding: 10px;">Affiliate 10% Telemetry</th>
-                <th style="padding: 10px; text-align: right;">Manage Tier & Actions</th>
-              </tr>
-            </thead>
-            <tbody id="user-directory-tbody">
-              <tr>
-                <td colspan="5" style="padding: 1rem; text-align: center; color: #a0aec0;">Loading platform user directory...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Mass Email Broadcaster Tool -->
-      <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
-        <h2 style="margin-top: 0; font-size: 1.2rem;">Google Contacts & Gmail Mass Email Broadcaster</h2>
-        <p style="margin: 0 0 1rem 0; color: #718096; font-size: 0.85rem;">Send targeted broadcast updates to users based on their assigned role tier via your authenticated Google Workspace account.</p>
-
-        <form id="mass-email-form" style="display: flex; flex-direction: column; gap: 1rem;">
-          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Target Audience Tier:</label>
-              <select id="mass-email-target-role" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
-                <option value="all">All Registered Users (Consented)</option>
-                <option value="subscriber">Subscribers Only (Free Tier)</option>
-                <option value="member">Members Only (Paid Tier)</option>
-                <option value="affiliate">Affiliate Members Only (Referral Program)</option>
-                <option value="prospect">Prospects Only (Google Sync - Mass Email Laws Apply)</option>
-              </select>
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Subject Line:</label>
-              <input type="text" id="mass-email-subject" placeholder="Important Announcement for Foundation Members" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-          <div>
-            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Message Body (Supports <code>{{name}}</code> personalization tag):</label>
-            <textarea id="mass-email-body" placeholder="Hello {{name}},\n\nHere is your monthly platform update..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 120px; font-family: system-ui, sans-serif; box-sizing: border-box;"></textarea>
-          </div>
-          <button type="submit" id="btn-send-mass-email" class="btn-primary" style="align-self: flex-start;">
-            Dispatch Mass Email via Gmail
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 6: PRODUCTS & SERVICES -->
-  <div id="tab-products" class="admin-panel" style="display: none;">
+<div id="tab-products" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
         <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">Products & Services Management</h2>
@@ -895,7 +818,8 @@
   </div>
 
   <!-- TAB: FINANCES & PAYROLL -->
-  <div id="tab-finances" class="admin-panel" style="display: none;">
+
+<div id="tab-finances" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
         <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">Business Finances & Payroll</h2>
@@ -1226,7 +1150,130 @@
   </div>
 
   <!-- TAB 7: CMS PUBLISHER -->
-  <div id="tab-cms" class="admin-panel" style="display: none;">
+
+<div id="tab-users" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.25rem; border-radius: 8px; display: flex; gap: 1rem; align-items: center;">
+        <div style="font-size: 1.75rem;">🔒</div>
+        <div>
+          <h3 style="margin: 0 0 0.25rem 0; font-size: 1rem; color: #2b6cb0;">Google Workspace System Admin Lock</h3>
+          <p style="margin: 0; font-size: 0.85rem; color: #2c5282;">
+            Sole System Administrator status is anchored to the connected Google Workspace owner (<strong id="connected-admin-email">--</strong>). Managed user tiers include <strong>Subscriber (Free)</strong>, <strong>Member (Paid)</strong>, and <strong>Affiliate Member (Paid + 10% Recurring Referral Commission)</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Create User Form -->
+      <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+        <h2 style="margin-top: 0; font-size: 1.2rem;">Create / Invite Platform User</h2>
+        <form id="create-user-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
+              <input type="text" id="new-user-name" placeholder="Alex Rivers" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
+              <input type="email" id="new-user-email" placeholder="alex@example.com" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Membership Role Tier:</label>
+              <select id="new-user-role" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                <option value="subscriber">Subscriber (Free Access)</option>
+                <option value="member" selected>Member (Paid Monthly - $29/mo)</option>
+                <option value="affiliate">Affiliate Member (Paid + 10% Referral Engine)</option>
+                <option value="prospect">Prospect (Google Contacts Sync)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Referred By (Affiliate Code):</label>
+              <input type="text" id="new-user-referrer" placeholder="OPTIONAL_AFFILIATE_ID" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="align-self: flex-start;">
+            Create User Account
+          </button>
+        </form>
+      </div>
+
+      <!-- User Directory Table with Stripe Payment Status & Delinquency Converter -->
+      <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">User Directory, Dues & Referral Telemetry</h2>
+            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Monitors membership dues, Stripe payment statuses, and automatic delinquency conversions.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-convert-late-users" style="padding: 6px 12px; font-size: 0.8rem; background: #e53e3e; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+              Convert Late Dues to Subscribers
+            </button>
+            <button id="btn-sync-google-contacts" style="padding: 6px 12px; font-size: 0.8rem; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+              Sync All to Google Contacts
+            </button>
+            <button id="btn-import-google-prospects" style="padding: 6px 12px; font-size: 0.8rem; background: #319795; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+              Import Prospects (Google Contacts)
+            </button>
+            <button id="btn-refresh-users" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Refresh Directory</button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+            <thead>
+              <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
+                <th style="padding: 10px;">User & Email</th>
+                <th style="padding: 10px;">Membership Tier</th>
+                <th style="padding: 10px;">Payment Status / Dues</th>
+                <th style="padding: 10px;">Affiliate 10% Telemetry</th>
+                <th style="padding: 10px; text-align: right;">Manage Tier & Actions</th>
+              </tr>
+            </thead>
+            <tbody id="user-directory-tbody">
+              <tr>
+                <td colspan="5" style="padding: 1rem; text-align: center; color: #a0aec0;">Loading platform user directory...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mass Email Broadcaster Tool -->
+      <div style="background: var(--theme-color-surface, #fff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+        <h2 style="margin-top: 0; font-size: 1.2rem;">Google Contacts & Gmail Mass Email Broadcaster</h2>
+        <p style="margin: 0 0 1rem 0; color: #718096; font-size: 0.85rem;">Send targeted broadcast updates to users based on their assigned role tier via your authenticated Google Workspace account.</p>
+
+        <form id="mass-email-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Target Audience Tier:</label>
+              <select id="mass-email-target-role" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                <option value="all">All Registered Users (Consented)</option>
+                <option value="subscriber">Subscribers Only (Free Tier)</option>
+                <option value="member">Members Only (Paid Tier)</option>
+                <option value="affiliate">Affiliate Members Only (Referral Program)</option>
+                <option value="prospect">Prospects Only (Google Sync - Mass Email Laws Apply)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Subject Line:</label>
+              <input type="text" id="mass-email-subject" placeholder="Important Announcement for Foundation Members" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Message Body (Supports <code>{{name}}</code> personalization tag):</label>
+            <textarea id="mass-email-body" placeholder="Hello {{name}},\n\nHere is your monthly platform update..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 120px; font-family: system-ui, sans-serif; box-sizing: border-box;"></textarea>
+          </div>
+          <button type="submit" id="btn-send-mass-email" class="btn-primary" style="align-self: flex-start;">
+            Dispatch Mass Email via Gmail
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 6: PRODUCTS & SERVICES -->
+
+<div id="tab-cms" class="admin-panel" style="display: none;">
     <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
       <h2 style="margin-top: 0;">Content Publisher</h2>
       <form id="cms-form" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -1328,7 +1375,292 @@
   </div>
 
   <!-- TAB 7: SEO & ANALYTICS -->
-  <div id="tab-seo" class="admin-panel" style="display: none;">
+
+<div id="tab-kanban" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <div>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem;">Project Task Kanban Board</h2>
+            <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Drag and drop tasks between columns to track project progress.</p>
+          </div>
+        </div>
+
+        <!-- Task Creation Form -->
+        <form id="task-form" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.75rem;">
+            <div>
+              <input type="text" id="task-title" placeholder="Task title..." required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <select id="task-priority" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="">Priority</option>
+              </select>
+            </div>
+            <div>
+              <input type="date" id="task-due-date" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <select id="task-assignee" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="">Assignee</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary" style="padding: 8px 16px;">Add Task</button>
+          </div>
+          <div>
+            <textarea id="task-description" placeholder="Task description (optional)..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
+          </div>
+        </form>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+          <!-- Backlog Column -->
+          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">Backlog</h3>
+            <div id="column-backlog" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+              <!-- Tasks rendered here -->
+            </div>
+          </div>
+
+          <!-- In Progress Column -->
+          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">In Progress</h3>
+            <div id="column-in_progress" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+              <!-- Tasks rendered here -->
+            </div>
+          </div>
+
+          <!-- Review Column -->
+          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">Review / Testing</h3>
+            <div id="column-review" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+              <!-- Tasks rendered here -->
+            </div>
+          </div>
+
+          <!-- Completed Column -->
+          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">Completed</h3>
+            <div id="column-completed" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+              <!-- Tasks rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPDATE TAB 9: SECURITY & DEV OPS WITH LASTPASS -->
+
+<div id="tab-marketing" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem;">Automated Marketing & Workflows</h2>
+            <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Build visual node-based automation sequences for email follow-ups, user engagement, and role updates.</p>
+          </div>
+          <button id="btn-new-workflow" style="padding: 6px 14px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+            + New Workflow
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+          <!-- Left: Workflow List & Form -->
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+              <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Active Workflows</h3>
+              <div id="workflows-list" style="max-height: 300px; overflow-y: auto;">
+                <!-- Workflows rendered here -->
+              </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+
+            <form id="workflow-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">Workflow Settings</h3>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Workflow Name:</label>
+                <input type="text" id="workflow-name" placeholder="Welcome Sequence" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Description:</label>
+                <textarea id="workflow-description" placeholder="Describe what this workflow does..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Status:</label>
+                <select id="workflow-active" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                  <option value="true">Active</option>
+                  <option value="false">Paused</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary" style="align-self: flex-start;">Save Workflow</button>
+            </form>
+          </div>
+
+          <!-- Right: Visual Workflow Builder -->
+          <div>
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Workflow Canvas</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1rem; height: 400px;">
+              <!-- Triggers Palette -->
+              <div style="background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: bold; color: #2d3748;">Triggers</h4>
+                <div id="trigger-palette">
+                  <!-- Trigger nodes rendered here -->
+                </div>
+              </div>
+
+              <!-- Actions Palette -->
+              <div style="background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: bold; color: #2d3748;">Actions</h4>
+                <div id="action-palette">
+                  <!-- Action nodes rendered here -->
+                </div>
+              </div>
+
+              <!-- Canvas -->
+              <div id="workflow-canvas" style="background: white; border: 2px dashed #cbd5e0; border-radius: 6px; padding: 1rem; overflow-y: auto;">
+                <!-- Workflow nodes rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 12: KANBAN TASK BOARD -->
+
+<div id="tab-chatbot" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- AI Chatbot & Telephony Setup Instructions Guide -->
+      <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">AI Chatbot & Voice Telephony Setup Guide</h2>
+        <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #2c5282;">Follow these steps to wire up the zero-build chatbot widget and messaging webhooks:</p>
+        <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #2c5282; line-height: 1.5;">
+          <li><strong>OpenAI Setup:</strong> Visit the <a href="https://platform.openai.com/api-keys" target="_blank" style="font-weight: bold; color: #2b6cb0;">OpenAI Dashboard</a> to retrieve an API Key. Note: Cloudflare Edge endpoints will use <code>gpt-4o-mini</code> for highly performant, ultra low-cost completions. If a <code>GEMINI_API_KEY</code> is bound in Cloudflare Secrets, the endpoints will automatically route through Gemini 2.5 Flash at zero token costs!</li>
+          <li><strong>SMS Webhook (Telnyx / Twilio):</strong>
+            <br>&bull; <em>Telnyx:</em> Point your inbound messages webhook to <code>https://yourdomain.com/api/sms-webhook</code>. Ensure <code>TELNYX_API_KEY</code> and <code>TELNYX_PHONE_NUMBER</code> are set.
+            <br>&bull; <em>Twilio:</em> Point your phone number webhook to <code>https://yourdomain.com/api/sms-webhook</code>. Ensure <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, and <code>TWILIO_PHONE_NUMBER</code> are set in Cloudflare secrets.
+          </li>
+          <li><strong>Voice Telephony Webhook:</strong> Set your voice platform call routing webhook (Vapi.ai, Telnyx, or Twilio) to <code>https://yourdomain.com/api/voice-webhook</code>. It responds with valid TwiML/TeXML instructions dynamic voice dialog.</li>
+          <li><strong>Frontend Web Widget:</strong> The chatbot widget automatically mounts on the lower-right corner of the site. You can toggle its visibility on/off using the "Chatbot Enabled" switch below.</li>
+        </ul>
+      </div>
+
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem;">AI Chatbot, SMS & Voice Customization</h2>
+        <p style="color: #718096; font-size: 0.85rem; margin-bottom: 1.25rem;">Configure chatbot welcome settings, openai system context prompt triggers, and voice routing options.</p>
+
+        <form id="chatbot-settings-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Chatbot Enabled:</label>
+              <select id="chat-enabled" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="true">Yes, Enable Chat Widget</option>
+                <option value="false">No, Hide Chat Widget</option>
+              </select>
+            </div>
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Bot Display Name:</label>
+              <input type="text" id="chat-name" placeholder="Foundation Assistant" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Welcome Initial Text Message:</label>
+              <input type="text" id="chat-welcome" placeholder="Hello! How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="min-width: 0;">
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">AI System Prompt Context (Configured context instructions):</label>
+            <textarea id="chat-system-prompt" placeholder="You are a helpful customer support assistant for Foundation Framework..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+          <h3 style="margin: 0; font-size: 1.05rem;">Voice Telephony Welcomes</h3>
+          <div style="min-width: 0;">
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Voice Welcome Saying Text (TeXML/TwiML Speech):</label>
+            <input type="text" id="chat-voice-welcome" placeholder="Thank you for calling Foundation support. How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+          <h3 style="margin: 0; font-size: 1.05rem;">Telnyx & Twilio Integrations Settings (Edges Webhooks Key Bindings)</h3>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">OpenAI API Key (gpt-4o-mini):</label>
+              <input type="password" id="chat-openai-key" placeholder="sk-..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx API Key:</label>
+              <input type="password" id="chat-telnyx-key" placeholder="KEY..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Account SID:</label>
+              <input type="text" id="chat-twilio-sid" placeholder="AC..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Auth Token:</label>
+              <input type="password" id="chat-twilio-token" placeholder="Token..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx Phone Number:</label>
+              <input type="text" id="chat-telnyx-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div style="min-width: 0;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Phone Number:</label>
+              <input type="text" id="chat-twilio-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+            Save Chatbot & Keys Config
+          </button>
+        </form>
+      </div>
+
+      <!-- Live Chat Audit Trails Logging Monitor Panel -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">Live Support Conversations Logging Audit Trails</h2>
+            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Displays live web, SMS, and voice assistant communication events.</p>
+          </div>
+          <button id="btn-refresh-chat-logs" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Refresh Logs</button>
+        </div>
+
+        <div style="overflow-y: auto; max-height: 250px; background: var(--theme-color-background, #f7fafc); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
+                <th style="padding: 8px;">Timestamp</th>
+                <th style="padding: 8px;">Sender</th>
+                <th style="padding: 8px;">Type</th>
+                <th style="padding: 8px;">Message Content</th>
+              </tr>
+            </thead>
+            <tbody id="chat-logs-tbody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 11: MARKETING AUTOMATION & WORKFLOWS -->
+
+<div id="tab-seo" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <!-- GA4 / Looker Setup Warning Prompter Banner -->
       <div id="seo-setup-warning-banner" style="display: none; padding: 1rem; border-radius: 8px; background: #fff5f5; border: 1px solid #fed7d7; color: #c53030;">
@@ -1484,7 +1816,8 @@
   </div>
 
   <!-- TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) -->
-  <div id="tab-performance" class="admin-panel" style="display: none;">
+
+<div id="tab-performance" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -1546,8 +1879,20 @@
   </div>
 
     <!-- TAB 9: SECURITY & DEV OPS -->
+
+  <!-- TAB: SECURITY & OPERATIONS -->
   <div id="tab-security" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem; margin-bottom: 0.5rem;">
+        <div>
+          <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem;">Security & Operations</h2>
+          <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Manage security monitoring, threat detection, and credential vault.</p>
+        </div>
+        <span id="admin-role-badge" style="padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; background: #f0fdf4; color: #166534;">
+          Primary Admin
+        </span>
+      </div>
+
       <!-- Security Setup Warning Prompter Banner -->
       <div id="security-setup-warning-banner" style="display: none; padding: 1rem; border-radius: 8px; background: #fff5f5; border: 1px solid #fed7d7; color: #c53030;">
         <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">⚠️ Security Integration Incomplete</h3>
@@ -1559,463 +1904,9 @@
         </ol>
       </div>
 
-      <div style="background: #ffffff; border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">Google Search Console Security & Threat Monitor</h2>
-            <p style="margin: 0; color: #718096; font-size: 0.85rem;">Real-time automated scanning for phishing, site defacement, code injections, malware, and unnatural link penalties.</p>
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button id="btn-scan-gsc-security" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">
-              Refresh GSC Security Scan
-            </button>
-            <button id="btn-request-reconsideration" style="padding: 6px 14px; font-size: 0.85rem; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
-              Submit Reconsideration
-            </button>
-          </div>
-        </div>
-        <div id="gsc-security-banner" style="padding: 1rem; border-radius: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
-          <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <div id="gsc-status-icon" style="font-size: 1.5rem;">🛡️</div>
-            <div>
-              <strong id="gsc-status-title" style="display: block; font-size: 1rem; color: #166534;">No Negative Security Issues Detected</strong>
-              <span id="gsc-status-sub" style="font-size: 0.8rem; color: #15803d;">Domain is clean of phishing, defacement, malware, and unnatural links in Google Search Console.</span>
-            </div>
-          </div>
-          <span id="gsc-last-scanned" style="font-size: 0.75rem; color: #718096;">Last Scanned: Just now</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div style="background: #f7fafc; padding: 12px; border-radius: 6px; border: 1px solid #edf2f7;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.85rem; color: #2d3748;">Phishing & Social Engineering</strong>
-              <span id="gsc-flag-phishing" style="font-weight: bold; font-size: 0.75rem; color: #38a169;">CLEAN</span>
-            </div>
-            <p id="gsc-desc-phishing" style="margin: 0; color: #718096; font-size: 0.75rem;">No deceptive pages or fake login forms detected.</p>
-          </div>
-          <div style="background: #f7fafc; padding: 12px; border-radius: 6px; border: 1px solid #edf2f7;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.85rem; color: #2d3748;">Hacked Content & Defacement</strong>
-              <span id="gsc-flag-hacked" style="font-weight: bold; font-size: 0.75rem; color: #38a169;">CLEAN</span>
-            </div>
-            <p id="gsc-desc-hacked" style="margin: 0; color: #718096; font-size: 0.75rem;">No injected URLs, text, or malicious scripts found.</p>
-          </div>
-          <div style="background: #f7fafc; padding: 12px; border-radius: 6px; border: 1px solid #edf2f7;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.85rem; color: #2d3748;">Unnatural Links & Spam Penalties</strong>
-              <span id="gsc-flag-links" style="font-weight: bold; font-size: 0.75rem; color: #38a169;">CLEAN</span>
-            </div>
-            <p id="gsc-desc-links" style="margin: 0; color: #718096; font-size: 0.75rem;">No manual action link penalties active against domain.</p>
-          </div>
-          <div style="background: #f7fafc; padding: 12px; border-radius: 6px; border: 1px solid #edf2f7;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 0.85rem; color: #2d3748;">Malware & Harmful Payloads</strong>
-              <span id="gsc-flag-malware" style="font-weight: bold; font-size: 0.75rem; color: #38a169;">CLEAN</span>
-            </div>
-            <p id="gsc-desc-malware" style="margin: 0; color: #718096; font-size: 0.75rem;">0 harmful software downloads flagged by Google.</p>
-          </div>
-        </div>
-      </div>
-      <!-- Site-Wide Threat Scanner & Edge lookup -->
-      <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem; width: 100%; box-sizing: border-box;">
-
-        <!-- Global Threat Lookup Panel -->
-        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; width: 100%; box-sizing: border-box;">
-          <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-danger, #e53e3e); display: flex; align-items: center; gap: 0.5rem;">
-            <span>🌐</span> Global Threat Lookups (VirusTotal / ClamAV)
-          </h3>
-          <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
-            Query 70+ global antivirus engines on Cloudflare serverless edge to instantly verify arbitrary file signatures or domain names.
-          </p>
-
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%; box-sizing: border-box; margin-bottom: 1rem;">
-            <input type="text" id="security-edge-scan-input" placeholder="Enter file SHA-256 hash or domain..." style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-size: 0.9rem; max-width: 100%; box-sizing: border-box;" />
-            <button id="btn-run-security-edge-scan" class="btn-primary" style="background: var(--theme-color-danger, #e53e3e); font-weight: bold; font-size: 0.85rem; border: none; white-space: nowrap; cursor: pointer; max-width: 100%; box-sizing: border-box;">
-              Edge Threat Scan
-            </button>
-          </div>
-
-          <!-- Edge Scan Results Area -->
-          <div id="security-edge-scan-results" style="display: none; padding: 1rem; border-radius: var(--theme-layout-border-radius, 8px); font-size: 0.85rem; line-height: 1.4; width: 100%; box-sizing: border-box;">
-            <!-- Dynamic edge results -->
-          </div>
-        </div>
-
-        <!-- Site-Wide Threat Scanner Panel -->
-        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; width: 100%; box-sizing: border-box;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem; margin-bottom: 1rem;">
-            <div>
-              <h3 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 0.5rem;">
-                <span>🛡️</span> Site-Wide File Threat Scanner
-              </h3>
-              <p style="margin: 0.25rem 0 0 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
-                Audits all core framework files and database public media assets against global security signatures.
-              </p>
-            </div>
-
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-              <!-- Monthly Cron Toggle -->
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); background: var(--theme-color-background, #f7fafc); padding: 6px 12px; border-radius: 4px; border: 1px solid var(--theme-color-border, #e2e8f0);">
-                <input type="checkbox" id="security-monthly-scan-toggle" style="cursor: pointer;" />
-                Enable Automated Silent Monthly Security Scan
-              </label>
-
-              <button id="btn-run-site-audit" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">
-                Run Live Site Audit
-              </button>
-              <button id="btn-email-site-audit" style="padding: 6px 14px; font-size: 0.85rem; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
-                <span>📧</span> Email Report
-              </button>
-            </div>
-          </div>
-
-          <!-- Overall Audit Info Banner -->
-          <div id="site-audit-overview-banner" style="display: none; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border: 1px solid transparent; font-size: 0.9rem;">
-            <!-- Overall rating info -->
-          </div>
-
-          <!-- Dynamic Report Table -->
-          <div style="overflow-x: auto; width: 100%; box-sizing: border-box;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 750px;">
-              <thead>
-                <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
-                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); width: 30%;">Asset Path / Name</th>
-                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); width: 30%;">SHA-256 Signature Hash</th>
-                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: center; width: 16%; min-width: 100px;">ClamAV Status</th>
-                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: center; width: 14%; min-width: 90px;">Multi-Engine</th>
-                  <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: right; width: 10%; min-width: 60px;">Rating</th>
-                </tr>
-              </thead>
-              <tbody id="site-audit-report-tbody">
-                <tr>
-                  <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--theme-color-text-secondary, #a0aec0); font-style: italic;">
-                    No site threat audit has been run. Click "Run Live Site Audit" above to analyze your framework files.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-      <div style="background: #1a202c; color: #fff; border: 1px solid #2d3748; padding: 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-        <div>
-          <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem;">Developer Mode</h3>
-          <p style="margin: 0; color: #a0aec0; font-size: 0.85rem;">Toggle debugging and test suites.</p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <button id="btn-run-tests" style="padding: 6px 12px; background: #3182ce; color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
-            Run Tests
-          </button>
-          <div style="display: flex; background: #2d3748; padding: 4px; border-radius: 6px; gap: 4px;">
-            <label style="cursor: pointer; padding: 6px 14px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;" id="label-dev-off">
-              <input type="radio" name="devMode" value="off" style="display: none;" id="radio-dev-off"> OFF
-            </label>
-            <label style="cursor: pointer; padding: 6px 14px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;" id="label-dev-on">
-              <input type="radio" name="devMode" value="on" style="display: none;" id="radio-dev-on"> ON
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 10: AI CHATBOT, SMS, AND VOICE SERVICE ENDPOINT -->
-  <div id="tab-chatbot" class="admin-panel" style="display: none;">
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <!-- AI Chatbot & Telephony Setup Instructions Guide -->
-      <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
-        <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">AI Chatbot & Voice Telephony Setup Guide</h2>
-        <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #2c5282;">Follow these steps to wire up the zero-build chatbot widget and messaging webhooks:</p>
-        <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #2c5282; line-height: 1.5;">
-          <li><strong>OpenAI Setup:</strong> Visit the <a href="https://platform.openai.com/api-keys" target="_blank" style="font-weight: bold; color: #2b6cb0;">OpenAI Dashboard</a> to retrieve an API Key. Note: Cloudflare Edge endpoints will use <code>gpt-4o-mini</code> for highly performant, ultra low-cost completions. If a <code>GEMINI_API_KEY</code> is bound in Cloudflare Secrets, the endpoints will automatically route through Gemini 2.5 Flash at zero token costs!</li>
-          <li><strong>SMS Webhook (Telnyx / Twilio):</strong>
-            <br>&bull; <em>Telnyx:</em> Point your inbound messages webhook to <code>https://yourdomain.com/api/sms-webhook</code>. Ensure <code>TELNYX_API_KEY</code> and <code>TELNYX_PHONE_NUMBER</code> are set.
-            <br>&bull; <em>Twilio:</em> Point your phone number webhook to <code>https://yourdomain.com/api/sms-webhook</code>. Ensure <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, and <code>TWILIO_PHONE_NUMBER</code> are set in Cloudflare secrets.
-          </li>
-          <li><strong>Voice Telephony Webhook:</strong> Set your voice platform call routing webhook (Vapi.ai, Telnyx, or Twilio) to <code>https://yourdomain.com/api/voice-webhook</code>. It responds with valid TwiML/TeXML instructions dynamic voice dialog.</li>
-          <li><strong>Frontend Web Widget:</strong> The chatbot widget automatically mounts on the lower-right corner of the site. You can toggle its visibility on/off using the "Chatbot Enabled" switch below.</li>
-        </ul>
-      </div>
-
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <h2 style="margin-top: 0; font-size: 1.25rem;">AI Chatbot, SMS & Voice Customization</h2>
-        <p style="color: #718096; font-size: 0.85rem; margin-bottom: 1.25rem;">Configure chatbot welcome settings, openai system context prompt triggers, and voice routing options.</p>
-
-        <form id="chatbot-settings-form" style="display: flex; flex-direction: column; gap: 1rem;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Chatbot Enabled:</label>
-              <select id="chat-enabled" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-                <option value="true">Yes, Enable Chat Widget</option>
-                <option value="false">No, Hide Chat Widget</option>
-              </select>
-            </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Bot Display Name:</label>
-              <input type="text" id="chat-name" placeholder="Foundation Assistant" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Welcome Initial Text Message:</label>
-              <input type="text" id="chat-welcome" placeholder="Hello! How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-
-          <div style="min-width: 0;">
-            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">AI System Prompt Context (Configured context instructions):</label>
-            <textarea id="chat-system-prompt" placeholder="You are a helpful customer support assistant for Foundation Framework..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
-          </div>
-
-          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-          <h3 style="margin: 0; font-size: 1.05rem;">Voice Telephony Welcomes</h3>
-          <div style="min-width: 0;">
-            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Voice Welcome Saying Text (TeXML/TwiML Speech):</label>
-            <input type="text" id="chat-voice-welcome" placeholder="Thank you for calling Foundation support. How can I help you today?" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-          </div>
-
-          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-          <h3 style="margin: 0; font-size: 1.05rem;">Telnyx & Twilio Integrations Settings (Edges Webhooks Key Bindings)</h3>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">OpenAI API Key (gpt-4o-mini):</label>
-              <input type="password" id="chat-openai-key" placeholder="sk-..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx API Key:</label>
-              <input type="password" id="chat-telnyx-key" placeholder="KEY..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Account SID:</label>
-              <input type="text" id="chat-twilio-sid" placeholder="AC..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Auth Token:</label>
-              <input type="password" id="chat-twilio-token" placeholder="Token..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Telnyx Phone Number:</label>
-              <input type="text" id="chat-telnyx-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Twilio Phone Number:</label>
-              <input type="text" id="chat-twilio-num" placeholder="+1..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-
-          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
-            Save Chatbot & Keys Config
-          </button>
-        </form>
-      </div>
-
-      <!-- Live Chat Audit Trails Logging Monitor Panel -->
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">Live Support Conversations Logging Audit Trails</h2>
-            <p style="margin: 0; color: #718096; font-size: 0.8rem;">Displays live web, SMS, and voice assistant communication events.</p>
-          </div>
-          <button id="btn-refresh-chat-logs" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Refresh Logs</button>
-        </div>
-
-        <div style="overflow-y: auto; max-height: 250px; background: var(--theme-color-background, #f7fafc); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-            <thead>
-              <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
-                <th style="padding: 8px;">Timestamp</th>
-                <th style="padding: 8px;">Sender</th>
-                <th style="padding: 8px;">Type</th>
-                <th style="padding: 8px;">Message Content</th>
-              </tr>
-            </thead>
-            <tbody id="chat-logs-tbody">
-              <tr>
-                <td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 11: MARKETING AUTOMATION & WORKFLOWS -->
-  <div id="tab-marketing" class="admin-panel" style="display: none;">
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem;">Automated Marketing & Workflows</h2>
-            <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Build visual node-based automation sequences for email follow-ups, user engagement, and role updates.</p>
-          </div>
-          <button id="btn-new-workflow" style="padding: 6px 14px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
-            + New Workflow
-          </button>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
-          <!-- Left: Workflow List & Form -->
-          <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <div>
-              <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Active Workflows</h3>
-              <div id="workflows-list" style="max-height: 300px; overflow-y: auto;">
-                <!-- Workflows rendered here -->
-              </div>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-            
-            <form id="workflow-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">Workflow Settings</h3>
-              <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Workflow Name:</label>
-                <input type="text" id="workflow-name" placeholder="Welcome Sequence" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-              </div>
-              <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Description:</label>
-                <textarea id="workflow-description" placeholder="Describe what this workflow does..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
-              </div>
-              <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Status:</label>
-                <select id="workflow-active" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-                  <option value="true">Active</option>
-                  <option value="false">Paused</option>
-                </select>
-              </div>
-              <button type="submit" class="btn-primary" style="align-self: flex-start;">Save Workflow</button>
-            </form>
-          </div>
-
-          <!-- Right: Visual Workflow Builder -->
-          <div>
-            <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Workflow Canvas</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1rem; height: 400px;">
-              <!-- Triggers Palette -->
-              <div style="background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
-                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: bold; color: #2d3748;">Triggers</h4>
-                <div id="trigger-palette">
-                  <!-- Trigger nodes rendered here -->
-                </div>
-              </div>
-
-              <!-- Actions Palette -->
-              <div style="background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
-                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: bold; color: #2d3748;">Actions</h4>
-                <div id="action-palette">
-                  <!-- Action nodes rendered here -->
-                </div>
-              </div>
-
-              <!-- Canvas -->
-              <div id="workflow-canvas" style="background: white; border: 2px dashed #cbd5e0; border-radius: 6px; padding: 1rem; overflow-y: auto;">
-                <!-- Workflow nodes rendered here -->
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 12: KANBAN TASK BOARD -->
-  <div id="tab-kanban" class="admin-panel" style="display: none;">
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem;">Project Task Kanban Board</h2>
-            <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Drag and drop tasks between columns to track project progress.</p>
-          </div>
-        </div>
-
-        <!-- Task Creation Form -->
-        <form id="task-form" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
-          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.75rem;">
-            <div>
-              <input type="text" id="task-title" placeholder="Task title..." required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <select id="task-priority" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-                <option value="">Priority</option>
-              </select>
-            </div>
-            <div>
-              <input type="date" id="task-due-date" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <select id="task-assignee" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-                <option value="">Assignee</option>
-              </select>
-            </div>
-            <button type="submit" class="btn-primary" style="padding: 8px 16px;">Add Task</button>
-          </div>
-          <div>
-            <textarea id="task-description" placeholder="Task description (optional)..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
-          </div>
-        </form>
-
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-          <!-- Backlog Column -->
-          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
-            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">Backlog</h3>
-            <div id="column-backlog" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-              <!-- Tasks rendered here -->
-            </div>
-          </div>
-
-          <!-- In Progress Column -->
-          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
-            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">In Progress</h3>
-            <div id="column-in_progress" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-              <!-- Tasks rendered here -->
-            </div>
-          </div>
-
-          <!-- Review Column -->
-          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
-            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">Review / Testing</h3>
-            <div id="column-review" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-              <!-- Tasks rendered here -->
-            </div>
-          </div>
-
-          <!-- Completed Column -->
-          <div style="background: #f7fafc; border-radius: 6px; padding: 0.75rem;">
-            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: bold; color: #2d3748; text-align: center;">Completed</h3>
-            <div id="column-completed" style="min-height: 200px; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-              <!-- Tasks rendered here -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- UPDATE TAB 9: SECURITY & DEV OPS WITH LASTPASS -->
-  <div id="tab-security" class="admin-panel" style="display: none;">
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem;">Security & Operations</h2>
-          <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Manage security monitoring, threat detection, and credential vault.</p>
-        </div>
-        <span id="admin-role-badge" style="padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; background: #f0fdf4; color: #166534;">
-          Primary Admin
-        </span>
-      </div>
-
       <!-- LastPass Vault Manager -->
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">LastPass Vault & Credential Manager</h3>
+        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">LastPass Vault & Credential Manager</h3>
         
         <!-- LastPass Configuration -->
         <form id="lastpass-config-form" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
@@ -2059,22 +1950,11 @@
         </div>
       </div>
 
-      <!-- Existing Security & Dev Ops Content -->
-      <!-- Security Setup Warning Prompter Banner -->
-      <div id="security-setup-warning-banner" style="display: none; padding: 1rem; border-radius: 8px; background: #fff5f5; border: 1px solid #fed7d7; color: #c53030;">
-        <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">⚠️ Security Integration Incomplete</h3>
-        <p style="margin: 0 0 0.75rem 0; font-size: 0.85rem; color: #9b2c2c;">You have not fully configured your VirusTotal API Key or registered your site in Google Search Console. Threat and defacement monitoring are inactive.</p>
-        <p style="margin: 0; font-size: 0.8rem; font-weight: bold; color: #c53030;">How to Configure:</p>
-        <ol style="margin: 0.25rem 0 0 0; padding-left: 1.25rem; font-size: 0.8rem; color: #9b2c2c; line-height: 1.4;">
-          <li>Go to the <strong>API Keys & Cloud</strong> tab and copy your secure <strong>VirusTotal API Key</strong>.</li>
-          <li>Ensure your base domain is fully verified in your <a href="https://search.google.com/search-console" target="_blank" style="font-weight: bold; color: #2b6cb0;">Google Search Console Dashboard</a> to permit live threat retrieval.</li>
-        </ol>
-      </div>
-
+      <!-- Google Search Console Security & Threat Monitor -->
       <div style="background: #ffffff; border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div>
-            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">Google Search Console Security & Threat Monitor</h2>
+            <h3 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Google Search Console Security & Threat Monitor</h3>
             <p style="margin: 0; color: #718096; font-size: 0.85rem;">Real-time automated scanning for phishing, site defacement, code injections, malware, and unnatural link penalties.</p>
           </div>
           <div style="display: flex; gap: 0.5rem;">
@@ -2127,25 +2007,89 @@
           </div>
         </div>
       </div>
-      <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h3 style="margin: 0; font-size: 1rem;">VirusTotal Threat Analysis (Cloudflare Edge)</h3>
-          <button id="btn-scan-virustotal" style="padding: 6px 12px; background: #e53e3e; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-            Run Live Edge Scan
+
+      <!-- Global Threat Lookup Panel (VirusTotal / ClamAV) -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; width: 100%; box-sizing: border-box;">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-danger, #e53e3e); display: flex; align-items: center; gap: 0.5rem;">
+          <span>🌐</span> Global Threat Lookups (VirusTotal / ClamAV)
+        </h3>
+        <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
+          Query 70+ global antivirus engines on Cloudflare serverless edge to instantly verify arbitrary file signatures or domain names.
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; width: 100%; box-sizing: border-box; margin-bottom: 1rem;">
+          <input type="text" id="security-edge-scan-input" placeholder="Enter file SHA-256 hash or domain..." style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-size: 0.9rem; max-width: 100%; box-sizing: border-box;" />
+          <button id="btn-run-security-edge-scan" class="btn-primary" style="background: var(--theme-color-danger, #e53e3e); font-weight: bold; font-size: 0.85rem; border: none; white-space: nowrap; cursor: pointer; max-width: 100%; box-sizing: border-box;">
+            Edge Threat Scan
           </button>
         </div>
-        <div style="background: #fff5f5; border: 1px solid #fed7d7; padding: 12px; border-radius: 6px; font-size: 0.85rem; color: #c53030;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span>Blacklist Checks:</span> <strong style="color: #38a169;">0 / 90 Flagged Clean</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>SSL Certificate:</span> <strong style="color: #38a169;">Valid (TLS 1.3)</strong>
-          </div>
+
+        <!-- Edge Scan Results Area -->
+        <div id="security-edge-scan-results" style="display: none; padding: 1rem; border-radius: var(--theme-layout-border-radius, 8px); font-size: 0.85rem; line-height: 1.4; width: 100%; box-sizing: border-box;">
+          <!-- Dynamic edge results -->
         </div>
       </div>
+
+      <!-- Site-Wide Threat Scanner Panel -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; width: 100%; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem; margin-bottom: 1rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 0.5rem;">
+              <span>🛡️</span> Site-Wide File Threat Scanner
+            </h3>
+            <p style="margin: 0.25rem 0 0 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem; line-height: 1.4;">
+              Audits all core framework files and database public media assets against global security signatures.
+            </p>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <!-- Monthly Cron Toggle -->
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); background: var(--theme-color-background, #f7fafc); padding: 6px 12px; border-radius: 4px; border: 1px solid var(--theme-color-border, #e2e8f0);">
+              <input type="checkbox" id="security-monthly-scan-toggle" style="cursor: pointer;" />
+              Enable Automated Silent Monthly Security Scan
+            </label>
+
+            <button id="btn-run-site-audit" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem; font-weight: bold; cursor: pointer;">
+              Run Live Site Audit
+            </button>
+            <button id="btn-email-site-audit" style="padding: 6px 14px; font-size: 0.85rem; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+              <span>📧</span> Email Report
+            </button>
+          </div>
+        </div>
+
+        <!-- Overall Audit Info Banner -->
+        <div id="site-audit-overview-banner" style="display: none; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border: 1px solid transparent; font-size: 0.9rem;">
+          <!-- Overall rating info -->
+        </div>
+
+        <!-- Dynamic Report Table -->
+        <div style="overflow-x: auto; width: 100%; box-sizing: border-box;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 750px;">
+            <thead>
+              <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
+                <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); width: 30%;">Asset Path / Name</th>
+                <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); width: 30%;">SHA-256 Signature Hash</th>
+                <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: center; width: 16%; min-width: 100px;">ClamAV Status</th>
+                <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: center; width: 14%; min-width: 90px;">Multi-Engine</th>
+                <th style="padding: 12px 10px; color: var(--theme-color-text-secondary, #4a5568); text-align: right; width: 10%; min-width: 60px;">Rating</th>
+              </tr>
+            </thead>
+            <tbody id="site-audit-report-tbody">
+              <tr>
+                <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--theme-color-text-secondary, #a0aec0); font-style: italic;">
+                  No site threat audit has been run. Click "Run Live Site Audit" above to analyze your framework files.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Developer Mode Panel -->
       <div style="background: #1a202c; color: #fff; border: 1px solid #2d3748; padding: 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
         <div>
-          <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem;">Developer Mode</h3>
+          <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; color: white;">Developer Mode</h3>
           <p style="margin: 0; color: #a0aec0; font-size: 0.85rem;">Toggle debugging and test suites.</p>
         </div>
         <div style="display: flex; align-items: center; gap: 1rem;">
@@ -2162,8 +2106,10 @@
           </div>
         </div>
       </div>
+
     </div>
   </div>
+
   </div> <!-- Ends Right Content Column -->
   </div> <!-- Ends Two-column sidebar layout -->
 </section>

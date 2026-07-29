@@ -34,12 +34,10 @@ export function initTabController() {
       const targetTab = btn.getAttribute('data-tab');
       tabButtons.forEach((b) => {
         b.classList.remove('active');
-        b.style.borderLeft = '';
-        b.style.paddingLeft = '';
-        b.style.color = 'var(--theme-color-text-secondary, #4a5568)';
+        // Clean up inline styles so CSS stylesheet handles responsive rendering perfectly
+        b.removeAttribute('style');
       });
       btn.classList.add('active');
-      btn.style.color = 'var(--theme-color-primary, #2b6cb0)';
 
       panels.forEach((p) => {
         p.style.display = p.id === `tab-${targetTab}` ? 'block' : 'none';
