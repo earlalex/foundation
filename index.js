@@ -14,10 +14,7 @@ import './components/global/AuthorCard.js';
 import './components/global/ChatWidget.js';
 
 // Automated Test Suites
-import { runAllSchemaTests } from './schemas/test-runner.js';
-import { runStoreTests } from './core/test-store.js';
-import { runRouterTests } from './router/test-router.js';
-import { runServicesTests } from './core/test-services.js';
+import { runAllSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
 
 // Page Controllers
 import { initAdminPage } from './pages/admin/admin.js';

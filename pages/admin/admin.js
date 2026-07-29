@@ -1206,8 +1206,8 @@ export function initAdminPage() {
   const runTestsBtn = document.getElementById('btn-run-tests');
   runTestsBtn?.addEventListener('click', async () => {
     try {
-      const { runAllSchemaTests } = await import('../../schemas/test-runner.js');
-      runAllSchemaTests();
+      const { runSchemaTests } = await import('../../tests/index.js');
+      runSchemaTests();
     } catch (err) {
       errorHandler.handleError(err, 'Admin - Run Tests');
       console.error('Failed to execute test runner module:', err);
