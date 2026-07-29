@@ -7,6 +7,7 @@ export async function onRequestPost(context) {
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
   if (!stripeSecretKey) {
+    console.error('[Stripe Webhook]: Stripe API key not configured');
     return new Response(
       JSON.stringify({ error: 'STRIPE_SECRET_KEY binding missing' }), 
       { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -20,6 +21,10 @@ export async function onRequestPost(context) {
     const firebaseProjectId = env.FIREBASE_PROJECT_ID;
     const firestoreApiKey = env.FIREBASE_API_KEY;
 
+    if (!firebaseProjectId || !firestoreApiKey) {
+      console.error('[Stripe Webhook]: Firebase configuration missing');
+    }
+
     // Helper to update user document directly via Firestore REST API at the Edge
     async function updateFirestoreUser(userEmail, patchPayload) {
       if (!firebaseProjectId || !userEmail) return;
@@ -31,11 +36,15 @@ export async function onRequestPost(context) {
         fields[key] = { stringValue: String(value) };
       }
 
-      await fetch(firestoreUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields })
-      });
+      try {
+        await fetch(firestoreUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields })
+        });
+      } catch (firestoreErr) {
+        console.error('[Stripe Webhook]: Firestore update failed for user:', userEmail, firestoreErr);
+      }
     }
 
     // Helper to trigger post-checkout digital asset delivery
@@ -51,34 +60,38 @@ export async function onRequestPost(context) {
 
       const baseUrl = new URL(request.url).origin;
 
-      if (deliveryType === 'attachment') {
-        // STRATEGY A: Small File Direct Email Attachment via Gmail API
-        await fetch(`${baseUrl}/api/send-fulfillment-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: customerEmail,
-            name: customerName,
-            fileId,
-            fileName,
-            mode: 'ATTACHMENT'
-          })
-        });
-      } else {
-        // STRATEGY B: Large/High-Value File Tracked Proxy Link
-        const token = crypto.randomUUID();
-        const downloadUrl = `${baseUrl}/api/download?fileId=${fileId}&email=${encodeURIComponent(customerEmail)}&token=${token}`;
+      try {
+        if (deliveryType === 'attachment') {
+          // STRATEGY A: Small File Direct Email Attachment via Gmail API
+          await fetch(`${baseUrl}/api/send-fulfillment-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: customerEmail,
+              name: customerName,
+              fileId,
+              fileName,
+              mode: 'ATTACHMENT'
+            })
+          });
+        } else {
+          // STRATEGY B: Large/High-Value File Tracked Proxy Link
+          const token = crypto.randomUUID();
+          const downloadUrl = `${baseUrl}/api/download?fileId=${fileId}&email=${encodeURIComponent(customerEmail)}&token=${token}`;
 
-        await fetch(`${baseUrl}/api/send-fulfillment-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: customerEmail,
-            name: customerName,
-            downloadUrl,
-            mode: 'TRACKED_LINK'
-          })
-        });
+          await fetch(`${baseUrl}/api/send-fulfillment-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: customerEmail,
+              name: customerName,
+              downloadUrl,
+              mode: 'TRACKED_LINK'
+            })
+          });
+        }
+      } catch (fulfillmentErr) {
+        console.error('[Stripe Webhook]: Fulfillment failed for session:', session.id, fulfillmentErr);
       }
     }
 
@@ -136,7 +149,8 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { 
+    console.error('[Stripe Webhook]: Unhandled error:', err);
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), { 
       status: 400, 
       headers: { 'Content-Type': 'application/json' } 
     });

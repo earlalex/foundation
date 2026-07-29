@@ -1,5 +1,6 @@
 // pages/home/home.js
 import { contentDB } from '../../core/db.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 export async function initHomePage() {
   const container = document.getElementById('home-sections-container');
@@ -75,6 +76,7 @@ export async function initHomePage() {
 
     container.innerHTML = htmlOutput;
   } catch (err) {
+    errorHandler.handleError(err, 'Home Page - Content Loading');
     console.error('Error rendering multi-section homepage:', err);
     container.innerHTML = `
       <div style="text-align: center; color: #e53e3e; padding: 2rem;">

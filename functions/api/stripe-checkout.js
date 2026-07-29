@@ -5,6 +5,7 @@ export async function onRequestPost(context) {
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
   if (!stripeSecretKey) {
+    console.error('[Stripe Checkout]: Stripe API key not configured');
     return new Response(JSON.stringify({ error: 'Stripe API key unconfigured' }), { status: 500 });
   }
 
@@ -26,20 +27,32 @@ export async function onRequestPost(context) {
 
     if (action === 'portal') {
       // Create Customer Portal Link
-      const params = new URLSearchParams();
-      params.append('customer', email);
-      params.append('return_url', `${domain}/admin`);
+      try {
+        const params = new URLSearchParams();
+        params.append('customer', email);
+        params.append('return_url', `${domain}/admin`);
 
-      const res = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: params
-      });
-      const session = await res.json();
-      return new Response(JSON.stringify({ url: session.url }), { status: 200 });
+        const res = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: params
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error('[Stripe Checkout]: Portal session creation failed:', errorData);
+          return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to create portal session' }), { status: res.status });
+        }
+        
+        const session = await res.json();
+        return new Response(JSON.stringify({ url: session.url }), { status: 200 });
+      } catch (portalErr) {
+        console.error('[Stripe Checkout]: Portal request error:', portalErr);
+        return new Response(JSON.stringify({ error: 'Portal request failed' }), { status: 500 });
+      }
     }
 
     // Determine Mode & Line Items
@@ -104,6 +117,12 @@ export async function onRequestPost(context) {
       body: params
     });
 
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error('[Stripe Checkout]: Session creation failed:', errorData);
+      return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to create checkout session' }), { status: res.status });
+    }
+
     const session = await res.json();
 
     if (session.error) {
@@ -114,6 +133,6 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ url: session.url }), { status: 200 });
   } catch (err) {
     console.error('[Stripe Endpoint Exception]:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), { status: 500 });
   }
 }

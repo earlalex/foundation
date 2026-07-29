@@ -2,6 +2,7 @@
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 /**
  * Mask API key for security - show only last 4 characters
@@ -141,6 +142,7 @@ export function initIntegrationsTab() {
         toast.error('Failed to save credentials. Please try again.');
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Integrations - Firebase Config Form');
       toast.error(`Error saving credentials: ${err.message}`);
     } finally {
       if (submitBtn) {
@@ -191,6 +193,7 @@ export function initIntegrationsTab() {
         toast.error('Failed to save platform keys. Please try again.');
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin Integrations - Stripe Cloudflare Form');
       toast.error(`Error saving platform keys: ${err.message}`);
     } finally {
       if (submitBtn) {

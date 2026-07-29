@@ -2,6 +2,7 @@
 import { contentDB } from '../../core/db.js';
 import { renderContent } from '../../utils/universalRenderer.js';
 import { authManager } from '../../core/auth.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 export async function initDetailPage() {
   const container = document.getElementById('detail-view-container');
@@ -48,22 +49,30 @@ export async function initDetailPage() {
           body: JSON.stringify({ role: 'member', action: 'checkout' })
         });
         const data = await response.json();
-        if (data.url) {
+        if (data?.url) {
           window.location.href = data.url;
         } else {
+          errorHandler.handleError(new Error('No checkout URL returned'), 'Detail Page - Stripe Checkout');
           alert('Stripe Gateway initializing. Please check configuration.');
         }
       } catch (err) {
+        errorHandler.handleError(err, 'Detail Page - Stripe Checkout');
         alert(`Checkout error: ${err.message}`);
       }
     });
 
     document.getElementById('btn-paywall-login')?.addEventListener('click', async () => {
-      await authManager.loginWithGoogle();
-      window.location.reload();
+      try {
+        await authManager.loginWithGoogle();
+        window.location.reload();
+      } catch (err) {
+        errorHandler.handleError(err, 'Detail Page - Google Login');
+        alert('Login failed. Please try again.');
+      }
     });
 
   } catch (err) {
+    errorHandler.handleError(err, 'Detail Page - Initialization');
     console.error('Error initializing detail page:', err);
     container.innerHTML = `
       <div class="card" style="text-align: center; padding: 3rem; color: #e53e3e;">

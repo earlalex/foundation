@@ -26,6 +26,7 @@ export async function onRequestPost(context) {
     const preferredProvider = context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
 
     if (!geminiKey && !openAiKey) {
+      console.error('[Voice Webhook]: No AI credentials configured');
       return new Response("Missing API key environment bindings (GEMINI_API_KEY or OPENAI_API_KEY).", { status: 500 });
     }
 
@@ -53,6 +54,7 @@ export async function onRequestPost(context) {
       });
 
       if (!response.ok) {
+        console.warn('[Voice Webhook]: Primary Gemini model failed, trying fallback');
         // Fallback to gemini-2.5-flash-lite
         const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`;
         const fallbackRes = await fetch(fallbackUrl, {
@@ -73,7 +75,9 @@ export async function onRequestPost(context) {
           const data = await fallbackRes.json();
           return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         }
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        console.error('[Voice Webhook]: Gemini fallback also failed:', errorText);
+        throw new Error(errorText);
       }
 
       const data = await response.json();
@@ -99,7 +103,9 @@ export async function onRequestPost(context) {
       });
 
       if (!openAiResponse.ok) {
-        throw new Error(await openAiResponse.text());
+        const errorText = await openAiResponse.text();
+        console.error('[Voice Webhook]: OpenAI API call failed:', errorText);
+        throw new Error(errorText);
       }
 
       const aiData = await openAiResponse.json();
@@ -111,28 +117,34 @@ export async function onRequestPost(context) {
         try {
           responseSpeech = await queryGemini(geminiKey, callText);
         } catch (err) {
-          console.warn("[Voice API]: Gemini failed, trying OpenAI:", err.message);
+          console.error('[Voice Webhook]: Gemini failed, trying OpenAI:', err);
           if (openAiKey) {
             try {
               responseSpeech = await queryOpenAI(openAiKey, callText);
-            } catch (e) {}
+            } catch (e) {
+              console.error('[Voice Webhook]: OpenAI fallback also failed:', e);
+            }
           }
         }
       } else if (openAiKey) {
         try {
           responseSpeech = await queryOpenAI(openAiKey, callText);
         } catch (err) {
-          console.warn("[Voice API]: OpenAI failed, trying Gemini:", err.message);
+          console.error('[Voice Webhook]: OpenAI failed, trying Gemini:', err);
           if (geminiKey) {
             try {
               responseSpeech = await queryGemini(geminiKey, callText);
-            } catch (e) {}
+            } catch (e) {
+              console.error('[Voice Webhook]: Gemini fallback also failed:', e);
+            }
           }
         }
       } else if (geminiKey) {
         try {
           responseSpeech = await queryGemini(geminiKey, callText);
-        } catch (e) {}
+        } catch (e) {
+          console.error('[Voice Webhook]: Gemini call failed:', e);
+        }
       }
     }
 
@@ -211,7 +223,7 @@ export async function onRequestPost(context) {
         });
 
       } catch (wsErr) {
-        console.warn('[Voice Webhook]: Google Workspace background logging failed:', wsErr.message);
+        console.error('[Voice Webhook]: Google Workspace background logging failed:', wsErr);
       }
     }
 
@@ -241,7 +253,8 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error('[Voice Webhook]: Unhandled error:', err);
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });

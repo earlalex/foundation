@@ -7,21 +7,37 @@ export async function onRequestPost(context) {
     let action = null;
 
     if (contentType.includes("application/json")) {
-      const body = await context.request.json();
-      if (body.action) {
-        action = body.action;
-      }
-      if (body.hash) {
-        hashHex = body.hash;
-      } else if (body.domain) {
-        domain = body.domain;
+      try {
+        const body = await context.request.json();
+        if (body.action) {
+          action = body.action;
+        }
+        if (body.hash) {
+          hashHex = body.hash;
+        } else if (body.domain) {
+          domain = body.domain;
+        }
+      } catch (jsonErr) {
+        console.error('[VirusTotal Scan]: Failed to parse JSON body:', jsonErr);
+        return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
       }
     } else {
       // Direct binary payload
-      const arrayBuffer = await context.request.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      try {
+        const arrayBuffer = await context.request.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (bufferErr) {
+        console.error('[VirusTotal Scan]: Failed to process binary payload:', bufferErr);
+        return new Response(JSON.stringify({ error: 'Failed to process binary payload' }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     }
 
     // Read secret VirusTotal API key securely from Cloudflare Environment Variables
@@ -71,51 +87,60 @@ export async function onRequestPost(context) {
 
             // Query VT if API key is configured
             if (vtApiKey) {
-              const vtRes = await fetch(`https://www.virustotal.com/api/v3/files/${fileHash}`, {
-                headers: { 'x-apikey': vtApiKey }
-              });
+              try {
+                const vtRes = await fetch(`https://www.virustotal.com/api/v3/files/${fileHash}`, {
+                  headers: { 'x-apikey': vtApiKey }
+                });
 
-              if (vtRes.status === 200) {
-                const vtData = await vtRes.json();
-                rawResult = vtData;
-                const stats = vtData.data?.attributes?.last_analysis_stats || {};
-                const results = vtData.data?.attributes?.last_analysis_results || {};
+                if (vtRes.status === 200) {
+                  const vtData = await vtRes.json();
+                  rawResult = vtData;
+                  const stats = vtData.data?.attributes?.last_analysis_stats || {};
+                  const results = vtData.data?.attributes?.last_analysis_results || {};
 
-                const total = Object.keys(results).length || 70;
-                const malicious = stats.malicious || 0;
-                statusText = `${malicious}/${total} Flagged`;
+                  const total = Object.keys(results).length || 70;
+                  const malicious = stats.malicious || 0;
+                  statusText = `${malicious}/${total} Flagged`;
 
-                const clamav = results.ClamAV;
-                if (clamav) {
-                  clamavStatus = clamav.category === 'malicious' ? `Flagged (${clamav.result || 'threat'})` : "Clean";
-                } else {
+                  const clamav = results.ClamAV;
+                  if (clamav) {
+                    clamavStatus = clamav.category === 'malicious' ? `Flagged (${clamav.result || 'threat'})` : "Clean";
+                  } else {
+                    clamavStatus = "Clean";
+                  }
+
+                  if (malicious > 0) {
+                    rating = "High Risk";
+                    maliciousCount++;
+                  } else {
+                    cleanCount++;
+                  }
+                } else if (vtRes.status === 429) {
+                  // Graceful fallback on VirusTotal rate limits (e.g. Free Tier limit 4 reqs/min)
+                  console.warn('[VirusTotal Scan]: Rate limit reached, using cached data');
+                  statusText = "0/70 Clean (Cached)";
                   clamavStatus = "Clean";
-                }
-
-                if (malicious > 0) {
-                  rating = "High Risk";
-                  maliciousCount++;
-                } else {
                   cleanCount++;
+                } else {
+                  console.warn('[VirusTotal Scan]: VT API returned non-200 status:', vtRes.status);
+                  cleanCount++; // Treat other errors as clean
                 }
-              } else if (vtRes.status === 429) {
-                // Graceful fallback on VirusTotal rate limits (e.g. Free Tier limit 4 reqs/min)
-                statusText = "0/70 Clean (Cached)";
-                clamavStatus = "Clean";
+              } catch (vtErr) {
+                console.error('[VirusTotal Scan]: VT API query failed for asset:', asset, vtErr);
                 cleanCount++;
-              } else {
-                cleanCount++; // Treat 404 as clean
               }
             } else {
               // Simulated clean scan when API key is missing
               cleanCount++;
             }
           } else {
+            console.error('[VirusTotal Scan]: Failed to fetch asset:', asset);
             statusText = "Fetch Error";
             clamavStatus = "N/A";
             rating = "Error";
           }
         } catch (e) {
+          console.error('[VirusTotal Scan]: Error processing asset:', asset, e);
           statusText = "Scan Error";
           clamavStatus = "N/A";
           rating = "Error";
@@ -171,6 +196,7 @@ export async function onRequestPost(context) {
         });
         saveSuccess = fbRes.ok;
       } catch (e) {
+        console.error('[VirusTotal Scan]: Firestore save failed:', e);
         // Quiet fallback
       }
 
@@ -206,7 +232,7 @@ export async function onRequestPost(context) {
         });
         emailSent = emailRes.ok;
       } catch (err) {
-        console.warn('[Server Email Warning]:', err.message);
+        console.error('[VirusTotal Scan]: Email dispatch failed:', err);
       }
 
       return new Response(JSON.stringify({
@@ -240,24 +266,33 @@ export async function onRequestPost(context) {
     }
 
     if (domain) {
-      const response = await fetch(`https://www.virustotal.com/api/v3/domains/${domain}`, {
-        method: 'GET',
-        headers: { 'x-apikey': vtApiKey }
-      });
-      const data = await response.json();
-      return new Response(JSON.stringify({
-        success: response.ok,
-        domain: domain,
-        results: data
-      }), {
-        status: response.ok ? 200 : response.status,
-        headers: { "Content-Type": "application/json" }
-      });
+      try {
+        const response = await fetch(`https://www.virustotal.com/api/v3/domains/${domain}`, {
+          method: 'GET',
+          headers: { 'x-apikey': vtApiKey }
+        });
+        const data = await response.json();
+        return new Response(JSON.stringify({
+          success: response.ok,
+          domain: domain,
+          results: data
+        }), {
+          status: response.ok ? 200 : response.status,
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (domainErr) {
+        console.error('[VirusTotal Scan]: Domain scan failed:', domainErr);
+        return new Response(JSON.stringify({ error: 'Domain scan request failed' }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     } else if (hashHex) {
-      const response = await fetch(`https://www.virustotal.com/api/v3/files/${hashHex}`, {
-        method: 'GET',
-        headers: { 'x-apikey': vtApiKey }
-      });
+      try {
+        const response = await fetch(`https://www.virustotal.com/api/v3/files/${hashHex}`, {
+          method: 'GET',
+          headers: { 'x-apikey': vtApiKey }
+        });
 
       const status = response.status;
       const data = await response.json();
@@ -300,6 +335,13 @@ export async function onRequestPost(context) {
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
+      } catch (hashErr) {
+        console.error('[VirusTotal Scan]: Hash scan failed:', hashErr);
+        return new Response(JSON.stringify({ error: 'Hash scan request failed' }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     } else {
       return new Response(JSON.stringify({ error: "Invalid request payload. Must provide domain, hash, or binary payload." }), {
         status: 400,
@@ -308,7 +350,8 @@ export async function onRequestPost(context) {
     }
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error('[VirusTotal Scan]: Unhandled error:', err);
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });

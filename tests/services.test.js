@@ -1,9 +1,9 @@
-// core/test-services.js
+// tests/services.test.js
 import { 
   fetchSeoMyRankAddr, 
   getSearchConsoleSecurityIssues, 
   runLighthouseAudit 
-} from './google-services.js';
+} from '../core/google-services.js';
 
 export async function runServicesTests() {
   console.group('  Running Foundation Features & Integration Services Test Suite...');

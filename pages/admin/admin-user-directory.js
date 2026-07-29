@@ -8,6 +8,7 @@ import {
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
+import { errorHandler } from '../../core/error-handler.js';
 
 const MONTHLY_MEMBERSHIP_FEE = 29.00;
 const REFERRAL_COMMISSION_RATE = 0.10;
@@ -73,6 +74,7 @@ export function initUserDirectoryTab() {
         renderVisibleUsers(0, cachedUsers.length);
       }
     } catch (err) {
+      errorHandler.handleError(err, 'Admin User Directory - Load Users');
       tbody.innerHTML = `<tr><td colspan="5" style="padding: 1rem; text-align: center; color: #e53e3e;">Error loading users: ${err.message}</td></tr>`;
     }
   }
@@ -196,6 +198,7 @@ export function initUserDirectoryTab() {
             toast.success('User removed successfully.');
             renderUsersList();
           } catch (err) {
+            errorHandler.handleError(err, 'Admin User Directory - Delete User');
             toast.error(`Failed to remove user: ${err.message}`);
           }
         }
@@ -224,6 +227,7 @@ export function initUserDirectoryTab() {
       toast.success('Google Contacts synced successfully.');
       renderUsersList();
     } catch (err) {
+      errorHandler.handleError(err, 'Admin User Directory - Sync Contacts');
       toast.error(`Failed to sync contacts: ${err.message}`);
     } finally {
       if (syncContactsBtn) {
@@ -253,6 +257,7 @@ export function initUserDirectoryTab() {
         toast.success(`Converted ${users.length} delinquent users to prospects.`);
         renderUsersList();
       } catch (err) {
+        errorHandler.handleError(err, 'Admin User Directory - Convert Users');
         toast.error(`Failed to convert users: ${err.message}`);
       }
     }
@@ -297,6 +302,7 @@ export function initUserDirectoryTab() {
       subjectInput.value = '';
       bodyInput.value = '';
     } catch (err) {
+      errorHandler.handleError(err, 'Admin User Directory - Mass Email');
       toast.error(`Failed to send email: ${err.message}`);
     } finally {
       if (submitBtn) {
