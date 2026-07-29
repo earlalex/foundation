@@ -173,22 +173,38 @@ export function initUserDirectoryTab() {
             <div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #4a5568);">${activeReferrals} referrals</div>
           </td>
           <td style="padding: 12px; text-align: right;">
-            ${!isPrimary ? `
-              <button class="btn-delete-user" data-user-id="${u.id}" data-user-index="${actualIndex}" style="padding: 6px 12px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Remove</button>
-            ` : '<span style="color: var(--theme-color-text-secondary, #a0aec0); font-size: 0.8rem;">Protected</span>'}
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center;">
+              <button class="btn-test-experience" data-user-role="${u.role || 'subscriber'}" style="padding: 6px 12px; background: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.2s;">
+                Test Experience
+              </button>
+              ${!isPrimary ? `
+                <button class="btn-delete-user" data-user-id="${u.id}" data-user-index="${actualIndex}" style="padding: 6px 12px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Remove</button>
+              ` : '<span style="color: var(--theme-color-text-secondary, #a0aec0); font-size: 0.8rem;">Protected</span>'}
+            </div>
           </td>
         </tr>
       `;
     }).join('');
 
-    // Re-attach delete button handlers
+    // Re-attach handlers
     attachDeleteHandlers();
   }
 
   /**
-   * Attach delete button event handlers
+   * Attach delete and simulation button event handlers
    */
   function attachDeleteHandlers() {
+    tbody.querySelectorAll('.btn-test-experience').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const role = btn.dataset.userRole;
+        store.dispatch('SET_SIMULATED_USER_TIER', role);
+        toast.success(`Active Preview: Simulation Mode for [${role.toUpperCase()}] started!`);
+        setTimeout(() => {
+          window.router.navigateTo('/home');
+        }, 500);
+      });
+    });
+
     tbody.querySelectorAll('.btn-delete-user').forEach(btn => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.userId;

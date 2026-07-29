@@ -225,11 +225,13 @@ export class Router {
 
       // --- RBAC Access & Persona Checking ---
       const currentUser = store.state.user;
-      const currentRole = currentUser?.role || 'prospect'; // fallback is prospect (guest)
+      const simulatedTier = store.state.simulatedUserTier;
+      const currentRole = simulatedTier || currentUser?.role || 'prospect'; // fallback is prospect (guest)
       const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
+      const hasUserSession = simulatedTier ? (simulatedTier !== 'prospect') : !!currentUser;
 
       // Unauthenticated / Prospect Persona gatekeeping
-      if (!currentUser && (cleanPath === '/account' || cleanPath === '/admin')) {
+      if (!hasUserSession && (cleanPath === '/account' || cleanPath === '/admin')) {
         this.#isLoading = false;
         await this.loadRoute('/login');
         return;
@@ -244,7 +246,7 @@ export class Router {
 
       // Editor Persona Access Constraints
       const isEditor = currentRole === 'editor';
-      const isPrimaryAdmin = currentRole === 'admin' || (currentUser && configManager.current.adminEmails?.includes(currentUser.email));
+      const isPrimaryAdmin = currentRole === 'admin' || (currentUser && configManager.current.adminEmails?.includes(currentUser.email) && !simulatedTier);
 
       // Hard gate check for Admin Panel
       if (cleanPath === '/admin') {

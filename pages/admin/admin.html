@@ -101,6 +101,29 @@
   }
 </style>
 <section style="max-width: 100%; margin: 2rem auto; padding: 1.5rem; font-family: system-ui, sans-serif;">
+  <!-- Experience Bar Component (Impersonation Mode) -->
+  <div id="admin-preview-toolbar" style="background: var(--theme-color-surface, #2d3748); border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 8px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span style="font-weight: bold; font-size: 0.95rem; color: var(--theme-color-text-primary, #ffffff);">Preview Experience As:</span>
+      <select id="preview-role-select" style="padding: 6px 12px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-background, #1a202c); color: var(--theme-color-text-primary, #ffffff); font-size: 0.85rem; font-weight: bold; cursor: pointer;">
+        <option value="prospect">Prospect</option>
+        <option value="subscriber">Subscriber</option>
+        <option value="member">Member</option>
+        <option value="affiliate">Affiliate Member</option>
+        <option value="editor">Editor</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+      <button id="btn-launch-preview" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+        Launch Live Mode
+      </button>
+      <button id="btn-reset-preview" style="padding: 6px 14px; font-size: 0.85rem; background: transparent; color: var(--theme-color-danger, #e53e3e); border: 1px solid var(--theme-color-danger, #e53e3e); border-radius: 4px; font-weight: bold; cursor: pointer;">
+        Reset
+      </button>
+    </div>
+  </div>
+
   <!-- Top header bar with log-in & notification information -->
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem;">
     <div>

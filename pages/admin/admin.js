@@ -21,6 +21,7 @@ import { errorHandler } from '../../core/error-handler.js';
 
 // Import modular tab controllers
 import { initTabController } from './admin-tabs-controller.js';
+import { initAdminPreview } from './admin-preview.js';
 import { initSiteSettingsTab } from './admin-site-settings.js';
 import { initBusinessProfileTab } from './admin-business-profile.js';
 import { initPublicProfileTab } from './admin-public-profile.js';
@@ -94,6 +95,7 @@ export function initAdminPage() {
 
   // --- 1. TAB ROUTING CONTROLLER ---
   initTabController();
+  initAdminPreview();
 
   // --- 2. INITIALIZE TAB MODULES ---
   initSiteSettingsTab();
@@ -1256,8 +1258,13 @@ export function initAdminPage() {
   const runTestsBtn = document.getElementById('btn-run-tests');
   runTestsBtn?.addEventListener('click', async () => {
     try {
-      const { runSchemaTests } = await import('../../tests/index.js');
-      runSchemaTests();
+      const { runAllTests } = await import('../../tests/index.js');
+      const results = await runAllTests();
+      if (results.success) {
+        toast.success(`Complete Test Battery passed successfully! (${results.passedSuites}/${results.totalSuites} suites passed)`);
+      } else {
+        toast.error(`Some tests failed: ${results.passedSuites}/${results.totalSuites} suites passed`);
+      }
     } catch (err) {
       errorHandler.handleError(err, 'Admin - Run Tests');
       console.error('Failed to execute test runner module:', err);
