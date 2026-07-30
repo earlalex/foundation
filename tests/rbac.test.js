@@ -172,6 +172,59 @@ export async function runRbacTests() {
     }
   });
 
+  // 7. VA recruitment & onboarding database integration tests
+  await assertTest('VA Management: Verify 1-click hiring, onboarding, and activity logs', async () => {
+    const candId = `va_cand_test_${Date.now()}`;
+    const testCandidate = {
+      type: 'va_candidate',
+      id: candId,
+      name: 'Elena Santos',
+      skills: ['SEO Specialist'],
+      hourlyRate: 7.00,
+      status: 'shortlisted'
+    };
+
+    // Save candidate
+    await contentDB.saveVaCandidate(testCandidate);
+
+    // Verify candidate is loaded
+    const candList = await contentDB.getVaCandidates('shortlisted');
+    const matched = candList.find(c => c.id === candId);
+    if (!matched || matched.name !== 'Elena Santos') {
+      throw new Error('Candidate was not successfully persisted or loaded.');
+    }
+
+    // Assign LastPass Shared credential access
+    const credId = `cred_lp_${Date.now()}`;
+    const testCredential = {
+      id: credId,
+      serviceName: 'Canva Pro Shared',
+      loginUrl: 'https://canva.com/login',
+      username: 'editor_canva',
+      encryptedPassKey: 'masked_canva_key_123',
+      assignedEditorId: null
+    };
+    await contentDB.saveVaultCredential(testCredential);
+    await contentDB.assignLastpassVaultAccess(credId, candId);
+
+    // Verify LastPass credential assignment matches assignedEditorId
+    const updatedCreds = await contentDB.getVaultCredentials();
+    const matchedCred = updatedCreds.find(c => c.id === credId);
+    if (!matchedCred || matchedCred.assignedEditorId !== candId) {
+      throw new Error('Credential was not assigned to candidate Editor correctly.');
+    }
+
+    // Verify activity logs can be successfully compiled
+    const logs = await contentDB.getVaActivityLogs(candId);
+    if (!Array.isArray(logs)) {
+      throw new Error('Activity log ledger query did not return a valid array.');
+    }
+
+    // Clean up
+    await contentDB.deleteContent(candId);
+    await contentDB.deleteVaultCredential(credId);
+  });
+
   // Clean up state
   store.dispatch('SET_USER', null);
 
