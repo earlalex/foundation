@@ -13,6 +13,7 @@ import { runMarketingTests } from './marketing.test.js';
 import { runRbacTests } from './rbac.test.js';
 import { runPagesTests } from './pages.test.js';
 import { runVaultNaicsTests } from './vault-naics.test.js';
+import { runWizardsTests } from './wizards.test.js';
 
 /**
  * Main test runner that executes all Foundation Framework test suites
@@ -38,7 +39,8 @@ export async function runAllTests() {
     { name: 'Finances & ACH Processing', runner: runFinancesTests },
     { name: 'Marketing Workflows', runner: runMarketingTests },
     { name: 'Security & VirusTotal', runner: runSecurityTests },
-    { name: 'Password Vault & NAICS Classification', runner: runVaultNaicsTests }
+    { name: 'Password Vault & NAICS Classification', runner: runVaultNaicsTests },
+    { name: 'Setup Wizards & Configuration Guards', runner: runWizardsTests }
   ];
 
   for (const suite of testSuites) {
@@ -84,5 +86,6 @@ export {
   runMarketingTests,
   runRbacTests,
   runPagesTests,
-  runVaultNaicsTests
+  runVaultNaicsTests,
+  runWizardsTests
 };

@@ -49,6 +49,62 @@ export const defaultConfig = {
     provisioningHash: "",
     companyId: "",
     apiEndpoint: "https://lastpass.com/enterprise/api.php"
+  },
+  // Newly added structured configs for section setup wizards
+  businessProfile: {
+    legalName: "",
+    dba: "",
+    ein: "",
+    entityType: "llc",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "",
+    email: "",
+    supportEmail: "",
+    phone: "",
+    privacyUrl: "/privacy",
+    termsUrl: "/terms",
+    refundUrl: "/refunds",
+    duns: "",
+    bankName: "",
+    bankRouting: "",
+    bankAccount: "",
+    naicsCode: "",
+    naicsDefinition: ""
+  },
+  stripe: {
+    publishableKey: "",
+    secretKey: "",
+    priceId: "",
+    webhookSecret: "",
+    achFee: 500, // flat $5.00 fee in cents
+    enableAch: false
+  },
+  google: {
+    clientId: "",
+    clientSecret: ""
+  },
+  aiConfig: {
+    geminiApiKey: "",
+    openaiApiKey: "",
+    preferredProvider: "gemini"
+  },
+  virustotal: {
+    apiKey: ""
+  },
+  marketing: {
+    gmailSender: "",
+    defaultSenderAlias: "Notification System",
+    defaultDelay: 24,
+    defaultTrigger: "user_signup"
+  },
+  vaHub: {
+    apiKey: "",
+    pipelineId: "",
+    onboardingTemplate: "Welcome to our team! Please complete your onboarding...",
+    welcomeEmailSubject: "Welcome to the Team!"
   }
 };
 
@@ -135,6 +191,13 @@ class ConfigEngine {
   }
 
   /**
+   * Set current configuration object (mainly for testing)
+   */
+  set current(val) {
+    this.#activeConfig = val;
+  }
+
+  /**
    * Save configuration to Firestore
    * @param {Object} configPayload - Configuration object to save
    * @returns {Promise<boolean>} True if save was successful
@@ -187,6 +250,62 @@ class ConfigEngine {
   }
 
   /**
+   * Explicit readiness guards for every admin section
+   */
+  isBrandConfigured() {
+    const config = this.current;
+    return !!(config.siteTitle && config.siteDomain && config.siteTitle !== 'Foundation Framework' && config.siteTitle !== '');
+  }
+
+  isApiKeysConfigured() {
+    const config = this.current;
+    const fb = config.firebase || {};
+    const google = config.google || {};
+    const ai = config.aiConfig || {};
+    const hasFb = !!(fb.apiKey && fb.projectId && fb.apiKey !== 'YOUR_API_KEY' && fb.projectId !== 'YOUR_PROJECT_ID' && fb.apiKey !== '');
+    const hasGoogle = !!(google.clientId && google.clientSecret && google.clientId !== '');
+    const hasAi = !!((ai.geminiApiKey || ai.openaiApiKey) && (ai.geminiApiKey !== '' || ai.openaiApiKey !== ''));
+    return hasFb && hasGoogle && hasAi;
+  }
+
+  isBusinessConfigured() {
+    const config = this.current;
+    const biz = config.businessProfile || {};
+    return !!(biz.legalName && biz.address && biz.ein && biz.naicsCode && biz.legalName !== '');
+  }
+
+  isFinancesConfigured() {
+    const config = this.current;
+    const stripe = config.stripe || {};
+    return !!(stripe.secretKey && stripe.publishableKey && stripe.priceId && stripe.achFee !== undefined && stripe.secretKey !== '');
+  }
+
+  isLastpassConfigured() {
+    const config = this.current;
+    const lp = config.lastpass || {};
+    return !!(lp.provisioningHash && lp.companyId && lp.provisioningHash !== '');
+  }
+
+  isMarketingConfigured() {
+    const config = this.current;
+    const mkt = config.marketing || {};
+    return !!(mkt.gmailSender && mkt.defaultTrigger && mkt.gmailSender !== '');
+  }
+
+  isSecurityConfigured() {
+    const config = this.current;
+    const vt = config.virustotal || {};
+    const sec = config.security || {};
+    return !!(vt.apiKey && sec.monthlyScanEnabled !== undefined && vt.apiKey !== '');
+  }
+
+  isVaHubConfigured() {
+    const config = this.current;
+    const va = config.vaHub || {};
+    return !!(va.apiKey && va.onboardingTemplate && va.apiKey !== '');
+  }
+
+  /**
    * Check if a specific module is properly configured
    * @param {string} moduleName - Name of the module to check
    * @returns {boolean} True if module is configured, false otherwise
@@ -196,19 +315,16 @@ class ConfigEngine {
     
     const moduleConfigs = {
       'site-brand': () => {
-        return !!(config.siteTitle && config.siteDomain && config.siteTitle !== 'Foundation Framework');
+        return this.isBrandConfigured();
       },
       'api-keys': () => {
-        const fb = config.firebase || {};
-        return !!(fb.apiKey && fb.projectId && fb.apiKey !== 'YOUR_API_KEY' && fb.projectId !== 'YOUR_PROJECT_ID');
+        return this.isApiKeysConfigured();
       },
       'business-legal': () => {
-        const biz = config.businessProfile || {};
-        return !!(biz.businessName && biz.businessAddress && biz.phone);
+        return this.isBusinessConfigured();
       },
       'finances-ach': () => {
-        const stripe = config.stripe || {};
-        return !!(stripe.secretKey && stripe.publishableKey && stripe.secretKey !== '');
+        return this.isFinancesConfigured();
       },
       'chatbot-voice': () => {
         const chat = config.chatbot || {};
@@ -217,9 +333,7 @@ class ConfigEngine {
         return !!(chat.enabled && (hasTelnyx || hasTwilio));
       },
       'security-ops': () => {
-        const sec = config.security || {};
-        const seo = config.seoMyRankAddr || {};
-        return !!(sec.monthlyScanEnabled !== undefined && seo.apiKey);
+        return this.isSecurityConfigured();
       },
       'seo-analytics': () => {
         const third = config.thirdParty || {};
@@ -260,21 +374,22 @@ class ConfigEngine {
         { key: 'firebase.projectId', path: 'firebase.projectId', label: 'Firebase Project ID' }
       ],
       'business-legal': [
-        { key: 'businessProfile.businessName', path: 'businessProfile.businessName', label: 'Business Name' },
-        { key: 'businessProfile.businessAddress', path: 'businessProfile.businessAddress', label: 'Business Address' },
-        { key: 'businessProfile.phone', path: 'businessProfile.phone', label: 'Phone Number' }
+        { key: 'businessProfile.legalName', path: 'businessProfile.legalName', label: 'Business Name' },
+        { key: 'businessProfile.address', path: 'businessProfile.address', label: 'Business Address' },
+        { key: 'businessProfile.ein', path: 'businessProfile.ein', label: 'EIN / Tax ID' },
+        { key: 'businessProfile.naicsCode', path: 'businessProfile.naicsCode', label: 'NAICS Industry Code' }
       ],
       'finances-ach': [
         { key: 'stripe.secretKey', path: 'stripe.secretKey', label: 'Stripe Secret Key' },
-        { key: 'stripe.publishableKey', path: 'stripe.publishableKey', label: 'Stripe Publishable Key' }
+        { key: 'stripe.publishableKey', path: 'stripe.publishableKey', label: 'Stripe Publishable Key' },
+        { key: 'stripe.priceId', path: 'stripe.priceId', label: 'Stripe Price ID' }
       ],
       'chatbot-voice': [
         { key: 'chatbot.enabled', path: 'chatbot.enabled', label: 'Chatbot Enabled' },
         { key: 'chatbot.telnyxApiKey', path: 'chatbot.telnyxApiKey', label: 'Telnyx API Key (or Twilio)' }
       ],
       'security-ops': [
-        { key: 'security.monthlyScanEnabled', path: 'security.monthlyScanEnabled', label: 'Monthly Scan Enabled' },
-        { key: 'seoMyRankAddr.apiKey', path: 'seoMyRankAddr.apiKey', label: 'SEO API Key' }
+        { key: 'virustotal.apiKey', path: 'virustotal.apiKey', label: 'VirusTotal API Key' }
       ],
       'seo-analytics': [
         { key: 'thirdParty.ga4PropertyId', path: 'thirdParty.ga4PropertyId', label: 'GA4 Property ID' },
