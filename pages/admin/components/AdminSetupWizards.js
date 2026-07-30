@@ -625,6 +625,23 @@ export class AdminSetupWizards {
               }
             }
 
+            const wizardTypeToConfigKey = {
+              site: 'site',
+              api: 'api',
+              business: 'businessProfile',
+              finances: 'stripe',
+              lastpass: 'lastpass',
+              marketing: 'marketing',
+              security: 'security',
+              va: 'vaHub'
+            };
+
+            const configKey = wizardTypeToConfigKey[wizardType];
+            if (configKey) {
+              mergedConfig[configKey] = mergedConfig[configKey] || {};
+              mergedConfig[configKey].isConfigured = true;
+            }
+
             const success = await configManager.saveToFirebase(mergedConfig);
             if (success) {
               toast.success(`${config.title} successfully configured and unlocked!`);
