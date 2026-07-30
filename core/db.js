@@ -1274,6 +1274,112 @@ export class ContentDB {
       return [];
     }
   }
+
+  // --- VA Management & Evaluation Helpers ---
+
+  async saveVaCandidate(data) {
+    return this.saveContent(data);
+  }
+
+  async getVaCandidates(statusFilter = 'all') {
+    const all = await this.getAllContent();
+    let vas = all.filter(item => item.type === 'va_candidate' || item.type === 'va_hired');
+    if (statusFilter && statusFilter !== 'all') {
+      vas = vas.filter(item => item.status === statusFilter);
+    }
+    return vas;
+  }
+
+  async getVaActivityLogs(editorId) {
+    const logs = [];
+    const user = await this.getUser(editorId);
+    const editorEmail = user?.email || editorId;
+    const editorName = user?.name || '';
+
+    // 1. Get Kanban Tasks
+    try {
+      const tasks = await this.getKanbanTasks();
+      const assignedTasks = tasks.filter(t => t.assigneeId === editorId || t.assigneeId === editorEmail);
+      assignedTasks.forEach(task => {
+        logs.push({
+          id: `log_task_${task.id}`,
+          timestamp: task.updatedAt || task.createdAt || new Date().toISOString(),
+          type: 'task',
+          description: `Assigned Kanban Task: "${task.title}" (Status: ${task.status})`,
+          details: task.description || ''
+        });
+      });
+    } catch (e) {
+      console.warn('Error fetching tasks for activity logs', e);
+    }
+
+    // 2. Get Content Submissions
+    try {
+      const contentItems = await this.getAllContent();
+      const editorContent = contentItems.filter(item =>
+        item.author === editorEmail ||
+        item.author === editorName ||
+        (item.author && item.author.toLowerCase() === editorName.toLowerCase())
+      );
+      editorContent.forEach(item => {
+        logs.push({
+          id: `log_content_${item.id}`,
+          timestamp: item.updatedAt || item.date || new Date().toISOString(),
+          type: 'content',
+          description: `CMS Content Published: "${item.title}" (Type: ${item.type})`,
+          details: item.description || ''
+        });
+      });
+    } catch (e) {
+      console.warn('Error fetching content for activity logs', e);
+    }
+
+    // 3. Get Marketing Workflows
+    try {
+      const workflows = await this.getMarketingWorkflows();
+      const editorWorkflows = workflows.filter(w => w.createdBy === editorId || w.createdBy === editorEmail);
+      editorWorkflows.forEach(w => {
+        logs.push({
+          id: `log_wf_${w.id}`,
+          timestamp: w.updatedAt || new Date().toISOString(),
+          type: 'marketing',
+          description: `Marketing Workflow Drafted: "${w.name}"`,
+          details: w.description || ''
+        });
+      });
+    } catch (e) {
+      console.warn('Error fetching workflows for activity logs', e);
+    }
+
+    // Sort logs newest first
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return logs;
+  }
+
+  async assignLastpassVaultAccess(vaultId, editorId) {
+    const creds = await this.getVaultCredentials();
+    const cred = creds.find(c => c.id === vaultId);
+    if (!cred) {
+      throw new Error(`Vault credential with ID ${vaultId} not found`);
+    }
+    cred.assignedEditorId = editorId || null;
+    cred.updatedAt = new Date().toISOString();
+    return this.saveVaultCredential(cred);
+  }
+
+  async updateKanbanTaskStatus(taskId, columnId, editorId) {
+    const tasks = await this.getKanbanTasks();
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+      throw new Error(`Kanban task with ID ${taskId} not found`);
+    }
+    task.status = columnId;
+    if (editorId) {
+      task.updatedBy = editorId;
+    }
+    task.updatedAt = new Date().toISOString();
+    return this.saveKanbanTask(task);
+  }
 }
 
 /**

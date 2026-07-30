@@ -10,6 +10,7 @@ import { SponsorSchema } from './sponsor.js';
 import { EventSchema } from './event.js';
 import { ProductSchema } from './product.js';
 import { PageSchema } from './page.js';
+import { VaSchema } from './va.js';
 
 class SchemaRegistry {
   #schemas = new Map();
@@ -26,6 +27,8 @@ class SchemaRegistry {
     this.register('event', EventSchema);
     this.register('product', ProductSchema);
     this.register('page', PageSchema);
+    this.register('va_candidate', VaSchema);
+    this.register('va_hired', VaSchema);
   }
 
   register(contentType, schemaDefinition) {

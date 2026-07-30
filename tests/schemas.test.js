@@ -189,6 +189,28 @@ export function runSchemaTests() {
       preview: validPreview
     });
   });
+
+  assertTest('VA Candidate Schema: Passes valid payload', () => {
+    schemaRegistry.validate({
+      type: 'va_candidate',
+      id: 'va-cand-test',
+      name: 'Maria Clara',
+      skills: ['Content Editor', 'SEO'],
+      hourlyRate: 7.50,
+      status: 'prospect'
+    });
+  });
+
+  assertTest('VA Hired Schema: Passes valid payload', () => {
+    schemaRegistry.validate({
+      type: 'va_hired',
+      id: 'va-hired-test',
+      name: 'Juan Luna',
+      skills: ['Web Designer'],
+      hourlyRate: 9.00,
+      status: 'hired'
+    });
+  });
   console.groupEnd();
 
   const passedAll = totalTests === passedTests;

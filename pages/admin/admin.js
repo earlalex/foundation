@@ -33,6 +33,7 @@ import { initMarketingTab } from './admin-marketing.js';
 import { initKanbanTab } from './admin-kanban.js';
 import { initSecurityTab } from './admin-security.js';
 import { initPagesTab } from './admin-pages.js';
+import { initVasTab } from './admin-vas.js';
 
 export function initAdminPage() {
   // --- 0.1 ROLE-BASED ACCESS CONTROL (RBAC) DISPLAY GUARD ---
@@ -128,6 +129,8 @@ export function initAdminPage() {
       initMarketingTab();
     } else if (targetTab === 'kanban') {
       initKanbanTab();
+    } else if (targetTab === 'vas') {
+      initVasTab();
     }
   });
 

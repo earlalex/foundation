@@ -12,6 +12,10 @@ service cloud.firestore {
         request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails;
     }
 
+    function isEditor() {
+      return isAuthenticated() && request.auth.token.role == 'editor';
+    }
+
     // Settings & Master Configuration Document
     match /settings/config {
       allow read: if true; // Public needs site identity & brand settings
@@ -28,8 +32,32 @@ service cloud.firestore {
     match /content/{contentId} {
       allow read: if resource.data.access.visibility == 'public' || 
                   (isAuthenticated() && resource.data.access.visibility == 'authenticated') || 
-                  isAdmin();
-      allow write: if isAdmin();
+                  isAdmin() || isEditor();
+      allow write: if isAdmin() || isEditor();
+    }
+
+    // Marketing Workflows
+    match /marketing_workflows/{workflowId} {
+      allow read, write: if isAdmin() || isEditor();
+    }
+
+    // Kanban Tasks
+    match /kanban_tasks/{taskId} {
+      allow read, write: if isAdmin() || isEditor();
+    }
+
+    // Finances (Block Editors, allow only Admins)
+    match /finances_expenses/{expenseId} {
+      allow read, write: if isAdmin();
+    }
+    match /finances_payroll/{payrollId} {
+      allow read, write: if isAdmin();
+    }
+    match /finances_budgets/{budgetId} {
+      allow read, write: if isAdmin();
+    }
+    match /finances_employees/{employeeId} {
+      allow read, write: if isAdmin();
     }
   }
 }

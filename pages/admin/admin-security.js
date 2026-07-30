@@ -1,6 +1,7 @@
 // pages/admin/admin-security.js - Security & LastPass Vault Integration Controller
 import { contentDB } from '../../core/db.js';
 import { configManager } from '../../core/config.js';
+import { store } from '../../core/store.js';
 import { toast } from '../../utils/toast.js';
 import { authManager } from '../../core/auth.js';
 import { errorHandler } from '../../core/error-handler.js';
@@ -16,16 +17,26 @@ export function initSecurityTab() {
 }
 
 function checkAdminRole() {
-  const currentUser = authManager.currentUser;
-  const adminEmails = configManager.current.adminEmails || [];
+  const currentUser = store.state.user;
   
-  isAdminPrimary = adminEmails.includes(currentUser?.email);
+  isAdminPrimary = currentUser?.isAdmin === true || currentUser?.role === 'admin';
   
   const roleBadge = document.getElementById('admin-role-badge');
   if (roleBadge) {
-    roleBadge.textContent = isAdminPrimary ? 'Primary Admin' : 'Limited Access';
+    roleBadge.textContent = isAdminPrimary ? 'Primary Admin' : 'Limited Access (Editor)';
     roleBadge.style.background = isAdminPrimary ? '#f0fdf4' : '#fffaf0';
     roleBadge.style.color = isAdminPrimary ? '#166534' : '#c05621';
+  }
+
+  // If user is Editor, hide the Add Credential form and LastPass configuration completely
+  const addForm = document.getElementById('vault-credential-form');
+  const lpForm = document.getElementById('lastpass-config-form');
+  if (currentUser?.role === 'editor') {
+    if (addForm) addForm.style.display = 'none';
+    if (lpForm) lpForm.style.display = 'none';
+  } else {
+    if (addForm) addForm.style.display = 'grid';
+    if (lpForm) lpForm.style.display = 'grid';
   }
 }
 
@@ -48,7 +59,53 @@ function renderCredentialsList() {
     return;
   }
 
-  container.innerHTML = credentials.map(cred => `
+  // Filter credentials for Editor: if the user is not a primary admin, only show credentials assigned to them!
+  const currentUser = store.state.user;
+  const isEditorUser = currentUser?.role === 'editor';
+
+  let visibleCreds = credentials;
+  if (isEditorUser) {
+    visibleCreds = credentials.filter(c => c.assignedEditorId === currentUser.id);
+  }
+
+  if (visibleCreds.length === 0) {
+    container.innerHTML = '<p style="color: var(--theme-color-text-secondary, #718096); font-size: 0.9rem;">No shared credentials assigned to your editor profile.</p>';
+    return;
+  }
+
+  container.innerHTML = visibleCreds.map(cred => {
+    const showDeleteBtn = isAdminPrimary ? `
+      <button onclick="window.deleteCredential('${cred.id}')"
+              style="padding: 4px 8px; background: #fed7d7; color: #c53030; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+        Delete
+      </button>
+    ` : '';
+
+    const showCopyBtn = isAdminPrimary ? `
+      <button onclick="window.copyPassword('${cred.id}')"
+              style="padding: 4px 8px; background: #edf2f7; color: #4a5568; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+        Copy
+      </button>
+    ` : '';
+
+    const showRevealBtn = isAdminPrimary ? `
+      <button onclick="window.togglePasswordVisibility('${cred.id}')"
+              style="padding: 4px 8px; background: #ebf8ff; color: #2b6cb0; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+        Show
+      </button>
+    ` : '';
+
+    const showAssignSection = isAdminPrimary ? `
+      <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #cbd5e0; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <label style="font-weight: 600; color: #718096; font-size: 0.75rem;">Assign Editor Access:</label>
+        <select id="assign-va-select-${cred.id}" onchange="window.assignVaultAccess('${cred.id}', this.value)"
+                style="padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; border: 1px solid #cbd5e0; background: white;">
+          <option value="">Unassigned (Admin Only)</option>
+        </select>
+      </div>
+    ` : '';
+
+    return `
     <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); 
                 padding: 1rem; border-radius: 6px; margin-bottom: 0.75rem;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
@@ -58,10 +115,7 @@ function renderCredentialsList() {
             ${cred.loginUrl}
           </p>
         </div>
-        <button onclick="window.deleteCredential('${cred.id}')" 
-                style="padding: 4px 8px; background: #fed7d7; color: #c53030; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
-          Delete
-        </button>
+        ${showDeleteBtn}
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.85rem;">
         <div>
@@ -79,17 +133,14 @@ function renderCredentialsList() {
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 2px;">
             <input type="password" id="password-${cred.id}" value="${'•'.repeat(12)}" readonly
                    style="flex: 1; padding: 4px 8px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.8rem; height: 28px;" />
-            <button onclick="window.copyPassword('${cred.id}')"
-                    style="padding: 4px 8px; background: #edf2f7; color: #4a5568; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
-              Copy
-            </button>
-            <button onclick="window.togglePasswordVisibility('${cred.id}')"
-                    style="padding: 4px 8px; background: #ebf8ff; color: #2b6cb0; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
-              Show
-            </button>
+            ${showCopyBtn}
+            ${showRevealBtn}
           </div>
         </div>
       </div>
+
+      ${showAssignSection}
+
       <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
         <a href="${cred.loginUrl}" target="_blank" 
            style="flex: 1; padding: 6px 12px; background: #48bb78; color: white; text-align: center; text-decoration: none; 
@@ -102,8 +153,44 @@ function renderCredentialsList() {
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
+
+  if (isAdminPrimary) {
+    populateVASelectors();
+  }
 }
+
+async function populateVASelectors() {
+  try {
+    const allUsers = await contentDB.getAllUsers();
+    const editors = allUsers.filter(u => u.role === 'editor');
+
+    credentials.forEach(cred => {
+      const select = document.getElementById(`assign-va-select-${cred.id}`);
+      if (!select) return;
+
+      select.innerHTML = '<option value="">Unassigned (Admin Only)</option>' +
+        editors.map(ed => `<option value="${ed.id}" ${cred.assignedEditorId === ed.id ? 'selected' : ''}>${ed.name || ed.displayName || ed.email}</option>`).join('');
+    });
+  } catch (err) {
+    console.error('Failed to populate VA assignment selectors:', err);
+  }
+}
+
+window.assignVaultAccess = async function(credId, editorId) {
+  try {
+    await contentDB.assignLastpassVaultAccess(credId, editorId);
+    const cred = credentials.find(c => c.id === credId);
+    if (cred) {
+      cred.assignedEditorId = editorId || null;
+    }
+    toast.success('Successfully updated shared credential assignment!');
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Security - Assign Vault Access');
+    toast.error('Failed to assign credential access');
+  }
+};
 
 window.copyToClipboard = function(text, label) {
   navigator.clipboard.writeText(text).then(() => {
