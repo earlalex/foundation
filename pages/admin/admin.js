@@ -19,6 +19,10 @@ import { FormValidator, validationRules } from '../../utils/validation.js';
 import { scanFileLocally } from '../../utils/securityScanner.js';
 import { errorHandler } from '../../core/error-handler.js';
 
+// Setup Wizard Components
+import { AdminSetupCard } from './components/AdminSetupCard.js';
+import { AdminSetupWizards } from './components/AdminSetupWizards.js';
+
 // Import modular tab controllers
 import { initTabController } from './admin-tabs-controller.js';
 import { initAdminPreview } from './admin-preview.js';
@@ -98,47 +102,193 @@ export function initAdminPage() {
   initTabController();
   initAdminPreview();
 
-  // --- 2. INITIALIZE TAB MODULES ---
-  initSiteSettingsTab();
-  initBusinessProfileTab();
+  // --- 2. CONFIGURATION READY GUARDS & RE-RUN SETUP BUTTONS ---
+  const sectionGuards = [
+    {
+      tabId: 'tab-site',
+      title: "Site & Brand",
+      wizardKey: 'site',
+      isConfigured: () => configManager.isBrandConfigured(),
+      getMissing: () => configManager.getMissingConfigKeys('site-brand'),
+      initFn: initSiteSettingsTab
+    },
+    {
+      tabId: 'tab-config',
+      title: "API Keys & Cloud",
+      wizardKey: 'api',
+      isConfigured: () => configManager.isApiKeysConfigured(),
+      getMissing: () => configManager.getMissingConfigKeys('api-keys'),
+      initFn: initIntegrationsTab
+    },
+    {
+      tabId: 'tab-business',
+      title: "Business & Legal",
+      wizardKey: 'business',
+      isConfigured: () => configManager.isBusinessConfigured(),
+      getMissing: () => configManager.getMissingConfigKeys('business-legal'),
+      initFn: initBusinessProfileTab
+    },
+    {
+      tabId: 'tab-finances',
+      title: "Finances & ACH",
+      wizardKey: 'finances',
+      isConfigured: () => configManager.isFinancesConfigured(),
+      getMissing: () => configManager.getMissingConfigKeys('finances-ach'),
+      initFn: initFinancesTab
+    },
+    {
+      tabId: 'tab-security',
+      title: "Password Vault & Security",
+      wizardKey: 'lastpass',
+      isConfigured: () => configManager.isLastpassConfigured() && configManager.isSecurityConfigured(),
+      getMissing: () => {
+        const m = [];
+        if (!configManager.isLastpassConfigured()) m.push("LastPass Provisioning Hash & Company ID");
+        if (!configManager.isSecurityConfigured()) m.push("VirusTotal API Key & Scan Schedules");
+        return m;
+      },
+      initFn: () => {
+        initSecurityTab();
+        loadGscSecurityThreats();
+      }
+    },
+    {
+      tabId: 'tab-marketing',
+      title: "Automated Marketing",
+      wizardKey: 'marketing',
+      isConfigured: () => configManager.isMarketingConfigured(),
+      getMissing: () => ["Gmail notification credentials & Sequence triggers"],
+      initFn: initMarketingTab
+    },
+    {
+      tabId: 'tab-vas',
+      title: "VA Hiring Hub",
+      wizardKey: 'va',
+      isConfigured: () => configManager.isVaHubConfigured(),
+      getMissing: () => ["OnlineJobs.ph pipeline/API connection parameters"],
+      initFn: initVasTab
+    }
+  ];
+
+  function checkAndInitTab(tabId) {
+    const g = sectionGuards.find(x => x.tabId === `tab-${tabId}`);
+    if (!g) return true; // not guarded (like users, pages, cms, etc.)
+
+    const panel = document.getElementById(g.tabId);
+    if (!panel) return true;
+
+    // Ensure re-run button exists
+    let rBtn = panel.querySelector('.btn-rerun-setup');
+    if (!rBtn) {
+      rBtn = document.createElement('button');
+      rBtn.className = 'btn-rerun-setup';
+      rBtn.textContent = '⚙ Re-run Setup Wizard';
+      rBtn.style.cssText = `
+        float: right;
+        margin-bottom: 1rem;
+        padding: 6px 12px;
+        background: var(--theme-color-surface, #f7fafc);
+        color: var(--theme-color-primary, #2b6cb0);
+        border: 1px solid var(--theme-color-primary, #2b6cb0);
+        border-radius: var(--theme-layout-border-radius, 4px);
+        font-weight: bold;
+        font-size: 0.85rem;
+        cursor: pointer;
+      `;
+      panel.insertBefore(rBtn, panel.firstChild);
+    }
+
+    const isAlreadyConfigured = g.isConfigured();
+    rBtn.style.display = isAlreadyConfigured ? 'block' : 'none';
+
+    rBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      let wizardKey = g.wizardKey;
+      if (g.tabId === 'tab-security') {
+        if (!configManager.isLastpassConfigured()) {
+          wizardKey = 'lastpass';
+        } else if (!configManager.isSecurityConfigured()) {
+          wizardKey = 'security';
+        } else {
+          wizardKey = 'security';
+        }
+      }
+
+      AdminSetupWizards.launch(wizardKey, () => {
+        AdminSetupCard.unlock(panel);
+        checkAndInitTab(tabId);
+      });
+    };
+
+    if (!isAlreadyConfigured) {
+      let wizardKey = g.wizardKey;
+      if (g.tabId === 'tab-security') {
+        if (!configManager.isLastpassConfigured()) {
+          wizardKey = 'lastpass';
+        } else if (!configManager.isSecurityConfigured()) {
+          wizardKey = 'security';
+        }
+      }
+
+      AdminSetupCard.render(panel, {
+        title: g.title,
+        missingPrereqs: g.getMissing(),
+        onLaunchWizard: () => {
+          AdminSetupWizards.launch(wizardKey, () => {
+            AdminSetupCard.unlock(panel);
+            checkAndInitTab(tabId);
+          });
+        }
+      });
+      return false;
+    } else {
+      AdminSetupCard.unlock(panel);
+      g.initFn();
+      return true;
+    }
+  }
+
+  // Set up CONFIG_UPDATED reactive listener
+  window.addEventListener('CONFIG_UPDATED', () => {
+    const activeBtn = document.querySelector('.admin-tab.active');
+    if (activeBtn) {
+      checkAndInitTab(activeBtn.getAttribute('data-tab'));
+    }
+  });
+
+  // Initialize public non-guarded elements
   initPublicProfileTab();
-  initIntegrationsTab();
 
   // --- 3. TAB-SPECIFIC INITIALIZATION VIA EVENT LISTENERS ---
   window.addEventListener('adminTabChanged', (e) => {
     const targetTab = e.detail.tab;
     
+    const isOk = checkAndInitTab(targetTab);
+    if (!isOk) return; // Stop further on-demand initialization if unconfigured
+
     if (targetTab === 'users') {
       initUserDirectoryTab();
     } else if (targetTab === 'pages') {
       initPagesTab();
     } else if (targetTab === 'products') {
       initProductsTab();
-    } else if (targetTab === 'finances') {
-      initFinancesTab();
     } else if (targetTab === 'seo') {
       loadSeoAndAnalyticsTab();
     } else if (targetTab === 'performance') {
       loadPerformanceTab();
-    } else if (targetTab === 'security') {
-      initSecurityTab();
-      loadGscSecurityThreats();
     } else if (targetTab === 'chatbot') {
       loadChatbotAndVoiceTab();
-    } else if (targetTab === 'marketing') {
-      initMarketingTab();
     } else if (targetTab === 'kanban') {
       initKanbanTab();
-    } else if (targetTab === 'vas') {
-      initVasTab();
     }
   });
 
-  // --- REMOVED: Site & Brand Settings (now in admin-site-settings.js) ---
-  // --- REMOVED: Business & Legal Profile (now in admin-business-profile.js) ---
-  // --- REMOVED: Public Profile (now in admin-public-profile.js) ---
-  // --- REMOVED: Integrations (now in admin-integrations.js) ---
-  // --- REMOVED: User Directory (now in admin-user-directory.js) ---
+  // Run initial check and load for active tab on page load
+  const activeTabBtn = document.querySelector('.admin-tab.active');
+  const activeTab = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'site';
+  checkAndInitTab(activeTab);
 
   // --- 6. CMS PUBLISHER CONTROLLER ---
   const contentTypeSelect = document.getElementById('content-type');
