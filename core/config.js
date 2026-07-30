@@ -11,6 +11,12 @@ export const defaultConfig = {
   siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
   adminEmails: [],
+  site: {
+    isConfigured: false
+  },
+  api: {
+    isConfigured: false
+  },
   firebase: {
     apiKey: "",
     projectId: ""
@@ -24,7 +30,8 @@ export const defaultConfig = {
     vtUrl: "/api/virustotal-scan"
   },
   security: {
-    monthlyScanEnabled: false
+    monthlyScanEnabled: false,
+    isConfigured: false
   },
   seoMyRankAddr: {
     apiKey: "E4462175E8369240D133B6C4F3CD288C",
@@ -48,7 +55,8 @@ export const defaultConfig = {
   lastpass: {
     provisioningHash: "",
     companyId: "",
-    apiEndpoint: "https://lastpass.com/enterprise/api.php"
+    apiEndpoint: "https://lastpass.com/enterprise/api.php",
+    isConfigured: false
   },
   // Newly added structured configs for section setup wizards
   businessProfile: {
@@ -72,7 +80,8 @@ export const defaultConfig = {
     bankRouting: "",
     bankAccount: "",
     naicsCode: "",
-    naicsDefinition: ""
+    naicsDefinition: "",
+    isConfigured: false
   },
   stripe: {
     publishableKey: "",
@@ -80,7 +89,8 @@ export const defaultConfig = {
     priceId: "",
     webhookSecret: "",
     achFee: 500, // flat $5.00 fee in cents
-    enableAch: false
+    enableAch: false,
+    isConfigured: false
   },
   google: {
     clientId: "",
@@ -98,13 +108,15 @@ export const defaultConfig = {
     gmailSender: "",
     defaultSenderAlias: "Notification System",
     defaultDelay: 24,
-    defaultTrigger: "user_signup"
+    defaultTrigger: "user_signup",
+    isConfigured: false
   },
   vaHub: {
     apiKey: "",
     pipelineId: "",
     onboardingTemplate: "Welcome to our team! Please complete your onboarding...",
-    welcomeEmailSubject: "Welcome to the Team!"
+    welcomeEmailSubject: "Welcome to the Team!",
+    isConfigured: false
   }
 };
 
@@ -123,17 +135,30 @@ class ConfigEngine {
   }
 
   /**
+   * Get cached config from LocalStorage securely
+   * @private
+   */
+  #getLocalStorageConfig() {
+    if (typeof window === 'undefined') return null;
+    const saved = localStorage.getItem('foundation_config');
+    if (saved) {
+      try {
+        return { ...defaultConfig, ...JSON.parse(saved) };
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Load configuration from localStorage
    * @private
    */
   #loadFromLocalStorage() {
-    const saved = localStorage.getItem('foundation_config');
+    const saved = this.#getLocalStorageConfig();
     if (saved) {
-      try {
-        this.#activeConfig = { ...defaultConfig, ...JSON.parse(saved) };
-      } catch (e) {
-        this.#activeConfig = { ...defaultConfig };
-      }
+      this.#activeConfig = saved;
     } else {
       this.#activeConfig = { ...defaultConfig };
     }
@@ -166,7 +191,7 @@ class ConfigEngine {
       if (docSnap && docSnap.exists()) {
         const firestoreData = docSnap.data();
         this.#activeConfig = { ...defaultConfig, ...firestoreData, isInstalled: true };
-        localStorage.removeItem('foundation_config');
+        localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
         console.log('[ConfigEngine]: Master configuration verified from Firestore.');
         return true;
       } else if (hasLocalKeys) {
@@ -241,7 +266,7 @@ class ConfigEngine {
       ]);
 
       console.log('[ConfigEngine]: Configuration synced to Firestore successfully.');
-      localStorage.removeItem('foundation_config');
+      localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
       return true;
     } catch (err) {
       console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.');
@@ -253,56 +278,65 @@ class ConfigEngine {
    * Explicit readiness guards for every admin section
    */
   isBrandConfigured() {
-    const config = this.current;
-    return !!(config.siteTitle && config.siteDomain && config.siteTitle !== 'Foundation Framework' && config.siteTitle !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.site?.isConfigured === true;
+    const hasParams = !!(local.siteTitle && local.siteDomain && local.siteTitle !== 'Foundation Framework' && local.siteTitle !== '');
+    return isFlagged || hasParams;
   }
 
   isApiKeysConfigured() {
-    const config = this.current;
-    const fb = config.firebase || {};
-    const google = config.google || {};
-    const ai = config.aiConfig || {};
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.api?.isConfigured === true;
+    const fb = local.firebase || {};
+    const google = local.google || {};
+    const ai = local.aiConfig || {};
     const hasFb = !!(fb.apiKey && fb.projectId && fb.apiKey !== 'YOUR_API_KEY' && fb.projectId !== 'YOUR_PROJECT_ID' && fb.apiKey !== '');
     const hasGoogle = !!(google.clientId && google.clientSecret && google.clientId !== '');
     const hasAi = !!((ai.geminiApiKey || ai.openaiApiKey) && (ai.geminiApiKey !== '' || ai.openaiApiKey !== ''));
-    return hasFb && hasGoogle && hasAi;
+    return isFlagged || (hasFb && hasGoogle && hasAi);
   }
 
   isBusinessConfigured() {
-    const config = this.current;
-    const biz = config.businessProfile || {};
-    return !!(biz.legalName && biz.address && biz.ein && biz.naicsCode && biz.legalName !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.businessProfile?.isConfigured === true;
+    const biz = local.businessProfile || {};
+    return isFlagged || !!(biz.legalName && biz.address && biz.ein && biz.naicsCode && biz.legalName !== '');
   }
 
   isFinancesConfigured() {
-    const config = this.current;
-    const stripe = config.stripe || {};
-    return !!(stripe.secretKey && stripe.publishableKey && stripe.priceId && stripe.achFee !== undefined && stripe.secretKey !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.stripe?.isConfigured === true;
+    const stripe = local.stripe || {};
+    return isFlagged || !!(stripe.secretKey && stripe.publishableKey && stripe.priceId && stripe.achFee !== undefined && stripe.secretKey !== '');
   }
 
   isLastpassConfigured() {
-    const config = this.current;
-    const lp = config.lastpass || {};
-    return !!(lp.provisioningHash && lp.companyId && lp.provisioningHash !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.lastpass?.isConfigured === true;
+    const lp = local.lastpass || {};
+    return isFlagged || !!(lp.provisioningHash && lp.companyId && lp.provisioningHash !== '');
   }
 
   isMarketingConfigured() {
-    const config = this.current;
-    const mkt = config.marketing || {};
-    return !!(mkt.gmailSender && mkt.defaultTrigger && mkt.gmailSender !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.marketing?.isConfigured === true;
+    const mkt = local.marketing || {};
+    return isFlagged || !!(mkt.gmailSender && mkt.defaultTrigger && mkt.gmailSender !== '');
   }
 
   isSecurityConfigured() {
-    const config = this.current;
-    const vt = config.virustotal || {};
-    const sec = config.security || {};
-    return !!(vt.apiKey && sec.monthlyScanEnabled !== undefined && vt.apiKey !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.security?.isConfigured === true;
+    const vt = local.virustotal || {};
+    const sec = local.security || {};
+    return isFlagged || !!(vt.apiKey && sec.monthlyScanEnabled !== undefined && vt.apiKey !== '');
   }
 
   isVaHubConfigured() {
-    const config = this.current;
-    const va = config.vaHub || {};
-    return !!(va.apiKey && va.onboardingTemplate && va.apiKey !== '');
+    const local = this.#getLocalStorageConfig() || this.current;
+    const isFlagged = local.vaHub?.isConfigured === true;
+    const va = local.vaHub || {};
+    return isFlagged || !!(va.apiKey && va.onboardingTemplate && va.apiKey !== '');
   }
 
   /**
@@ -311,7 +345,7 @@ class ConfigEngine {
    * @returns {boolean} True if module is configured, false otherwise
    */
   isModuleConfigured(moduleName) {
-    const config = this.#activeConfig;
+    const config = this.#getLocalStorageConfig() || this.current;
     
     const moduleConfigs = {
       'site-brand': () => {
@@ -361,7 +395,7 @@ class ConfigEngine {
    * @returns {Array<string>} Array of missing configuration keys
    */
   getMissingConfigKeys(moduleName) {
-    const config = this.#activeConfig;
+    const config = this.#getLocalStorageConfig() || this.current;
     const missing = [];
 
     const moduleRequirements = {

@@ -177,15 +177,25 @@ export function initAdminPage() {
     const panel = document.getElementById(g.tabId);
     if (!panel) return true;
 
+    const isAlreadyConfigured = g.isConfigured();
+
+    if (isAlreadyConfigured) {
+      AdminSetupCard.unlock(panel);
+    }
+
+    // Ensure parent panel has position relative for absolute positioning of top-right toolbar button
+    panel.style.position = 'relative';
+
     // Ensure re-run button exists
-    let rBtn = panel.querySelector('.btn-rerun-setup');
+    let rBtn = panel.querySelector('.btn-reconfigure-settings') || panel.querySelector('.btn-rerun-setup');
     if (!rBtn) {
       rBtn = document.createElement('button');
-      rBtn.className = 'btn-rerun-setup';
-      rBtn.textContent = '⚙ Re-run Setup Wizard';
+      rBtn.className = 'btn-reconfigure-settings btn-rerun-setup';
+      rBtn.textContent = 'Re-configure Settings';
       rBtn.style.cssText = `
-        float: right;
-        margin-bottom: 1rem;
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
         padding: 6px 12px;
         background: var(--theme-color-surface, #f7fafc);
         color: var(--theme-color-primary, #2b6cb0);
@@ -194,11 +204,12 @@ export function initAdminPage() {
         font-weight: bold;
         font-size: 0.85rem;
         cursor: pointer;
+        z-index: 10;
       `;
       panel.insertBefore(rBtn, panel.firstChild);
     }
 
-    const isAlreadyConfigured = g.isConfigured();
+    console.log(`[checkAndInitTab] tabId: ${tabId}, isAlreadyConfigured: ${isAlreadyConfigured}, site.isConfigured: ${configManager.current.site?.isConfigured}`);
     rBtn.style.display = isAlreadyConfigured ? 'block' : 'none';
 
     rBtn.onclick = (e) => {
@@ -244,7 +255,6 @@ export function initAdminPage() {
       });
       return false;
     } else {
-      AdminSetupCard.unlock(panel);
       g.initFn();
       return true;
     }
