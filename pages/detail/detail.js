@@ -41,7 +41,9 @@ export async function initDetailPage() {
     container.innerHTML = renderContent(item);
 
     // Wire Paywall Action Listeners
-    document.getElementById('btn-paywall-subscribe')?.addEventListener('click', async () => {
+    document.getElementById('btn-paywall-subscribe')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       try {
         const response = await fetch('/api/stripe-checkout', {
           method: 'POST',
@@ -61,7 +63,9 @@ export async function initDetailPage() {
       }
     });
 
-    document.getElementById('btn-paywall-login')?.addEventListener('click', async () => {
+    document.getElementById('btn-paywall-login')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       try {
         await authManager.loginWithGoogle();
         window.location.reload();

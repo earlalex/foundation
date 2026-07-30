@@ -103,6 +103,24 @@ export function initNavbar() {
     });
   }
 
+  // Hook Google Auth Sign-In for unauthenticated navbar link
+  const authLink = document.getElementById('nav-auth-link');
+  if (authLink) {
+    authLink.addEventListener('click', async (e) => {
+      const state = store.state;
+      if (!state.user) {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const { authManager } = await import('./auth.js');
+          await authManager.loginWithGoogle();
+        } catch (err) {
+          console.error('[Navbar Auth]: Google login failed:', err);
+        }
+      }
+    });
+  }
+
   function updateActiveLink(currentPath) {
     const navLinks = document.querySelectorAll('.nav-link');
     let activeRoute = currentPath || window.location.pathname;
@@ -158,16 +176,16 @@ export function initNavbar() {
       adminLink.style.display = isDevOrAdmin ? 'inline-block' : 'none';
     }
 
-    const authLink = document.getElementById('nav-auth-link');
-    if (authLink) {
+    const authLinkElement = document.getElementById('nav-auth-link');
+    if (authLinkElement) {
       if (state.user) {
-        authLink.textContent = 'My Dashboard';
-        authLink.setAttribute('href', '/account');
-        authLink.setAttribute('data-path', '/account');
+        authLinkElement.textContent = 'My Dashboard';
+        authLinkElement.setAttribute('href', '/account');
+        authLinkElement.setAttribute('data-path', '/account');
       } else {
-        authLink.textContent = 'Sign In / Register';
-        authLink.setAttribute('href', '/login');
-        authLink.setAttribute('data-path', '/login');
+        authLinkElement.textContent = 'Sign In / Register';
+        authLinkElement.setAttribute('href', '/login');
+        authLinkElement.setAttribute('data-path', '/login');
       }
     }
   }

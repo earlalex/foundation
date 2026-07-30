@@ -43,7 +43,9 @@
   const googleBtn = document.getElementById('google-login-btn');
   const errorContainer = document.getElementById('login-error-container');
 
-  googleBtn?.addEventListener('click', async () => {
+  googleBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (errorContainer) errorContainer.style.display = 'none';
     try {
       await authManager.loginWithGoogle();
