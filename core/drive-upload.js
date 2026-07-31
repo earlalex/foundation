@@ -245,6 +245,7 @@ export async function uploadFileToDrive(file) {
 
   const isPrivate = file.isPrivateDoc === true;
   const isCorporateBinder = file.isCorporateBinder === true || isPrivate || file.name?.includes('Worksheet') || file.name?.includes('Articles') || file.name?.includes('EIN');
+  const isH5P = file.isH5P === true;
 
   let relativePath = '';
   let pathSegments = [];
@@ -252,6 +253,14 @@ export async function uploadFileToDrive(file) {
   if (isCorporateBinder) {
     pathSegments = ['corporate-binder'];
     relativePath = `corporate-binder/${file.name}`;
+  } else if (isH5P) {
+    const now = new Date();
+    const year = String(now.getFullYear());
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const courseId = file.courseId || 'unknown-course';
+    const lessonId = file.lessonId || 'unknown-lesson';
+    pathSegments = ['assets', year, month, 'h5p', courseId, lessonId];
+    relativePath = `assets/${year}/${month}/h5p/${courseId}/${lessonId}/${file.name}`;
   } else {
     const category = getAssetCategory(file);
     const now = new Date();

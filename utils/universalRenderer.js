@@ -9,6 +9,60 @@ export function renderContent(contentData) {
     return `<div style="text-align: center; padding: 3rem; color: #718096;">Content record unavailable.</div>`;
   }
 
+  // Handle Multi-Lesson Interactive Education Courses specifically
+  if (contentData.type === 'education' && contentData.modules && contentData.modules.length > 0) {
+    return `
+      <article class="content-full" style="max-width: 1000px; margin: 2rem auto; font-family: system-ui, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <span style="text-transform: uppercase; font-size: 0.75rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0); letter-spacing: 0.05em; background: #ebf8ff; padding: 4px 10px; border-radius: 12px;">
+            Structured Course
+          </span>
+          <span style="color: #718096; font-size: 0.85rem;">Published ${contentData.date || 'Today'}</span>
+        </div>
+
+        <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 0.5rem; line-height: 1.2;">
+          ${contentData.title}
+        </h1>
+        <p style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem;">By <strong>${contentData.author || 'Foundation Team'}</strong></p>
+
+        <!-- Dynamic Overall Course Progress stats bar for enrolled users -->
+        <div id="course-player-overall-progress" style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 8px; border: 1px solid var(--theme-color-border, #e2e8f0); margin-bottom: 1.5rem; display: none;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; color: var(--theme-color-text-secondary, #4a5568); margin-bottom: 4px;">
+            <span>Course Progress Tracker</span>
+            <span id="course-progress-percentage-label">0% Complete</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: #edf2f7; border-radius: 4px; overflow: hidden;">
+            <div id="course-progress-bar-indicator" style="width: 0%; height: 100%; background: var(--theme-color-primary, #2b6cb0); transition: width 0.3s ease-in-out;"></div>
+          </div>
+        </div>
+
+        <div class="course-player-shell" style="display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1.5rem;">
+          <!-- Left Side: Syllabus Navigation -->
+          <div class="course-syllabus-nav" style="flex: 1; min-width: 280px; max-width: 320px; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1rem; height: max-content;">
+            <h3 style="margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; color: var(--theme-color-primary, #2b6cb0);">Course Syllabus</h3>
+            <div id="syllabus-modules-list" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+              <!-- Syllabus modules and lessons will render here dynamically -->
+            </div>
+          </div>
+
+          <!-- Right Side: Active Lesson Panel -->
+          <div class="course-lesson-display" style="flex: 2; min-width: 320px; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; min-height: 480px;">
+            <div id="lesson-content-pane">
+              <div style="text-align: center; padding: 4rem 1rem; color: var(--theme-color-text-secondary, #a0aec0);">
+                <h3>Welcome to ${contentData.title}</h3>
+                <p style="font-size: 0.95rem;">Select a lesson from the syllabus index on the left to begin learning.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 3rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); padding-top: 2rem;">
+          <author-card layout="full"></author-card>
+        </div>
+      </article>
+    `;
+  }
+
   const user = store.state.user;
   const visibility = contentData.access?.visibility || 'public';
 

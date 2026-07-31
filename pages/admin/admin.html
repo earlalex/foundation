@@ -893,142 +893,355 @@
   <!-- TAB 5: USER DIRECTORY, GOOGLE CONTACTS & MASS EMAIL -->
 
 <div id="tab-products" class="admin-panel" style="display: none;">
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
-        <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">Products & Services Management</h2>
-        <p style="margin: 0; font-size: 0.9rem; color: #2c5282;">
-          Create and manage products with flexible payment options: full upfront payment, retainer + invoice, or invoice-only. All invoices are tracked and linked to Google Contacts.
-        </p>
-      </div>
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <!-- Products/Courses Sub-Tabs Selector -->
+    <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--theme-color-border, #e2e8f0); padding-bottom: 0.25rem;">
+      <button id="btn-subtab-products" class="btn-primary" style="background: var(--theme-color-primary, #2b6cb0); color: white; padding: 8px 16px; font-size: 0.9rem; border-radius: var(--theme-layout-border-radius, 8px); cursor: pointer; border: none; font-weight: bold;">
+        Products & Services
+      </button>
+      <button id="btn-subtab-courses" style="background: transparent; color: var(--theme-color-text-secondary, #4a5568); padding: 8px 16px; font-size: 0.9rem; border-radius: var(--theme-layout-border-radius, 8px); cursor: pointer; border: 1px solid transparent; font-weight: bold;">
+        Education Course Builder
+      </button>
+    </div>
 
-      <!-- Create Product Form -->
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <h2 style="margin-top: 0; font-size: 1.25rem;">Create New Product/Service</h2>
-        <form id="product-form" style="display: flex; flex-direction: column; gap: 1rem;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Product Title:</label>
-              <input type="text" id="product-title" placeholder="Consulting Package" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Category:</label>
-              <input type="text" id="product-category" placeholder="Consulting" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
+    <!-- Sub-tab 1: Products & Services -->
+    <div id="panel-subtab-products" style="display: block;">
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
+          <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">Products & Services Management</h2>
+          <p style="margin: 0; font-size: 0.9rem; color: #2c5282;">
+            Create and manage products with flexible payment options: full upfront payment, retainer + invoice, or invoice-only. All invoices are tracked and linked to Google Contacts.
+          </p>
+        </div>
 
-          <div style="min-width: 0;">
-            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Description:</label>
-            <textarea id="product-description" placeholder="Detailed product description..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
-          </div>
-
-          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-          <h3 style="margin: 0; font-size: 1.05rem;">Pricing & Payment Options</h3>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Base Price ($):</label>
-              <input type="number" id="product-price" placeholder="1000.00" required step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Currency:</label>
-              <select id="product-currency" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="GBP">GBP - British Pound</option>
-                <option value="CAD">CAD - Canadian Dollar</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="min-width: 0;">
-            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Payment Type:</label>
-            <select id="product-payment-type" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
-              <option value="full_upfront">Full Upfront Payment</option>
-              <option value="retainer_invoice">Retainer + Invoice (Upfront fee + balance invoiced)</option>
-              <option value="invoice_only">Invoice Only (No upfront payment)</option>
-            </select>
-          </div>
-
-          <div id="retainer-fields" style="display: none;">
+        <!-- Create Product Form -->
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+          <h2 style="margin-top: 0; font-size: 1.25rem;">Create New Product/Service</h2>
+          <form id="product-form" style="display: flex; flex-direction: column; gap: 1rem;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="min-width: 0;">
-                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Retainer Amount ($):</label>
-                <input type="number" id="product-retainer-amount" placeholder="500.00" step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Product Title:</label>
+                <input type="text" id="product-title" placeholder="Consulting Package" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
               </div>
               <div style="min-width: 0;">
-                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Or Retainer Percentage (%):</label>
-                <input type="number" id="product-retainer-percentage" placeholder="50" step="1" min="1" max="100" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Category:</label>
+                <input type="text" id="product-category" placeholder="Consulting" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
               </div>
             </div>
-          </div>
 
-          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-          <h3 style="margin: 0; font-size: 1.05rem;">Stripe Integration</h3>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Product ID:</label>
-              <input type="text" id="product-stripe-id" placeholder="prod_xxxxx" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Description:</label>
+              <textarea id="product-description" placeholder="Detailed product description..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
             </div>
+
+            <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+            <h3 style="margin: 0; font-size: 1.05rem;">Pricing & Payment Options</h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="min-width: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Base Price ($):</label>
+                <input type="number" id="product-price" placeholder="1000.00" required step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div style="min-width: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Currency:</label>
+                <select id="product-currency" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="CAD">CAD - Canadian Dollar</option>
+                </select>
+              </div>
+            </div>
+
             <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Price ID:</label>
-              <input type="text" id="product-stripe-price-id" placeholder="price_xxxxx" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Payment Type:</label>
+              <select id="product-payment-type" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="full_upfront">Full Upfront Payment</option>
+                <option value="retainer_invoice">Retainer + Invoice (Upfront fee + balance invoiced)</option>
+                <option value="invoice_only">Invoice Only (No upfront payment)</option>
+              </select>
             </div>
-          </div>
-          <div style="margin-top: 0.5rem;">
-            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; cursor: pointer;">
-              <input type="checkbox" id="product-enable-ach" style="cursor: pointer;" />
-              Enable ACH Direct Debit Payment ($5 Platform Fee Applied)
-            </label>
-          </div>
 
-          <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-          <h3 style="margin: 0; font-size: 1.05rem;">Invoice Settings</h3>
+            <div id="retainer-fields" style="display: none;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="min-width: 0;">
+                  <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Retainer Amount ($):</label>
+                  <input type="number" id="product-retainer-amount" placeholder="500.00" step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div style="min-width: 0;">
+                  <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Or Retainer Percentage (%):</label>
+                  <input type="number" id="product-retainer-percentage" placeholder="50" step="1" min="1" max="100" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                </div>
+              </div>
+            </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+            <h3 style="margin: 0; font-size: 1.05rem;">Stripe Integration</h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="min-width: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Product ID:</label>
+                <input type="text" id="product-stripe-id" placeholder="prod_xxxxx" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div style="min-width: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Price ID:</label>
+                <input type="text" id="product-stripe-price-id" placeholder="price_xxxxx" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+            </div>
+            <div style="margin-top: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; cursor: pointer;">
+                <input type="checkbox" id="product-enable-ach" style="cursor: pointer;" />
+                Enable ACH Direct Debit Payment ($5 Platform Fee Applied)
+              </label>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
+            <h3 style="margin: 0; font-size: 1.05rem;">Invoice Settings</h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="min-width: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Invoice Due Days:</label>
+                <input type="number" id="product-invoice-days" placeholder="30" value="30" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div style="min-width: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Contact Email (for invoicing):</label>
+                <input type="email" id="product-google-contact" placeholder="client@example.com" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+            </div>
+
             <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Invoice Due Days:</label>
-              <input type="number" id="product-invoice-days" placeholder="30" value="30" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Payment Terms:</label>
+              <textarea id="product-payment-terms" placeholder="Net 30 days from invoice date. Late payments subject to 1.5% monthly fee." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
             </div>
-            <div style="min-width: 0;">
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Contact Email (for invoicing):</label>
-              <input type="email" id="product-google-contact" placeholder="client@example.com" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
 
-          <div style="min-width: 0;">
-            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Payment Terms:</label>
-            <textarea id="product-payment-terms" placeholder="Net 30 days from invoice date. Late payments subject to 1.5% monthly fee." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
-          </div>
+            <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+              Create Product
+            </button>
+          </form>
+        </div>
 
-          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
-            Create Product
-          </button>
-        </form>
+        <!-- Products List -->
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+          <h2 style="margin-top: 0; font-size: 1.25rem;">Existing Products</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); text-align: left;">
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Product</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Category</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Price</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Payment Type</th>
+                <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1rem;">No products created yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
 
-      <!-- Products List -->
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <h2 style="margin-top: 0; font-size: 1.25rem;">Existing Products</h2>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); text-align: left;">
-              <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Product</th>
-              <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Category</th>
-              <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Price</th>
-              <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Payment Type</th>
-              <th style="padding: 12px; font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="products-tbody">
-            <tr>
-              <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1rem;">No products created yet.</td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Sub-tab 2: Education Course Builder -->
+    <div id="panel-subtab-courses" style="display: none;">
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px;">
+          <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">Education Course & Curriculum Builder</h2>
+          <p style="margin: 0; font-size: 0.9rem; color: #2c5282;">
+            Construct multi-module learning pathways, assign role permissions, set prerequisites, and embed interactive H5P learning materials or GrapesJS visual templates.
+          </p>
+        </div>
+
+        <!-- Course Creation & List Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem; flex-wrap: wrap;">
+          <!-- Course Creator Form -->
+          <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+            <h3 style="margin-top: 0; font-size: 1.15rem; margin-bottom: 1rem;" id="course-form-title">Create New Course</h3>
+            <form id="course-form" style="display: flex; flex-direction: column; gap: 1rem;">
+              <input type="hidden" id="course-id" />
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Course Title:</label>
+                <input type="text" id="course-title" placeholder="e.g. Vanilla JS Masterclass" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Description:</label>
+                <textarea id="course-description" placeholder="Short description of the curriculum..." required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Access Visibility:</label>
+                <select id="course-visibility" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                  <option value="public">Public (Everyone)</option>
+                  <option value="subscriber">Subscriber (Free Registered)</option>
+                  <option value="member">Member / Affiliate (Paid Tier)</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" id="btn-save-course" class="btn-primary" style="padding: 10px 18px; font-weight: bold; border-radius: 6px;">Create Course</button>
+                <button type="button" id="btn-reset-course-form" style="display: none; padding: 10px 18px; border-radius: 6px; border: 1px solid #cbd5e0; background: transparent; cursor: pointer;">Cancel</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Existing Courses Table -->
+          <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+            <h3 style="margin-top: 0; font-size: 1.15rem; margin-bottom: 1rem;">Course List Workspace</h3>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); text-align: left; font-size: 0.85rem;">
+                    <th style="padding: 10px;">Course Title</th>
+                    <th style="padding: 10px;">Modules</th>
+                    <th style="padding: 10px;">Access</th>
+                    <th style="padding: 10px; text-align: right;">Manage</th>
+                  </tr>
+                </thead>
+                <tbody id="courses-tbody">
+                  <!-- Existing courses load here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected Course Curriculum Workspace (Hidden unless a course is selected) -->
+        <div id="curriculum-workspace-card" style="display: none; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); letter-spacing: 0.5px;">ACTIVE CURRICULUM WORKSPACE</span>
+              <h3 id="workspace-course-title" style="margin: 0.25rem 0 0 0; font-size: 1.35rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">Course Title</h3>
+            </div>
+            <button id="btn-add-module" class="btn-primary" style="background: var(--theme-color-accent, #38a169); font-weight: bold; padding: 8px 16px; border-radius: 6px;">
+              + Add Module
+            </button>
+          </div>
+
+          <div id="course-modules-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Modules & Lessons structured view dynamically compiled -->
+          </div>
+        </div>
+
+        <!-- Lesson Creation Modal / Modal overlay or form (Rendered Inline as a Card on selection/trigger) -->
+        <div id="lesson-editor-card" style="display: none; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <h4 id="lesson-editor-title" style="margin: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Add New Lesson</h4>
+            <button type="button" id="btn-close-lesson-editor" style="background: transparent; border: none; font-size: 1.25rem; font-weight: bold; cursor: pointer; color: #a0aec0;">&times;</button>
+          </div>
+
+          <form id="lesson-form" style="display: flex; flex-direction: column; gap: 1rem;">
+            <input type="hidden" id="lesson-module-id" />
+            <input type="hidden" id="lesson-id" />
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Lesson Title:</label>
+                <input type="text" id="lesson-title" placeholder="e.g. Introduction to DOM" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Unique Lesson ID / Code:</label>
+                <input type="text" id="lesson-code" placeholder="e.g. intro-dom" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Content Type:</label>
+                <select id="lesson-content-type" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                  <option value="rich-text">Rich Text / Markdown</option>
+                  <option value="grapesjs">GrapesJS Visual Canvas</option>
+                  <option value="video">Embedded Video</option>
+                  <option value="h5p">H5P Interactive Content</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Gated Role Threshold:</label>
+                <select id="lesson-role" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                  <option value="subscriber">Subscriber (Free)</option>
+                  <option value="member">Member (Paid)</option>
+                  <option value="affiliate">Affiliated Member (Paid+Affiliate)</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Prerequisite Lesson (Locked Gate):</label>
+                <select id="lesson-prerequisite" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                  <option value="">None (Always Unlocked)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Content Area - Rich Text -->
+            <div id="lesson-content-rich-text" class="lesson-content-block" style="display: block;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Rich Text / HTML Body:</label>
+              <textarea id="lesson-body" placeholder="Write full lesson content..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 150px; box-sizing: border-box;"></textarea>
+            </div>
+
+            <!-- Content Area - GrapesJS Visual Canvas -->
+            <div id="lesson-content-grapesjs" class="lesson-content-block" style="display: none;">
+              <div style="background: #edf2f7; padding: 1rem; border-radius: 6px; border: 1px solid #cbd5e0; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.85rem; color: #4a5568;">Use GrapesJS visual templates to compile compiled HTML & CSS body fields.</span>
+                <button type="button" id="btn-launch-lesson-grapes" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; background: #805ad5;">Launch Lesson GrapesJS Builder</button>
+              </div>
+              <!-- Hidden fields storing GrapesJS compiled blocks -->
+              <input type="hidden" id="lesson-gjs-html" />
+              <input type="hidden" id="lesson-gjs-css" />
+              <input type="hidden" id="lesson-gjs-project" />
+            </div>
+
+            <!-- Content Area - Video Embed -->
+            <div id="lesson-content-video" class="lesson-content-block" style="display: none;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Embedded Video URL (e.g. YouTube, Vimeo, Loom):</label>
+              <input type="url" id="lesson-video-url" placeholder="https://www.youtube.com/embed/..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+
+            <!-- Content Area - H5P Standalone -->
+            <div id="lesson-content-h5p" class="lesson-content-block" style="display: none;">
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <div>
+                  <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Unpacked H5P Directory Path or Package Link:</label>
+                  <input type="text" id="lesson-h5p-path" placeholder="e.g. /assets/h5p/course-1/lesson-1/" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Passing Score Threshold (%):</label>
+                  <input type="number" id="lesson-passing-score" value="80" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                </div>
+              </div>
+              <div style="margin-top: 0.5rem; background: #f7fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Upload .h5p package or zip archive directly to Google Drive:</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                  <input type="file" id="lesson-h5p-file" accept=".h5p,.zip" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; background: white;" />
+                  <button type="button" id="btn-upload-h5p" style="padding: 8px 14px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">
+                    Upload & Auto-Unpack
+                  </button>
+                </div>
+                <div id="h5p-upload-status" style="font-size: 0.75rem; color: #718096; margin-top: 4px;">Organized under: {{company-name}}-{{site-name}}/assets/{{year}}/{{month}}/h5p/{{courseId}}/{{lessonId}}/</div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); padding-top: 1rem; margin-top: 0.5rem;">
+              <button type="submit" id="btn-save-lesson" class="btn-primary" style="padding: 10px 20px; font-weight: bold; border-radius: 6px; background: var(--theme-color-accent, #38a169);">Save Lesson Node</button>
+              <button type="button" id="btn-cancel-lesson" style="padding: 10px 20px; border-radius: 6px; border: 1px solid #cbd5e0; background: transparent; cursor: pointer;">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Optional standalone GrapesJS Modal popup overlay for Lesson design -->
+        <div id="lesson-grapesjs-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+          <div style="width: 90%; height: 90%; background: white; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div style="background: #2d3748; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+              <h4 style="margin: 0; font-size: 1.1rem; font-weight: bold;">Lesson Visual GrapesJS Builder Workspace</h4>
+              <button type="button" id="btn-close-lesson-grapes" style="background: transparent; border: none; font-size: 1.5rem; color: white; font-weight: bold; cursor: pointer;">&times;</button>
+            </div>
+            <div id="grapesjs-lesson-canvas" style="flex: 1; height: 100%; background: #ffffff;"></div>
+            <div style="padding: 1rem; background: #edf2f7; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+              <button type="button" id="btn-save-grapes-content" class="btn-primary" style="background: #38a169; font-weight: bold; padding: 10px 20px;">Apply & Save Visual Changes</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
+</div>
 
   <!-- TAB: FINANCES & PAYROLL -->
 

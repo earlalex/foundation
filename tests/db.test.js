@@ -82,6 +82,28 @@ export async function runDbTests() {
     }
   });
 
+  await assertTest('ContentDB saves and retrieves user course progress', async () => {
+    const userId = 'user_123';
+    const courseId = 'course_999';
+    const progressData = {
+      completedLessons: ['lesson-1'],
+      overallProgress: 50,
+      lastAccessedLesson: 'lesson-1'
+    };
+
+    await contentDB.saveUserCourseProgress(userId, courseId, progressData);
+    const retrieved = await contentDB.getUserCourseProgress(userId, courseId);
+
+    if (!retrieved || retrieved.overallProgress !== 50 || retrieved.lastAccessedLesson !== 'lesson-1') {
+      throw new Error('Failed to retrieve user course progress.');
+    }
+
+    const allProgress = await contentDB.getUserAllProgress(userId);
+    if (!allProgress || allProgress.length !== 1 || allProgress[0].courseId !== courseId) {
+      throw new Error('Failed to retrieve user all progress.');
+    }
+  });
+
   const passedAll = totalTests === passedTests;
   console.log(
     `%c\n  DB Test Summary: ${passedTests}/${totalTests} Tests Passed ${passedAll ? '✅' : '❌'}`,
