@@ -17,6 +17,15 @@ export class Router {
     this.routesManifest = routesManifest;
     this.isTestInstance = isTestInstance;
 
+    // Capture referral code if present
+    if (typeof window !== 'undefined' && window.location) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      if (ref) {
+        sessionStorage.setItem('foundation_ref_id', ref);
+      }
+    }
+
     // Dynamically map /login for unit test instances to prevent 404 falling back on redirecting
     if (this.isTestInstance && !this.routesManifest['/login']) {
       this.routesManifest['/login'] = { title: 'Login', viewPath: './pages/login.html' };

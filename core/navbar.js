@@ -172,8 +172,9 @@ export function initNavbar() {
   function syncNavbarVisibility(state) {
     const adminLink = document.getElementById('nav-admin-link');
     if (adminLink) {
-      const isDevOrAdmin = state.user?.role === 'admin' || state.user?.role === 'editor' || state.user?.isAdmin || state.devMode || window.__FOUNDATION_DEV_BYPASS__;
-      adminLink.style.display = isDevOrAdmin ? 'inline-block' : 'none';
+      const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
+      const hasAdminAccess = currentRole === 'admin' || currentRole === 'editor' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
+      adminLink.style.display = hasAdminAccess ? 'inline-block' : 'none';
     }
 
     const authLinkElement = document.getElementById('nav-auth-link');

@@ -81,7 +81,7 @@
     <nav class="account-sidebar">
       <button class="account-tab-btn active" data-sec="overview">Overview & Profile</button>
       <button class="account-tab-btn" data-sec="content">Unlocked Materials</button>
-      <button class="account-tab-btn" id="tab-btn-affiliate" data-sec="affiliate" style="display: none;">Affiliate Hub</button>
+      <button class="account-tab-btn" id="tab-btn-affiliate" data-sec="affiliate" style="display: none;">Affiliate & Referral Hub</button>
       <button class="account-tab-btn" data-sec="messages">Message Center</button>
       <button class="account-tab-btn" data-sec="purchases">Order History</button>
       <button class="account-tab-btn" data-sec="settings">Settings</button>
@@ -102,10 +102,33 @@
             <div>
               <h2 id="acc-name" style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">Full Name</h2>
               <p id="acc-email" style="margin: 0.25rem 0 0.5rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.9rem;">user@example.com</p>
-              <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <span id="acc-badge" style="padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: #e2e8f0; color: #4a5568;">SUBSCRIBER</span>
                 <span id="acc-status-badge" style="padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: #f0fdf4; color: #166534;">Active</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Role-Specific Capability & Intention Cards -->
+          <div id="acc-role-actions-card" style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+            <h3 style="margin-top: 0; font-size: 1.15rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">Your Operational Goals</h3>
+            <div id="acc-role-actions-content" style="margin-top: 1rem;">
+              <!-- Dynamically rendered based on active persona role -->
+            </div>
+          </div>
+
+          <!-- Consent & Privacy Preferences -->
+          <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+            <h3 style="margin-top: 0; font-size: 1.15rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">Consent & Privacy Preferences</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
+                <input type="checkbox" id="consent-newsletter" style="cursor: pointer;" />
+                Opt-in to weekly newsletters & promotional announcements
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
+                <input type="checkbox" id="consent-privacy" style="cursor: pointer;" />
+                I agree to the privacy preferences and cookie usage guidelines
+              </label>
             </div>
           </div>
 
@@ -122,9 +145,9 @@
 
           <!-- Affiliate Program Referral Invitation CTA (For Paid Members who are NOT Affiliates yet) -->
           <div id="acc-affiliate-invite-card" style="display: none; background: #ebf8ff; border: 1px solid #bee3f8; color: #2b6cb0; padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px);">
-            <h3 style="margin-top: 0; font-size: 1.25rem; font-weight: 800;">Become a Referral Partner & Earn 10%</h3>
+            <h3 style="margin-top: 0; font-size: 1.25rem; font-weight: 800;">Become a Referral Partner & Earn 20%</h3>
             <p style="margin: 0.5rem 0 1.5rem 0; font-size: 0.95rem; line-height: 1.5; color: #2c5282;">
-              Unlock the Affiliate Program to earn 10% recurring commissions on referrals! Simply request referral access to generate your unique link.
+              Unlock the Affiliate Program to earn 20% recurring commissions on referrals! Simply request referral access to generate your unique link.
             </p>
             <button id="btn-activate-affiliate" class="btn-primary" style="padding: 10px 24px; font-weight: bold; border-radius: 6px;">
               Request Affiliate Partnership Access
@@ -161,32 +184,99 @@
         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
           <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px);">
-            <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Affiliate Program & Recurring Revenue Hub</h2>
-            <p style="margin: 0 0 1.5rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Track clicks, active monthly referrals, and estimated 10% recurring income.</p>
-
-            <div style="background: var(--theme-color-background, #f7fafc); padding: 1.25rem; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 6px; margin-bottom: 1.5rem;">
-              <span style="font-weight: bold; font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); text-transform: uppercase;">Your Unique Referral Link:</span>
-              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="acc-ref-link" readonly style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace; font-size: 0.85rem;" value="https://site.com/?ref=CODE" />
-                <button id="btn-copy-ref-link" style="padding: 10px 18px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Copy Link</button>
-              </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+              <h2 style="margin: 0; font-size: 1.5rem; color: var(--theme-color-primary, #2b6cb0); font-weight: 800;">Affiliate & Referral Partner Hub</h2>
+              <span id="acc-aff-status-badge" style="padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; background: #ebf8ff; color: #2b6cb0;">ACTIVE PARTNER — 20% COMMISSION</span>
             </div>
+            <p style="margin: 0 0 2rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.9rem; line-height: 1.5;">
+              Welcome to your partner dashboard. Refer members to Ascension Avenue Academy and earn recurring income. Track performance and grab assets below.
+            </p>
 
             <!-- Real-Time Metrics -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
-              <div style="background: #f0fdf4; padding: 1.25rem; border-radius: 6px; border: 1px solid #bbf7d0; text-align: center;">
-                <span style="font-size: 0.75rem; color: #166534; text-transform: uppercase; font-weight: bold;">Active Referrals</span>
-                <strong id="acc-ref-count" style="display: block; font-size: 2rem; color: #15803d; margin-top: 4px;">0</strong>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+              <div style="background: #fffaf0; padding: 1.25rem; border-radius: 8px; border: 1px solid #fbd38d; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="font-size: 0.75rem; color: #c05621; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Total Clicks</span>
+                <strong id="acc-clicks-count" style="display: block; font-size: 2.25rem; color: #dd6b20; margin-top: 4px;">124</strong>
               </div>
-              <div style="background: #ebf8ff; padding: 1.25rem; border-radius: 6px; border: 1px solid #bee3f8; text-align: center;">
-                <span style="font-size: 0.75rem; color: #2b6cb0; text-transform: uppercase; font-weight: bold;">Est. Monthly Earnings</span>
-                <strong id="acc-ref-earnings" style="display: block; font-size: 2rem; color: #2b6cb0; margin-top: 4px;">$0.00</strong>
+              <div style="background: #f0fdf4; padding: 1.25rem; border-radius: 8px; border: 1px solid #bbf7d0; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="font-size: 0.75rem; color: #166534; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Conversions</span>
+                <strong id="acc-conversions-count" style="display: block; font-size: 2.25rem; color: #15803d; margin-top: 4px;">0</strong>
               </div>
-              <div style="background: #fffaf0; padding: 1.25rem; border-radius: 6px; border: 1px solid #fbd38d; text-align: center;">
-                <span style="font-size: 0.75rem; color: #c05621; text-transform: uppercase; font-weight: bold;">Click Tracking</span>
-                <strong style="display: block; font-size: 2rem; color: #c05621; margin-top: 4px;">--</strong>
+              <div style="background: #ebf8ff; padding: 1.25rem; border-radius: 8px; border: 1px solid #bee3f8; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="font-size: 0.75rem; color: #2b6cb0; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Total Earned ($)</span>
+                <strong id="acc-earned-count" style="display: block; font-size: 2.25rem; color: #2b6cb0; margin-top: 4px;">$0.00</strong>
+              </div>
+              <div style="background: #faf5ff; padding: 1.25rem; border-radius: 8px; border: 1px solid #e9d8fd; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <span style="font-size: 0.75rem; color: #6b46c1; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Pending Payout ($)</span>
+                <strong id="acc-pending-count" style="display: block; font-size: 2.25rem; color: #6b46c1; margin-top: 4px;">$0.00</strong>
               </div>
             </div>
+
+            <!-- Promotional Asset Generator -->
+            <div style="border-top: 1px solid var(--theme-color-border, #e2e8f0); padding-top: 2rem;">
+              <h3 style="margin-top: 0; font-size: 1.25rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c);">Promotional Asset & Link Generator</h3>
+              <p style="margin: 0.25rem 0 1.5rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Generate customized tracking links and copy widgets to embed on your websites, blogs, or newsletters.</p>
+
+              <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <!-- Base Link -->
+                <div style="background: var(--theme-color-background, #f7fafc); padding: 1.25rem; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 6px;">
+                  <span style="font-weight: bold; font-size: 0.8rem; color: var(--theme-color-text-secondary, #4a5568); text-transform: uppercase; letter-spacing: 0.5px;">Your Unique Base Referral Link:</span>
+                  <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="acc-ref-link" readonly style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace; font-size: 0.85rem; background: #fff;" value="https://site.com/?ref=CODE" />
+                    <button id="btn-copy-ref-link" style="padding: 10px 18px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;">Copy Base Link</button>
+                  </div>
+                </div>
+
+                <!-- Product Links -->
+                <div style="background: var(--theme-color-background, #f7fafc); padding: 1.25rem; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 6px;">
+                  <span style="font-weight: bold; font-size: 0.8rem; color: var(--theme-color-text-secondary, #4a5568); text-transform: uppercase; letter-spacing: 0.5px;">Generate Product-Specific Tracking Links:</span>
+                  <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <select id="aff-product-select" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.9rem;">
+                      <option value="">-- Choose Course, Publication or Membership Tier --</option>
+                    </select>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                      <input type="text" id="aff-product-link" readonly placeholder="Choose a product to generate your referral tracking link" style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace; font-size: 0.85rem; background: #fff;" />
+                      <button id="btn-copy-product-link" style="padding: 10px 18px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Copy Product Link</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Embed Snippets -->
+                <div style="background: var(--theme-color-background, #f7fafc); padding: 1.25rem; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 6px; display: flex; flex-direction: column; gap: 1.25rem;">
+                  <span style="font-weight: bold; font-size: 0.8rem; color: var(--theme-color-text-secondary, #4a5568); text-transform: uppercase; letter-spacing: 0.5px;">Embeddable CTA Widgets & Banner Snippets:</span>
+
+                  <!-- Snippet 1: Text Link -->
+                  <div>
+                    <label style="display: block; font-weight: bold; font-size: 0.78rem; color: #4a5568; margin-bottom: 0.25rem;">1. Text Link HTML Snippet:</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                      <textarea id="embed-text-link" readonly style="flex: 1; min-width: 250px; height: 50px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace; font-size: 0.8rem; background: #fff; resize: none;"></textarea>
+                      <button id="btn-copy-embed-text" style="padding: 10px 18px; font-weight: bold; background: #4a5568; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Copy HTML</button>
+                    </div>
+                  </div>
+
+                  <!-- Snippet 2: Interactive Button -->
+                  <div>
+                    <label style="display: block; font-weight: bold; font-size: 0.78rem; color: #4a5568; margin-bottom: 0.25rem;">2. Interactive CTA Button Snippet:</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                      <textarea id="embed-btn-widget" readonly style="flex: 1; min-width: 250px; height: 60px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace; font-size: 0.8rem; background: #fff; resize: none;"></textarea>
+                      <button id="btn-copy-embed-btn" style="padding: 10px 18px; font-weight: bold; background: #4a5568; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Copy Widget</button>
+                    </div>
+                  </div>
+
+                  <!-- Snippet 3: Banner Embed -->
+                  <div>
+                    <label style="display: block; font-weight: bold; font-size: 0.78rem; color: #4a5568; margin-bottom: 0.25rem;">3. Graphic Banner Snippet (728x90 Leaderboard):</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                      <textarea id="embed-banner" readonly style="flex: 1; min-width: 250px; height: 65px; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-family: monospace; font-size: 0.8rem; background: #fff; resize: none;"></textarea>
+                      <button id="btn-copy-embed-banner" style="padding: 10px 18px; font-weight: bold; background: #4a5568; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Copy Banner</button>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -258,274 +348,7 @@
 </section>
 
 <script type="module">
-  import { store } from '../core/store.js';
-  import { contentDB } from '../core/db.js';
-  import { authManager } from '../core/auth.js';
-  import { toast } from '../utils/toast.js';
-
-  // Subtab switching controller
-  const tabs = document.querySelectorAll('.account-tab-btn');
-  const panels = document.querySelectorAll('.account-panel-view');
-
-  tabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tabs.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const targetSec = btn.getAttribute('data-sec');
-      panels.forEach(p => {
-        p.style.display = p.id === `sec-${targetSec}` ? 'block' : 'none';
-      });
-    });
-  });
-
-  // Load and bind user information from store state
-  async function loadUserDashboard() {
-    const user = store.state.user;
-    if (!user) {
-      toast.warning('Authentication context missing. Redirecting to sign in.');
-      window.router.loadRoute('/login');
-      return;
-    }
-
-    const currentRole = user.role || 'prospect';
-
-    // Set textual elements
-    document.getElementById('acc-name').textContent = user.displayName || 'No Display Name';
-    document.getElementById('acc-email').textContent = user.email;
-    document.getElementById('acc-initials').textContent = (user.displayName || 'S').substring(0, 1).toUpperCase();
-
-    const badgeEl = document.getElementById('acc-badge');
-    badgeEl.textContent = currentRole.toUpperCase() + ' ROLE';
-    badgeEl.style.background = currentRole === 'affiliate' ? '#ebf8ff' : currentRole === 'member' ? '#f0fdf4' : '#e2e8f0';
-    badgeEl.style.color = currentRole === 'affiliate' ? '#2b6cb0' : currentRole === 'member' ? '#2f855a' : '#4a5568';
-
-    document.getElementById('acc-settings-name').value = user.displayName || '';
-
-    // Persona-based visually custom sections
-    const paywallCard = document.getElementById('acc-paywall-card');
-    const affiliateInviteCard = document.getElementById('acc-affiliate-invite-card');
-    const billingCard = document.getElementById('acc-billing-card');
-    const affiliateTabBtn = document.getElementById('tab-btn-affiliate');
-
-    if (currentRole === 'subscriber') {
-      paywallCard.style.display = 'block';
-      affiliateInviteCard.style.display = 'none';
-      billingCard.style.display = 'none';
-      affiliateTabBtn.style.display = 'none';
-    } else if (currentRole === 'member') {
-      paywallCard.style.display = 'none';
-      affiliateInviteCard.style.display = 'block';
-      billingCard.style.display = 'block';
-      affiliateTabBtn.style.display = 'none';
-    } else if (currentRole === 'affiliate') {
-      paywallCard.style.display = 'none';
-      affiliateInviteCard.style.display = 'none';
-      billingCard.style.display = 'block';
-      affiliateTabBtn.style.display = 'block';
-
-      // Load affiliate telemetry details
-      document.getElementById('acc-ref-link').value = `${window.location.origin}/?ref=${user.affiliateCode || user.uid}`;
-      const existingUserRec = await contentDB.getUser(user.email);
-      const activeCount = existingUserRec?.referredCount || 0;
-      document.getElementById('acc-ref-count').textContent = activeCount;
-      document.getElementById('acc-ref-earnings').textContent = '$' + (activeCount * 2.90).toFixed(2);
-    } else if (currentRole === 'admin') {
-      paywallCard.style.display = 'none';
-      affiliateInviteCard.style.display = 'none';
-      billingCard.style.display = 'none';
-      affiliateTabBtn.style.display = 'none';
-    }
-
-    // Load dynamic courses grid
-    loadUnlockedContent(currentRole);
-
-    // Load message inbox
-    loadInbox(user.uid);
-
-    // Load order receipts ledger
-    loadOrdersLedger(user.email);
-  }
-
-  // Handle billing portal redirects
-  document.getElementById('btn-manage-billing')?.addEventListener('click', () => {
-    toast.info('Linking to Stripe Customer Billing Portal... billing methods can be managed safely.');
-    setTimeout(() => {
-      window.open('https://billing.stripe.com/p/session/demo', '_blank');
-    }, 1000);
-  });
-
-  // Handle upgrade subscription via Checkout
-  document.getElementById('btn-upgrade-membership')?.addEventListener('click', async () => {
-    toast.info('Directing to payment gateways via Stripe Checkout...');
-    try {
-      const user = store.state.user;
-      await contentDB.saveUser({
-        ...user,
-        role: 'member',
-        paymentStatus: 'Active'
-      });
-      toast.success('Stripe Mock Checkout complete! Persona upgraded to Paid Member.');
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (e) {
-      toast.error('Checkout routing failed.');
-    }
-  });
-
-  // Handle requested affiliate activation program
-  document.getElementById('btn-activate-affiliate')?.addEventListener('click', async () => {
-    try {
-      const user = store.state.user;
-      await contentDB.saveUser({
-        ...user,
-        role: 'affiliate',
-        affiliateCode: `aff_${user.uid.substring(0, 5)}`
-      });
-      toast.success('Affiliate Program Partner code activated successfully!');
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (e) {
-      toast.error('Affiliate program registration failed.');
-    }
-  });
-
-  // Copy referral code link to clipboard helper
-  document.getElementById('btn-copy-ref-link')?.addEventListener('click', () => {
-    const linkInput = document.getElementById('acc-ref-link');
-    if (linkInput) {
-      linkInput.select();
-      navigator.clipboard.writeText(linkInput.value);
-      toast.success('Referral program invite link copied to clipboard!');
-    }
-  });
-
-  // Dynamic unlocked publications loader
-  async function loadUnlockedContent(role) {
-    const grid = document.getElementById('acc-content-grid');
-    if (!grid) return;
-
-    try {
-      const allContent = await contentDB.getAllContent();
-      const filtered = allContent.filter(item => {
-        const visibility = item.access?.visibility || 'public';
-        if (visibility === 'public') return true;
-        if (visibility === 'subscriber' && (role === 'subscriber' || role === 'member' || role === 'affiliate' || role === 'admin')) return true;
-        if ((visibility === 'member' || visibility === 'paid') && (role === 'member' || role === 'affiliate' || role === 'admin')) return true;
-        return false;
-      });
-
-      if (filtered.length === 0) {
-        grid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: #a0aec0; padding: 2rem;">No unlocked materials matched your tier.</p>`;
-        return;
-      }
-
-      grid.innerHTML = filtered.map(item => `
-        <div style="border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; overflow: hidden; background: var(--theme-color-surface, #ffffff); box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
-          ${item.preview?.featuredImage?.src ? `<img src="${item.preview.featuredImage.src}" style="width: 100%; height: 160px; object-fit: cover;" />` : ''}
-          <div style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); letter-spacing: 0.5px;">${item.type}</span>
-              <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: bold; line-height: 1.3;">${item.title}</h4>
-              <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: var(--theme-color-text-secondary, #718096); line-height: 1.4;">${item.description}</p>
-            </div>
-            <button onclick="window.router.navigateTo('/detail?id=${item.id}')" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; width: 100%;">
-              Open Publication
-            </button>
-          </div>
-        </div>
-      `).join('');
-
-    } catch (e) {
-      grid.innerHTML = `<p style="grid-column: 1 / -1; color: var(--theme-color-danger, #e53e3e); text-align: center;">Failed to load unlocked publications.</p>`;
-    }
-  }
-
-  // Dynamic notifications messages inbox loader
-  async function loadInbox(uid) {
-    const list = document.getElementById('acc-messages-list');
-    if (!list) return;
-
-    try {
-      const notifs = await contentDB.getUserNotifications(uid);
-      if (notifs.length === 0) {
-        list.innerHTML = `<p style="color: #a0aec0; text-align: center; padding: 1.5rem; font-style: italic;">Your inbox is completely clear.</p>`;
-        return;
-      }
-
-      list.innerHTML = notifs.map(item => `
-        <div style="background: #f7fafc; border-left: 4px solid var(--theme-color-primary, #2b6cb0); padding: 1rem; border-radius: 0 6px 6px 0; border-top: 1px solid #edf2f7; border-right: 1px solid #edf2f7; border-bottom: 1px solid #edf2f7;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-            <strong style="font-size: 0.95rem; color: #2d3748;">${item.title}</strong>
-            <span style="font-size: 0.75rem; color: #a0aec0;">${item.date}</span>
-          </div>
-          <p style="margin: 0; font-size: 0.85rem; color: #4a5568; line-height: 1.4;">${item.message}</p>
-        </div>
-      `).join('');
-    } catch (e) {
-      list.innerHTML = `<p style="color: var(--theme-color-danger, #e53e3e);">Failed to query inbox notifications.</p>`;
-    }
-  }
-
-  // Dynamic purchases receipts ledger table loader
-  async function loadOrdersLedger(email) {
-    const tbody = document.getElementById('acc-purchases-tbody');
-    if (!tbody) return;
-
-    try {
-      const orders = await contentDB.getUserPurchases(email);
-      if (orders.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="4" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">No past order receipts found.</td>
-          </tr>
-        `;
-        return;
-      }
-
-      tbody.innerHTML = orders.map(ord => `
-        <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
-          <td style="padding: 10px;">${ord.date || ord.dueDate || 'Recent'}</td>
-          <td style="padding: 10px;">
-            <strong>${ord.id}</strong>
-            <div style="font-size: 0.75rem; color: #718096;">Product Code Settlement</div>
-          </td>
-          <td style="padding: 10px; font-weight: bold;">$${(ord.amount || ord.totalAmount || 0).toFixed(2)}</td>
-          <td style="padding: 10px;">
-            <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #edf2f7; color: #4a5568;">Paid</span>
-          </td>
-        </tr>
-      `).join('');
-    } catch (e) {
-      console.warn('Orders ledger query skipped:', e);
-    }
-  }
-
-  // Bind settings change form submissions
-  document.getElementById('acc-settings-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nameInput = document.getElementById('acc-settings-name').value.trim();
-    if (nameInput) {
-      try {
-        const user = store.state.user;
-        await contentDB.saveUser({
-          ...user,
-          name: nameInput
-        });
-        toast.success('Account preferences saved successfully!');
-      } catch (err) {
-        toast.error('Failed to save settings.');
-      }
-    }
-  });
-
-  // Bind logout actions
-  document.getElementById('btn-account-logout')?.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to log out of your dashboard?')) {
-      await authManager.logout();
-      toast.success('Successfully logged out.');
-      window.router.loadRoute('/home');
-    }
-  });
-
-  // Trigger main profile settings render call
-  loadUserDashboard();
+  // Load controller directly to guarantee robust cross-browser routing and dynamic execution
+  import { initAccountPage } from './pages/account.js';
+  initAccountPage();
 </script>

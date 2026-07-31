@@ -3,14 +3,28 @@ import {
   getFirestore, 
   collection, 
   doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
-  deleteDoc, 
+  getDoc as originalGetDoc,
+  getDocs as originalGetDocs,
+  setDoc as originalSetDoc,
+  deleteDoc as originalDeleteDoc,
   query, 
   where, 
   limit 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+// Global Firestore timeout wrapper to prevent headless chromium test runner hangs in offline sandbox environments
+function withTimeout(promise, ms = 2000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), ms))
+  ]);
+}
+
+const getDoc = (docRef) => withTimeout(originalGetDoc(docRef));
+const getDocs = (queryRef) => withTimeout(originalGetDocs(queryRef));
+const setDoc = (docRef, data, options) => withTimeout(originalSetDoc(docRef, data, options));
+const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
+
 import { schemaRegistry } from '../schemas/registry.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';

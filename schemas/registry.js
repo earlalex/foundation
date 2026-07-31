@@ -1,4 +1,4 @@
-import { validateSchema } from '../core/validator.js';
+import { validateSchema, Type } from '../core/validator.js';
 import { AnnouncementSchema } from './announcement.js';
 import { BlogSchema } from './blog.js';
 import { BookSchema } from './book.js';
@@ -34,6 +34,15 @@ class SchemaRegistry {
     this.register('va_candidate', VaSchema);
     this.register('va_hired', VaSchema);
     this.register('email_templates', EmailTemplateSchema);
+    this.register('security_audit', {
+      id: Type.string,
+      type: Type.literal('security_audit'),
+      timestamp: Type.string,
+      overallRating: Type.string,
+      totalAssets: Type.number,
+      maliciousAssets: Type.number,
+      reportSummary: Type.string
+    });
     this.register('zap_scans', ZapScanSchema);
     this.register('marketing_segments', MarketingSegmentSchema);
     this.register('marketing_journeys', MarketingJourneySchema);

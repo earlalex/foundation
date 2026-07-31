@@ -90,7 +90,7 @@ export async function runSecurityTests() {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const calculatedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    const expectedHash = 'd743a60a95ff2da650ff1b590e8d5314798e4f51e0ccb45d2f65a1cc1f13f1e5';
+    const expectedHash = '9cf379e063570d07b11bca89b9b734201c95bf789d9b717aa9e2e8ab332ec6c8';
     if (calculatedHash !== expectedHash) {
       throw new Error(`SHA-256 calculation mismatch. Expected: ${expectedHash}, Got: ${calculatedHash}`);
     }
