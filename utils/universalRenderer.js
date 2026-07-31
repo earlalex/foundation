@@ -102,11 +102,11 @@ export function renderContent(contentData) {
 
       ${featuredImage && contentData.editorType !== 'grapesjs' ? `<img src="${featuredImage}" alt="${contentData.title}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 8px; margin-bottom: 2rem;" />` : ''}
 
-      ${contentData.type === 'event' && contentData.meetUrl ? `
+      ${contentData.meetUrl ? `
         <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.25rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <strong style="display: block; color: #2b6cb0; font-size: 1.05rem;">Live Event Google Meet Session</strong>
-            <span style="font-size: 0.85rem; color: #2c5282;">Date: ${contentData.date} (${contentData.startTime || '14:00'} - ${contentData.endTime || '15:00'})</span>
+            <span style="font-size: 0.85rem; color: #2c5282;">Date: ${contentData.date || 'Today'} (${contentData.startTime || '14:00'} - ${contentData.endTime || '15:00'})</span>
           </div>
           <a href="${contentData.meetUrl}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 10px 18px; background: #2b6cb0; color: white; border-radius: 6px; text-decoration: none; font-weight: bold;">
             Join Google Meet

@@ -28,6 +28,7 @@ logger.info('Foundation Core initializing...');
  */
 window.foundationDevBypass = function() {
   window.__FOUNDATION_DEV_BYPASS__ = true;
+  window.store = store;
   store.dispatch('SET_DEV_MODE', true);
   console.log('%c[Security Bypass Granted]: Emergency Console Dev Bypass Active.', 'color: #38a169; font-weight: bold;');
   window.router?.loadRoute('/admin');
@@ -184,5 +185,7 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/detail/detail.js').then(m => m.initDetailPage());
   } else if (e.detail.path === '/admin') {
     initAdminPage();
+  } else if (e.detail.path === '/account') {
+    import('./pages/account.js').then(m => m.initAccountPage());
   }
 });

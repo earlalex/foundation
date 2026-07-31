@@ -9,6 +9,14 @@ export async function runRbacTests() {
   let totalTests = 0;
   let passedTests = 0;
 
+  // Clear any persistent state that would interfere with RBAC checks
+  const originalBypass = window.__FOUNDATION_DEV_BYPASS__;
+  window.__FOUNDATION_DEV_BYPASS__ = false;
+  const originalSimulated = store.state.simulatedUserTier;
+  store.dispatch('SET_SIMULATED_USER_TIER', null);
+  const originalDevMode = store.state.devMode;
+  store.dispatch('SET_DEV_MODE', false);
+
   async function assertTest(testName, testFn) {
     totalTests++;
     try {
@@ -124,7 +132,7 @@ export async function runRbacTests() {
     const testReferrals = 5;
     const monthlyFee = 29.00;
     const commissionRate = 0.10;
-    const earnings = testReferrals * (monthlyFee * commissionRate);
+    const earnings = parseFloat((testReferrals * (monthlyFee * commissionRate)).toFixed(2));
     if (earnings !== 14.50) {
       throw new Error('Affiliate commission calculation must equal 10% of recurring monthly dues.');
     }
@@ -227,6 +235,9 @@ export async function runRbacTests() {
 
   // Clean up state
   store.dispatch('SET_USER', null);
+  store.dispatch('SET_SIMULATED_USER_TIER', originalSimulated);
+  store.dispatch('SET_DEV_MODE', originalDevMode);
+  window.__FOUNDATION_DEV_BYPASS__ = originalBypass;
 
   const passedAll = totalTests === passedTests;
   console.log(

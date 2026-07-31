@@ -508,7 +508,10 @@ export async function fetchSeoMyRankAddr(domain) {
 
   try {
     const url = `https://seo-rank.my-addr.com/api2/sr+fb/${apiKey}/${encodeURIComponent(targetDomain)}`;
-    const response = await fetch(url).catch(() => null);
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(url, { signal: controller.signal }).catch(() => null);
+    clearTimeout(id);
     if (response && response.ok) {
       const data = await response.json();
       return {
@@ -657,9 +660,12 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
 
   try {
     console.log('[Lighthouse Engine]: Fetching PageSpeed API for', urlToAudit, strategy);
-    const response = await fetch(endpoint);
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 2500);
+    const response = await fetch(endpoint, { signal: controller.signal });
+    clearTimeout(id);
     
-    if (response.ok) {
+    if (response && response.ok) {
       const data = await response.json();
       const categories = data.lighthouseResult?.categories || {};
       const audits = data.lighthouseResult?.audits || {};

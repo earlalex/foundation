@@ -20,7 +20,8 @@ export async function onRequestPost(context) {
       currency,
       enableAch,
       priceId,
-      mode
+      mode,
+      affiliateId
     } = body;
 
     const domain = new URL(request.url).origin;
@@ -89,6 +90,9 @@ export async function onRequestPost(context) {
     }
     if (enableAch) {
       params.append('metadata[enableAch]', 'true');
+    }
+    if (affiliateId) {
+      params.append('metadata[affiliateId]', affiliateId);
     }
 
     // Handle ACH Direct Debit Payment option

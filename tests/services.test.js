@@ -94,7 +94,9 @@ export async function runServicesTests() {
 
   // 5. LIGHTHOUSE AUDIT ENGINE
   await assertTest('Lighthouse Audit Engine: Formats Core Web Vitals telemetries', async () => {
+    console.log('[DEBUG] Calling runLighthouseAudit');
     const audit = await runLighthouseAudit(window.location.href, 'mobile');
+    console.log('[DEBUG] runLighthouseAudit finished', audit);
     if (!audit || typeof audit.scores?.performance !== 'number') {
       throw new Error('Invalid Lighthouse performance score returned.');
     }
@@ -105,7 +107,9 @@ export async function runServicesTests() {
 
   // 6. SEO-MY-RANK-ADDR TELEMETRY
   await assertTest('SEO Rank Service: Queries domain authority metrics', async () => {
+    console.log('[DEBUG] Calling fetchSeoMyRankAddr');
     const telemetry = await fetchSeoMyRankAddr('foundation.dev');
+    console.log('[DEBUG] fetchSeoMyRankAddr finished', telemetry);
     if (!telemetry || !telemetry.googleRank) {
       throw new Error('SEO rank telemetry missing googleRank property.');
     }

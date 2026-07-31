@@ -47,6 +47,67 @@ export async function onRequestPost(context) {
       }
     }
 
+    // Helper to credit affiliate with 10% commission on the purchase price
+    async function creditAffiliate(affiliateId, amountPaid) {
+      if (!firebaseProjectId || !affiliateId) return;
+
+      const commissionRate = 0.10;
+      const commissionAmount = amountPaid * commissionRate;
+      const docId = affiliateId.includes('@') ? affiliateId.replace(/[@.]/g, '_') : affiliateId;
+      const userUrl = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`;
+
+      try {
+        const res = await fetch(userUrl);
+        let currentPending = 0;
+        let currentEarned = 0;
+        let referredCount = 0;
+
+        if (res.ok) {
+          const userData = await res.json();
+          const fields = userData.fields || {};
+          currentPending = parseFloat(fields.pendingBalance?.stringValue || fields.pendingBalance?.doubleValue || '0') || 0;
+          currentEarned = parseFloat(fields.totalEarned?.stringValue || fields.totalEarned?.doubleValue || '0') || 0;
+          referredCount = parseInt(fields.referredCount?.stringValue || fields.referredCount?.integerValue || '0') || 0;
+        }
+
+        const newPending = currentPending + commissionAmount;
+        const newEarned = currentEarned + commissionAmount;
+        const newReferred = referredCount + 1;
+
+        const patchFields = {
+          pendingBalance: { stringValue: String(newPending.toFixed(2)) },
+          totalEarned: { stringValue: String(newEarned.toFixed(2)) },
+          referredCount: { stringValue: String(newReferred) }
+        };
+
+        const updateUrl = `${userUrl}&updateMask.fieldPaths=pendingBalance&updateMask.fieldPaths=totalEarned&updateMask.fieldPaths=referredCount`;
+        await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: patchFields })
+        });
+
+        // Record commission log
+        const commissionUrl = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/affiliate_commissions?key=${firestoreApiKey}`;
+        await fetch(commissionUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              affiliateId: { stringValue: affiliateId },
+              amountPaid: { stringValue: String(amountPaid.toFixed(2)) },
+              commissionAmount: { stringValue: String(commissionAmount.toFixed(2)) },
+              timestamp: { stringValue: new Date().toISOString() }
+            }
+          })
+        });
+
+        console.log(`[Stripe Webhook]: Credited affiliate ${affiliateId} with commission $${commissionAmount.toFixed(2)}`);
+      } catch (err) {
+        console.error('[Stripe Webhook]: Failed to credit affiliate:', affiliateId, err);
+      }
+    }
+
     // Helper to trigger post-checkout digital asset delivery
     async function handleFulfillment(session) {
       const customerEmail = session.customer_email || session.customer_details?.email;
@@ -101,15 +162,27 @@ export async function onRequestPost(context) {
         const session = event.data.object;
         const customerEmail = session.customer_email || session.customer_details?.email;
         const assignedRole = session.metadata?.role || 'member';
+        const affiliateId = session.metadata?.affiliateId;
+        const amountPaid = (session.amount_total || 2900) / 100;
 
         // 1. Update Firestore Profile
-        await updateFirestoreUser(customerEmail, {
+        const userPatch = {
           role: assignedRole,
           paymentStatus: 'Active',
           stripeCustomerId: session.customer,
           stripeSubscriptionId: session.subscription
-        });
+        };
+        if (affiliateId) {
+          userPatch.referredBy = affiliateId;
+        }
+
+        await updateFirestoreUser(customerEmail, userPatch);
         console.log(`[Stripe Webhook]: Upgraded ${customerEmail} to ${assignedRole}`);
+
+        // Credit Affiliate
+        if (affiliateId) {
+          await creditAffiliate(affiliateId, amountPaid);
+        }
 
         // 2. Process Digital Fulfillment (if file exists)
         await handleFulfillment(session);

@@ -293,22 +293,22 @@ class ConfigEngine {
    * Section-wide Wizards configurations
    */
   isSection1Configured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     return local.sectionWizards?.section1 === true;
   }
 
   isSection2Configured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     return local.sectionWizards?.section2 === true;
   }
 
   isSection3Configured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     return local.sectionWizards?.section3 === true;
   }
 
   isSection4Configured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     return local.sectionWizards?.section4 === true;
   }
 
@@ -316,25 +316,25 @@ class ConfigEngine {
    * Sequential Wizard readiness getters
    */
   isGoogleWorkspaceConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     const g = local.google || {};
     return !!(g.clientId && g.clientSecret && g.ownerEmail && g.clientId !== '' && g.clientSecret !== '');
   }
 
   isFirebaseConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     const fb = local.firebase || {};
     return !!(fb.apiKey && fb.projectId && fb.authDomain && fb.apiKey !== '' && fb.projectId !== '');
   }
 
   isCloudflareConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     const cf = local.cloudflare || {};
     return !!(cf.zoneId && cf.pagesUrl && cf.workerApiKey && cf.zoneId !== '');
   }
 
   isLastpassConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     const lp = local.lastpass || {};
     return !!(lp.provisioningHash && lp.companyId && lp.provisioningHash !== '');
   }
@@ -343,7 +343,7 @@ class ConfigEngine {
    * Explicit readiness guards for every admin section
    */
   isBrandConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section1 === true) return true;
     const isFlagged = local.site?.isConfigured === true;
     const hasParams = !!(local.siteTitle && local.siteDomain && local.siteTitle !== 'Foundation Framework' && local.siteTitle !== '');
@@ -351,7 +351,7 @@ class ConfigEngine {
   }
 
   isApiKeysConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section1 === true) return true;
     const fb = local.firebase || {};
     const google = local.google || {};
@@ -359,7 +359,7 @@ class ConfigEngine {
   }
 
   isBusinessConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section2 === true) return true;
     const isFlagged = local.businessProfile?.isConfigured === true;
     const biz = local.businessProfile || {};
@@ -367,7 +367,7 @@ class ConfigEngine {
   }
 
   isFinancesConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section2 === true) return true;
     const isFlagged = local.stripe?.isConfigured === true;
     const stripe = local.stripe || {};
@@ -375,7 +375,7 @@ class ConfigEngine {
   }
 
   isMarketingConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section3 === true) return true;
     const isFlagged = local.marketing?.isConfigured === true;
     const mkt = local.marketing || {};
@@ -383,7 +383,7 @@ class ConfigEngine {
   }
 
   isSecurityConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section4 === true) return true;
     const isFlagged = local.security?.isConfigured === true;
     const vt = local.virustotal || {};
@@ -392,7 +392,7 @@ class ConfigEngine {
   }
 
   isVaHubConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
+    const local = this.current;
     if (local.sectionWizards?.section4 === true) return true;
     const isFlagged = local.vaHub?.isConfigured === true;
     const va = local.vaHub || {};
@@ -405,7 +405,7 @@ class ConfigEngine {
    * @returns {boolean} True if module is configured, false otherwise
    */
   isModuleConfigured(moduleName) {
-    const config = this.#getLocalStorageConfig() || this.current;
+    const config = this.current;
     
     const moduleConfigs = {
       'site-brand': () => {
@@ -455,7 +455,7 @@ class ConfigEngine {
    * @returns {Array<string>} Array of missing configuration keys
    */
   getMissingConfigKeys(moduleName) {
-    const config = this.#getLocalStorageConfig() || this.current;
+    const config = this.current;
     const missing = [];
 
     const moduleRequirements = {
