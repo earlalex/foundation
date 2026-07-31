@@ -824,6 +824,44 @@ async function initGrapesJSEditor() {
     }
   });
 
+  // Register Reusable Global Web Components inside GrapesJS Newsletter Block Manager as well
+  const bm = window.editorGrapesJS.BlockManager;
+  bm.add('author-card-component', {
+    label: 'Author Card Component',
+    category: 'Foundation Global Components',
+    content: '<author-card layout="compact"></author-card>'
+  });
+  bm.add('content-card-component', {
+    label: 'Content Card Component',
+    category: 'Foundation Global Components',
+    content: '<content-card title="Strategic Growth" date="July 2026" description="Learn strategic operations models." author="Jane Doe"></content-card>'
+  });
+  bm.add('chat-widget-component', {
+    label: 'Chat Widget Component',
+    category: 'Foundation Global Components',
+    content: '<chat-widget></chat-widget>'
+  });
+  bm.add('hero-banner-component', {
+    label: 'Hero Banner Component',
+    category: 'Foundation Global Components',
+    content: '<hero-banner title="Elevate Operations" subtitle="A zero-build modular web experience."></hero-banner>'
+  });
+  bm.add('feature-grid-component', {
+    label: 'Feature Grid Component',
+    category: 'Foundation Global Components',
+    content: '<feature-grid title-1="Automations" desc-1="Run marketing workflows natively." title-2="Security Scans" desc-2="Verify file signature integrity on the edge."></feature-grid>'
+  });
+  bm.add('pricing-table-component', {
+    label: 'Pricing Table Component',
+    category: 'Foundation Global Components',
+    content: '<pricing-table title="Core Membership" price="$29" period="/month"></pricing-table>'
+  });
+  bm.add('testimonial-slider-component', {
+    label: 'Testimonial Slider Component',
+    category: 'Foundation Global Components',
+    content: '<testimonial-slider author="Alex R."></testimonial-slider>'
+  });
+
   // Pre-load preset newsletter layout
   window.editorGrapesJS.setComponents(`
     <table style="width: 100%; max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; color: #333333;">

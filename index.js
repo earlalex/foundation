@@ -12,6 +12,10 @@ import { initNavbar } from './core/navbar.js';
 import './components/global/ContentCard.js';
 import './components/global/AuthorCard.js';
 import './components/global/ChatWidget.js';
+import './components/global/HeroBanner.js';
+import './components/global/FeatureGrid.js';
+import './components/global/PricingTable.js';
+import './components/global/TestimonialSlider.js';
 
 // Automated Test Suites
 import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
@@ -35,6 +39,17 @@ window.foundationDevBypass = function() {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize Active Plugins & Hooks
+  try {
+    const { pluginManager } = await import('./core/plugins.js');
+    pluginManager.initializeActivePlugins();
+
+    const { doAction } = await import('./core/hooks.js');
+    await doAction('foundation_init');
+  } catch (err) {
+    console.error('[Foundation Init Hooks]: Active plugins initialization failed.', err);
+  }
+
   // 1. Initialize Master Configuration (reads LocalStorage / Firestore)
   const isInstalled = await configManager.init();
 

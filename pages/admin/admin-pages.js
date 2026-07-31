@@ -166,6 +166,13 @@ export function initPagesTab() {
           categorySections: 'Sections'
         }
       },
+    });
+
+    // Trigger page_builder_init hook when GrapesJS Studio initializes
+    import('../../core/hooks.js').then(({ doAction }) => {
+      doAction('page_builder_init', editorInstance);
+    }).catch(err => {
+      console.error('[Page Builder Hook]: page_builder_init trigger failed.', err);
       assetManager: {
         upload: 1,
         uploadFile: async (ev) => {
@@ -188,6 +195,49 @@ export function initPagesTab() {
     });
 
     const bm = editorInstance.BlockManager;
+
+    // Register Reusable Global Web Components exposed to GrapesJS
+    bm.add('author-card-component', {
+      label: 'Author Card Component',
+      category: 'Foundation Global Components',
+      content: '<author-card layout="compact"></author-card>'
+    });
+
+    bm.add('content-card-component', {
+      label: 'Content Card Component',
+      category: 'Foundation Global Components',
+      content: '<content-card title="Strategic Growth" date="July 2026" description="Learn strategic operations models." author="Jane Doe"></content-card>'
+    });
+
+    bm.add('chat-widget-component', {
+      label: 'Chat Widget Component',
+      category: 'Foundation Global Components',
+      content: '<chat-widget></chat-widget>'
+    });
+
+    bm.add('hero-banner-component', {
+      label: 'Hero Banner Component',
+      category: 'Foundation Global Components',
+      content: '<hero-banner title="Elevate Operations" subtitle="A zero-build modular web experience."></hero-banner>'
+    });
+
+    bm.add('feature-grid-component', {
+      label: 'Feature Grid Component',
+      category: 'Foundation Global Components',
+      content: '<feature-grid title-1="Automations" desc-1="Run marketing workflows natively." title-2="Security Scans" desc-2="Verify file signature integrity on the edge."></feature-grid>'
+    });
+
+    bm.add('pricing-table-component', {
+      label: 'Pricing Table Component',
+      category: 'Foundation Global Components',
+      content: '<pricing-table title="Core Membership" price="$29" period="/month"></pricing-table>'
+    });
+
+    bm.add('testimonial-slider-component', {
+      label: 'Testimonial Slider Component',
+      category: 'Foundation Global Components',
+      content: '<testimonial-slider author="Alex R."></testimonial-slider>'
+    });
 
     // Remove pre-existing default blocks to keep layout organized if needed, or add our 9 rich layouts:
     bm.add('hero-section', {
@@ -365,24 +415,30 @@ export function initPagesTab() {
     const compiledHtml = editorInstance.getHtml();
     const compiledCss = editorInstance.getCss();
 
-    const payload = {
-      type: 'page',
-      id: slug,
-      slug: slug,
-      title: title,
-      description: desc || 'Custom dynamic page',
-      editorType: 'grapesjs',
-      projectData: projectData,
-      compiledHtml: compiledHtml,
-      compiledCss: compiledCss,
-      access: { visibility: access },
-      author: store.state.user?.displayName || 'Editor',
-      date: new Date().toISOString().split('T')[0]
-    };
+    const { applyFilters, doAction } = await import('../../core/hooks.js');
 
     try {
+      let payload = {
+        type: 'page',
+        id: slug,
+        slug: slug,
+        title: title,
+        description: desc || 'Custom dynamic page',
+        editorType: 'grapesjs',
+        projectData: projectData,
+        compiledHtml: compiledHtml,
+        compiledCss: compiledCss,
+        access: { visibility: access },
+        author: store.state.user?.displayName || 'Editor',
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      // Filter pipeline mutates payload before saving
+      payload = applyFilters('content_before_save', payload);
+
       const success = await contentDB.saveCustomPage(payload);
       if (success) {
+        await doAction('content_after_save', payload);
         toast.success(`Custom page /pages/${slug} published successfully!`);
         form.reset();
         editingPageId = null;
