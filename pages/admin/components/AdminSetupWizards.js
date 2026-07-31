@@ -1,7 +1,6 @@
 /**
  * pages/admin/components/AdminSetupWizards.js
- * Implements interactive, step-by-step setup modals for each of the Admin sections
- * with strict sequential order enforcement and secure temporary secret storage.
+ * Implements interactive, step-by-step setup modals for each of the 4 master admin section wizards.
  */
 import { configManager } from '../../../core/config.js';
 import { toast } from '../../../utils/toast.js';
@@ -11,6 +10,7 @@ import {
   deleteTempCredentialsVault
 } from '../../../core/drive-upload.js';
 import { contentDB } from '../../../core/db.js';
+import { sendGmailNotification } from '../../../core/google-services.js';
 
 export class AdminSetupWizards {
   /**
@@ -18,52 +18,19 @@ export class AdminSetupWizards {
    */
   static getOnboardingProgress() {
     const cfg = configManager.current || {};
-    const step1 = !!(cfg.google?.clientId && cfg.google?.clientSecret && cfg.google?.ownerEmail);
-    const step2 = !!(cfg.firebase?.apiKey && cfg.firebase?.projectId && cfg.firebase?.authDomain);
-    const step3 = !!(cfg.cloudflare?.zoneId && cfg.cloudflare?.pagesUrl && cfg.cloudflare?.workerApiKey);
-    const step4 = !!(cfg.lastpass?.provisioningHash && cfg.lastpass?.companyId);
-    return { step1, step2, step3, step4 };
-  }
-
-  /**
-   * Enforce strict sequential onboarding order
-   * @param {number} targetStep
-   */
-  static enforceSequence(targetStep) {
-    const progress = this.getOnboardingProgress();
-    if (targetStep >= 2 && !progress.step1) {
-      throw new Error("Strict Sequence Block: Step 1 (Google Workspace) is not fully configured yet!");
-    }
-    if (targetStep >= 3 && !progress.step2) {
-      throw new Error("Strict Sequence Block: Step 2 (Firebase) is not fully configured yet!");
-    }
-    if (targetStep >= 4 && !progress.step3) {
-      throw new Error("Strict Sequence Block: Step 3 (Cloudflare) is not fully configured yet!");
-    }
-    if (targetStep >= 5 && !progress.step4) {
-      throw new Error("Strict Sequence Block: Step 4 (LastPass Password Vault) is not fully configured yet!");
-    }
+    const section1 = !!cfg.sectionWizards?.section1;
+    const section2 = !!cfg.sectionWizards?.section2;
+    const section3 = !!cfg.sectionWizards?.section3;
+    const section4 = !!cfg.sectionWizards?.section4;
+    return { section1, section2, section3, section4 };
   }
 
   /**
    * Launch a specific wizard modal
-   * @param {string} wizardType - One of: 'google_workspace', 'firebase_cloud', 'cloudflare_edge', 'lastpass_vault', 'site', 'business', 'finances', 'marketing', 'security', 'va'
+   * @param {string} wizardType - One of: 'section1', 'section2', 'section3', 'section4'
    * @param {Function} onComplete - Callback executed upon successful setup completion
    */
   static launch(wizardType, onComplete) {
-    // 1. Enforce sequence checks dynamically before launching
-    try {
-      if (wizardType === 'firebase_cloud') this.enforceSequence(2);
-      else if (wizardType === 'cloudflare_edge') this.enforceSequence(3);
-      else if (wizardType === 'lastpass_vault') this.enforceSequence(4);
-      else if (['site', 'business', 'finances', 'marketing', 'security', 'va'].includes(wizardType)) {
-        this.enforceSequence(5);
-      }
-    } catch (err) {
-      toast.error(err.message);
-      return;
-    }
-
     const modal = document.createElement('div');
     modal.className = 'setup-wizard-modal';
     modal.style.cssText = `
@@ -82,12 +49,12 @@ export class AdminSetupWizards {
     `;
 
     const wizardDefs = {
-      // STEP 1: Google Workspace Setup
-      google_workspace: {
-        title: "Step 1: Google Workspace Setup Wizard",
+      // MASTER SECTION 1: Platform Setup & Identity Wizard
+      section1: {
+        title: "Section 1: Platform Setup & Identity Wizard",
         steps: [
           {
-            title: "OAuth Credentials & Admin Email",
+            title: "Step 1/3: Google Workspace OAuth Settings",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure Google Client credentials and main workspace email.</p>
@@ -119,16 +86,9 @@ export class AdminSetupWizards {
                 consentScreenCompleted: true
               };
             }
-          }
-        ]
-      },
-
-      // STEP 2: Firebase Setup
-      firebase_cloud: {
-        title: "Step 2: Firebase Setup Wizard",
-        steps: [
+          },
           {
-            title: "Firebase/Firestore Integration Keys",
+            title: "Step 2/3: Firebase & Firestore Database Setup",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <div>
@@ -159,16 +119,9 @@ export class AdminSetupWizards {
                 databaseRulesInitialized: true
               };
             }
-          }
-        ]
-      },
-
-      // STEP 3: Cloudflare Setup
-      cloudflare_edge: {
-        title: "Step 3: Cloudflare Edge Setup Wizard",
-        steps: [
+          },
           {
-            title: "Cloudflare Zone & Worker Integration",
+            title: "Step 3/3: Cloudflare Pages & Workers Integration",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <div>
@@ -199,21 +152,109 @@ export class AdminSetupWizards {
                 workerApiKey: document.getElementById('wz-cf-key').value,
                 wranglerValidated: true
               };
+              data.isInstalled = true;
+              data.siteTitle = data.siteTitle || "Foundation Framework";
+              data.siteDomain = data.siteDomain || window.location.origin;
+              data.adminEmails = [document.getElementById('wz-google-owner')?.value || "admin@example.com"];
             }
           }
         ]
       },
 
-      // STEP 4: LastPass Vault Setup
-      lastpass_vault: {
-        title: "Step 4: LastPass Vault Setup Wizard",
+      // MASTER SECTION 2: Business Operations Wizard
+      section2: {
+        title: "Section 2: Business Operations Wizard",
         steps: [
           {
-            title: "LastPass Enterprise Connection",
+            title: "Step 1/3: Corporate Entity Details",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">LastPass Enterprise API Key / Provisioning Hash:</label>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Legal Corporate Name:</label>
+                  <input type="text" id="wz-biz-name" value="Ascension Avenue Academy" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">EIN / Tax ID:</label>
+                  <input type="text" id="wz-biz-ein" placeholder="12-3456789" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Headquarters Address:</label>
+                  <input type="text" id="wz-biz-address" placeholder="100 Innovation Way" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div>
+                    <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">NAICS Classification Code:</label>
+                    <input type="text" id="wz-biz-naics" value="541511" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  </div>
+                  <div>
+                    <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">NAICS Description:</label>
+                    <input type="text" id="wz-biz-naics-def" value="Custom Computer Programming Services" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  </div>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const n = document.getElementById('wz-biz-name')?.value;
+              const e = document.getElementById('wz-biz-ein')?.value;
+              const a = document.getElementById('wz-biz-address')?.value;
+              const na = document.getElementById('wz-biz-naics')?.value;
+              if (!n || !e || !a || !na) throw new Error("Please complete all corporate details fields.");
+            },
+            save: (data) => {
+              data.businessProfile = {
+                ...(configManager.current.businessProfile || {}),
+                legalName: document.getElementById('wz-biz-name').value,
+                ein: document.getElementById('wz-biz-ein').value,
+                address: document.getElementById('wz-biz-address').value,
+                naicsCode: document.getElementById('wz-biz-naics').value,
+                naicsDefinition: document.getElementById('wz-biz-naics-def').value,
+                isConfigured: true
+              };
+            }
+          },
+          {
+            title: "Step 2/3: Stripe Connections ($5 ACH Direct Debit Fee)",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Initialize your Stripe credentials. The ACH payment path enforces a flat $5.00 application fee parameter.</p>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Stripe Publishable Key:</label>
+                  <input type="text" id="wz-stripe-pub" placeholder="pk_test_..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Stripe Secret Key:</label>
+                  <input type="password" id="wz-stripe-sec" placeholder="sk_test_..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Monthly Membership Price ID:</label>
+                  <input type="text" id="wz-stripe-price" placeholder="price_xxxxx..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const p = document.getElementById('wz-stripe-pub')?.value;
+              const s = document.getElementById('wz-stripe-sec')?.value;
+              const pr = document.getElementById('wz-stripe-price')?.value;
+              if (!p || !s || !pr) throw new Error("Stripe Publishable key, Secret key, and Price ID are required.");
+            },
+            save: (data) => {
+              data.stripe = {
+                ...(configManager.current.stripe || {}),
+                publishableKey: document.getElementById('wz-stripe-pub').value,
+                secretKey: document.getElementById('wz-stripe-sec').value,
+                priceId: document.getElementById('wz-stripe-price').value,
+                achFee: 500, // flat $5 application fee parameter enforced
+                enableAch: true,
+                isConfigured: true
+              };
+            }
+          },
+          {
+            title: "Step 3/3: LastPass Enterprise Connection",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">LastPass API Key / Provisioning Hash:</label>
                   <input type="password" id="wz-lp-hash" placeholder="Enter LP key" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
                 </div>
                 <div>
@@ -239,143 +280,103 @@ export class AdminSetupWizards {
         ]
       },
 
-      // Everything Else individual step definitions:
-      site: {
-        title: "Site & Brand Setup Wizard",
+      // MASTER SECTION 3: Growth & Marketing Wizard
+      section3: {
+        title: "Section 3: Growth & Marketing Wizard",
         steps: [
           {
-            title: "Step 1: Website Name & Base Domain",
+            title: "Step 1/2: Gmail / SMTP Setup",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Website Title:</label>
-                  <input type="text" id="wz-site-title" placeholder="Foundation Framework" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Default Gmail/SMTP Sender:</label>
+                  <input type="email" id="wz-mkt-sender" placeholder="newsletter@yourdomain.com" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
                 </div>
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Base URL / Domain:</label>
-                  <input type="url" id="wz-site-domain" placeholder="https://example.com" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Default Sender Alias:</label>
+                  <input type="text" id="wz-mkt-alias" value="Notification System" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
                 </div>
               </div>
             `,
             validate: () => {
-              const t = document.getElementById('wz-site-title')?.value;
-              const d = document.getElementById('wz-site-domain')?.value;
-              if (!t || !d) throw new Error("Please enter both Title and Domain!");
+              const s = document.getElementById('wz-mkt-sender')?.value;
+              if (!s) throw new Error("Default Gmail sender is required.");
             },
             save: (data) => {
-              data.siteTitle = document.getElementById('wz-site-title').value;
-              data.siteDomain = document.getElementById('wz-site-domain').value;
-            }
-          },
-          {
-            title: "Step 2: Dynamic Path Overrides &pres",
-            html: `
-              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
-                <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Company Name Parameter:</label>
-                  <input type="text" id="wz-site-company" placeholder="Ascension Avenue Academy" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-                </div>
-                <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Site Name Parameter:</label>
-                  <input type="text" id="wz-site-name" placeholder="Foundation" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-                </div>
-              </div>
-            `,
-            validate: () => {
-              const c = document.getElementById('wz-site-company')?.value;
-              const s = document.getElementById('wz-site-name')?.value;
-              if (!c || !s) throw new Error("Company Name and Site Name are required!");
-            },
-            save: (data) => {
-              data.site = {
-                ...(configManager.current.site || {}),
-                companyName: document.getElementById('wz-site-company').value,
-                siteName: document.getElementById('wz-site-name').value
-              };
-            }
-          }
-        ]
-      },
-      business: {
-        title: "Business & Legal Setup Wizard",
-        steps: [
-          {
-            title: "Step 1: Corporate Entity Details",
-            html: `
-              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
-                <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Legal Corporate Name:</label>
-                  <input type="text" id="wz-biz-name" value="Ascension Avenue Academy" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-                </div>
-                <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Headquarters Address:</label>
-                  <input type="text" id="wz-biz-address" placeholder="100 Innovation Way" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-                </div>
-              </div>
-            `,
-            validate: () => {
-              const n = document.getElementById('wz-biz-name')?.value;
-              const a = document.getElementById('wz-biz-address')?.value;
-              if (!n || !a) throw new Error("Corporate Name and Address are required!");
-            },
-            save: (data) => {
-              data.businessProfile = {
-                ...(configManager.current.businessProfile || {}),
-                legalName: document.getElementById('wz-biz-name').value,
-                address: document.getElementById('wz-biz-address').value
-              };
-            }
-          }
-        ]
-      },
-      finances: {
-        title: "Finances & ACH Setup Wizard",
-        steps: [
-          {
-            title: "Stripe Connections",
-            html: `
-              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
-                <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Stripe Publishable Key:</label>
-                  <input type="text" id="wz-stripe-pub" placeholder="pk_test_..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-                </div>
-                <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Stripe Secret Key:</label>
-                  <input type="password" id="wz-stripe-sec" placeholder="sk_test_..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-                </div>
-              </div>
-            `,
-            validate: () => {
-              const p = document.getElementById('wz-stripe-pub')?.value;
-              const s = document.getElementById('wz-stripe-sec')?.value;
-              if (!p || !s) throw new Error("Stripe keys are required!");
-            },
-            save: (data) => {
-              data.stripe = {
-                ...(configManager.current.stripe || {}),
-                publishableKey: document.getElementById('wz-stripe-pub').value,
-                secretKey: document.getElementById('wz-stripe-sec').value,
+              data.marketing = {
+                gmailSender: document.getElementById('wz-mkt-sender').value,
+                defaultSenderAlias: document.getElementById('wz-mkt-alias').value,
+                defaultDelay: 24,
+                defaultTrigger: "user_signup",
                 isConfigured: true
               };
             }
+          },
+          {
+            title: "Step 2/2: Test Email Dispatch & Chatbot Context",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <p style="font-size: 0.85rem; color: #718096;">Dispatch a live test welcome email to verify connections, and set system chatbot greetings.</p>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.90rem; margin-bottom: 0.25rem;">Dispatch Test Email To:</label>
+                  <input type="email" id="wz-mkt-test-email" placeholder="test@example.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <button type="button" id="btn-wz-test-email" style="
+                    margin-top: 0.5rem;
+                    padding: 6px 12px;
+                    background: var(--theme-color-accent, #38a169);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    cursor: pointer;
+                  ">Send Test Email</button>
+                </div>
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0;" />
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Chatbot Welcoming Greeting Message:</label>
+                  <input type="text" id="wz-mkt-chat-welcome" value="Hello! How can I help you today?" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Chatbot AI System Prompt:</label>
+                  <textarea id="wz-mkt-chat-prompt" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 40px; box-sizing: border-box;">You are a helpful customer support agent.</textarea>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const w = document.getElementById('wz-mkt-chat-welcome')?.value;
+              if (!w) throw new Error("Chatbot welcome greeting is required.");
+            },
+            save: (data) => {
+              data.chatbot = {
+                ...(configManager.current.chatbot || {}),
+                enabled: true,
+                welcomeMessage: document.getElementById('wz-mkt-chat-welcome').value,
+                systemPrompt: document.getElementById('wz-mkt-chat-prompt').value
+              };
+            }
           }
         ]
       },
-      security: {
-        title: "Step 8: OWASP ZAP & Security Setup Wizard",
+
+      // MASTER SECTION 4: Platform Operations Wizard
+      section4: {
+        title: "Section 4: Platform Operations Wizard",
         steps: [
           {
-            title: "OWASP ZAP Integration & Threat Configuration",
+            title: "Step 1/2: OWASP ZAP & VirusTotal Scan Keys",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
-                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure ZAP Daemon API endpoint parameters for threat testing.</p>
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">ZAP API Base URL:</label>
-                  <input type="text" id="wz-zap-url" value="https://wwtesw.zaproxy.org" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">OWASP ZAP Base URL:</label>
+                  <input type="url" id="wz-sec-zap-url" value="https://wwtesw.zaproxy.org" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
                 </div>
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">ZAP API Key:</label>
-                  <input type="password" id="wz-zap-key" placeholder="Enter ZAP API Key" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">OWASP ZAP API Key:</label>
+                  <input type="password" id="wz-sec-zap-key" placeholder="zap_api_token" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">VirusTotal API Key:</label>
+                  <input type="password" id="wz-sec-vt-key" placeholder="vt_api_token" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
                 </div>
                 <div>
                   <button type="button" id="btn-wz-test-zap" style="
@@ -388,21 +389,58 @@ export class AdminSetupWizards {
                     cursor: pointer;
                     font-size: 0.85rem;
                   ">
-                    Test ZAP Connection
+                    Test ZAP REST API Connection
                   </button>
+                  <div id="wz-zap-feedback" style="display: none; font-size: 0.8rem; margin-top: 4px; font-weight: bold;"></div>
                 </div>
-                <div id="wz-zap-test-feedback" style="display: none; padding: 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem;"></div>
               </div>
             `,
             validate: () => {
-              const url = document.getElementById('wz-zap-url')?.value;
-              if (!url) throw new Error("ZAP API Base URL is required!");
+              const url = document.getElementById('wz-sec-zap-url')?.value;
+              const vt = document.getElementById('wz-sec-vt-key')?.value;
+              if (!url || !vt) throw new Error("ZAP URL and VirusTotal API Key are required!");
             },
             save: (data) => {
               data.security = {
                 ...(configManager.current.security || {}),
-                zapApiUrl: document.getElementById('wz-zap-url').value,
-                zapApiKey: document.getElementById('wz-zap-key').value,
+                zapApiUrl: document.getElementById('wz-sec-zap-url').value,
+                zapApiKey: document.getElementById('wz-sec-zap-key').value,
+                isConfigured: true
+              };
+              data.virustotal = {
+                apiKey: document.getElementById('wz-sec-vt-key').value
+              };
+            }
+          },
+          {
+            title: "Step 2/2: OnlineJobs.ph Integration Pipeline",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">OnlineJobs.ph API / Pipeline ID:</label>
+                  <input type="text" id="wz-va-pipe" placeholder="pipeline_1234..." required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">VA Integration Key:</label>
+                  <input type="password" id="wz-va-key" placeholder="va_api_secret_key" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">VA welcome Email Template:</label>
+                  <textarea id="wz-va-template" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 50px; box-sizing: border-box;">Welcome to our team! Please complete your onboarding...</textarea>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const pipe = document.getElementById('wz-va-pipe')?.value;
+              const k = document.getElementById('wz-va-key')?.value;
+              if (!pipe || !k) throw new Error("Pipeline ID and Integration Key are required.");
+            },
+            save: (data) => {
+              data.vaHub = {
+                apiKey: document.getElementById('wz-va-key').value,
+                pipelineId: document.getElementById('wz-va-pipe').value,
+                onboardingTemplate: document.getElementById('wz-va-template').value,
+                welcomeEmailSubject: "Welcome to the Team!",
                 isConfigured: true
               };
             }
@@ -467,49 +505,70 @@ export class AdminSetupWizards {
         });
       }
 
+      // Bind Test Email click event for Section 3 Step 2
+      const testEmailBtn = modal.querySelector('#btn-wz-test-email');
+      if (testEmailBtn) {
+        testEmailBtn.onclick = async () => {
+          const testEmail = modal.querySelector('#wz-mkt-test-email').value;
+          if (!testEmail) {
+            toast.warning('Please input a test recipient email.');
+            return;
+          }
+          testEmailBtn.textContent = 'Sending...';
+          try {
+            const success = await sendGmailNotification({
+              toEmail: testEmail,
+              subject: "Workspace Verification - Sample Test Email",
+              messageBody: "Congratulations, the Section 3 Growth & Marketing setup wizard connections are verified!"
+            });
+            if (success) {
+              toast.success(`Verified: Test welcome email dispatched safely to ${testEmail}!`);
+            } else {
+              toast.warning('Test dispatch registered. Save report or login to complete.');
+            }
+          } catch (e) {
+            toast.error('Dispatch failed: ' + e.message);
+          } finally {
+            testEmailBtn.textContent = 'Send Test Email';
+          }
+        };
+      }
+
+      // Bind Test ZAP REST API Connection
       const testZapBtn = modal.querySelector('#btn-wz-test-zap');
       if (testZapBtn) {
-        testZapBtn.addEventListener('click', async () => {
-          const url = modal.querySelector('#wz-zap-url').value;
-          const key = modal.querySelector('#wz-zap-key').value;
-          const feedback = modal.querySelector('#wz-zap-test-feedback');
-
-          if (feedback) {
-            feedback.style.display = 'block';
-            feedback.style.background = '#ebf8ff';
-            feedback.style.color = '#2b6cb0';
-            feedback.textContent = 'Testing connection to ZAP daemon...';
+        testZapBtn.onclick = async () => {
+          const url = modal.querySelector('#wz-sec-zap-url').value;
+          const key = modal.querySelector('#wz-sec-zap-key').value;
+          const fb = modal.querySelector('#wz-zap-feedback');
+          if (fb) {
+            fb.style.display = 'block';
+            fb.style.color = '#2b6cb0';
+            fb.textContent = 'Testing connection...';
           }
-
           try {
             const res = await fetch('/api/zap-scan', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'test-connection', baseUrl: url, apiKey: key })
             });
-            const data = await res.json();
-            if (feedback) {
-              if (data.success) {
-                feedback.style.background = '#f0fdf4';
-                feedback.style.color = '#166534';
-                feedback.textContent = `Success: Connected. ZAP version: ${data.version}`;
-                toast.success('Successfully connected to ZAP Daemon API!');
+            const d = await res.json();
+            if (fb) {
+              if (d.success) {
+                fb.style.color = '#38a169';
+                fb.textContent = `Success: ZAP Daemon online. (Version: ${d.version})`;
               } else {
-                feedback.style.background = '#fff5f5';
-                feedback.style.color = '#c53030';
-                feedback.textContent = `Failed: ${data.error || 'Connection error'}`;
-                toast.error('Failed to connect to ZAP Daemon API');
+                fb.style.color = '#e53e3e';
+                fb.textContent = `Offline: ${d.error || 'Connection failed'}`;
               }
             }
           } catch (e) {
-            if (feedback) {
-              feedback.style.background = '#fff5f5';
-              feedback.style.color = '#c53030';
-              feedback.textContent = `Error: ${e.message}`;
-              toast.error('Connection failed.');
+            if (fb) {
+              fb.style.color = '#e53e3e';
+              fb.textContent = 'Failed: Proxy scan service offline.';
             }
           }
-        });
+        };
       }
 
       // Next / Finish step listener
@@ -546,27 +605,13 @@ export class AdminSetupWizards {
               }
             }
 
-            const wizardTypeToConfigKey = {
-              site: 'site',
-              google_workspace: 'google',
-              firebase_cloud: 'firebase',
-              cloudflare_edge: 'cloudflare',
-              lastpass_vault: 'lastpass',
-              business: 'businessProfile',
-              finances: 'stripe',
-              security: 'security'
-            };
-
-            const configKey = wizardTypeToConfigKey[wizardType];
-            if (configKey) {
-              mergedConfig[configKey] = mergedConfig[configKey] || {};
-              mergedConfig[configKey].isConfigured = true;
-            }
+            mergedConfig.sectionWizards = mergedConfig.sectionWizards || {};
+            mergedConfig.sectionWizards[wizardType] = true;
 
             const success = await configManager.saveToFirebase(mergedConfig);
             if (success) {
-              // DIRECTIVE 2.2: TEMPORARY SECRET STORAGE VAULT FLOW
-              if (['google_workspace', 'firebase_cloud', 'cloudflare_edge'].includes(wizardType)) {
+              // TEMPORARY SECRET STORAGE VAULT FLOW (Section 1 completed)
+              if (wizardType === 'section1') {
                 try {
                   const tempCreds = {
                     google: mergedConfig.google || {},
@@ -581,8 +626,8 @@ export class AdminSetupWizards {
                 }
               }
 
-              // DIRECTIVE 2.2: STEP 4 LASTPASS CONFIGURATION RECOVERY FLOW
-              if (wizardType === 'lastpass_vault') {
+              // LASTPASS CONFIGURATION RECOVERY FLOW (Section 2 completed: now we can move temp creds to LP)
+              if (wizardType === 'section2') {
                 try {
                   const tempCreds = await readTempCredentialsVault();
                   if (tempCreds) {

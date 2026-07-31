@@ -36,6 +36,14 @@ service cloud.firestore {
       allow write: if isAdmin() || isEditor();
     }
 
+    // Custom Dynamic Pages built by GrapesJS or Block Editor
+    match /pages/{pageId} {
+      allow read: if resource.data.access.visibility == 'public' ||
+                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') ||
+                  isAdmin() || isEditor();
+      allow write: if isAdmin() || isEditor();
+    }
+
     // Marketing Workflows / Journeys / Segments
     match /marketing_workflows/{workflowId} {
       allow read, write: if isAdmin() || isEditor();

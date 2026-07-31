@@ -104,80 +104,149 @@ export function initAdminPage() {
 
   // --- 2. CONFIGURATION READY GUARDS & RE-RUN SETUP BUTTONS ---
   const sectionGuards = [
+    // Section 1 Tabs
     {
       tabId: 'tab-site',
       title: "Site & Brand",
-      wizardKey: 'site',
-      isConfigured: () => configManager.isBrandConfigured(),
-      getMissing: () => configManager.getMissingConfigKeys('site-brand'),
+      wizardKey: 'section1',
+      isConfigured: () => configManager.isSection1Configured(),
+      getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
       initFn: initSiteSettingsTab
     },
     {
       tabId: 'tab-config',
       title: "API Keys & Cloud",
-      wizardKey: 'api',
-      isConfigured: () => configManager.isApiKeysConfigured(),
-      getMissing: () => configManager.getMissingConfigKeys('api-keys'),
+      wizardKey: 'section1',
+      isConfigured: () => configManager.isSection1Configured(),
+      getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
       initFn: initIntegrationsTab
     },
     {
+      tabId: 'tab-profile',
+      title: "Public Profile",
+      wizardKey: 'section1',
+      isConfigured: () => configManager.isSection1Configured(),
+      getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
+      initFn: initPublicProfileTab
+    },
+
+    // Section 2 Tabs
+    {
       tabId: 'tab-business',
       title: "Business & Legal",
-      wizardKey: 'business',
-      isConfigured: () => configManager.isBusinessConfigured(),
-      getMissing: () => configManager.getMissingConfigKeys('business-legal'),
+      wizardKey: 'section2',
+      isConfigured: () => configManager.isSection2Configured(),
+      getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
       initFn: initBusinessProfileTab
     },
     {
-      tabId: 'tab-finances',
-      title: "Finances & ACH",
-      wizardKey: 'finances',
-      isConfigured: () => configManager.isFinancesConfigured(),
-      getMissing: () => configManager.getMissingConfigKeys('finances-ach'),
-      initFn: initFinancesTab
+      tabId: 'tab-products',
+      title: "Products & Services",
+      wizardKey: 'section2',
+      isConfigured: () => configManager.isSection2Configured(),
+      getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
+      initFn: initProductsTab
     },
     {
+      tabId: 'tab-finances',
+      title: "Finances & Payroll",
+      wizardKey: 'section2',
+      isConfigured: () => configManager.isSection2Configured(),
+      getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
+      initFn: initFinancesTab
+    },
+
+    // Section 3 Tabs
+    {
+      tabId: 'tab-marketing',
+      title: "Automated Marketing",
+      wizardKey: 'section3',
+      isConfigured: () => configManager.isSection3Configured(),
+      getMissing: () => ["Gmail/SMTP sender credentials", "Test sample email verification", "Marketing Journey state storage"],
+      initFn: initMarketingTab
+    },
+    {
+      tabId: 'tab-chatbot',
+      title: "AI Chatbot & Voice",
+      wizardKey: 'section3',
+      isConfigured: () => configManager.isSection3Configured(),
+      getMissing: () => ["Gmail/SMTP sender credentials", "Test sample email verification", "Marketing Journey state storage"],
+      initFn: loadChatbotAndVoiceTab
+    },
+
+    // Section 4 Tabs
+    {
       tabId: 'tab-security',
-      title: "Password Vault & Security",
-      wizardKey: 'lastpass',
-      isConfigured: () => configManager.isLastpassConfigured() && configManager.isSecurityConfigured(),
-      getMissing: () => {
-        const m = [];
-        if (!configManager.isLastpassConfigured()) m.push("LastPass Provisioning Hash & Company ID");
-        if (!configManager.isSecurityConfigured()) m.push("VirusTotal API Key & Scan Schedules");
-        return m;
-      },
+      title: "Security & Operations",
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
       initFn: () => {
         initSecurityTab();
         loadGscSecurityThreats();
       }
     },
     {
-      tabId: 'tab-marketing',
-      title: "Automated Marketing",
-      wizardKey: 'marketing',
-      isConfigured: () => configManager.isMarketingConfigured(),
-      getMissing: () => ["Gmail notification credentials & Sequence triggers"],
-      initFn: initMarketingTab
-    },
-    {
       tabId: 'tab-vas',
       title: "VA Hiring Hub",
-      wizardKey: 'va',
-      isConfigured: () => configManager.isVaHubConfigured(),
-      getMissing: () => ["OnlineJobs.ph pipeline/API connection parameters"],
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
       initFn: initVasTab
+    },
+    {
+      tabId: 'tab-kanban',
+      title: "Kanban Task Board",
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
+      initFn: initKanbanTab
+    },
+    {
+      tabId: 'tab-pages',
+      title: "Page Creator",
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
+      initFn: initPagesTab
+    },
+    {
+      tabId: 'tab-cms',
+      title: "CMS Publisher",
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
+      initFn: () => {
+        // Init content publisher tab elements
+      }
+    },
+    {
+      tabId: 'tab-seo',
+      title: "SEO & Analytics",
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
+      initFn: loadSeoAndAnalyticsTab
+    },
+    {
+      tabId: 'tab-performance',
+      title: "Performance",
+      wizardKey: 'section4',
+      isConfigured: () => configManager.isSection4Configured(),
+      getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
+      initFn: loadPerformanceTab
     }
   ];
 
   function checkAndInitTab(tabId) {
     const g = sectionGuards.find(x => x.tabId === `tab-${tabId}`);
-    if (!g) return true; // not guarded (like users, pages, cms, etc.)
+    if (!g) return true; // not guarded (like users, etc.)
 
     const panel = document.getElementById(g.tabId);
     if (!panel) return true;
 
-    const isAlreadyConfigured = g.isConfigured();
+    const isBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
+    const isAlreadyConfigured = g.isConfigured() || isBypass;
 
     if (isAlreadyConfigured) {
       AdminSetupCard.unlock(panel);
@@ -209,78 +278,24 @@ export function initAdminPage() {
       panel.insertBefore(rBtn, panel.firstChild);
     }
 
-    console.log(`[checkAndInitTab] tabId: ${tabId}, isAlreadyConfigured: ${isAlreadyConfigured}, site.isConfigured: ${configManager.current.site?.isConfigured}`);
     rBtn.style.display = isAlreadyConfigured ? 'block' : 'none';
 
     rBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      let wizardKey = g.wizardKey;
-      if (g.tabId === 'tab-config') {
-        if (!configManager.isGoogleWorkspaceConfigured()) {
-          wizardKey = 'google_workspace';
-        } else if (!configManager.isFirebaseConfigured()) {
-          wizardKey = 'firebase_cloud';
-        } else if (!configManager.isCloudflareConfigured()) {
-          wizardKey = 'cloudflare_edge';
-        }
-      } else if (g.tabId === 'tab-security') {
-        if (!configManager.isLastpassConfigured()) {
-          wizardKey = 'lastpass_vault';
-        } else if (!configManager.isSecurityConfigured()) {
-          wizardKey = 'security';
-        } else {
-          wizardKey = 'security';
-        }
-      }
-
-      AdminSetupWizards.launch(wizardKey, () => {
+      AdminSetupWizards.launch(g.wizardKey, () => {
         AdminSetupCard.unlock(panel);
         checkAndInitTab(tabId);
       });
     };
 
     if (!isAlreadyConfigured) {
-      let wizardKey = g.wizardKey;
-      if (g.tabId === 'tab-config') {
-        if (!configManager.isGoogleWorkspaceConfigured()) {
-          wizardKey = 'google_workspace';
-        } else if (!configManager.isFirebaseConfigured()) {
-          wizardKey = 'firebase_cloud';
-        } else if (!configManager.isCloudflareConfigured()) {
-          wizardKey = 'cloudflare_edge';
-        }
-      } else if (g.tabId === 'tab-security') {
-        if (!configManager.isLastpassConfigured()) {
-          wizardKey = 'lastpass_vault';
-        } else if (!configManager.isSecurityConfigured()) {
-          wizardKey = 'security';
-        }
-      }
-
       AdminSetupCard.render(panel, {
         title: g.title,
         missingPrereqs: g.getMissing(),
         onLaunchWizard: () => {
-          let targetWizardKey = wizardKey;
-          if (g.tabId === 'tab-config') {
-            if (!configManager.isGoogleWorkspaceConfigured()) {
-              targetWizardKey = 'google_workspace';
-            } else if (!configManager.isFirebaseConfigured()) {
-              targetWizardKey = 'firebase_cloud';
-            } else if (!configManager.isCloudflareConfigured()) {
-              targetWizardKey = 'cloudflare_edge';
-            }
-          } else if (g.tabId === 'tab-security') {
-            if (!configManager.isLastpassConfigured()) {
-              targetWizardKey = 'lastpass_vault';
-            } else if (!configManager.isSecurityConfigured()) {
-              targetWizardKey = 'security';
-            }
-          }
-
-          AdminSetupWizards.launch(targetWizardKey, () => {
+          AdminSetupWizards.launch(g.wizardKey, () => {
             AdminSetupCard.unlock(panel);
             checkAndInitTab(tabId);
           });
@@ -384,11 +399,41 @@ export function initAdminPage() {
     document.getElementById(fId)?.addEventListener('input', updateLivePreview);
   });
 
+  const cmsEditorTypeToggle = document.getElementById('cms-editor-type-toggle');
+  const cmsGjsWrapper = document.getElementById('cms-grapesjs-canvas-wrapper');
+  const contentBodyTextarea = document.getElementById('content-body');
+  let cmsEditorInstance = null;
+
+  cmsEditorTypeToggle?.addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      if (cmsGjsWrapper) cmsGjsWrapper.style.display = 'block';
+      if (contentBodyTextarea) contentBodyTextarea.style.display = 'none';
+
+      // Initialize GrapesJS for CMS body optionally
+      if (!cmsEditorInstance && window.grapesjs) {
+        cmsEditorInstance = window.grapesjs.init({
+          container: '#grapesjs-cms-canvas',
+          fromElement: true,
+          height: '400px',
+          width: 'auto',
+          storageManager: false,
+          plugins: ['gjs-preset-webpage'],
+          pluginsOpts: {
+            'gjs-preset-webpage': {}
+          }
+        });
+      }
+    } else {
+      if (cmsGjsWrapper) cmsGjsWrapper.style.display = 'none';
+      if (contentBodyTextarea) contentBodyTextarea.style.display = 'block';
+    }
+  });
+
   cmsForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     // Validate form before submission
-    if (cmsValidator && !cmsValidator.validateAll()) {
+    if (cmsValidator && !cmsEditorTypeToggle?.checked && !cmsValidator.validateAll()) {
       toast.error('Please fix the validation errors before publishing content.');
       return;
     }
@@ -432,6 +477,14 @@ export function initAdminPage() {
             : null
         }
       };
+
+      // Set GrapesJS visual builder payload inside Content record if toggle is active
+      if (cmsEditorTypeToggle?.checked && cmsEditorInstance) {
+        payload.editorType = 'grapesjs';
+        payload.projectData = cmsEditorInstance.getProjectData();
+        payload.compiledHtml = cmsEditorInstance.getHtml();
+        payload.compiledCss = cmsEditorInstance.getCss();
+      }
 
       if (contentType === 'event') {
         const locationVal = document.getElementById('event-location')?.value || '';
