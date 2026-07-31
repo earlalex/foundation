@@ -129,6 +129,7 @@ export async function initAccountPage() {
   await loadCourseProgressDashboard(currentRole);
   await loadInbox(user.uid);
   await loadOrdersLedger(user.email);
+  await loadEventTicketsDashboard(user, currentRole);
 
   // Wire Setup Event Listeners
 
@@ -752,6 +753,120 @@ async function loadCourseProgressDashboard(role) {
     }
   } catch (err) {
     console.error('[Course Progress Dashboard]: Load failed:', err);
+    container.style.display = 'none';
+  }
+}
+
+// Dynamic Event Tickets & Pass Generator
+async function loadEventTicketsDashboard(user, role) {
+  const container = document.getElementById('my-tickets-container');
+  const listEl = document.getElementById('my-tickets-list');
+  if (!container || !listEl) return;
+
+  try {
+    let registrations = await contentDB.getRegistrationsByUser(user.email);
+
+    // Seed a mock high-fidelity pass for Premium/Admin tiers if they do not have any registered events yet
+    const isPremiumTier = role === 'member' || role === 'affiliate' || role === 'admin' || role === 'editor';
+    if ((!registrations || registrations.length === 0) && isPremiumTier) {
+      const mockReg = {
+        id: 'reg_seeded_pass',
+        eventId: 'sample-summit',
+        email: user.email,
+        accessCode: 'EVT-ASC-SUMMIT-2026',
+        qrPayload: 'FOUNDATION-PASS:EVT-ASC-SUMMIT-2026',
+        cartItems: JSON.stringify([
+          { id: 't-gen', type: 'ticket', name: 'General Admission', price: 99.00, quantity: 1 }
+        ]),
+        createdAt: new Date().toISOString()
+      };
+      registrations = [mockReg];
+    }
+
+    if (!registrations || registrations.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    const cardsHtml = [];
+    for (const reg of registrations) {
+      const event = await contentDB.getContentById(reg.eventId) || {
+        title: 'Ascension Avenue Summit 2026',
+        date: '2026-08-25',
+        location: { venueName: 'Grand Empowerment Hall', address: '123 Elevation Way, San Francisco, CA' }
+      };
+
+      let itemsBought = [];
+      try {
+        itemsBought = JSON.parse(reg.cartItems || '[]');
+      } catch (e) {}
+
+      const itemsListText = itemsBought.map(i => `${i.quantity}x ${i.name}`).join(', ') || 'General Admission';
+      const locStr = event.location?.venueName || event.location || 'Online / virtual';
+      const locAddr = event.location?.address ? `, ${event.location.address}` : '';
+
+      cardsHtml.push(`
+        <div style="background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); color: white; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+
+          <!-- Coupon cutout design lines -->
+          <div style="position: absolute; left: -10px; top: 50%; width: 20px; height: 20px; background: var(--theme-color-surface, #ffffff); border-radius: 50%; transform: translateY(-50%);"></div>
+          <div style="position: absolute; right: -10px; top: 50%; width: 20px; height: 20px; background: var(--theme-color-surface, #ffffff); border-radius: 50%; transform: translateY(-50%);"></div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #63b3ed; letter-spacing: 1px;">OFFICIAL SUMMIT PASS</span>
+              <span style="font-size: 0.75rem; background: #38a169; color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">CONFIRMED</span>
+            </div>
+
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: white; line-height: 1.3;">${event.title}</h4>
+
+            <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.82rem; color: #cbd5e0;">
+              <div>📅 <strong>Date:</strong> ${event.date}</div>
+              <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">
+                📍 <strong>Location:</strong> ${locStr}${locAddr}
+              </div>
+              <div style="font-size: 0.75rem; color: #a0aec0; margin-top: 0.25rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.25rem;">
+                🎫 <strong>Inclusions:</strong> ${itemsListText}
+              </div>
+            </div>
+          </div>
+
+          <!-- Ticket pass footer with Code and QR Code representation -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); margin-top: 0.5rem;">
+            <div>
+              <span style="font-size: 0.6rem; text-transform: uppercase; color: #a0aec0; display: block; letter-spacing: 0.5px;">Gate Access Code</span>
+              <strong style="font-size: 0.95rem; font-family: monospace; color: #fbd38d;">${reg.accessCode}</strong>
+            </div>
+
+            <!-- Mock QR Code visual representation -->
+            <div style="background: white; padding: 4px; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" title="${reg.qrPayload}">
+              <!-- Visual QR pattern simulation using small dark boxes -->
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; width: 100%; height: 100%;">
+                <div style="background: black;"></div><div style="background: black;"></div><div style="background: white;"></div><div style="background: black;"></div>
+                <div style="background: white;"></div><div style="background: black;"></div><div style="background: black;"></div><div style="background: white;"></div>
+                <div style="background: black;"></div><div style="background: white;"></div><div style="background: black;"></div><div style="background: black;"></div>
+                <div style="background: black;"></div><div style="background: black;"></div><div style="background: white;"></div><div style="background: black;"></div>
+              </div>
+            </div>
+          </div>
+
+          <a href="data:text/plain;charset=utf-8,${encodeURIComponent('Official Ticket Receipt\nEvent: ' + event.title + '\nDate: ' + event.date + '\nPass Code: ' + reg.accessCode + '\nEmail: ' + reg.email)}" download="${reg.id}-ticket-receipt.txt" style="text-align: center; font-size: 0.75rem; font-weight: bold; color: #cbd5e0; text-decoration: underline; cursor: pointer; margin-top: 0.25rem;">
+            Download Ticket Receipt (PDF)
+          </a>
+
+        </div>
+      `);
+    }
+
+    if (cardsHtml.length > 0) {
+      listEl.innerHTML = cardsHtml.join('');
+      container.style.display = 'block';
+    } else {
+      container.style.display = 'none';
+    }
+
+  } catch (err) {
+    console.error('[loadEventTicketsDashboard]: Failed:', err);
     container.style.display = 'none';
   }
 }

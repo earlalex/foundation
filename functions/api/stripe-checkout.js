@@ -94,6 +94,11 @@ export async function onRequestPost(context) {
     if (affiliateId) {
       params.append('metadata[affiliateId]', affiliateId);
     }
+    if (body.metadata && typeof body.metadata === 'object') {
+      for (const [mKey, mVal] of Object.entries(body.metadata)) {
+        params.append(`metadata[${mKey}]`, String(mVal));
+      }
+    }
 
     // Handle ACH Direct Debit Payment option
     if (enableAch) {

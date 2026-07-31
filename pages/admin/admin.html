@@ -170,6 +170,9 @@
 
       <!-- Group 2: Business Operations & Monetization -->
       <div class="sidebar-category-header">Business Operations</div>
+      <button class="admin-tab" data-tab="events">
+        Event Operations
+      </button>
       <button class="admin-tab" data-tab="products">
         Products & Services
       </button>
@@ -218,6 +221,174 @@
     </nav>
 <!-- Right Content Column -->
     <div style="flex: 1; min-width: 300px;">
+
+  <!-- TAB: EVENT OPERATIONS & TICKETING -->
+  <div id="tab-events" class="admin-panel" style="display: none;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+      <!-- Event Builder Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Event Operations Center & Builder</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Build comprehensive events with multi-tier ticket selection, dynamic sponsorships, and vendor packages.
+        </p>
+
+        <form id="admin-event-builder-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <input type="hidden" id="admin-event-id" />
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Event Title:</label>
+              <input type="text" id="admin-event-title" placeholder="Ascension Summit 2026" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">URL Slug:</label>
+              <input type="text" id="admin-event-slug" placeholder="ascension-summit-2026" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Event Date:</label>
+              <input type="date" id="admin-event-date" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Location Type:</label>
+              <select id="admin-event-loc-type" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="physical">Physical Venue</option>
+                <option value="virtual">Virtual Meeting (Zoom / Google Meet)</option>
+              </select>
+            </div>
+            <div id="admin-event-physical-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; flex: 1;">
+              <div>
+                <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Venue Name:</label>
+                <input type="text" id="admin-event-venue" placeholder="Grand Hall" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Address:</label>
+                <input type="text" id="admin-event-address" placeholder="123 Street" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+            </div>
+            <div id="admin-event-virtual-fields" style="display: none; flex: 1;">
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Meeting URL:</label>
+              <input type="url" id="admin-event-meeturl" placeholder="https://meet.google.com/..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Description:</label>
+            <textarea id="admin-event-desc" placeholder="Supports Markdown / GrapesJS HTML output..." required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; box-sizing: border-box;"></textarea>
+          </div>
+
+          <!-- Dynamic Multi-Tier Ticket Creator -->
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #edf2f7); margin-top: 0.5rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-text-primary, #2d3748);">Dynamic Ticket Price Tiers</h4>
+            <div id="admin-ticket-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <!-- Ticket tiers list -->
+            </div>
+            <button type="button" id="btn-admin-add-ticket-row" style="padding: 6px 12px; background: #e2e8f0; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
+              + Add Ticket Tier
+            </button>
+          </div>
+
+          <!-- Dynamic Vendor Package Creator -->
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #edf2f7); margin-top: 0.5rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-text-primary, #2d3748);">Exhibitor & Vendor Packages</h4>
+            <div id="admin-vendor-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <!-- Vendor packages list -->
+            </div>
+            <button type="button" id="btn-admin-add-vendor-row" style="padding: 6px 12px; background: #e2e8f0; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
+              + Add Vendor Package
+            </button>
+          </div>
+
+          <!-- Dynamic Corporate Sponsor Creator -->
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #edf2f7); margin-top: 0.5rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-text-primary, #2d3748);">Corporate Sponsorship Packages</h4>
+            <div id="admin-sponsor-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <!-- Sponsor packages list -->
+            </div>
+            <button type="button" id="btn-admin-add-sponsor-row" style="padding: 6px 12px; background: #e2e8f0; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
+              + Add Sponsorship Package
+            </button>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <div>
+              <label style="font-weight: 600; font-size: 0.85rem; margin-right: 0.5rem;">Access Visibility:</label>
+              <select id="admin-event-access" style="padding: 6px 12px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0);">
+                <option value="public">Public (Everyone)</option>
+                <option value="authenticated">Authenticated Members</option>
+                <option value="paid">Paid Event Only</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="submit" class="btn-primary" style="padding: 10px 20px; font-weight: bold; border-radius: 6px;">
+                Save Event Configuration
+              </button>
+              <button type="button" id="btn-admin-reset-event-form" style="padding: 10px 18px; border: 1px solid #cbd5e0; background: transparent; cursor: pointer; border-radius: 6px;">
+                Reset
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Live Sales Breakdown & Roster Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0);">Event Sales Telemetry & Registrant Roster</h3>
+            <p style="margin: 0.25rem 0 0 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.8rem;">Monitor live registration statuses, export to CSV, or dispatch announcements.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-admin-export-attendees" style="padding: 8px 16px; background: #4a5568; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">
+              Export Roster to CSV
+            </button>
+            <button id="btn-admin-broadcast-attendees" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem; font-weight: bold; background: var(--theme-color-accent, #38a169); border: none;">
+              Broadcast to Attendees
+            </button>
+          </div>
+        </div>
+
+        <!-- Sales Metrics summary grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: #f7fafc; padding: 1rem; border-radius: 6px; border: 1px solid #edf2f7; text-align: center;">
+            <span style="font-size: 0.75rem; font-weight: bold; color: #4a5568; text-transform: uppercase;">Ticket Sales Margin</span>
+            <strong id="admin-lbl-ticket-sales" style="display: block; font-size: 1.6rem; color: var(--theme-color-primary, #2b6cb0); margin-top: 4px;">0 Sold</strong>
+          </div>
+          <div style="background: #f7fafc; padding: 1rem; border-radius: 6px; border: 1px solid #edf2f7; text-align: center;">
+            <span style="font-size: 0.75rem; font-weight: bold; color: #4a5568; text-transform: uppercase;">Vendor Booth Occupancy</span>
+            <strong id="admin-lbl-vendor-sales" style="display: block; font-size: 1.6rem; color: #319795; margin-top: 4px;">0 / 15 Occupied</strong>
+          </div>
+          <div style="background: #f7fafc; padding: 1rem; border-radius: 6px; border: 1px solid #edf2f7; text-align: center;">
+            <span style="font-size: 0.75rem; font-weight: bold; color: #4a5568; text-transform: uppercase;">Active Corporate Sponsors</span>
+            <strong id="admin-lbl-sponsor-sales" style="display: block; font-size: 1.6rem; color: #805ad5; margin-top: 4px;">0 Active</strong>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); color: var(--theme-color-text-secondary, #4a5568);">
+                <th style="padding: 10px;">Date Registered</th>
+                <th style="padding: 10px;">Email / User</th>
+                <th style="padding: 10px;">Pass Code</th>
+                <th style="padding: 10px;">Purchased Items</th>
+                <th style="padding: 10px; text-align: right;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="admin-registrants-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">No registrations recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- TAB: PLUGINS & EXTENSIONS -->
   <div id="tab-plugins" class="admin-panel" style="display: none;">
