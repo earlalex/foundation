@@ -73,6 +73,19 @@ export function renderContent(contentData) {
   // 4. Render Full Content Body for Authorized Users
   const paragraphs = contentData.longFormText || [contentData.description];
 
+  // DIRECTIVE 3: GrapesJS Visual Web Builder Render Path inside Article Body
+  let bodyContentHTML = '';
+  if (contentData.editorType === 'grapesjs') {
+    bodyContentHTML = `
+      <style>${contentData.compiledCss || ''}</style>
+      <div class="grapesjs-content" style="background: #ffffff; border-radius: 8px; overflow: hidden;">
+        ${contentData.compiledHtml || ''}
+      </div>
+    `;
+  } else {
+    bodyContentHTML = paragraphs.map(p => `<p style="margin-bottom: 1.5rem;">${p}</p>`).join('');
+  }
+
   return `
     <article class="content-full" style="max-width: 800px; margin: 2rem auto; font-family: system-ui, sans-serif;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
@@ -87,7 +100,7 @@ export function renderContent(contentData) {
       </h1>
       <p style="color: #718096; font-size: 0.9rem; margin-bottom: 2rem;">By <strong>${contentData.author || 'Foundation Team'}</strong></p>
 
-      ${featuredImage ? `<img src="${featuredImage}" alt="${contentData.title}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 8px; margin-bottom: 2rem;" />` : ''}
+      ${featuredImage && contentData.editorType !== 'grapesjs' ? `<img src="${featuredImage}" alt="${contentData.title}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 8px; margin-bottom: 2rem;" />` : ''}
 
       ${contentData.type === 'event' && contentData.meetUrl ? `
         <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.25rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
@@ -102,7 +115,7 @@ export function renderContent(contentData) {
       ` : ''}
 
       <div class="body-paragraphs" style="line-height: 1.85; font-size: 1.1rem; color: var(--theme-color-text-primary, #2d3748);">
-        ${paragraphs.map(p => `<p style="margin-bottom: 1.5rem;">${p}</p>`).join('')}
+        ${bodyContentHTML}
       </div>
 
       ${contentData.worksheets && contentData.worksheets.length > 0 ? `

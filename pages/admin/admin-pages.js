@@ -1,23 +1,62 @@
-// pages/admin/admin-pages.js - Visual Page Creator & Block Editor Tab Controller
+// pages/admin/admin-pages.js - Visual Page Creator & GrapesJS Web Builder Controller
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { store } from '../../core/store.js';
+import { configManager } from '../../core/config.js';
+import { uploadFileToDrive } from '../../core/drive-upload.js';
+
+let editorInstance = null;
+let editingPageId = null; // Track if we are editing an existing page
+
+// Dynamically load GrapesJS core libraries and styles from unpkg CDNs
+function loadGrapesJS() {
+  return new Promise((resolve, reject) => {
+    if (window.grapesjs) {
+      resolve(window.grapesjs);
+      return;
+    }
+
+    // Add grapesjs stylesheet
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/grapesjs/dist/css/grapes.min.css';
+    document.head.appendChild(link);
+
+    // Add webpage preset stylesheet
+    const linkPreset = document.createElement('link');
+    linkPreset.rel = 'stylesheet';
+    linkPreset.href = 'https://unpkg.com/grapesjs-preset-webpage/dist/grapesjs-preset-webpage.min.css';
+    document.head.appendChild(linkPreset);
+
+    // Add GrapesJS core script
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/grapesjs';
+    script.onload = () => {
+      // Add webpage preset script
+      const scriptPreset = document.createElement('script');
+      scriptPreset.src = 'https://unpkg.com/grapesjs-preset-webpage';
+      scriptPreset.onload = () => {
+        resolve(window.grapesjs);
+      };
+      scriptPreset.onerror = () => reject(new Error('Failed to load GrapesJS Webpage Preset'));
+      document.head.appendChild(scriptPreset);
+    };
+    script.onerror = () => reject(new Error('Failed to load GrapesJS Core Library'));
+    document.head.appendChild(script);
+  });
+}
 
 export function initPagesTab() {
   const form = document.getElementById('page-creator-form');
-  const blocksContainer = document.getElementById('page-blocks-container');
-  const btnAddBlock = document.getElementById('btn-add-page-block');
-  const previewBox = document.getElementById('page-live-preview-box');
+  const canvasElement = document.getElementById('grapesjs-page-builder-canvas');
   const existingPagesTbody = document.getElementById('existing-pages-tbody');
 
-  if (!form || !blocksContainer || !btnAddBlock || !previewBox || !existingPagesTbody) {
-    console.warn('[Page Creator]: Form elements or workspace is missing in DOM.');
+  if (!form || !canvasElement || !existingPagesTbody) {
+    console.warn('[Page Creator]: Form elements or GrapesJS canvas wrapper is missing in DOM.');
     return;
   }
 
-  let blocks = [];
-
-  // Load existing user custom pages
+  // Load existing custom pages
   async function loadExistingPages() {
     try {
       const pages = await contentDB.getCustomPages();
@@ -38,11 +77,44 @@ export function initPagesTab() {
           </td>
           <td style="padding: 12px; font-weight: 600; text-transform: capitalize;">${p.access?.visibility || 'public'}</td>
           <td style="padding: 12px; text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button class="btn-edit-page" data-slug="${p.id}" style="padding: 4px 8px; background: var(--theme-color-primary, #2b6cb0); color: white; border-radius: 4px; font-size: 0.75rem; border: none; cursor: pointer; font-weight: bold;">Edit</button>
             <a href="/pages/${p.id}" target="_blank" style="padding: 4px 8px; background: #319795; color: white; border-radius: 4px; font-size: 0.75rem; text-decoration: none; font-weight: bold;">View</a>
             <button class="btn-delete-page" data-slug="${p.id}" style="padding: 4px 8px; background: #e53e3e; color: white; border-radius: 4px; font-size: 0.75rem; border: none; cursor: pointer; font-weight: bold;">Delete</button>
           </td>
         </tr>
       `).join('');
+
+      // Attach edit click listeners
+      existingPagesTbody.querySelectorAll('.btn-edit-page').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const slug = btn.dataset.slug;
+          try {
+            const pageData = await contentDB.getCustomPageBySlug(slug);
+            if (pageData) {
+              document.getElementById('page-title').value = pageData.title || '';
+              document.getElementById('page-slug').value = pageData.id || '';
+              document.getElementById('page-meta-desc').value = pageData.description || '';
+              document.getElementById('page-access').value = pageData.access?.visibility || 'public';
+              editingPageId = pageData.id;
+
+              const submitBtn = document.getElementById('btn-submit-page-creator');
+              if (submitBtn) submitBtn.textContent = 'Update & Publish Custom Page';
+
+              if (editorInstance && pageData.projectData) {
+                editorInstance.loadProjectData(pageData.projectData);
+              } else if (editorInstance) {
+                // fallback to setting html content if no project data exists
+                editorInstance.setComponents(pageData.compiledHtml || '');
+                editorInstance.setStyle(pageData.compiledCss || '');
+              }
+              toast.info(`Editing custom page: "${pageData.title}"`);
+              form.scrollIntoView({ behavior: 'smooth' });
+            }
+          } catch (err) {
+            toast.error('Failed to load page for editing.');
+          }
+        });
+      });
 
       // Attach delete click listeners
       existingPagesTbody.querySelectorAll('.btn-delete-page').forEach(btn => {
@@ -53,6 +125,13 @@ export function initPagesTab() {
               await contentDB.deleteContent(slug);
               toast.success('Page deleted successfully.');
               loadExistingPages();
+              if (editingPageId === slug) {
+                form.reset();
+                editingPageId = null;
+                const submitBtn = document.getElementById('btn-submit-page-creator');
+                if (submitBtn) submitBtn.textContent = 'Publish Custom Route Page';
+                if (editorInstance) editorInstance.DomComponents.clear();
+              }
             } catch (err) {
               toast.error('Failed to delete custom page.');
             }
@@ -65,136 +144,202 @@ export function initPagesTab() {
     }
   }
 
-  // Update visual preview box on-the-fly
-  function updateLivePreview() {
-    const title = document.getElementById('page-title').value || 'My Custom Page';
-    const slug = document.getElementById('page-slug').value || 'our-story';
-    const desc = document.getElementById('page-meta-desc').value || '';
-    const access = document.getElementById('page-access').value || 'public';
+  // Load and Initialize GrapesJS
+  loadGrapesJS().then((grapesjs) => {
+    if (editorInstance) {
+      // already initialized
+      loadExistingPages();
+      return;
+    }
 
-    let blocksHtml = blocks.map((b, idx) => {
-      if (b.type === 'heading') {
-        return `<h2 style="font-size: 1.8rem; color: var(--theme-color-primary, #2b6cb0); margin-top: 1.5rem;">${b.value}</h2>`;
-      } else if (b.type === 'paragraph') {
-        return `<p style="line-height: 1.6; color: var(--theme-color-text-secondary, #4a5568); margin-bottom: 1rem;">${b.value}</p>`;
-      } else if (b.type === 'image') {
-        return `<div style="text-align: center; margin: 1.5rem 0;"><img src="${b.value}" alt="Image Block" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" /></div>`;
-      } else if (b.type === 'cta') {
-        return `
-          <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 8px; padding: 1.5rem; text-align: center; margin: 1.5rem 0;">
-            <p style="font-weight: bold; font-size: 1.15rem; color: #2b6cb0; margin-bottom: 0.75rem;">Join Foundation Today!</p>
-            <button class="btn-primary" style="padding: 10px 20px; font-weight: bold;">${b.value || 'Get Started'}</button>
-          </div>
-        `;
-      } else if (b.type === 'video') {
-        return `
-          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1.5rem 0; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <iframe src="${b.value}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
-          </div>
-        `;
-      } else if (b.type === 'button') {
-        return `
-          <div style="text-align: center; margin: 1rem 0;">
-            <button class="btn-primary" style="padding: 10px 24px; font-weight: bold;">${b.value || 'Click Me'}</button>
-          </div>
-        `;
+    editorInstance = grapesjs.init({
+      container: '#grapesjs-page-builder-canvas',
+      fromElement: true,
+      height: '600px',
+      width: 'auto',
+      storageManager: false, // Manually persist to Firebase
+      plugins: ['gjs-preset-webpage'],
+      pluginsOpts: {
+        'gjs-preset-webpage': {
+          modalImportTitle: 'Import HTML Template',
+          modalImportLabel: 'Paste your HTML/CSS code here',
+          categorySections: 'Sections'
+        }
+      },
+      assetManager: {
+        upload: 1,
+        uploadFile: async (ev) => {
+          const files = ev.dataTransfer ? ev.dataTransfer.files : ev.target.files;
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            try {
+              // Direct upload using project active directory structure
+              const res = await uploadFileToDrive(file);
+              if (res && res.src) {
+                editorInstance.AssetManager.add(res.src);
+                toast.success(`Asset "${file.name}" uploaded safely to Google Drive.`);
+              }
+            } catch (err) {
+              toast.error(`Asset upload failed: ${err.message}`);
+            }
+          }
+        }
       }
-      return '';
-    }).join('');
+    });
 
-    previewBox.innerHTML = `
-      <article style="max-width: 100%; padding: 1rem; font-family: system-ui, sans-serif;">
-        <header style="border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; color: #4a5568;">
-            Access: ${access.toUpperCase()}
-          </span>
-          <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0.5rem 0 0.25rem 0;">${title}</h1>
-          <p style="color: var(--theme-color-text-secondary, #718096); font-style: italic; font-size: 0.95rem; margin: 0;">Route Slug: /pages/${slug}</p>
-          ${desc ? `<p style="font-size: 0.9rem; color: #a0aec0; margin-top: 4px;">Description: ${desc}</p>` : ''}
-        </header>
-        <div>
-          ${blocksHtml || '<p style="color: #a0aec0; font-style: italic; text-align: center; padding: 2rem;">Workspace is currently empty. Add content blocks above.</p>'}
-        </div>
-      </article>
-    `;
-  }
+    const bm = editorInstance.BlockManager;
 
-  // Render individual block controllers in the editor builder list
-  function renderBlocksEditor() {
-    blocksContainer.innerHTML = '';
-    blocks.forEach((block, idx) => {
-      const blockDiv = document.createElement('div');
-      blockDiv.style.cssText = 'background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;';
+    // Remove pre-existing default blocks to keep layout organized if needed, or add our 9 rich layouts:
+    bm.add('hero-section', {
+      label: 'Hero Section',
+      category: 'Premium Sections',
+      content: `
+        <section class="hero-section" style="padding: 5rem 2rem; text-align: center; background: linear-gradient(135deg, #ebf8ff 0%, #ffffff 100%); font-family: system-ui, sans-serif; border-bottom: 1px solid #edf2f7;">
+          <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 1rem; color: #2b6cb0; line-height: 1.2;">Welcome to Our Academy</h1>
+          <p style="font-size: 1.25rem; color: #4a5568; max-width: 650px; margin: 0 auto 2rem; line-height: 1.6;">Ascension Avenue Academy is the premium workspace designed to cultivate operational excellence and strategic leadership.</p>
+          <a href="#" class="btn-primary" style="padding: 12px 28px; background: #2b6cb0; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(43, 108, 176, 0.25);">Explore Workspace</a>
+        </section>
+      `
+    });
 
-      blockDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: bold; font-size: 0.85rem; text-transform: uppercase; color: var(--theme-color-text-secondary, #718096);">
-            Block #${idx + 1}: ${block.type}
-          </span>
-          <div style="display: flex; gap: 0.25rem;">
-            <button class="btn-move-up" data-idx="${idx}" style="padding: 2px 6px; font-size: 0.7rem; cursor: pointer; border: 1px solid #cbd5e0; border-radius: 4px; background: transparent;">▲</button>
-            <button class="btn-move-down" data-idx="${idx}" style="padding: 2px 6px; font-size: 0.7rem; cursor: pointer; border: 1px solid #cbd5e0; border-radius: 4px; background: transparent;">▼</button>
-            <button class="btn-remove-block" data-idx="${idx}" style="padding: 2px 6px; font-size: 0.7rem; cursor: pointer; background: #fed7d7; color: #c53030; border: none; border-radius: 4px;">✖</button>
+    bm.add('flex-grid', {
+      label: '2/3 Column Flex Grid',
+      category: 'Premium Sections',
+      content: `
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap; padding: 3rem 1.5rem; background: #ffffff; font-family: system-ui, sans-serif;">
+          <div style="flex: 1; min-width: 250px; background: #f7fafc; padding: 2rem; border-radius: 8px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <h3 style="color: #2b6cb0; font-size: 1.25rem; margin-top: 0;">Strategy Pillar</h3>
+            <p style="color: #4a5568; line-height: 1.6;">Our framework delivers end-to-end operational visibility with secure localized data caches.</p>
+          </div>
+          <div style="flex: 1; min-width: 250px; background: #f7fafc; padding: 2rem; border-radius: 8px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <h3 style="color: #2b6cb0; font-size: 1.25rem; margin-top: 0;">Execution Pillar</h3>
+            <p style="color: #4a5568; line-height: 1.6;">Automate and scale workflows instantly, decoupled from browser SDK limits.</p>
           </div>
         </div>
-        <div>
-          <textarea class="block-value-input" data-idx="${idx}" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-family: sans-serif; font-size: 0.9rem; box-sizing: border-box; min-height: 40px;" placeholder="Enter content block value...">${block.value || ''}</textarea>
-        </div>
-      `;
-
-      // Event listener for block content edits
-      const ta = blockDiv.querySelector('.block-value-input');
-      ta.addEventListener('input', (e) => {
-        blocks[idx].value = e.target.value;
-        updateLivePreview();
-      });
-
-      // Move Up
-      blockDiv.querySelector('.btn-move-up').addEventListener('click', () => {
-        if (idx > 0) {
-          const temp = blocks[idx];
-          blocks[idx] = blocks[idx - 1];
-          blocks[idx - 1] = temp;
-          renderBlocksEditor();
-          updateLivePreview();
-        }
-      });
-
-      // Move Down
-      blockDiv.querySelector('.btn-move-down').addEventListener('click', () => {
-        if (idx < blocks.length - 1) {
-          const temp = blocks[idx];
-          blocks[idx] = blocks[idx + 1];
-          blocks[idx + 1] = temp;
-          renderBlocksEditor();
-          updateLivePreview();
-        }
-      });
-
-      // Remove block
-      blockDiv.querySelector('.btn-remove-block').addEventListener('click', () => {
-        blocks.splice(idx, 1);
-        renderBlocksEditor();
-        updateLivePreview();
-      });
-
-      blocksContainer.appendChild(blockDiv);
+      `
     });
-  }
 
-  // Bind adding new block types
-  btnAddBlock.addEventListener('click', () => {
-    const typeSelect = document.getElementById('page-block-type-select');
-    if (!typeSelect) return;
-    const blockType = typeSelect.value;
-    blocks.push({ type: blockType, value: '' });
-    renderBlocksEditor();
-    updateLivePreview();
-  });
+    bm.add('cta-cards', {
+      label: 'CTA Cards',
+      category: 'Components',
+      content: `
+        <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 12px; padding: 2.5rem; text-align: center; margin: 2rem 0; font-family: system-ui, sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <h2 style="color: #2b6cb0; margin-top: 0; font-size: 1.75rem; font-weight: 800;">Elevate Your Operations</h2>
+          <p style="color: #2c5282; margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">Tap into customized, secure legal binders, automated task boards, and advanced threat monitors.</p>
+          <button style="padding: 12px 30px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2);">Upgrade Membership</button>
+        </div>
+      `
+    });
 
-  // Bind key identity field inputs to refresh preview
-  ['page-title', 'page-slug', 'page-meta-desc', 'page-access'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', updateLivePreview);
+    bm.add('feature-matrix', {
+      label: 'Feature Matrix',
+      category: 'Premium Sections',
+      content: `
+        <section style="padding: 4rem 1.5rem; background: #ffffff; font-family: system-ui, sans-serif;">
+          <h2 style="text-align: center; font-size: 2rem; margin-bottom: 3rem; color: #2d3748;">High-Fidelity Operations Features</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem;">
+            <div style="text-align: center; padding: 1rem;">
+              <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
+              <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">Vulnerability Scans</h4>
+              <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Integrated OWASP ZAP API proxy and file scanner safeguards.</p>
+            </div>
+            <div style="text-align: center; padding: 1rem;">
+              <div style="font-size: 2.5rem; margin-bottom: 1rem;">💰</div>
+              <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">Stripe Direct Debit</h4>
+              <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Perform ACH payments natively with automatic application fees.</p>
+            </div>
+            <div style="text-align: center; padding: 1rem;">
+              <div style="font-size: 2.5rem; margin-bottom: 1rem;">👥</div>
+              <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">VA Hiring Hub</h4>
+              <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Contractor onboarding with secure credential bridging.</p>
+            </div>
+          </div>
+        </section>
+      `
+    });
+
+    bm.add('navbar', {
+      label: 'Navbar Block',
+      category: 'Components',
+      content: `
+        <nav style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #2d3748; color: white; font-family: system-ui, sans-serif;">
+          <div style="font-weight: bold; font-size: 1.25rem;">Ascension Academy</div>
+          <div style="display: flex; gap: 1.5rem; font-size: 0.95rem;">
+            <a href="#" style="color: white; text-decoration: none;">Home</a>
+            <a href="#" style="color: white; text-decoration: none;">Services</a>
+            <a href="#" style="color: white; text-decoration: none;">Pricing</a>
+          </div>
+        </nav>
+      `
+    });
+
+    bm.add('footer', {
+      label: 'Footer Block',
+      category: 'Components',
+      content: `
+        <footer style="background: #1a202c; color: #a0aec0; padding: 3rem 2rem; text-align: center; font-family: system-ui, sans-serif; font-size: 0.9rem; border-top: 1px solid #2d3748;">
+          <p style="margin-bottom: 1rem; color: white; font-weight: bold;">Ascension Avenue Academy</p>
+          <p style="margin-bottom: 1.5rem;">© ${new Date().getFullYear()} Ascension Avenue Academy. All rights reserved.</p>
+          <div style="display: flex; justify-content: center; gap: 1.5rem;">
+            <a href="#" style="color: #a0aec0; text-decoration: none;">Privacy Policy</a>
+            <a href="#" style="color: #a0aec0; text-decoration: none;">Terms of Service</a>
+          </div>
+        </footer>
+      `
+    });
+
+    bm.add('image-gallery', {
+      label: 'Image Gallery',
+      category: 'Components',
+      content: `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 2rem 1.5rem;">
+          <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
+          <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
+          <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
+        </div>
+      `
+    });
+
+    bm.add('form-container', {
+      label: 'Form Container',
+      category: 'Components',
+      content: `
+        <div style="max-width: 450px; margin: 2rem auto; padding: 2rem; background: #ffffff; border: 1px solid #edf2f7; border-radius: 8px; font-family: system-ui, sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <h3 style="margin-top: 0; color: #2d3748; margin-bottom: 1rem;">Contact Us</h3>
+          <form style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Name</label>
+              <input type="text" placeholder="John Doe" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Email</label>
+              <input type="email" placeholder="john@example.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <button type="button" style="padding: 10px; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Submit Request</button>
+          </form>
+        </div>
+      `
+    });
+
+    bm.add('video-modal', {
+      label: 'Video Embed',
+      category: 'Components',
+      content: `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+          <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
+        </div>
+      `
+    });
+
+    loadExistingPages();
+  }).catch((err) => {
+    console.error('Failed to initialize GrapesJS Editor:', err);
+    canvasElement.innerHTML = `
+      <div style="padding: 2rem; text-align: center; color: var(--theme-color-danger, #e53e3e);">
+        <h3>Failed to load GrapesJS Builder</h3>
+        <p>${err.message}</p>
+      </div>
+    `;
   });
 
   // Submit / Publish Page
@@ -210,12 +355,26 @@ export function initPagesTab() {
       return;
     }
 
+    if (!editorInstance) {
+      toast.error('GrapesJS Editor is still loading. Please wait.');
+      return;
+    }
+
+    // Retrieve visual payload parameters
+    const projectData = editorInstance.getProjectData();
+    const compiledHtml = editorInstance.getHtml();
+    const compiledCss = editorInstance.getCss();
+
     const payload = {
       type: 'page',
       id: slug,
+      slug: slug,
       title: title,
       description: desc || 'Custom dynamic page',
-      blocks: blocks,
+      editorType: 'grapesjs',
+      projectData: projectData,
+      compiledHtml: compiledHtml,
+      compiledCss: compiledCss,
       access: { visibility: access },
       author: store.state.user?.displayName || 'Editor',
       date: new Date().toISOString().split('T')[0]
@@ -226,9 +385,13 @@ export function initPagesTab() {
       if (success) {
         toast.success(`Custom page /pages/${slug} published successfully!`);
         form.reset();
-        blocks = [];
-        renderBlocksEditor();
-        updateLivePreview();
+        editingPageId = null;
+
+        const submitBtn = document.getElementById('btn-submit-page-creator');
+        if (submitBtn) submitBtn.textContent = 'Publish Custom Route Page';
+
+        // Clear canvas
+        editorInstance.DomComponents.clear();
         loadExistingPages();
       } else {
         toast.error('Failed to save page schema. Please verify connection.');
@@ -238,7 +401,6 @@ export function initPagesTab() {
     }
   });
 
-  // Initial tab loading
+  // Initial load
   loadExistingPages();
-  updateLivePreview();
 }

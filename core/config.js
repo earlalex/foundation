@@ -11,6 +11,12 @@ export const defaultConfig = {
   siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
   adminEmails: [],
+  sectionWizards: {
+    section1: false,
+    section2: false,
+    section3: false,
+    section4: false
+  },
   site: {
     isConfigured: false,
     companyName: "",
@@ -284,6 +290,29 @@ class ConfigEngine {
   }
 
   /**
+   * Section-wide Wizards configurations
+   */
+  isSection1Configured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    return local.sectionWizards?.section1 === true;
+  }
+
+  isSection2Configured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    return local.sectionWizards?.section2 === true;
+  }
+
+  isSection3Configured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    return local.sectionWizards?.section3 === true;
+  }
+
+  isSection4Configured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    return local.sectionWizards?.section4 === true;
+  }
+
+  /**
    * Sequential Wizard readiness getters
    */
   isGoogleWorkspaceConfigured() {
@@ -315,17 +344,23 @@ class ConfigEngine {
    */
   isBrandConfigured() {
     const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section1 === true) return true;
     const isFlagged = local.site?.isConfigured === true;
     const hasParams = !!(local.siteTitle && local.siteDomain && local.siteTitle !== 'Foundation Framework' && local.siteTitle !== '');
     return isFlagged || hasParams;
   }
 
   isApiKeysConfigured() {
-    return this.isGoogleWorkspaceConfigured() && this.isFirebaseConfigured() && this.isCloudflareConfigured();
+    const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section1 === true) return true;
+    const fb = local.firebase || {};
+    const google = local.google || {};
+    return !!(fb.apiKey && fb.projectId && google.clientId && google.clientSecret && fb.apiKey !== '' && google.clientId !== '');
   }
 
   isBusinessConfigured() {
     const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section2 === true) return true;
     const isFlagged = local.businessProfile?.isConfigured === true;
     const biz = local.businessProfile || {};
     return isFlagged || !!(biz.legalName && biz.address && biz.ein && biz.naicsCode && biz.legalName !== '');
@@ -333,6 +368,7 @@ class ConfigEngine {
 
   isFinancesConfigured() {
     const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section2 === true) return true;
     const isFlagged = local.stripe?.isConfigured === true;
     const stripe = local.stripe || {};
     return isFlagged || !!(stripe.secretKey && stripe.publishableKey && stripe.priceId && stripe.achFee !== undefined && stripe.secretKey !== '');
@@ -340,6 +376,7 @@ class ConfigEngine {
 
   isMarketingConfigured() {
     const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section3 === true) return true;
     const isFlagged = local.marketing?.isConfigured === true;
     const mkt = local.marketing || {};
     return isFlagged || !!(mkt.gmailSender && mkt.defaultTrigger && mkt.gmailSender !== '');
@@ -347,6 +384,7 @@ class ConfigEngine {
 
   isSecurityConfigured() {
     const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section4 === true) return true;
     const isFlagged = local.security?.isConfigured === true;
     const vt = local.virustotal || {};
     const sec = local.security || {};
@@ -355,6 +393,7 @@ class ConfigEngine {
 
   isVaHubConfigured() {
     const local = this.#getLocalStorageConfig() || this.current;
+    if (local.sectionWizards?.section4 === true) return true;
     const isFlagged = local.vaHub?.isConfigured === true;
     const va = local.vaHub || {};
     return isFlagged || !!(va.apiKey && va.onboardingTemplate && va.apiKey !== '');

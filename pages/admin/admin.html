@@ -1687,9 +1687,9 @@
   <div id="tab-pages" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Visual Page Creator & Block Editor</h2>
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Visual Page Creator & GrapesJS Web Builder</h2>
         <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
-          Build dynamic custom HTML routes seamlessly on the fly with custom visibility permissions.
+          Build, design, and organize custom pages visually on the fly with GrapesJS.
         </p>
 
         <form id="page-creator-form" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -1720,42 +1720,15 @@
             </div>
           </div>
 
-          <!-- Content Blocks Editor Builder -->
+          <!-- GrapesJS Workspace Canvas -->
           <hr style="border: none; border-top: 1px solid var(--theme-color-border, #e2e8f0); margin: 0.5rem 0;" />
-          <h3 style="margin: 0; font-size: 1.05rem; color: var(--theme-color-primary, #2b6cb0);">Design & Build Content Blocks</h3>
+          <h3 style="margin: 0; font-size: 1.05rem; color: var(--theme-color-primary, #2b6cb0);">GrapesJS Visual Canvas Workspace</h3>
+          <div id="grapesjs-page-builder-canvas" style="height: 600px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 8px; margin-top: 1rem; overflow: hidden; background: #ffffff;"></div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center; background: var(--theme-color-background, #f7fafc); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #cbd5e0);">
-            <label style="font-weight: 600; font-size: 0.85rem;">Block Type:</label>
-            <select id="page-block-type-select" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;">
-              <option value="heading">Heading Block</option>
-              <option value="paragraph" selected>Paragraph Block</option>
-              <option value="image">Image Block (URL)</option>
-              <option value="video">Video Embed (YouTube URL)</option>
-              <option value="cta">CTA Panel Box</option>
-              <option value="button">Action Button</option>
-            </select>
-            <button type="button" id="btn-add-page-block" style="padding: 6px 12px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-              + Add Block Element
-            </button>
-          </div>
-
-          <div id="page-blocks-container" style="display: flex; flex-direction: column; margin-top: 0.5rem;">
-            <!-- Added blocks list handles dynamically -->
-          </div>
-
-          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+          <button type="submit" id="btn-submit-page-creator" class="btn-primary" style="align-self: flex-start; margin-top: 1.5rem; padding: 10px 24px; font-weight: bold;">
             Publish Custom Route Page
           </button>
         </form>
-      </div>
-
-      <!-- Live Dynamic Instant Page Preview Side-by-Side -->
-      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Dynamic Layout Preview</h3>
-        <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.8rem;">Instant, real-time responsive preview of your blocks below.</p>
-        <div id="page-live-preview-box" style="border: 2px dashed var(--theme-color-border, #cbd5e0); border-radius: 8px; background: var(--theme-color-background, #f7fafc); padding: 1rem; overflow-y: auto; max-height: 400px;">
-          <!-- Live Preview canvas renders here -->
-        </div>
       </div>
 
       <!-- Existing Custom Pages Ledger -->
@@ -1826,6 +1799,16 @@
         <div>
           <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Long-Form Body Content (Paragraphs split by newlines):</label>
           <textarea id="content-body" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 120px;"></textarea>
+          <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <label style="font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+              <input type="checkbox" id="cms-editor-type-toggle" style="cursor: pointer;" />
+              Use GrapesJS Visual Editor for Body Content
+            </label>
+          </div>
+          <!-- GrapesJS Workspace Canvas for CMS Publisher -->
+          <div id="cms-grapesjs-canvas-wrapper" style="display: none; margin-top: 0.5rem;">
+            <div id="grapesjs-cms-canvas" style="height: 400px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 8px; background: #ffffff;"></div>
+          </div>
         </div>
         <!-- Dynamic Event Fields -->
         <div id="event-fields" style="display: none; background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0);">

@@ -68,7 +68,7 @@ export class AuthManager {
         let profile = {
           role: isAdmin ? 'admin' : 'subscriber',
           paymentStatus: 'None',
-          affiliateCode: `aff_${user.uid.substring(0, 5)}`
+          affiliateCode: `aff_${String(user.uid).substring(0, 5)}`
         };
 
         // Try syncing from ContentDB user profile if it exists
@@ -85,7 +85,7 @@ export class AuthManager {
           } else {
             // Save initial subscriber profile
             await contentDB.saveUser({
-              id: user.uid,
+              id: String(user.uid),
               name: user.displayName || 'Subscriber',
               email: user.email,
               role: profile.role,
@@ -98,7 +98,7 @@ export class AuthManager {
         }
 
         store.dispatch('SET_USER', {
-          uid: user.uid,
+          uid: String(user.uid),
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL,

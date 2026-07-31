@@ -17,6 +17,7 @@ import { configManager } from './config.js';
 import { store } from './store.js';
 
 const CONTENT_COLLECTION = 'content';
+const PAGES_COLLECTION = 'pages';
 const USERS_COLLECTION = 'users';
 const CHAT_LOGS_COLLECTION = 'chat_logs';
 const INVOICES_COLLECTION = 'invoices';
@@ -626,6 +627,14 @@ export class ContentDB {
    */
   async deleteContent(id) {
     const db = getFirestoreDB();
+
+    // Also delete from pages
+    const localPages = this.#getLocalPages();
+    if (localPages[id]) {
+      delete localPages[id];
+      this.#saveLocalPages(localPages);
+    }
+
     if (!db) {
       const local = this.#getLocalContent();
       delete local[id];
@@ -636,6 +645,13 @@ export class ContentDB {
     try {
       const docRef = doc(db, CONTENT_COLLECTION, id);
       await deleteDoc(docRef);
+
+      // Also try deleting from pages collection
+      try {
+        const pageDocRef = doc(db, PAGES_COLLECTION, id);
+        await deleteDoc(pageDocRef);
+      } catch (e) {}
+
       return true;
     } catch (err) {
       console.warn('[DB]: Firestore content delete error. Falling back to LocalStorage.', err.message);
@@ -1228,20 +1244,125 @@ export class ContentDB {
 
   // --- Dynamic Custom Pages & User Interaction Helpers ---
 
+  #getLocalPages() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalPages(data) {
+    localStorage.setItem('foundation_local_pages', JSON.stringify(data));
+  }
+
   async saveCustomPage(pageData) {
     const payload = {
       ...pageData,
-      type: 'page'
+      type: 'page',
+      updatedAt: new Date().toISOString()
     };
-    return this.saveContent(payload);
-  }
+    schemaRegistry.validate(payload);
 
-  async getCustomPages() {
-    return this.getContentByType('page', 100);
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalPages();
+      local[payload.id] = payload;
+      this.#saveLocalPages(local);
+      return true;
+    }
+
+    try {
+      const docRef = doc(db, PAGES_COLLECTION, payload.id);
+      await setDoc(docRef, payload, { merge: true });
+      return true;
+    } catch (err) {
+      console.warn('[DB]: Firestore pages write error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalPages();
+      local[payload.id] = payload;
+      this.#saveLocalPages(local);
+      return true;
+    }
   }
 
   async getCustomPageBySlug(slug) {
-    return this.getContentById(slug);
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = this.#getLocalPages();
+      const page = local[slug] || null;
+      if (page) schemaRegistry.validate(page);
+      return page;
+    }
+
+    try {
+      const docRef = doc(db, PAGES_COLLECTION, slug);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        schemaRegistry.validate(data);
+        return data;
+      }
+    } catch (err) {
+      console.warn('[DB]: Firestore pages read error. Falling back to LocalStorage.', err.message);
+    }
+
+    const local = this.#getLocalPages();
+    const page = local[slug] || null;
+    if (page) {
+      try {
+        schemaRegistry.validate(page);
+      } catch (e) {}
+    }
+    return page;
+  }
+
+  async getAllCustomPages() {
+    const results = [];
+    const db = getFirestoreDB();
+    if (db) {
+      try {
+        const user = store.state.user;
+        const isAdmin = user?.isAdmin;
+        const isEditor = user?.role === 'editor';
+        let q;
+        const colRef = collection(db, PAGES_COLLECTION);
+        if (isAdmin || isEditor) {
+          q = colRef;
+        } else {
+          q = query(colRef, where('access.visibility', '==', 'public'));
+        }
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          try {
+            schemaRegistry.validate(data);
+          } catch (e) {}
+          results.push(data);
+        });
+        if (results.length > 0) return results;
+      } catch (err) {
+        console.warn('[DB]: Cloud Firestore pages query bypassed or unreachable.', err.message);
+      }
+    }
+
+    // fallback to local
+    const local = this.#getLocalPages();
+    const user = store.state.user;
+    const isAdmin = user?.isAdmin;
+    const isEditor = user?.role === 'editor';
+    Object.values(local).forEach(item => {
+      if (isAdmin || isEditor || item.access?.visibility === 'public') {
+        try {
+          schemaRegistry.validate(item);
+        } catch (e) {}
+        results.push(item);
+      }
+    });
+    return results;
+  }
+
+  async getCustomPages() {
+    return this.getAllCustomPages();
   }
 
   async getUser(userId) {
