@@ -188,6 +188,43 @@ export class Router {
       console.error('[Router Hook]: router_before_route action callback execution failed.', err);
     }
 
+    // Dynamic Route-Based Code Splitting: loadRouteModule
+    try {
+      const urlObj = new URL(fullPath, window.location.origin);
+      let rawPath = urlObj.pathname || '/';
+      if (rawPath.endsWith('/index.html')) {
+        rawPath = rawPath.replace(/\/index\.html$/, '');
+      }
+      while (rawPath.length > 1 && rawPath.endsWith('/')) {
+        rawPath = rawPath.slice(0, -1);
+      }
+      let relPath = rawPath;
+      if (this.basePath !== '/' && rawPath.startsWith(this.basePath.slice(0, -1))) {
+        relPath = rawPath.slice(this.basePath.length - 1);
+      }
+      if (!relPath.startsWith('/')) {
+        relPath = '/' + relPath;
+      }
+      let cleanPath = (relPath === '/' || relPath === '/home' || relPath === '') ? '/home' : relPath;
+
+      // Handle Route-based splitting dynamic imports
+      if (cleanPath === '/admin') {
+        await import('../pages/admin/admin.js');
+      } else if (cleanPath === '/about') {
+        await import('../pages/about/about.js');
+      } else if (cleanPath === '/events') {
+        await import('../pages/events/events.js');
+      } else if (cleanPath === '/contact') {
+        await import('../pages/contact/contact.js');
+      } else if (cleanPath === '/detail') {
+        await import('../pages/detail/detail.js');
+      } else if (cleanPath === '/account') {
+        await import('../pages/account.js');
+      }
+    } catch (importErr) {
+      console.warn('[Router Splitting]: Dynamic route module load failed.', importErr);
+    }
+
     try {
       // 0. FIRST-RUN SETUP WIZARD GUARD
       const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);

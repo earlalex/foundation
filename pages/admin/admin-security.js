@@ -380,6 +380,9 @@ function setupZapScannerPanel() {
 
   if (!btnLaunchZap) return;
 
+  // Defer OWASP ZAP Scanner module import using conditional action-triggered module loading
+  let zapScannerInstance = zapScanner;
+
   // Set default URL to current domain if empty
   if (zapUrlInput && !zapUrlInput.value) {
     zapUrlInput.value = window.location.origin;
@@ -437,13 +440,19 @@ function setupZapScannerPanel() {
     zapProgressPercentage.textContent = '0%';
 
     try {
+      // Action-Triggered Module Loading: Import Zap Scanner only when user triggers scan
+      if (!zapScannerInstance) {
+        const mod = await import('../../utils/zapScanner.js');
+        zapScannerInstance = mod.zapScanner;
+      }
+
       let scanRes;
       if (scanType === 'spider') {
-        scanRes = await zapScanner.startSpiderScan(targetUrl);
+        scanRes = await zapScannerInstance.startSpiderScan(targetUrl);
       } else if (scanType === 'active') {
-        scanRes = await zapScanner.startActiveScan(targetUrl);
+        scanRes = await zapScannerInstance.startActiveScan(targetUrl);
       } else {
-        scanRes = await zapScanner.startAjaxSpiderScan(targetUrl);
+        scanRes = await zapScannerInstance.startAjaxSpiderScan(targetUrl);
       }
 
       if (scanRes && scanRes.scanId) {
@@ -453,7 +462,7 @@ function setupZapScannerPanel() {
         let progress = 0;
         const interval = setInterval(async () => {
           try {
-            const progRes = await zapScanner.getScanProgress(scanId, scanType);
+            const progRes = await zapScannerInstance.getScanProgress(scanId, scanType);
             progress = progRes.progress;
             zapProgressBar.style.width = `${progress}%`;
             zapProgressPercentage.textContent = `${progress}%`;
@@ -481,7 +490,7 @@ function setupZapScannerPanel() {
   async function completeScan(targetUrl, scanType) {
     try {
       // Fetch scan alerts/vulnerabilities
-      const alertRes = await zapScanner.getScanAlerts(targetUrl);
+      const alertRes = await zapScannerInstance.getScanAlerts(targetUrl);
       const findings = alertRes.findings || [];
 
       // Save to Firestore / local history

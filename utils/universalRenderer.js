@@ -83,11 +83,22 @@ export function renderContent(contentData) {
 
   // 2. Render Teaser Preview Block
   const previewText = contentData.preview?.teaserText || contentData.description || '';
-  const featuredImage = contentData.preview?.featuredImage?.src || null;
+  let featuredImage = contentData.preview?.featuredImage?.src || null;
+
+  // DIRECTIVE 3: convert Google Drive links to UC direct download/stream link
+  if (featuredImage) {
+    const isDrive = featuredImage.includes('drive.google.com') || featuredImage.includes('googleusercontent.com');
+    if (isDrive) {
+      const match = featuredImage.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || featuredImage.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        featuredImage = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+  }
 
   const previewHTML = `
     <div class="preview-card" style="padding: 1.25rem; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); margin-bottom: 1.5rem;">
-      ${featuredImage ? `<img src="${featuredImage}" alt="${contentData.title}" style="width: 100%; max-height: 380px; object-fit: cover; border-radius: 6px; margin-bottom: 1rem;" />` : ''}
+      ${featuredImage ? `<img src="${featuredImage}" loading="lazy" alt="${contentData.title}" style="width: 100%; max-height: 380px; object-fit: cover; border-radius: 6px; margin-bottom: 1rem;" />` : ''}
       <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 1.05rem; line-height: 1.6; margin: 0;">${previewText}</p>
     </div>
   `;
@@ -154,7 +165,7 @@ export function renderContent(contentData) {
       </h1>
       <p style="color: #718096; font-size: 0.9rem; margin-bottom: 2rem;">By <strong>${contentData.author || 'Foundation Team'}</strong></p>
 
-      ${featuredImage && contentData.editorType !== 'grapesjs' ? `<img src="${featuredImage}" alt="${contentData.title}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 8px; margin-bottom: 2rem;" />` : ''}
+      ${featuredImage && contentData.editorType !== 'grapesjs' ? `<img src="${featuredImage}" loading="lazy" alt="${contentData.title}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 8px; margin-bottom: 2rem;" />` : ''}
 
       ${contentData.meetUrl ? `
         <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.25rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">

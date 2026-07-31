@@ -342,6 +342,60 @@ class ConfigEngine {
   /**
    * Explicit readiness guards for every admin section
    */
+  isConfigured() {
+    return !!(this.current?.isInstalled && this.current?.adminEmails?.length > 0);
+  }
+
+  async resetPlatform() {
+    // Clear all localStorage keys
+    localStorage.removeItem('foundation_config');
+    localStorage.removeItem('foundation_theme');
+    localStorage.removeItem('foundation_ref_id');
+    localStorage.removeItem('foundation_local_chat_logs');
+    localStorage.removeItem('foundation_local_content');
+    localStorage.removeItem('foundation_local_users');
+    localStorage.removeItem('foundation_local_invoices');
+    localStorage.removeItem('foundation_local_expenses');
+    localStorage.removeItem('foundation_local_payroll');
+    localStorage.removeItem('foundation_local_budgets');
+    localStorage.removeItem('foundation_local_employees');
+    localStorage.removeItem('foundation_local_kanban_tasks');
+    localStorage.removeItem('foundation_local_vault_credentials');
+    localStorage.removeItem('foundation_local_pages');
+    localStorage.removeItem('foundation_local_marketing_segments');
+    localStorage.removeItem('foundation_local_email_templates');
+    localStorage.removeItem('foundation_local_course_progress');
+    localStorage.removeItem('foundation_dev_mode');
+
+    // Clear all sessionStorage keys
+    sessionStorage.clear();
+
+    // Wipe local IndexedDB tables
+    try {
+      if (typeof indexedDB !== 'undefined') {
+        await new Promise((resolve, reject) => {
+          const req = indexedDB.deleteDatabase('FoundationFinancesDB');
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+          req.onblocked = () => {
+            console.warn('IndexedDB delete blocked');
+            resolve();
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('IndexedDB reset warning:', e);
+    }
+
+    // Set config values back to defaults and not installed
+    this.#activeConfig = { ...defaultConfig, isInstalled: false };
+
+    // Dispatch LOGOUT to store and log out
+    const { authManager } = await import('./auth.js');
+    await authManager.logout();
+    store.dispatch('LOGOUT');
+  }
+
   isBrandConfigured() {
     const local = this.current;
     if (local.sectionWizards?.section1 === true) return true;

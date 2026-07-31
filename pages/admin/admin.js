@@ -103,6 +103,22 @@ export function initAdminPage() {
   initTabController();
   initAdminPreview();
 
+  // Action-Triggered Defer / Lazy Loading for heavy components & tabs:
+  // Preload next modules or connect on hover / active triggers.
+  import('../../utils/prefetch.js').then(({ PrefetchManager }) => {
+    PrefetchManager.preconnectDomain('https://firestore.googleapis.com');
+    PrefetchManager.preconnectDomain('https://lh3.googleusercontent.com');
+    PrefetchManager.preconnectDomain('https://drive.google.com');
+  });
+
+  // Always invoke initSiteSettingsTab on init to attach event listener triggers & Factory Reset strictly for admin role
+  initSiteSettingsTab();
+
+  // Re-run checking for active tab when user state changes (e.g. bypass / simulatedUserTier changes)
+  store.subscribe(() => {
+    initSiteSettingsTab();
+  });
+
   // --- 2. CONFIGURATION READY GUARDS & RE-RUN SETUP BUTTONS ---
   const sectionGuards = [
     // Section 1 Tabs
@@ -261,6 +277,10 @@ export function initAdminPage() {
       AdminSetupCard.unlock(panel);
     }
 
+    if (tabId === 'site') {
+      initSiteSettingsTab();
+    }
+
     // Ensure parent panel has position relative for absolute positioning of top-right toolbar button
     panel.style.position = 'relative';
 
@@ -313,6 +333,9 @@ export function initAdminPage() {
       return false;
     } else {
       g.initFn();
+      if (tabId === 'site') {
+        initSiteSettingsTab();
+      }
       return true;
     }
   }
@@ -335,7 +358,9 @@ export function initAdminPage() {
     const isOk = checkAndInitTab(targetTab);
     if (!isOk) return; // Stop further on-demand initialization if unconfigured
 
-    if (targetTab === 'users') {
+    if (targetTab === 'site') {
+      initSiteSettingsTab();
+    } else if (targetTab === 'users') {
       initUserDirectoryTab();
     } else if (targetTab === 'pages') {
       initPagesTab();
@@ -358,6 +383,17 @@ export function initAdminPage() {
   const activeTabBtn = document.querySelector('.admin-tab.active');
   const activeTab = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'site';
   checkAndInitTab(activeTab);
+
+  // Subscribe to store updates to dynamically adjust tab initialization (e.g. if isAdmin/devMode changes)
+  store.subscribe(() => {
+    const activeBtn = document.querySelector('.admin-tab.active');
+    if (activeBtn) {
+      checkAndInitTab(activeBtn.getAttribute('data-tab'));
+    }
+  });
+
+  // Strictly execute Factory Reset setup button on SiteSettings init
+  initSiteSettingsTab();
 
   // --- 6. CMS PUBLISHER CONTROLLER ---
   const contentTypeSelect = document.getElementById('content-type');
@@ -419,6 +455,26 @@ export function initAdminPage() {
     if (e.target.checked) {
       if (cmsGjsWrapper) cmsGjsWrapper.style.display = 'block';
       if (contentBodyTextarea) contentBodyTextarea.style.display = 'none';
+
+      // Defer Loading third party bundles (GrapesJS) until action-triggered "Edit Page in GrapesJS" is initiated
+      if (!window.grapesjs) {
+        const link1 = document.createElement('link');
+        link1.rel = 'stylesheet';
+        link1.href = 'https://unpkg.com/grapesjs/dist/css/grapes.min.css';
+        document.head.appendChild(link1);
+
+        const script1 = document.createElement('script');
+        script1.src = 'https://unpkg.com/grapesjs';
+        document.head.appendChild(script1);
+
+        await new Promise(r => script1.onload = r);
+
+        const script2 = document.createElement('script');
+        script2.src = 'https://unpkg.com/grapesjs-preset-webpage';
+        document.head.appendChild(script2);
+
+        await new Promise(r => script2.onload = r);
+      }
 
       // Initialize GrapesJS for CMS body optionally
       if (!cmsEditorInstance && window.grapesjs) {

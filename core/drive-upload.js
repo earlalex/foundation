@@ -216,6 +216,22 @@ export async function getOrCreateSiteRootFolder() {
   }
 }
 
+/**
+ * Convert Google Drive share links into direct streamable/download URLs
+ * @param {string} url - Google Drive link
+ * @returns {string} Direct URL or original URL
+ */
+export function convertDriveShareLink(url) {
+  if (!url || typeof url !== 'string') return url;
+
+  // Matches drive.google.com/file/d/FILE_ID/view... or open?id=FILE_ID
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  }
+  return url;
+}
+
 function getAssetCategory(file) {
   if (file.name?.endsWith('.ico') || file.type === 'image/x-icon' || file.name?.includes('favicon') || file.name?.includes('icon')) {
     return 'icons';

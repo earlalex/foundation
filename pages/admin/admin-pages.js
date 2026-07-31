@@ -56,6 +56,9 @@ export function initPagesTab() {
     return;
   }
 
+  // Defer Loading third party bundles (GrapesJS) until action-triggered "Edit Page in GrapesJS" or "Visual Page Creator" is initiated
+  // We can load it when the pages tab is selected or load on demand. Let's do action-triggered load here.
+
   // Load existing custom pages
   async function loadExistingPages() {
     try {
@@ -144,253 +147,242 @@ export function initPagesTab() {
     }
   }
 
-  // Load and Initialize GrapesJS
-  loadGrapesJS().then((grapesjs) => {
-    if (editorInstance) {
-      // already initialized
-      loadExistingPages();
-      return;
-    }
-
-    editorInstance = grapesjs.init({
-      container: '#grapesjs-page-builder-canvas',
-      fromElement: true,
-      height: '600px',
-      width: 'auto',
-      storageManager: false, // Manually persist to Firebase
-      plugins: ['gjs-preset-webpage'],
-      pluginsOpts: {
-        'gjs-preset-webpage': {
-          modalImportTitle: 'Import HTML Template',
-          modalImportLabel: 'Paste your HTML/CSS code here',
-          categorySections: 'Sections'
-        }
-      },
-    });
-
-    // Trigger page_builder_init hook when GrapesJS Studio initializes
-    import('../../core/hooks.js').then(({ doAction }) => {
-      doAction('page_builder_init', editorInstance);
-    }).catch(err => {
-      console.error('[Page Builder Hook]: page_builder_init trigger failed.', err);
-      assetManager: {
-        upload: 1,
-        uploadFile: async (ev) => {
-          const files = ev.dataTransfer ? ev.dataTransfer.files : ev.target.files;
-          for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            try {
-              // Direct upload using project active directory structure
-              const res = await uploadFileToDrive(file);
-              if (res && res.src) {
-                editorInstance.AssetManager.add(res.src);
-                toast.success(`Asset "${file.name}" uploaded safely to Google Drive.`);
-              }
-            } catch (err) {
-              toast.error(`Asset upload failed: ${err.message}`);
-            }
-          }
-        }
+  // Action-Triggered: Load and Initialize GrapesJS only when GrapesJS Page Builder is requested
+  const loadAndInitGrapesBuilder = () => {
+    if (editorInstance) return Promise.resolve(editorInstance);
+    return loadGrapesJS().then((grapesjs) => {
+      if (editorInstance) {
+        return editorInstance;
       }
-    });
 
-    const bm = editorInstance.BlockManager;
+      editorInstance = grapesjs.init({
+        container: '#grapesjs-page-builder-canvas',
+        fromElement: true,
+        height: '600px',
+        width: 'auto',
+        storageManager: false, // Manually persist to Firebase
+        plugins: ['gjs-preset-webpage'],
+        pluginsOpts: {
+          'gjs-preset-webpage': {
+            modalImportTitle: 'Import HTML Template',
+            modalImportLabel: 'Paste your HTML/CSS code here',
+            categorySections: 'Sections'
+          }
+        },
+      });
 
-    // Register Reusable Global Web Components exposed to GrapesJS
-    bm.add('author-card-component', {
-      label: 'Author Card Component',
-      category: 'Foundation Global Components',
-      content: '<author-card layout="compact"></author-card>'
-    });
+      // Bind web components & premium layouts
+      const bm = editorInstance.BlockManager;
 
-    bm.add('content-card-component', {
-      label: 'Content Card Component',
-      category: 'Foundation Global Components',
-      content: '<content-card title="Strategic Growth" date="July 2026" description="Learn strategic operations models." author="Jane Doe"></content-card>'
-    });
+      // Register Reusable Global Web Components exposed to GrapesJS
+      bm.add('author-card-component', {
+        label: 'Author Card Component',
+        category: 'Foundation Global Components',
+        content: '<author-card layout="compact"></author-card>'
+      });
 
-    bm.add('chat-widget-component', {
-      label: 'Chat Widget Component',
-      category: 'Foundation Global Components',
-      content: '<chat-widget></chat-widget>'
-    });
+      bm.add('content-card-component', {
+        label: 'Content Card Component',
+        category: 'Foundation Global Components',
+        content: '<content-card title="Strategic Growth" date="July 2026" description="Learn strategic operations models." author="Jane Doe"></content-card>'
+      });
 
-    bm.add('hero-banner-component', {
-      label: 'Hero Banner Component',
-      category: 'Foundation Global Components',
-      content: '<hero-banner title="Elevate Operations" subtitle="A zero-build modular web experience."></hero-banner>'
-    });
+      bm.add('chat-widget-component', {
+        label: 'Chat Widget Component',
+        category: 'Foundation Global Components',
+        content: '<chat-widget></chat-widget>'
+      });
 
-    bm.add('feature-grid-component', {
-      label: 'Feature Grid Component',
-      category: 'Foundation Global Components',
-      content: '<feature-grid title-1="Automations" desc-1="Run marketing workflows natively." title-2="Security Scans" desc-2="Verify file signature integrity on the edge."></feature-grid>'
-    });
+      bm.add('hero-banner-component', {
+        label: 'Hero Banner Component',
+        category: 'Foundation Global Components',
+        content: '<hero-banner title="Elevate Operations" subtitle="A zero-build modular web experience."></hero-banner>'
+      });
 
-    bm.add('pricing-table-component', {
-      label: 'Pricing Table Component',
-      category: 'Foundation Global Components',
-      content: '<pricing-table title="Core Membership" price="$29" period="/month"></pricing-table>'
-    });
+      bm.add('feature-grid-component', {
+        label: 'Feature Grid Component',
+        category: 'Foundation Global Components',
+        content: '<feature-grid title-1="Automations" desc-1="Run marketing workflows natively." title-2="Security Scans" desc-2="Verify file signature integrity on the edge."></feature-grid>'
+      });
 
-    bm.add('testimonial-slider-component', {
-      label: 'Testimonial Slider Component',
-      category: 'Foundation Global Components',
-      content: '<testimonial-slider author="Alex R."></testimonial-slider>'
-    });
+      bm.add('pricing-table-component', {
+        label: 'Pricing Table Component',
+        category: 'Foundation Global Components',
+        content: '<pricing-table title="Core Membership" price="$29" period="/month"></pricing-table>'
+      });
 
-    // Remove pre-existing default blocks to keep layout organized if needed, or add our 9 rich layouts:
-    bm.add('hero-section', {
-      label: 'Hero Section',
-      category: 'Premium Sections',
-      content: `
-        <section class="hero-section" style="padding: 5rem 2rem; text-align: center; background: linear-gradient(135deg, #ebf8ff 0%, #ffffff 100%); font-family: system-ui, sans-serif; border-bottom: 1px solid #edf2f7;">
-          <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 1rem; color: #2b6cb0; line-height: 1.2;">Welcome to Our Academy</h1>
-          <p style="font-size: 1.25rem; color: #4a5568; max-width: 650px; margin: 0 auto 2rem; line-height: 1.6;">Ascension Avenue Academy is the premium workspace designed to cultivate operational excellence and strategic leadership.</p>
-          <a href="#" class="btn-primary" style="padding: 12px 28px; background: #2b6cb0; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(43, 108, 176, 0.25);">Explore Workspace</a>
-        </section>
-      `
-    });
+      bm.add('testimonial-slider-component', {
+        label: 'Testimonial Slider Component',
+        category: 'Foundation Global Components',
+        content: '<testimonial-slider author="Alex R."></testimonial-slider>'
+      });
 
-    bm.add('flex-grid', {
-      label: '2/3 Column Flex Grid',
-      category: 'Premium Sections',
-      content: `
-        <div style="display: flex; gap: 2rem; flex-wrap: wrap; padding: 3rem 1.5rem; background: #ffffff; font-family: system-ui, sans-serif;">
-          <div style="flex: 1; min-width: 250px; background: #f7fafc; padding: 2rem; border-radius: 8px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-            <h3 style="color: #2b6cb0; font-size: 1.25rem; margin-top: 0;">Strategy Pillar</h3>
-            <p style="color: #4a5568; line-height: 1.6;">Our framework delivers end-to-end operational visibility with secure localized data caches.</p>
-          </div>
-          <div style="flex: 1; min-width: 250px; background: #f7fafc; padding: 2rem; border-radius: 8px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-            <h3 style="color: #2b6cb0; font-size: 1.25rem; margin-top: 0;">Execution Pillar</h3>
-            <p style="color: #4a5568; line-height: 1.6;">Automate and scale workflows instantly, decoupled from browser SDK limits.</p>
-          </div>
-        </div>
-      `
-    });
+      bm.add('hero-section', {
+        label: 'Hero Section',
+        category: 'Premium Sections',
+        content: `
+          <section class="hero-section" style="padding: 5rem 2rem; text-align: center; background: linear-gradient(135deg, #ebf8ff 0%, #ffffff 100%); font-family: system-ui, sans-serif; border-bottom: 1px solid #edf2f7;">
+            <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 1rem; color: #2b6cb0; line-height: 1.2;">Welcome to Our Academy</h1>
+            <p style="font-size: 1.25rem; color: #4a5568; max-width: 650px; margin: 0 auto 2rem; line-height: 1.6;">Ascension Avenue Academy is the premium workspace designed to cultivate operational excellence and strategic leadership.</p>
+            <a href="#" class="btn-primary" style="padding: 12px 28px; background: #2b6cb0; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(43, 108, 176, 0.25);">Explore Workspace</a>
+          </section>
+        `
+      });
 
-    bm.add('cta-cards', {
-      label: 'CTA Cards',
-      category: 'Components',
-      content: `
-        <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 12px; padding: 2.5rem; text-align: center; margin: 2rem 0; font-family: system-ui, sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-          <h2 style="color: #2b6cb0; margin-top: 0; font-size: 1.75rem; font-weight: 800;">Elevate Your Operations</h2>
-          <p style="color: #2c5282; margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">Tap into customized, secure legal binders, automated task boards, and advanced threat monitors.</p>
-          <button style="padding: 12px 30px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2);">Upgrade Membership</button>
-        </div>
-      `
-    });
-
-    bm.add('feature-matrix', {
-      label: 'Feature Matrix',
-      category: 'Premium Sections',
-      content: `
-        <section style="padding: 4rem 1.5rem; background: #ffffff; font-family: system-ui, sans-serif;">
-          <h2 style="text-align: center; font-size: 2rem; margin-bottom: 3rem; color: #2d3748;">High-Fidelity Operations Features</h2>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem;">
-            <div style="text-align: center; padding: 1rem;">
-              <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
-              <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">Vulnerability Scans</h4>
-              <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Integrated OWASP ZAP API proxy and file scanner safeguards.</p>
+      bm.add('flex-grid', {
+        label: '2/3 Column Flex Grid',
+        category: 'Premium Sections',
+        content: `
+          <div style="display: flex; gap: 2rem; flex-wrap: wrap; padding: 3rem 1.5rem; background: #ffffff; font-family: system-ui, sans-serif;">
+            <div style="flex: 1; min-width: 250px; background: #f7fafc; padding: 2rem; border-radius: 8px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+              <h3 style="color: #2b6cb0; font-size: 1.25rem; margin-top: 0;">Strategy Pillar</h3>
+              <p style="color: #4a5568; line-height: 1.6;">Our framework delivers end-to-end operational visibility with secure localized data caches.</p>
             </div>
-            <div style="text-align: center; padding: 1rem;">
-              <div style="font-size: 2.5rem; margin-bottom: 1rem;">💰</div>
-              <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">Stripe Direct Debit</h4>
-              <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Perform ACH payments natively with automatic application fees.</p>
-            </div>
-            <div style="text-align: center; padding: 1rem;">
-              <div style="font-size: 2.5rem; margin-bottom: 1rem;">👥</div>
-              <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">VA Hiring Hub</h4>
-              <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Contractor onboarding with secure credential bridging.</p>
+            <div style="flex: 1; min-width: 250px; background: #f7fafc; padding: 2rem; border-radius: 8px; border: 1px solid #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+              <h3 style="color: #2b6cb0; font-size: 1.25rem; margin-top: 0;">Execution Pillar</h3>
+              <p style="color: #4a5568; line-height: 1.6;">Automate and scale workflows instantly, decoupled from browser SDK limits.</p>
             </div>
           </div>
-        </section>
-      `
-    });
+        `
+      });
 
-    bm.add('navbar', {
-      label: 'Navbar Block',
-      category: 'Components',
-      content: `
-        <nav style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #2d3748; color: white; font-family: system-ui, sans-serif;">
-          <div style="font-weight: bold; font-size: 1.25rem;">Ascension Academy</div>
-          <div style="display: flex; gap: 1.5rem; font-size: 0.95rem;">
-            <a href="#" style="color: white; text-decoration: none;">Home</a>
-            <a href="#" style="color: white; text-decoration: none;">Services</a>
-            <a href="#" style="color: white; text-decoration: none;">Pricing</a>
+      bm.add('cta-cards', {
+        label: 'CTA Cards',
+        category: 'Components',
+        content: `
+          <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 12px; padding: 2.5rem; text-align: center; margin: 2rem 0; font-family: system-ui, sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h2 style="color: #2b6cb0; margin-top: 0; font-size: 1.75rem; font-weight: 800;">Elevate Your Operations</h2>
+            <p style="color: #2c5282; margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.5;">Tap into customized, secure legal binders, automated task boards, and advanced threat monitors.</p>
+            <button style="padding: 12px 30px; background: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2);">Upgrade Membership</button>
           </div>
-        </nav>
-      `
-    });
+        `
+      });
 
-    bm.add('footer', {
-      label: 'Footer Block',
-      category: 'Components',
-      content: `
-        <footer style="background: #1a202c; color: #a0aec0; padding: 3rem 2rem; text-align: center; font-family: system-ui, sans-serif; font-size: 0.9rem; border-top: 1px solid #2d3748;">
-          <p style="margin-bottom: 1rem; color: white; font-weight: bold;">Ascension Avenue Academy</p>
-          <p style="margin-bottom: 1.5rem;">© ${new Date().getFullYear()} Ascension Avenue Academy. All rights reserved.</p>
-          <div style="display: flex; justify-content: center; gap: 1.5rem;">
-            <a href="#" style="color: #a0aec0; text-decoration: none;">Privacy Policy</a>
-            <a href="#" style="color: #a0aec0; text-decoration: none;">Terms of Service</a>
+      bm.add('feature-matrix', {
+        label: 'Feature Matrix',
+        category: 'Premium Sections',
+        content: `
+          <section style="padding: 4rem 1.5rem; background: #ffffff; font-family: system-ui, sans-serif;">
+            <h2 style="text-align: center; font-size: 2rem; margin-bottom: 3rem; color: #2d3748;">High-Fidelity Operations Features</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem;">
+              <div style="text-align: center; padding: 1rem;">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
+                <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">Vulnerability Scans</h4>
+                <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Integrated OWASP ZAP API proxy and file scanner safeguards.</p>
+              </div>
+              <div style="text-align: center; padding: 1rem;">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">💰</div>
+                <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">Stripe Direct Debit</h4>
+                <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Perform ACH payments natively with automatic application fees.</p>
+              </div>
+              <div style="text-align: center; padding: 1rem;">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">👥</div>
+                <h4 style="font-size: 1.15rem; margin-top: 0; margin-bottom: 0.5rem; color: #2d3748;">VA Hiring Hub</h4>
+                <p style="color: #718096; font-size: 0.9rem; line-height: 1.5;">Contractor onboarding with secure credential bridging.</p>
+              </div>
+            </div>
+          </section>
+        `
+      });
+
+      bm.add('navbar', {
+        label: 'Navbar Block',
+        category: 'Components',
+        content: `
+          <nav style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: #2d3748; color: white; font-family: system-ui, sans-serif;">
+            <div style="font-weight: bold; font-size: 1.25rem;">Ascension Academy</div>
+            <div style="display: flex; gap: 1.5rem; font-size: 0.95rem;">
+              <a href="#" style="color: white; text-decoration: none;">Home</a>
+              <a href="#" style="color: white; text-decoration: none;">Services</a>
+              <a href="#" style="color: white; text-decoration: none;">Pricing</a>
+            </div>
+          </nav>
+        `
+      });
+
+      bm.add('footer', {
+        label: 'Footer Block',
+        category: 'Components',
+        content: `
+          <footer style="background: #1a202c; color: #a0aec0; padding: 3rem 2rem; text-align: center; font-family: system-ui, sans-serif; font-size: 0.9rem; border-top: 1px solid #2d3748;">
+            <p style="margin-bottom: 1rem; color: white; font-weight: bold;">Ascension Avenue Academy</p>
+            <p style="margin-bottom: 1.5rem;">© ${new Date().getFullYear()} Ascension Avenue Academy. All rights reserved.</p>
+            <div style="display: flex; justify-content: center; gap: 1.5rem;">
+              <a href="#" style="color: #a0aec0; text-decoration: none;">Privacy Policy</a>
+              <a href="#" style="color: #a0aec0; text-decoration: none;">Terms of Service</a>
+            </div>
+          </footer>
+        `
+      });
+
+      bm.add('image-gallery', {
+        label: 'Image Gallery',
+        category: 'Components',
+        content: `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 2rem 1.5rem;">
+            <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
+            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
           </div>
-        </footer>
-      `
-    });
+        `
+      });
 
-    bm.add('image-gallery', {
-      label: 'Image Gallery',
-      category: 'Components',
-      content: `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 2rem 1.5rem;">
-          <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
-          <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
-          <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80" style="width: 100%; border-radius: 6px; aspect-ratio: 16/9; object-fit: cover;" />
+      bm.add('form-container', {
+        label: 'Form Container',
+        category: 'Components',
+        content: `
+          <div style="max-width: 450px; margin: 2rem auto; padding: 2rem; background: #ffffff; border: 1px solid #edf2f7; border-radius: 8px; font-family: system-ui, sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h3 style="margin-top: 0; color: #2d3748; margin-bottom: 1rem;">Contact Us</h3>
+            <form style="display: flex; flex-direction: column; gap: 1rem;">
+              <div>
+                <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Name</label>
+                <input type="text" placeholder="John Doe" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Email</label>
+                <input type="email" placeholder="john@example.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <button type="button" style="padding: 10px; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Submit Request</button>
+            </form>
+          </div>
+        `
+      });
+
+      bm.add('video-modal', {
+        label: 'Video Embed',
+        category: 'Components',
+        content: `
+          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
+          </div>
+        `
+      });
+
+      // Trigger page_builder_init hook when GrapesJS Studio initializes
+      import('../../core/hooks.js').then(({ doAction }) => {
+        doAction('page_builder_init', editorInstance);
+      }).catch(err => {
+        console.error('[Page Builder Hook]: page_builder_init trigger failed.', err);
+      });
+
+      loadExistingPages();
+
+      return editorInstance;
+    }).catch((err) => {
+      console.error('Failed to initialize GrapesJS Editor:', err);
+      canvasElement.innerHTML = `
+        <div style="padding: 2rem; text-align: center; color: var(--theme-color-danger, #e53e3e);">
+          <h3>Failed to load GrapesJS Builder</h3>
+          <p>${err.message}</p>
         </div>
-      `
+      `;
     });
+  };
 
-    bm.add('form-container', {
-      label: 'Form Container',
-      category: 'Components',
-      content: `
-        <div style="max-width: 450px; margin: 2rem auto; padding: 2rem; background: #ffffff; border: 1px solid #edf2f7; border-radius: 8px; font-family: system-ui, sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-          <h3 style="margin-top: 0; color: #2d3748; margin-bottom: 1rem;">Contact Us</h3>
-          <form style="display: flex; flex-direction: column; gap: 1rem;">
-            <div>
-              <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Name</label>
-              <input type="text" placeholder="John Doe" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Email</label>
-              <input type="email" placeholder="john@example.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <button type="button" style="padding: 10px; background: #2b6cb0; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Submit Request</button>
-          </form>
-        </div>
-      `
-    });
-
-    bm.add('video-modal', {
-      label: 'Video Embed',
-      category: 'Components',
-      content: `
-        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 2rem 0; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-          <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
-        </div>
-      `
-    });
-
-    loadExistingPages();
-  }).catch((err) => {
-    console.error('Failed to initialize GrapesJS Editor:', err);
-    canvasElement.innerHTML = `
-      <div style="padding: 2rem; text-align: center; color: var(--theme-color-danger, #e53e3e);">
-        <h3>Failed to load GrapesJS Builder</h3>
-        <p>${err.message}</p>
-      </div>
-    `;
-  });
+  // Add click handler to GrapesJS canvas wrapper or button to initialize on demand
+  canvasElement.addEventListener('click', () => {
+    loadAndInitGrapesBuilder();
+  }, { once: true });
 
   // Submit / Publish Page
   form.addEventListener('submit', async (e) => {

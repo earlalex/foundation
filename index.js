@@ -20,8 +20,7 @@ import './components/global/TestimonialSlider.js';
 // Automated Test Suites
 import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
 
-// Page Controllers
-import { initAdminPage } from './pages/admin/admin.js';
+// Page Controllers (Lazily Loaded in Route Splitting / pageLoaded events)
 import { initHomePage } from './pages/home/home.js';
 
 logger.info('Foundation Core initializing...');
@@ -33,6 +32,13 @@ logger.info('Foundation Core initializing...');
 window.foundationDevBypass = function() {
   window.__FOUNDATION_DEV_BYPASS__ = true;
   window.store = store;
+  store.dispatch('SET_USER', {
+    uid: 'admin_bypass',
+    email: 'admin@example.com',
+    displayName: 'Bypass Admin',
+    isAdmin: true,
+    role: 'admin'
+  });
   store.dispatch('SET_DEV_MODE', true);
   console.log('%c[Security Bypass Granted]: Emergency Console Dev Bypass Active.', 'color: #38a169; font-weight: bold;');
   window.router?.loadRoute('/admin');
@@ -199,7 +205,7 @@ window.addEventListener('pageLoaded', (e) => {
   } else if (e.detail.path === '/detail') {
     import('./pages/detail/detail.js').then(m => m.initDetailPage());
   } else if (e.detail.path === '/admin') {
-    initAdminPage();
+    import('./pages/admin/admin.js').then(m => m.initAdminPage());
   } else if (e.detail.path === '/account') {
     import('./pages/account.js').then(m => m.initAccountPage());
   }
