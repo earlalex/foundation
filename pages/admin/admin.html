@@ -522,6 +522,49 @@
           </button>
         </form>
       </div>
+
+      <!-- Interactive Foundation Worksheet Generator Card -->
+      <div id="foundation-worksheet-card" style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px); margin-top: 1.5rem;">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Company Core Identity & Foundation Worksheet Generator</h2>
+        <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Edit corporate targets, compile company values, and automatically generate a downloadable/fillable Markdown/JSON Foundation Worksheet.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Monthly Revenue Target ($):</label>
+              <input type="number" id="worksheet-revenue-target" value="50000" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Subscriber Goal:</label>
+              <input type="number" id="worksheet-subscriber-goal" value="10000" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Company Name:</label>
+              <input type="text" id="worksheet-company-name" value="Ascension Avenue Academy" readonly style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; background: #edf2f7;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">NAICS Classification Selection:</label>
+              <input type="text" id="worksheet-naics-selection" value="Custom / Specialized Education & Empowerment Consulting Services" readonly style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; background: #edf2f7;" />
+            </div>
+          </div>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+            <button id="btn-generate-worksheet" class="btn-primary" style="background: var(--theme-color-accent, #38a169); font-weight: bold; padding: 10px 20px;">
+              Generate & Save Foundation Worksheet to Corporate Binder
+            </button>
+            <button id="btn-download-worksheet-md" style="padding: 10px 18px; background: transparent; color: var(--theme-color-primary, #2b6cb0); border: 1px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; font-weight: bold; cursor: pointer; display: none;">
+              Download Markdown (.md)
+            </button>
+            <button id="btn-download-worksheet-json" style="padding: 10px 18px; background: transparent; color: var(--theme-color-primary, #2b6cb0); border: 1px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; font-weight: bold; cursor: pointer; display: none;">
+              Download JSON (.json)
+            </button>
+          </div>
+          <div id="worksheet-status" style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); display: none; padding: 8px 12px; background: #f7fafc; border-radius: 4px; border: 1px solid #e2e8f0;">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

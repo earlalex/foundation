@@ -50,8 +50,8 @@ export function initBusinessProfileTab() {
   };
 
   // Load existing values
-  if (bizLegalNameInput) bizLegalNameInput.value = bizProfile.legalName || '';
-  if (bizDbaInput) bizDbaInput.value = bizProfile.dba || '';
+  if (bizLegalNameInput) bizLegalNameInput.value = bizProfile.legalName || 'Ascension Avenue Academy';
+  if (bizDbaInput) bizDbaInput.value = bizProfile.dba || 'Ascension Avenue Academy';
   if (bizEinInput) bizEinInput.value = bizProfile.ein || '';
   if (bizEntityTypeInput) bizEntityTypeInput.value = bizProfile.entityType || 'llc';
   if (bizAddressInput) bizAddressInput.value = bizProfile.address || '';
@@ -59,8 +59,8 @@ export function initBusinessProfileTab() {
   if (bizStateInput) bizStateInput.value = bizProfile.state || '';
   if (bizZipInput) bizZipInput.value = bizProfile.zip || '';
   if (bizCountryInput) bizCountryInput.value = bizProfile.country || '';
-  if (bizEmailInput) bizEmailInput.value = bizProfile.email || '';
-  if (bizSupportEmailInput) bizSupportEmailInput.value = bizProfile.supportEmail || '';
+  if (bizEmailInput) bizEmailInput.value = bizProfile.email || 'contact@ascensionavenue.com';
+  if (bizSupportEmailInput) bizSupportEmailInput.value = bizProfile.supportEmail || 'support@ascensionavenue.com';
   if (bizPhoneInput) bizPhoneInput.value = bizProfile.phone || '';
   if (bizPrivacyUrlInput) bizPrivacyUrlInput.value = bizProfile.privacyUrl || '/privacy';
   if (bizTermsUrlInput) bizTermsUrlInput.value = bizProfile.termsUrl || '/terms';
@@ -73,7 +73,7 @@ export function initBusinessProfileTab() {
 
   // Setup NAICS elements and select listeners
   if (bizNaicsSelect) {
-    const savedCode = bizProfile.naicsCode || '';
+    const savedCode = bizProfile.naicsCode || '541611';
     if (naicsDefinitions[savedCode]) {
       bizNaicsSelect.value = savedCode;
     } else if (savedCode) {
@@ -85,7 +85,7 @@ export function initBusinessProfileTab() {
     }
 
     if (bizNaicsDefinition) {
-      bizNaicsDefinition.value = bizProfile.naicsDefinition || '';
+      bizNaicsDefinition.value = bizProfile.naicsDefinition || 'Custom / Specialized Education & Empowerment Consulting Services';
     }
 
     bizNaicsSelect.addEventListener('change', (e) => {
@@ -235,4 +235,180 @@ export function initBusinessProfileTab() {
       }
     }
   });
+
+  // --- DIRECTIVE 3: FOUNDATION WORKSHEET GENERATOR CONTROLLER ---
+  const btnGenerateWorksheet = document.getElementById('btn-generate-worksheet');
+  const btnDownloadMd = document.getElementById('btn-download-worksheet-md');
+  const btnDownloadJson = document.getElementById('btn-download-worksheet-json');
+  const worksheetStatus = document.getElementById('worksheet-status');
+
+  const worksheetCompanyNameInput = document.getElementById('worksheet-company-name');
+  const worksheetNaicsInput = document.getElementById('worksheet-naics-selection');
+
+  if (worksheetCompanyNameInput && bizLegalNameInput) {
+    worksheetCompanyNameInput.value = bizLegalNameInput.value || "Ascension Avenue Academy";
+    bizLegalNameInput.addEventListener('input', () => {
+      worksheetCompanyNameInput.value = bizLegalNameInput.value || "Ascension Avenue Academy";
+    });
+  }
+
+  if (worksheetNaicsInput && bizNaicsDefinition) {
+    worksheetNaicsInput.value = bizNaicsDefinition.value || "Custom / Specialized Education & Empowerment Consulting Services";
+    bizNaicsDefinition.addEventListener('input', () => {
+      worksheetNaicsInput.value = bizNaicsDefinition.value || "Custom / Specialized Education & Empowerment Consulting Services";
+    });
+  }
+
+  if (btnGenerateWorksheet) {
+    btnGenerateWorksheet.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const revTarget = document.getElementById('worksheet-revenue-target')?.value || "50000";
+      const subGoal = document.getElementById('worksheet-subscriber-goal')?.value || "10000";
+      const companyName = worksheetCompanyNameInput ? worksheetCompanyNameInput.value : "Ascension Avenue Academy";
+      const naicsDef = worksheetNaicsInput ? worksheetNaicsInput.value : "Custom / Specialized Education & Empowerment Consulting Services";
+      const naicsCodeVal = bizNaicsSelect && bizNaicsSelect.value === 'custom'
+        ? (bizNaicsCustom ? bizNaicsCustom.value : '541611')
+        : (bizNaicsSelect ? bizNaicsSelect.value : '541611');
+
+      btnGenerateWorksheet.disabled = true;
+      btnGenerateWorksheet.textContent = 'Generating Worksheet...';
+
+      if (worksheetStatus) {
+        worksheetStatus.style.display = 'block';
+        worksheetStatus.textContent = "Compiling company values, goals, and regulatory classifications...";
+      }
+
+      const purpose = "To elevate men and women into full alignment with their potential - empowering them to reclaim sovereignty over their mind, body, and business through discipline, clarity, and higher consciousness.";
+      const mission = "To build transformational frameworks that merge fitness, mindset, and entrepreneurship, creating actionable programs, tools, and content that help people realign with their true purpose and achieve sustainable success.";
+      const coreValues = [
+        "Alignment over Achievement",
+        "Discipline",
+        "Integrity",
+        "Ownership",
+        "Creativity",
+        "Sovereignty",
+        "Growth",
+        "Community Impact",
+        "Health is Wealth"
+      ];
+      const kpis = [
+        "Health & Energy",
+        "Financial Performance",
+        "Customer & Market",
+        "Personal Growth & Operational Excellence"
+      ];
+
+      const worksheetData = {
+        companyName,
+        purpose,
+        mission,
+        coreValues,
+        kpiCategories: kpis,
+        targets: {
+          monthlyRevenueTarget: Number(revTarget),
+          subscriberGoal: Number(subGoal)
+        },
+        naics: {
+          code: naicsCodeVal,
+          definition: naicsDef
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      const markdownContent = `# ${companyName} - Foundation Worksheet
+
+## Purpose (Your Why)
+"${purpose}"
+
+## Mission (Your What & How)
+"${mission}"
+
+## 9 Core Values
+${coreValues.map((v, i) => `${i + 1}. ${v}`).join('\n')}
+
+## 12 KPIs Categories
+${kpis.map(k => `- ${k}`).join('\n')}
+
+## Operational Targets
+- **Monthly Revenue Target:** $${Number(revTarget).toLocaleString()}
+- **Subscriber Goal:** ${Number(subGoal).toLocaleString()}
+
+## NAICS Code & Definition
+- **NAICS Code:** ${naicsCodeVal}
+- **NAICS Definition:** ${naicsDef}
+
+---
+*Generated dynamically in the Ascension Avenue Academy Admin Command Center on ${new Date().toLocaleString()}*`;
+
+      try {
+        // Upload Markdown file
+        const mdBlob = new Blob([markdownContent], { type: 'text/markdown' });
+        const mdFile = new File([mdBlob], `${companyName.replace(/ /g, '_')}_Foundation_Worksheet.md`, { type: 'text/markdown' });
+        mdFile.isCorporateBinder = true;
+        const mdRes = await uploadFileToDrive(mdFile);
+
+        // Upload JSON file
+        const jsonBlob = new Blob([JSON.stringify(worksheetData, null, 2)], { type: 'application/json' });
+        const jsonFile = new File([jsonBlob], `${companyName.replace(/ /g, '_')}_Foundation_Worksheet.json`, { type: 'application/json' });
+        jsonFile.isCorporateBinder = true;
+        const jsonRes = await uploadFileToDrive(jsonFile);
+
+        if (mdRes && jsonRes) {
+          toast.success("Foundation Worksheet generated and securely saved to corporate-binder/ inside Google Drive and synced to LastPass Notes!");
+
+          if (worksheetStatus) {
+            worksheetStatus.style.background = "#f0fdf4";
+            worksheetStatus.style.borderColor = "#bbf7d0";
+            worksheetStatus.style.color = "#15803d";
+            worksheetStatus.innerHTML = `
+              <strong>✓ Foundation Worksheet successfully generated & archived!</strong><br>
+              Saved to: <code>corporate-binder/${mdFile.name}</code><br>
+              Google Drive ID: <code>${mdRes.id}</code><br>
+              Autofill and download copies locally below.
+            `;
+          }
+
+          // Enable and show local download buttons
+          if (btnDownloadMd) {
+            btnDownloadMd.style.display = 'inline-block';
+            btnDownloadMd.onclick = () => {
+              const url = URL.createObjectURL(mdBlob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = mdFile.name;
+              a.click();
+              URL.revokeObjectURL(url);
+            };
+          }
+
+          if (btnDownloadJson) {
+            btnDownloadJson.style.display = 'inline-block';
+            btnDownloadJson.onclick = () => {
+              const url = URL.createObjectURL(jsonBlob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = jsonFile.name;
+              a.click();
+              URL.revokeObjectURL(url);
+            };
+          }
+        } else {
+          throw new Error("Failed to upload worksheets to Google Drive.");
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Admin Business Profile - Worksheet Generator');
+        toast.error(`Worksheet Generator Error: ${err.message}`);
+        if (worksheetStatus) {
+          worksheetStatus.style.background = "#fff5f5";
+          worksheetStatus.style.borderColor = "#fed7d7";
+          worksheetStatus.style.color = "#c53030";
+          worksheetStatus.textContent = `Error: ${err.message}`;
+        }
+      } finally {
+        btnGenerateWorksheet.disabled = false;
+        btnGenerateWorksheet.textContent = 'Generate & Save Foundation Worksheet to Corporate Binder';
+      }
+    });
+  }
 }
