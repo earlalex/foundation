@@ -1,14 +1,60 @@
-// pages/admin/admin-products.js - Products & Services management
+// pages/admin/admin-products.js - Products & Services management + Education Course Builder
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { uploadFileToDrive } from '../../core/drive-upload.js';
+
+let selectedCourse = null;
+let grapesLessonEditor = null;
 
 export function initProductsTab() {
   const productForm = document.getElementById('product-form');
   const productsTbody = document.getElementById('products-tbody');
   const paymentTypeSelect = document.getElementById('product-payment-type');
   const retainerFields = document.getElementById('retainer-fields');
+
+  // Subtab Elements
+  const btnSubtabProducts = document.getElementById('btn-subtab-products');
+  const btnSubtabCourses = document.getElementById('btn-subtab-courses');
+  const panelSubtabProducts = document.getElementById('panel-subtab-products');
+  const panelSubtabCourses = document.getElementById('panel-subtab-courses');
+
+  // --- Subtab Switching Logic ---
+  if (btnSubtabProducts && btnSubtabCourses && panelSubtabProducts && panelSubtabCourses) {
+    btnSubtabProducts.addEventListener('click', () => {
+      btnSubtabProducts.className = 'btn-primary';
+      btnSubtabProducts.style.background = 'var(--theme-color-primary, #2b6cb0)';
+      btnSubtabProducts.style.color = 'white';
+      btnSubtabProducts.style.border = 'none';
+
+      btnSubtabCourses.className = '';
+      btnSubtabCourses.style.background = 'transparent';
+      btnSubtabCourses.style.color = 'var(--theme-color-text-secondary, #4a5568)';
+      btnSubtabCourses.style.border = '1px solid transparent';
+
+      panelSubtabProducts.style.display = 'block';
+      panelSubtabCourses.style.display = 'none';
+    });
+
+    btnSubtabCourses.addEventListener('click', () => {
+      btnSubtabCourses.className = 'btn-primary';
+      btnSubtabCourses.style.background = 'var(--theme-color-primary, #2b6cb0)';
+      btnSubtabCourses.style.color = 'white';
+      btnSubtabCourses.style.border = 'none';
+
+      btnSubtabProducts.className = '';
+      btnSubtabProducts.style.background = 'transparent';
+      btnSubtabProducts.style.color = 'var(--theme-color-text-secondary, #4a5568)';
+      btnSubtabProducts.style.border = '1px solid transparent';
+
+      panelSubtabProducts.style.display = 'none';
+      panelSubtabCourses.style.display = 'block';
+
+      // Load courses on tab switch
+      loadCourses();
+    });
+  }
 
   // Handle payment type change to show/hide retainer fields
   paymentTypeSelect?.addEventListener('change', () => {
@@ -19,14 +65,17 @@ export function initProductsTab() {
     }
   });
 
-  // Form validation
-  const productValidator = new FormValidator(productForm, {
-    'product-title': [(value) => value && value.trim().length > 0 ? null : 'Product title is required'],
-    'product-category': [(value) => value && value.trim().length > 0 ? null : 'Category is required'],
-    'product-price': [(value) => value && !isNaN(value) && parseFloat(value) > 0 ? null : 'Valid price is required'],
-    'product-currency': [(value) => value ? null : 'Currency is required'],
-    'product-payment-type': [(value) => value ? null : 'Payment type is required']
-  });
+  // Form validation for product
+  let productValidator = null;
+  if (productForm) {
+    productValidator = new FormValidator(productForm, {
+      'product-title': [(value) => value && value.trim().length > 0 ? null : 'Product title is required'],
+      'product-category': [(value) => value && value.trim().length > 0 ? null : 'Category is required'],
+      'product-price': [(value) => value && !isNaN(value) && parseFloat(value) > 0 ? null : 'Valid price is required'],
+      'product-currency': [(value) => value ? null : 'Currency is required'],
+      'product-payment-type': [(value) => value ? null : 'Payment type is required']
+    });
+  }
 
   // Load existing products
   async function loadProducts() {
@@ -108,7 +157,7 @@ export function initProductsTab() {
   productForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    if (!productValidator.validateAll()) {
+    if (productValidator && !productValidator.validateAll()) {
       toast.error('Please fix the validation errors before creating the product.');
       return;
     }
@@ -186,6 +235,518 @@ export function initProductsTab() {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
       }
+    }
+  });
+
+  // ==========================================
+  // --- EDUCATION COURSE BUILDER CONTROLLER ---
+  // ==========================================
+
+  const courseForm = document.getElementById('course-form');
+  const coursesTbody = document.getElementById('courses-tbody');
+  const curriculumWorkspaceCard = document.getElementById('curriculum-workspace-card');
+  const courseModulesContainer = document.getElementById('course-modules-container');
+  const lessonEditorCard = document.getElementById('lesson-editor-card');
+  const lessonForm = document.getElementById('lesson-form');
+
+  // Course management methods
+  async function loadCourses() {
+    if (!coursesTbody) return;
+    try {
+      const courses = await contentDB.getContentByType('education');
+      if (courses.length === 0) {
+        coursesTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">No courses built yet.</td></tr>';
+        return;
+      }
+
+      coursesTbody.innerHTML = courses.map(course => {
+        const moduleCount = course.modules?.length || 0;
+        return `
+          <tr style="border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
+            <td style="padding: 10px; font-weight: bold; color: var(--theme-color-text-primary, #2d3748);">${course.title}</td>
+            <td style="padding: 10px;">${moduleCount} Modules</td>
+            <td style="padding: 10px; text-transform: capitalize;">${course.access?.visibility || 'public'}</td>
+            <td style="padding: 10px; text-align: right;">
+              <button class="btn-manage-course" data-course-id="${course.id}" style="padding: 4px 8px; background: var(--theme-color-primary, #2b6cb0); color: white; border-radius: 4px; font-size: 0.75rem; border: none; cursor: pointer; font-weight: bold; margin-right: 4px;">Manage</button>
+              <button class="btn-delete-course" data-course-id="${course.id}" style="padding: 4px 8px; background: #e53e3e; color: white; border-radius: 4px; font-size: 0.75rem; border: none; cursor: pointer; font-weight: bold;">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      attachCourseListHandlers();
+    } catch (err) {
+      console.error('Failed to load courses:', err);
+    }
+  }
+
+  function attachCourseListHandlers() {
+    coursesTbody.querySelectorAll('.btn-manage-course').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.courseId;
+        const courses = await contentDB.getContentByType('education');
+        selectedCourse = courses.find(c => c.id === id);
+        if (selectedCourse) {
+          openCourseWorkspace();
+        }
+      };
+    });
+
+    coursesTbody.querySelectorAll('.btn-delete-course').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.courseId;
+        if (confirm('Are you sure you want to permanently delete this course and all its modules/lessons?')) {
+          await contentDB.deleteContent(id);
+          toast.success('Course deleted successfully.');
+          selectedCourse = null;
+          if (curriculumWorkspaceCard) curriculumWorkspaceCard.style.display = 'none';
+          if (lessonEditorCard) lessonEditorCard.style.display = 'none';
+          loadCourses();
+        }
+      };
+    });
+  }
+
+  // Course Form Saving
+  courseForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const idInput = document.getElementById('course-id').value;
+    const title = document.getElementById('course-title').value.trim();
+    const desc = document.getElementById('course-description').value.trim();
+    const visibility = document.getElementById('course-visibility').value;
+
+    try {
+      let courseData = {};
+      if (idInput) {
+        // Edit existing course
+        const courses = await contentDB.getContentByType('education');
+        const existing = courses.find(c => c.id === idInput);
+        courseData = {
+          ...existing,
+          title,
+          description: desc,
+          access: { visibility }
+        };
+      } else {
+        // Create new course
+        courseData = {
+          type: 'education',
+          id: 'course_' + Date.now(),
+          title,
+          description: desc,
+          access: { visibility },
+          modules: []
+        };
+      }
+
+      await contentDB.saveContent(courseData);
+      toast.success(idInput ? 'Course updated successfully!' : 'Course created successfully!');
+      courseForm.reset();
+      document.getElementById('course-id').value = '';
+      document.getElementById('course-form-title').textContent = 'Create New Course';
+      document.getElementById('btn-reset-course-form').style.display = 'none';
+
+      loadCourses();
+      if (selectedCourse && selectedCourse.id === courseData.id) {
+        selectedCourse = courseData;
+        openCourseWorkspace();
+      }
+    } catch (err) {
+      toast.error(`Failed to save course: ${err.message}`);
+    }
+  });
+
+  document.getElementById('btn-reset-course-form')?.addEventListener('click', () => {
+    courseForm.reset();
+    document.getElementById('course-id').value = '';
+    document.getElementById('course-form-title').textContent = 'Create New Course';
+    document.getElementById('btn-reset-course-form').style.display = 'none';
+  });
+
+  // Curriculum Modules & Lessons builder UI rendering
+  function openCourseWorkspace() {
+    if (!curriculumWorkspaceCard || !selectedCourse) return;
+
+    curriculumWorkspaceCard.style.display = 'block';
+    document.getElementById('workspace-course-title').textContent = selectedCourse.title;
+
+    renderModules();
+    curriculumWorkspaceCard.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function renderModules() {
+    if (!courseModulesContainer || !selectedCourse) return;
+
+    const modules = selectedCourse.modules || [];
+    if (modules.length === 0) {
+      courseModulesContainer.innerHTML = '<p style="color: var(--theme-color-text-secondary, #718096); font-style: italic; text-align: center; padding: 2rem;">No modules added to this course curriculum yet. Click "+ Add Module" to begin.</p>';
+      return;
+    }
+
+    courseModulesContainer.innerHTML = modules.map((mod, modIndex) => {
+      const lessons = mod.lessons || [];
+      const lessonsHtml = lessons.map(lesson => {
+        const typeBadge = `<span style="display:inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; background: #e2e8f0; color: #4a5568; margin-left: 0.5rem; text-transform: uppercase;">${lesson.contentType}</span>`;
+        const roleBadge = `<span style="display:inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; background: #ebf8ff; color: #2b6cb0; margin-left: 0.5rem; text-transform: capitalize;">${lesson.requiredRole}</span>`;
+        const prereqText = lesson.prerequisiteLessonId ? `<span style="font-size:0.75rem; color: #e53e3e; margin-left: 0.5rem;">🔒 Pre: ${lesson.prerequisiteLessonId}</span>` : '';
+
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: white; border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 6px; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem;">
+              <strong style="color: var(--theme-color-text-primary, #1a202c);">${lesson.title}</strong>
+              <code style="font-size: 0.75rem; color:#718096;">(${lesson.id})</code>
+              ${typeBadge}
+              ${roleBadge}
+              ${prereqText}
+            </div>
+            <div>
+              <button class="btn-edit-lesson" data-module-id="${mod.id}" data-lesson-id="${lesson.id}" style="padding: 2px 6px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; margin-right: 4px;">Edit</button>
+              <button class="btn-delete-lesson" data-module-id="${mod.id}" data-lesson-id="${lesson.id}" style="padding: 2px 6px; background: #e53e3e; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div style="background: var(--theme-color-background, #f7fafc); border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 8px; padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem;">
+            <h4 style="margin: 0; font-size: 1.05rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">
+              Module ${modIndex + 1}: ${mod.title}
+            </h4>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-trigger-add-lesson" data-module-id="${mod.id}" style="padding: 4px 10px; background: var(--theme-color-accent, #38a169); color: white; border-radius: 4px; font-size: 0.8rem; border: none; cursor: pointer; font-weight: bold;">+ Add Lesson</button>
+              <button class="btn-delete-module" data-module-id="${mod.id}" style="padding: 4px 10px; background: transparent; color: #e53e3e; border: 1px solid #e53e3e; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold;">Delete Module</button>
+            </div>
+          </div>
+          <div>
+            ${lessons.length === 0 ? '<p style="font-size: 0.85rem; color: var(--theme-color-text-secondary, #a0aec0); font-style: italic; margin: 0;">No lessons added to this module yet.</p>' : lessonsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    attachCurriculumHandlers();
+  }
+
+  function attachCurriculumHandlers() {
+    // Add Module Handler
+    const addModuleBtn = document.getElementById('btn-add-module');
+    if (addModuleBtn) {
+      addModuleBtn.onclick = async () => {
+        const title = prompt('Enter Module Title:');
+        if (title && title.trim()) {
+          const modules = selectedCourse.modules || [];
+          modules.push({
+            id: 'module_' + Date.now(),
+            title: title.trim(),
+            lessons: []
+          });
+          selectedCourse.modules = modules;
+          await contentDB.saveContent(selectedCourse);
+          toast.success('Module added successfully!');
+          renderModules();
+        }
+      };
+    }
+
+    // Delete Module Handler
+    courseModulesContainer.querySelectorAll('.btn-delete-module').forEach(btn => {
+      btn.onclick = async () => {
+        const modId = btn.dataset.moduleId;
+        if (confirm('Are you sure you want to delete this module and all its associated lessons?')) {
+          selectedCourse.modules = selectedCourse.modules.filter(m => m.id !== modId);
+          await contentDB.saveContent(selectedCourse);
+          toast.success('Module deleted successfully.');
+          renderModules();
+        }
+      };
+    });
+
+    // Add Lesson Trigger Handler
+    courseModulesContainer.querySelectorAll('.btn-trigger-add-lesson').forEach(btn => {
+      btn.onclick = () => {
+        const modId = btn.dataset.moduleId;
+        openLessonForm(modId, null);
+      };
+    });
+
+    // Edit Lesson Handler
+    courseModulesContainer.querySelectorAll('.btn-edit-lesson').forEach(btn => {
+      btn.onclick = () => {
+        const modId = btn.dataset.moduleId;
+        const lessonId = btn.dataset.lessonId;
+        openLessonForm(modId, lessonId);
+      };
+    });
+
+    // Delete Lesson Handler
+    courseModulesContainer.querySelectorAll('.btn-delete-lesson').forEach(btn => {
+      btn.onclick = async () => {
+        const modId = btn.dataset.moduleId;
+        const lessonId = btn.dataset.lessonId;
+        if (confirm('Are you sure you want to delete this lesson?')) {
+          const mod = selectedCourse.modules.find(m => m.id === modId);
+          if (mod) {
+            mod.lessons = mod.lessons.filter(l => l.id !== lessonId);
+            await contentDB.saveContent(selectedCourse);
+            toast.success('Lesson deleted successfully.');
+            renderModules();
+          }
+        }
+      };
+    });
+  }
+
+  // --- Lesson Editor Handling ---
+
+  const lessonContentTypeSelect = document.getElementById('lesson-content-type');
+  const lessonContentBlocks = document.querySelectorAll('.lesson-content-block');
+
+  lessonContentTypeSelect?.addEventListener('change', () => {
+    const activeType = lessonContentTypeSelect.value;
+    lessonContentBlocks.forEach(block => {
+      block.style.display = block.id === `lesson-content-${activeType}` ? 'block' : 'none';
+    });
+  });
+
+  // Populate prerequisite options from all existing lessons in selectedCourse
+  function populatePrerequisiteDropdown(currentLessonId = null) {
+    const select = document.getElementById('lesson-prerequisite');
+    if (!select || !selectedCourse) return;
+
+    select.innerHTML = '<option value="">None (Always Unlocked)</option>';
+    const modules = selectedCourse.modules || [];
+    modules.forEach(mod => {
+      const lessons = mod.lessons || [];
+      lessons.forEach(l => {
+        if (l.id !== currentLessonId) {
+          const opt = document.createElement('option');
+          opt.value = l.id;
+          opt.textContent = `${l.title} (${l.id})`;
+          select.appendChild(opt);
+        }
+      });
+    });
+  }
+
+  function openLessonForm(moduleId, lessonId = null) {
+    if (!lessonEditorCard) return;
+
+    lessonForm.reset();
+    document.getElementById('lesson-module-id').value = moduleId;
+    document.getElementById('lesson-id').value = lessonId || '';
+
+    // Clear dynamic blocks values
+    document.getElementById('lesson-gjs-html').value = '';
+    document.getElementById('lesson-gjs-css').value = '';
+    document.getElementById('lesson-gjs-project').value = '';
+
+    populatePrerequisiteDropdown(lessonId);
+
+    if (lessonId) {
+      // Editing
+      document.getElementById('lesson-editor-title').textContent = 'Edit Lesson Node';
+      const mod = selectedCourse.modules.find(m => m.id === moduleId);
+      const lesson = mod?.lessons?.find(l => l.id === lessonId);
+      if (lesson) {
+        document.getElementById('lesson-title').value = lesson.title || '';
+        document.getElementById('lesson-code').value = lesson.id || '';
+        document.getElementById('lesson-content-type').value = lesson.contentType || 'rich-text';
+        document.getElementById('lesson-role').value = lesson.requiredRole || 'subscriber';
+        document.getElementById('lesson-prerequisite').value = lesson.prerequisiteLessonId || '';
+        document.getElementById('lesson-passing-score').value = lesson.passingScore || 80;
+
+        document.getElementById('lesson-body').value = lesson.body || '';
+        document.getElementById('lesson-video-url').value = lesson.videoUrl || '';
+        document.getElementById('lesson-h5p-path').value = lesson.h5pPath || '';
+
+        // Restore GrapesJS values
+        document.getElementById('lesson-gjs-html').value = lesson.compiledHtml || '';
+        document.getElementById('lesson-gjs-css').value = lesson.compiledCss || '';
+        document.getElementById('lesson-gjs-project').value = lesson.projectData ? JSON.stringify(lesson.projectData) : '';
+      }
+    } else {
+      // Creating new
+      document.getElementById('lesson-editor-title').textContent = 'Add New Lesson Node';
+      document.getElementById('lesson-code').value = 'lesson-' + Date.now();
+    }
+
+    // Trigger contentType block change layout update
+    lessonContentTypeSelect.dispatchEvent(new Event('change'));
+
+    lessonEditorCard.style.display = 'block';
+    lessonEditorCard.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  document.getElementById('btn-close-lesson-editor')?.addEventListener('click', () => {
+    lessonEditorCard.style.display = 'none';
+  });
+
+  document.getElementById('btn-cancel-lesson')?.addEventListener('click', () => {
+    lessonEditorCard.style.display = 'none';
+  });
+
+  // H5P File Upload Direct Drive Org Setup
+  document.getElementById('btn-upload-h5p')?.addEventListener('click', async () => {
+    const fileInput = document.getElementById('lesson-h5p-file');
+    const pathInput = document.getElementById('lesson-h5p-path');
+    const statusDiv = document.getElementById('h5p-upload-status');
+
+    if (!fileInput || fileInput.files.length === 0) {
+      toast.warning('Please select a .h5p or .zip package file first.');
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const lessonCode = document.getElementById('lesson-code').value.trim();
+
+    if (!lessonCode) {
+      toast.warning('Please enter a unique Lesson Code/ID first to structure the directory.');
+      return;
+    }
+
+    // Assign custom fields to direct Drive Organizer Routing inside drive-upload.js
+    file.isH5P = true;
+    file.courseId = selectedCourse.id;
+    file.lessonId = lessonCode;
+
+    if (statusDiv) statusDiv.textContent = 'Uploading H5P archive to secure Site Folder...';
+
+    try {
+      const res = await uploadFileToDrive(file);
+      if (res && res.src) {
+        // Strip out direct CDN thumbnail, provide dynamic directory location path for stand-alone player setup options
+        const cdnDir = res.src.substring(0, res.src.lastIndexOf('/')) + '/';
+        pathInput.value = cdnDir;
+        if (statusDiv) statusDiv.textContent = `Safe Upload. Directory locked: ${res.localPath}`;
+        toast.success(`H5P Asset "${file.name}" uploaded and structured in corporate binder directory.`);
+      }
+    } catch (err) {
+      toast.error(`H5P Direct upload failed: ${err.message}`);
+    }
+  });
+
+  // GrapesJS Lesson Visual Builder Modal Workspace Trigger
+  document.getElementById('btn-launch-lesson-grapes')?.addEventListener('click', () => {
+    const modal = document.getElementById('lesson-grapesjs-modal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+
+    if (!grapesLessonEditor && window.grapesjs) {
+      grapesLessonEditor = window.grapesjs.init({
+        container: '#grapesjs-lesson-canvas',
+        fromElement: true,
+        height: '100%',
+        width: 'auto',
+        storageManager: false,
+        plugins: ['gjs-preset-webpage'],
+        pluginsOpts: {
+          'gjs-preset-webpage': {}
+        }
+      });
+    }
+
+    // Restore existing GrapesJS template data if edit
+    const projectJsonStr = document.getElementById('lesson-gjs-project').value;
+    if (grapesLessonEditor && projectJsonStr) {
+      try {
+        grapesLessonEditor.loadProjectData(JSON.parse(projectJsonStr));
+      } catch (e) {
+        console.warn('Could not restore GrapesJS template:', e);
+      }
+    } else if (grapesLessonEditor) {
+      grapesLessonEditor.DomComponents.clear();
+    }
+  });
+
+  document.getElementById('btn-close-lesson-grapes')?.addEventListener('click', () => {
+    document.getElementById('lesson-grapesjs-modal').style.display = 'none';
+  });
+
+  document.getElementById('btn-save-grapes-content')?.addEventListener('click', () => {
+    if (grapesLessonEditor) {
+      const html = grapesLessonEditor.getHtml();
+      const css = grapesLessonEditor.getCss();
+      const project = grapesLessonEditor.getProjectData();
+
+      document.getElementById('lesson-gjs-html').value = html;
+      document.getElementById('lesson-gjs-css').value = css;
+      document.getElementById('lesson-gjs-project').value = JSON.stringify(project);
+
+      toast.success('Visual lesson layouts compiled to state hidden slots.');
+      document.getElementById('lesson-grapesjs-modal').style.display = 'none';
+    }
+  });
+
+  // Submit Lesson Node Form
+  lessonForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const moduleId = document.getElementById('lesson-module-id').value;
+    const originalLessonId = document.getElementById('lesson-id').value;
+
+    const title = document.getElementById('lesson-title').value.trim();
+    const code = document.getElementById('lesson-code').value.trim();
+    const contentType = document.getElementById('lesson-content-type').value;
+    const requiredRole = document.getElementById('lesson-role').value;
+    const prerequisite = document.getElementById('lesson-prerequisite').value || undefined;
+    const passingScore = parseInt(document.getElementById('lesson-passing-score').value) || undefined;
+
+    const body = document.getElementById('lesson-body').value || undefined;
+    const videoUrl = document.getElementById('lesson-video-url').value || undefined;
+    const h5pPath = document.getElementById('lesson-h5p-path').value || undefined;
+
+    const compiledHtml = document.getElementById('lesson-gjs-html').value || undefined;
+    const compiledCss = document.getElementById('lesson-gjs-css').value || undefined;
+    const projectDataStr = document.getElementById('lesson-gjs-project').value;
+    const projectData = projectDataStr ? JSON.parse(projectDataStr) : undefined;
+
+    try {
+      const mod = selectedCourse.modules.find(m => m.id === moduleId);
+      if (!mod) {
+        toast.error('Parent module not found.');
+        return;
+      }
+
+      const lessonData = {
+        id: code,
+        title,
+        contentType,
+        requiredRole,
+        ...(prerequisite && { prerequisiteLessonId: prerequisite }),
+        ...(passingScore !== undefined && { passingScore }),
+        ...(body && { body }),
+        ...(videoUrl && { videoUrl }),
+        ...(h5pPath && { h5pPath }),
+        ...(compiledHtml && { compiledHtml }),
+        ...(compiledCss && { compiledCss }),
+        ...(projectData && { projectData })
+      };
+
+      if (originalLessonId) {
+        // Edit existing lesson
+        const idx = mod.lessons.findIndex(l => l.id === originalLessonId);
+        if (idx !== -1) {
+          mod.lessons[idx] = lessonData;
+        } else {
+          mod.lessons.push(lessonData);
+        }
+      } else {
+        // Add new lesson
+        if (mod.lessons.some(l => l.id === code)) {
+          toast.error(`Lesson ID/Code "${code}" already exists in this course! Please use a unique ID.`);
+          return;
+        }
+        mod.lessons.push(lessonData);
+      }
+
+      await contentDB.saveContent(selectedCourse);
+      toast.success(originalLessonId ? 'Lesson node updated successfully!' : 'Lesson node added successfully!');
+
+      lessonEditorCard.style.display = 'none';
+      renderModules();
+    } catch (err) {
+      toast.error(`Failed to save lesson: ${err.message}`);
     }
   });
 

@@ -1404,6 +1404,107 @@ export class ContentDB {
     }
   }
 
+  // --- User Progress Persistence Helpers ---
+
+  #getLocalCourseProgress() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_course_progress') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #saveLocalCourseProgress(data) {
+    try {
+      localStorage.setItem('foundation_local_course_progress', JSON.stringify(data));
+    } catch (e) {
+      console.error('[DB]: Failed to save course progress to localStorage', e);
+    }
+  }
+
+  /**
+   * Saves course progress for a user.
+   */
+  async saveUserCourseProgress(userId, courseId, progressData) {
+    const dbInstance = getFirestoreDB();
+    const payload = {
+      ...progressData,
+      userId,
+      courseId,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!dbInstance) {
+      const local = this.#getLocalCourseProgress();
+      const key = `${userId}_${courseId}`;
+      local[key] = payload;
+      this.#saveLocalCourseProgress(local);
+      return payload;
+    }
+
+    try {
+      const docRef = doc(dbInstance, USERS_COLLECTION, userId, 'course_progress', courseId);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore course progress write error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalCourseProgress();
+      const key = `${userId}_${courseId}`;
+      local[key] = payload;
+      this.#saveLocalCourseProgress(local);
+      return payload;
+    }
+  }
+
+  /**
+   * Retrieves course progress for a user and course.
+   */
+  async getUserCourseProgress(userId, courseId) {
+    const dbInstance = getFirestoreDB();
+    if (!dbInstance) {
+      const local = this.#getLocalCourseProgress();
+      const key = `${userId}_${courseId}`;
+      return local[key] || null;
+    }
+
+    try {
+      const docRef = doc(dbInstance, USERS_COLLECTION, userId, 'course_progress', courseId);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : null;
+    } catch (err) {
+      console.warn('[DB]: Firestore course progress read error. Falling back to LocalStorage.', err.message);
+      const local = this.#getLocalCourseProgress();
+      const key = `${userId}_${courseId}`;
+      return local[key] || null;
+    }
+  }
+
+  /**
+   * Retrieves all course progress records for a user.
+   */
+  async getUserAllProgress(userId) {
+    const dbInstance = getFirestoreDB();
+    if (!dbInstance) {
+      const local = this.#getLocalCourseProgress();
+      return Object.values(local).filter(item => item.userId === userId);
+    }
+
+    try {
+      const colRef = collection(dbInstance, USERS_COLLECTION, userId, 'course_progress');
+      const querySnapshot = await getDocs(colRef);
+      const results = [];
+      querySnapshot.forEach(docSnap => {
+        results.push(docSnap.data());
+      });
+      if (results.length > 0) return results;
+    } catch (err) {
+      console.warn('[DB]: Firestore course progress query error. Falling back to LocalStorage.', err.message);
+    }
+
+    const local = this.#getLocalCourseProgress();
+    return Object.values(local).filter(item => item.userId === userId);
+  }
+
   // --- VA Management & Evaluation Helpers ---
 
   async saveVaCandidate(data) {

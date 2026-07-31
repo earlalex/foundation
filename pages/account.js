@@ -125,6 +125,7 @@ export async function initAccountPage() {
 
   // Load dynamic collections
   await loadUnlockedContent(currentRole);
+  await loadCourseProgressDashboard(currentRole);
   await loadInbox(user.uid);
   await loadOrdersLedger(user.email);
 
@@ -550,5 +551,133 @@ async function loadOrdersLedger(email) {
     `).join('');
   } catch (e) {
     console.warn('Orders ledger query skipped:', e);
+  }
+}
+
+// Dynamic Course Progress & Certificate Dashboard
+async function loadCourseProgressDashboard(role) {
+  const container = document.getElementById('my-courses-progress-container');
+  const listEl = document.getElementById('my-courses-progress-list');
+  if (!container || !listEl) return;
+
+  const user = store.state.user;
+  if (!user) return;
+
+  try {
+    const allContent = await contentDB.getAllContent();
+    // Filter out only 'education' content type that has modules
+    const courses = allContent.filter(item => {
+      if (item.type !== 'education' || !item.modules || item.modules.length === 0) return false;
+      const visibility = item.access?.visibility || 'public';
+      if (visibility === 'public') return true;
+      if (visibility === 'subscriber' && (role === 'subscriber' || role === 'member' || role === 'affiliate' || role === 'admin')) return true;
+      if ((visibility === 'member' || visibility === 'paid') && (role === 'member' || role === 'affiliate' || role === 'admin')) return true;
+      return false;
+    });
+
+    if (courses.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    const cardsHtml = [];
+    let showDashboard = false;
+
+    for (const course of courses) {
+      const progress = await contentDB.getUserCourseProgress(user.uid, course.id) || {
+        completedLessons: [],
+        h5pScores: {},
+        overallProgress: 0,
+        lastAccessedLesson: null
+      };
+
+      // Extract all lessons list
+      const allLessons = [];
+      course.modules.forEach(m => {
+        if (m.lessons) {
+          m.lessons.forEach(l => allLessons.push(l));
+        }
+      });
+
+      const totalLessons = allLessons.length;
+      if (totalLessons === 0) continue;
+
+      showDashboard = true;
+
+      const completedCount = progress.completedLessons?.length || 0;
+      const overallPercent = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+
+      // Calculate score average
+      let averageScore = 0;
+      let quizCount = 0;
+      if (progress.h5pScores) {
+        Object.values(progress.h5pScores).forEach(scoreRec => {
+          if (scoreRec.percentage !== undefined) {
+            averageScore += scoreRec.percentage;
+            quizCount++;
+          }
+        });
+      }
+      const scoreAvgText = quizCount > 0 ? `${Math.round(averageScore / quizCount)}% Average` : 'No quizzes taken';
+
+      // Find resume lesson
+      let resumeLesson = allLessons[0];
+      if (progress.lastAccessedLesson) {
+        const lastIncomplete = allLessons.find(l => !progress.completedLessons.includes(l.id));
+        if (lastIncomplete) {
+          resumeLesson = lastIncomplete;
+        }
+      }
+
+      // Completion badge or certificate
+      let badgeHtml = '';
+      if (overallPercent === 100) {
+        badgeHtml = `
+          <div style="background: #e6fffa; border: 1px solid #319795; border-radius: 6px; padding: 10px; display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; color: #234e52; font-size: 0.85rem;">
+            <span>🏆</span>
+            <div>
+              <strong>Course Completed!</strong>
+              <a href="data:text/plain;charset=utf-8,${encodeURIComponent('Certificate of Excellence awarded to ' + user.displayName + ' for completing ' + course.title)}" download="${course.id}-certificate.txt" style="color: #319795; font-weight: bold; text-decoration: underline; margin-left: 0.5rem;">Download Completion Badge</a>
+            </div>
+          </div>
+        `;
+      }
+
+      cardsHtml.push(`
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h4 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-text-primary, #1a202c); font-weight: bold;">${course.title}</h4>
+              <p style="margin: 0.25rem 0 0.75rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">${completedCount} of ${totalLessons} lessons completed • ${scoreAvgText}</p>
+            </div>
+            <button onclick="window.router.navigateTo('/detail?id=${course.id}&resume=${resumeLesson?.id || ""}')" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; background: var(--theme-color-accent, #38a169);">
+              ${completedCount > 0 ? 'Resume Lesson' : 'Start Course'}
+            </button>
+          </div>
+
+          <div style="margin-top: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; color: var(--theme-color-text-secondary, #4a5568); margin-bottom: 0.25rem;">
+              <span>Overall Progress</span>
+              <span>${overallPercent}%</span>
+            </div>
+            <div style="width: 100%; height: 10px; background: #edf2f7; border-radius: 5px; overflow: hidden; border: 1px solid var(--theme-color-border, #e2e8f0);">
+              <div style="width: ${overallPercent}%; height: 100%; background: var(--theme-color-primary, #2b6cb0); transition: width 0.3s ease-in-out;"></div>
+            </div>
+          </div>
+
+          ${badgeHtml}
+        </div>
+      `);
+    }
+
+    if (showDashboard && cardsHtml.length > 0) {
+      listEl.innerHTML = cardsHtml.join('');
+      container.style.display = 'block';
+    } else {
+      container.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('[Course Progress Dashboard]: Load failed:', err);
+    container.style.display = 'none';
   }
 }
