@@ -180,6 +180,14 @@ export class Router {
     if (this.#isLoading) return;
     this.#isLoading = true;
 
+    // Trigger router before navigation action hook
+    try {
+      const { doAction } = await import('../core/hooks.js');
+      await doAction('router_before_route', fullPath);
+    } catch (err) {
+      console.error('[Router Hook]: router_before_route action callback execution failed.', err);
+    }
+
     try {
       // 0. FIRST-RUN SETUP WIZARD GUARD
       const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
@@ -372,6 +380,14 @@ export class Router {
 
       // Dispatch PUSH_HISTORY to store
       store.dispatch('PUSH_HISTORY', cleanPath);
+
+      // Trigger router after navigation action hook
+      try {
+        const { doAction } = await import('../core/hooks.js');
+        await doAction('router_after_route', cleanPath);
+      } catch (err) {
+        console.error('[Router Hook]: router_after_route action callback execution failed.', err);
+      }
 
       // Dispatch pageLoaded event with the clean path for navbar to use
       window.dispatchEvent(new CustomEvent('pageLoaded', { 

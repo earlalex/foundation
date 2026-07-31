@@ -244,15 +244,28 @@ export async function initAccountPage() {
   }
 
   // Logout actions
-  const btnLogout = document.getElementById('btn-account-logout');
+  const btnLogout = document.getElementById('btn-account-logout') || document.querySelector('[data-action="logout"]');
   if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to log out of your dashboard?')) {
-        await authManager.logout();
-        toast.success('Successfully logged out.');
-        if (window.router) window.router.loadRoute('/home');
+    const handleLogout = async (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
       }
-    });
+      if (confirm('Are you sure you want to log out of your dashboard?')) {
+        try {
+          await authManager.logout();
+          toast.success('Successfully logged out.');
+          if (window.router) {
+            window.router.loadRoute('/home');
+          } else {
+            window.location.href = '/home';
+          }
+        } catch (err) {
+          toast.error('Logout failed.');
+        }
+      }
+    };
+    btnLogout.addEventListener('click', handleLogout);
   }
 }
 

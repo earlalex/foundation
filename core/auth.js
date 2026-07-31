@@ -97,7 +97,7 @@ export class AuthManager {
           console.warn('[Auth Sync]: DB profiling sync skipped or unavailable.', dbErr);
         }
 
-        store.dispatch('SET_USER', {
+        const userObj = {
           uid: String(user.uid),
           email: user.email,
           displayName: user.displayName,
@@ -107,8 +107,17 @@ export class AuthManager {
           paymentStatus: profile.paymentStatus,
           affiliateCode: profile.affiliateCode,
           referredBy: profile.referredBy
-        });
+        };
+        store.dispatch('SET_USER', userObj);
         console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role})`);
+
+        // Trigger system-wide hook execution pipeline for user login
+        try {
+          const { doAction } = await import('./hooks.js');
+          await doAction('user_login', userObj);
+        } catch (hookErr) {
+          console.error('[Auth System]: Failed to dispatch user_login hook.', hookErr);
+        }
 
         // Smoothly redirect and update UI elements on status changes
         if (window.router) {
@@ -152,6 +161,14 @@ export class AuthManager {
       } else {
         store.dispatch('LOGOUT');
         console.log('[Auth]: Signed out.');
+
+        // Trigger system-wide hook execution pipeline for user logout
+        try {
+          const { doAction } = await import('./hooks.js');
+          await doAction('user_logout');
+        } catch (hookErr) {
+          console.error('[Auth System]: Failed to dispatch user_logout hook.', hookErr);
+        }
       }
     });
   }

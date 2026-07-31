@@ -38,6 +38,7 @@ import { initKanbanTab } from './admin-kanban.js';
 import { initSecurityTab } from './admin-security.js';
 import { initPagesTab } from './admin-pages.js';
 import { initVasTab } from './admin-vas.js';
+import { initPluginsTab } from './admin-plugins.js';
 
 export function initAdminPage() {
   // --- 0.1 ROLE-BASED ACCESS CONTROL (RBAC) DISPLAY GUARD ---
@@ -46,7 +47,7 @@ export function initAdminPage() {
 
   if (isEditor) {
     // Hide forbidden sidebar tabs
-    const forbiddenTabs = ['site', 'business', 'config', 'products', 'finances'];
+    const forbiddenTabs = ['site', 'business', 'config', 'products', 'finances', 'plugins'];
     forbiddenTabs.forEach(tab => {
       const btn = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
       if (btn) btn.style.display = 'none';
@@ -185,6 +186,14 @@ export function initAdminPage() {
         initSecurityTab();
         loadGscSecurityThreats();
       }
+    },
+    {
+      tabId: 'tab-plugins',
+      title: "Plugins & Extensions",
+      wizardKey: 'section1',
+      isConfigured: () => configManager.isSection1Configured(),
+      getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
+      initFn: initPluginsTab
     },
     {
       tabId: 'tab-vas',
@@ -340,6 +349,8 @@ export function initAdminPage() {
       loadChatbotAndVoiceTab();
     } else if (targetTab === 'kanban') {
       initKanbanTab();
+    } else if (targetTab === 'plugins') {
+      initPluginsTab();
     }
   });
 

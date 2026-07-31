@@ -7,8 +7,12 @@ import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
 
+import { darkModernTheme, ascensionBrandTheme } from '../../core/theme.js';
+
 const THEME_PRESETS = {
   default: defaultBrandTheme,
+  darkModern: darkModernTheme,
+  ascension: ascensionBrandTheme,
   emerald: {
     name: "Emerald Modern",
     colors: {
