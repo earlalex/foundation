@@ -265,12 +265,6 @@ export class ContentDB {
   }
 
   /**
-   * Get content by type from Firestore or localStorage fallback
-   * @param {string} type - Content type to filter by
-   * @param {number} maxItems - Maximum number of items to return
-   * @returns {Promise<Array>} Array of content objects
-   */
-    /**
    * Get all content from Firestore or localStorage fallback
    * @returns {Promise<Array>} Array of content objects
    */
@@ -1379,6 +1373,161 @@ export class ContentDB {
     }
     task.updatedAt = new Date().toISOString();
     return this.saveKanbanTask(task);
+  }
+
+  // --- OWASP ZAP Scans Persistence ---
+  async saveZapScanResult(data) {
+    const payload = {
+      ...data,
+      type: 'zap_scans',
+      id: data.id || `zap_${Date.now()}`
+    };
+    schemaRegistry.validate(payload);
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_security_scans') || '{}');
+      local[payload.id] = payload;
+      localStorage.setItem('foundation_local_security_scans', JSON.stringify(local));
+      return payload;
+    }
+    try {
+      const docRef = doc(db, 'security_scans', payload.id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_security_scans') || '{}');
+      local[payload.id] = payload;
+      localStorage.setItem('foundation_local_security_scans', JSON.stringify(local));
+      return payload;
+    }
+  }
+
+  async getZapScanHistory() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_security_scans') || '{}');
+      return Object.values(local).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+    }
+    try {
+      const querySnapshot = await getDocs(collection(db, 'security_scans'));
+      return querySnapshot.docs.map(doc => doc.data()).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+    } catch (err) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_security_scans') || '{}');
+      return Object.values(local).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+    }
+  }
+
+  // --- Marketing Segments Persistence ---
+  async saveMarketingSegment(segmentData) {
+    const payload = {
+      ...segmentData,
+      type: 'marketing_segments',
+      id: segmentData.id || `seg_${Date.now()}`
+    };
+    schemaRegistry.validate(payload);
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_marketing_segments') || '{}');
+      local[payload.id] = payload;
+      localStorage.setItem('foundation_local_marketing_segments', JSON.stringify(local));
+      return payload;
+    }
+    try {
+      const docRef = doc(db, 'marketing_segments', payload.id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_marketing_segments') || '{}');
+      local[payload.id] = payload;
+      localStorage.setItem('foundation_local_marketing_segments', JSON.stringify(local));
+      return payload;
+    }
+  }
+
+  async getMarketingSegments() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_marketing_segments') || '{}');
+      return Object.values(local);
+    }
+    try {
+      const querySnapshot = await getDocs(collection(db, 'marketing_segments'));
+      return querySnapshot.docs.map(doc => doc.data());
+    } catch (err) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_marketing_segments') || '{}');
+      return Object.values(local);
+    }
+  }
+
+  async getMarketingSegmentById(id) {
+    const segments = await this.getMarketingSegments();
+    return segments.find(s => s.id === id) || null;
+  }
+
+  async evaluateSegmentUsers(segmentId) {
+    const segment = await this.getMarketingSegmentById(segmentId);
+    if (!segment) return [];
+    const users = await this.getAllUsers();
+    const { marketingEngine } = await import('./marketingEngine.js');
+    return users.filter(user => marketingEngine.evaluateSegment(user, segment));
+  }
+
+  // --- Marketing Journeys (mapped to marketing_workflows) ---
+  async saveMarketingJourney(journeyData) {
+    const payload = {
+      ...journeyData,
+      type: 'marketing_journeys',
+      id: journeyData.id || `journey_${Date.now()}`
+    };
+    schemaRegistry.validate(payload);
+    return this.saveMarketingWorkflow(payload);
+  }
+
+  // --- Email Templates Persistence ---
+  async saveEmailTemplate(templateRecord) {
+    const payload = {
+      ...templateRecord,
+      type: 'email_templates',
+      id: templateRecord.id || `tpl_${Date.now()}`
+    };
+    schemaRegistry.validate(payload);
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_email_templates') || '{}');
+      local[payload.id] = payload;
+      localStorage.setItem('foundation_local_email_templates', JSON.stringify(local));
+      return payload;
+    }
+    try {
+      const docRef = doc(db, 'email_templates', payload.id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_email_templates') || '{}');
+      local[payload.id] = payload;
+      localStorage.setItem('foundation_local_email_templates', JSON.stringify(local));
+      return payload;
+    }
+  }
+
+  async getEmailTemplates() {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_email_templates') || '{}');
+      return Object.values(local);
+    }
+    try {
+      const querySnapshot = await getDocs(collection(db, 'email_templates'));
+      return querySnapshot.docs.map(doc => doc.data());
+    } catch (err) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_email_templates') || '{}');
+      return Object.values(local);
+    }
+  }
+
+  async getEmailTemplateById(id) {
+    const templates = await this.getEmailTemplates();
+    return templates.find(t => t.id === id) || null;
   }
 }
 

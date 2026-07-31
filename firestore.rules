@@ -36,8 +36,24 @@ service cloud.firestore {
       allow write: if isAdmin() || isEditor();
     }
 
-    // Marketing Workflows
+    // Marketing Workflows / Journeys / Segments
     match /marketing_workflows/{workflowId} {
+      allow read, write: if isAdmin() || isEditor();
+    }
+    match /marketing_segments/{segmentId} {
+      allow read, write: if isAdmin() || isEditor();
+    }
+    match /marketing_journeys/{journeyId} {
+      allow read, write: if isAdmin() || isEditor();
+    }
+
+    // Email Templates
+    match /email_templates/{templateId} {
+      allow read, write: if isAdmin() || isEditor();
+    }
+
+    // Security Scans (OWASP ZAP logs)
+    match /security_scans/{scanId} {
       allow read, write: if isAdmin() || isEditor();
     }
 

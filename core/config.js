@@ -37,7 +37,9 @@ export const defaultConfig = {
   },
   security: {
     monthlyScanEnabled: false,
-    isConfigured: false
+    isConfigured: false,
+    zapApiUrl: "https://wwtesw.zaproxy.org/",
+    zapApiKey: ""
   },
   seoMyRankAddr: {
     apiKey: "E4462175E8369240D133B6C4F3CD288C",

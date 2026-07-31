@@ -11,6 +11,10 @@ import { EventSchema } from './event.js';
 import { ProductSchema } from './product.js';
 import { PageSchema } from './page.js';
 import { VaSchema } from './va.js';
+import { EmailTemplateSchema } from './email_template.js';
+import { ZapScanSchema } from './zap_scan.js';
+import { MarketingSegmentSchema } from './marketing_segment.js';
+import { MarketingJourneySchema } from './marketing_journey.js';
 
 class SchemaRegistry {
   #schemas = new Map();
@@ -29,6 +33,10 @@ class SchemaRegistry {
     this.register('page', PageSchema);
     this.register('va_candidate', VaSchema);
     this.register('va_hired', VaSchema);
+    this.register('email_templates', EmailTemplateSchema);
+    this.register('zap_scans', ZapScanSchema);
+    this.register('marketing_segments', MarketingSegmentSchema);
+    this.register('marketing_journeys', MarketingJourneySchema);
   }
 
   register(contentType, schemaDefinition) {

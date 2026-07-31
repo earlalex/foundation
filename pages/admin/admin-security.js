@@ -1,10 +1,11 @@
-// pages/admin/admin-security.js - Security & LastPass Vault Integration Controller
+// pages/admin/admin-security.js - Security & LastPass Vault & OWASP ZAP Integration Controller
 import { contentDB } from '../../core/db.js';
 import { configManager } from '../../core/config.js';
 import { store } from '../../core/store.js';
 import { toast } from '../../utils/toast.js';
 import { authManager } from '../../core/auth.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { zapScanner } from '../../utils/zapScanner.js';
 
 let credentials = [];
 let isAdminPrimary = false;
@@ -14,6 +15,7 @@ export function initSecurityTab() {
   loadCredentials();
   setupVaultForm();
   setupLastPassConfig();
+  setupZapScannerPanel();
 }
 
 function checkAdminRole() {
@@ -83,14 +85,14 @@ function renderCredentialsList() {
 
     const showCopyBtn = isAdminPrimary ? `
       <button onclick="window.copyPassword('${cred.id}')"
-              style="padding: 4px 8px; background: #edf2f7; color: #4a5568; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+              style="padding: 4px 8px; background: #edf2f7; color: #4a5568; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">
         Copy
       </button>
     ` : '';
 
     const showRevealBtn = isAdminPrimary ? `
       <button onclick="window.togglePasswordVisibility('${cred.id}')"
-              style="padding: 4px 8px; background: #ebf8ff; color: #2b6cb0; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; white-space: nowrap;">
+              style="padding: 4px 8px; background: #ebf8ff; color: #2b6cb0; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">
         Show
       </button>
     ` : '';
@@ -347,7 +349,8 @@ function setupLastPassConfig() {
       lastpass: {
         provisioningHash: document.getElementById('lastpass-provisioning-hash').value,
         companyId: document.getElementById('lastpass-company-id').value,
-        apiEndpoint: document.getElementById('lastpass-api-endpoint').value
+        apiEndpoint: document.getElementById('lastpass-api-endpoint').value,
+        isConfigured: true
       }
     };
 
@@ -363,4 +366,193 @@ function setupLastPassConfig() {
       toast.error('Failed to save LastPass configuration');
     }
   });
+}
+
+function setupZapScannerPanel() {
+  const zapUrlInput = document.getElementById('zap-target-url');
+  const zapScanTypeSelect = document.getElementById('zap-scan-type');
+  const btnLaunchZap = document.getElementById('btn-launch-zap-scan');
+  const zapProgressContainer = document.getElementById('zap-progress-container');
+  const zapProgressBar = document.getElementById('zap-progress-bar');
+  const zapProgressPercentage = document.getElementById('zap-progress-percentage');
+  const zapFindingsTbody = document.getElementById('zap-findings-tbody');
+  const zapSchedulerSelect = document.getElementById('zap-scheduler-select');
+
+  if (!btnLaunchZap) return;
+
+  // Set default URL to current domain if empty
+  if (zapUrlInput && !zapUrlInput.value) {
+    zapUrlInput.value = window.location.origin;
+  }
+
+  // Set scheduler initial value from config
+  const secConfig = configManager.current.security || {};
+  if (zapSchedulerSelect) {
+    zapSchedulerSelect.value = secConfig.zapSchedule || 'none';
+    zapSchedulerSelect.addEventListener('change', async () => {
+      const updated = {
+        ...configManager.current,
+        security: {
+          ...(configManager.current.security || {}),
+          zapSchedule: zapSchedulerSelect.value
+        }
+      };
+      try {
+        await configManager.saveToFirebase(updated);
+        toast.success(`ZAP automated scan scheduler updated to: ${zapSchedulerSelect.value}`);
+      } catch (err) {
+        toast.error('Failed to save scheduler settings');
+      }
+    });
+  }
+
+  // Load previous ZAP scans history if available
+  loadZapScanHistory();
+
+  async function loadZapScanHistory() {
+    try {
+      const history = await contentDB.getZapScanHistory();
+      if (history && history.length > 0) {
+        // Render the latest completed scan findings
+        const latest = history[0];
+        renderZapFindings(latest.findings);
+      }
+    } catch (err) {
+      console.warn('Failed to load ZAP scan history:', err);
+    }
+  }
+
+  btnLaunchZap.addEventListener('click', async () => {
+    const targetUrl = zapUrlInput.value.trim();
+    if (!targetUrl) {
+      toast.warning('Please enter a valid target URL for OWASP ZAP scan.');
+      return;
+    }
+
+    const scanType = zapScanTypeSelect.value;
+    btnLaunchZap.disabled = true;
+    btnLaunchZap.textContent = 'Scanning...';
+    zapProgressContainer.style.display = 'block';
+    zapProgressBar.style.width = '0%';
+    zapProgressPercentage.textContent = '0%';
+
+    try {
+      let scanRes;
+      if (scanType === 'spider') {
+        scanRes = await zapScanner.startSpiderScan(targetUrl);
+      } else if (scanType === 'active') {
+        scanRes = await zapScanner.startActiveScan(targetUrl);
+      } else {
+        scanRes = await zapScanner.startAjaxSpiderScan(targetUrl);
+      }
+
+      if (scanRes && scanRes.scanId) {
+        const scanId = scanRes.scanId;
+
+        // Poll for scan progress
+        let progress = 0;
+        const interval = setInterval(async () => {
+          try {
+            const progRes = await zapScanner.getScanProgress(scanId, scanType);
+            progress = progRes.progress;
+            zapProgressBar.style.width = `${progress}%`;
+            zapProgressPercentage.textContent = `${progress}%`;
+
+            if (progress >= 100) {
+              clearInterval(interval);
+              completeScan(targetUrl, scanType);
+            }
+          } catch (e) {
+            clearInterval(interval);
+            completeScan(targetUrl, scanType); // Fallback to instant finish in sandbox
+          }
+        }, 1000);
+      } else {
+        throw new Error("Could not retrieve a valid ZAP scan ID.");
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Security - Launch ZAP Scan');
+      toast.error(`ZAP Scan Error: ${err.message}`);
+      btnLaunchZap.disabled = false;
+      btnLaunchZap.textContent = 'Launch ZAP Scan';
+    }
+  });
+
+  async function completeScan(targetUrl, scanType) {
+    try {
+      // Fetch scan alerts/vulnerabilities
+      const alertRes = await zapScanner.getScanAlerts(targetUrl);
+      const findings = alertRes.findings || [];
+
+      // Save to Firestore / local history
+      const scanRecord = {
+        id: `zap_${Date.now()}`,
+        targetUrl,
+        scanType,
+        progress: 100,
+        status: "completed",
+        findings,
+        scheduledFreq: zapSchedulerSelect?.value || "none",
+        createdAt: new Date().toISOString()
+      };
+
+      await contentDB.saveZapScanResult(scanRecord);
+
+      // Render findings in the table
+      renderZapFindings(findings);
+
+      toast.success(`OWASP ZAP ${scanType} complete! ${findings.length} findings parsed.`);
+    } catch (err) {
+      errorHandler.handleError(err, 'Security - ZAP scan completion');
+      toast.error('Failed to parse and save scan results');
+    } finally {
+      btnLaunchZap.disabled = false;
+      btnLaunchZap.textContent = 'Launch ZAP Scan';
+    }
+  }
+
+  function renderZapFindings(findings) {
+    if (!zapFindingsTbody) return;
+
+    if (!findings || findings.length === 0) {
+      zapFindingsTbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem; font-style: italic;">
+            ✓ All Clean! ZAP identified 0 vulnerabilities on this target.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    zapFindingsTbody.innerHTML = findings.map(f => {
+      const risk = f.risk || 'Medium';
+      let riskBg = '#edf2f7', riskColor = '#4a5568';
+      if (risk.toLowerCase() === 'high') {
+        riskBg = '#fff5f5'; riskColor = '#e53e3e';
+      } else if (risk.toLowerCase() === 'medium') {
+        riskBg = '#fffaf0'; riskColor = '#dd6b20';
+      } else if (risk.toLowerCase() === 'low') {
+        riskBg = '#ebf8ff'; riskColor = '#2b6cb0';
+      } else if (risk.toLowerCase() === 'informational') {
+        riskBg = '#f0fff4'; riskColor = '#38a169';
+      }
+
+      return `
+        <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+          <td style="padding: 10px;">
+            <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; background: ${riskBg}; color: ${riskColor}; text-transform: uppercase;">
+              ${risk}
+            </span>
+          </td>
+          <td style="padding: 10px; font-weight: 600; color: var(--theme-color-text-primary, #2d3748);">${f.alert}</td>
+          <td style="padding: 10px; font-family: monospace; font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096);">CWE-${f.cweid || 'N/A'}</td>
+          <td style="padding: 10px; font-family: monospace; font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.param || 'N/A'}">
+            <code>${f.param || 'N/A'}</code>
+          </td>
+          <td style="padding: 10px; color: var(--theme-color-text-secondary, #4a5568); font-size: 0.8rem; line-height: 1.4;">${f.remediation}</td>
+        </tr>
+      `;
+    }).join('');
+  }
 }

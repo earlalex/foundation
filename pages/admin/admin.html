@@ -565,6 +565,103 @@
           </div>
         </div>
       </div>
+
+      <!-- Dynamic Event-Based Segments Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0; font-size: 1.25rem;">Dittofeed Event-Based Contact Segments</h2>
+            <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Create dynamic event-driven and trait-driven user target segments evaluated in real-time.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+          <!-- Left: Segment list -->
+          <div>
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Dynamic Segments</h3>
+            <div id="marketing-segments-list">
+              <!-- Segments rendered here -->
+            </div>
+          </div>
+
+          <!-- Right: Segment builder form -->
+          <div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">Segment Rule Builder</h3>
+            <form id="segment-builder-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <input type="text" id="segment-name" placeholder="Segment Name (e.g. Inactive Members)" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <textarea id="segment-description" placeholder="Describe the segment criteria..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 40px; box-sizing: border-box;"></textarea>
+              </div>
+              <div style="margin-top: 0.5rem;">
+                <strong>Evaluation Matching Rules:</strong>
+                <div id="segment-rules-list" style="margin-top: 0.5rem;">
+                  <!-- Dynamic rules lines -->
+                </div>
+                <button type="button" id="btn-add-segment-rule" style="margin-top: 0.5rem; padding: 4px 8px; background: #e2e8f0; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                  + Add Matching Condition
+                </button>
+              </div>
+              <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">Save Segment</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dual-Engine Email Templates & Campaigns Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="margin: 0; font-size: 1.25rem;">Campaign Email Templates</h2>
+            <p style="margin: 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Draft rich email campaigns using GrapesJS visual editor or EmailBuilder blocks.</p>
+          </div>
+          <button id="btn-new-email-template" style="padding: 6px 14px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+            + New Template
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+          <!-- Left: Templates list -->
+          <div>
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem;">Saved Templates</h3>
+            <div id="email-templates-list">
+              <!-- Templates rendered here -->
+            </div>
+          </div>
+
+          <!-- Right: Visual Dual-Mode Template Workspace -->
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <input type="text" id="email-template-name" placeholder="Template Name (e.g. Welcome Series Part 1)" style="padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              <input type="text" id="email-template-subject" placeholder="Email Subject Line (e.g. Welcome to the Tribe!)" style="padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f7fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <label style="font-weight: bold; font-size: 0.85rem;">Editor Engine Mode:</label>
+                <select id="email-editor-mode-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e0;">
+                  <option value="grapesjs">GrapesJS Visual Canvas</option>
+                  <option value="emailbuilder">Simple Block Editor</option>
+                </select>
+              </div>
+              <button id="btn-save-email-template" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem; font-weight: bold; background: var(--theme-color-accent, #38a169); border: none; cursor: pointer;">
+                Save Email Template
+              </button>
+            </div>
+
+            <!-- Workspace Panels -->
+            <div id="grapesjs-workspace" style="display: block;">
+              <div id="grapesjs-canvas-wrapper"></div>
+            </div>
+
+            <div id="emailbuilder-workspace" style="display: none;">
+              <div id="emailbuilder-canvas-wrapper"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2417,6 +2514,78 @@
             </div>
             <p id="gsc-desc-malware" style="margin: 0; color: #718096; font-size: 0.75rem;">0 harmful software downloads flagged by Google.</p>
           </div>
+        </div>
+      </div>
+
+      <!-- OWASP ZAP Threat & Vulnerability Panel -->
+      <div style="background: #ffffff; border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">OWASP ZAP Threat & Vulnerability Panel</h3>
+            <p style="margin: 0; color: #718096; font-size: 0.85rem;">Run visual automated security testing and penetration tests against arbitrary URLs.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Scan Scheduler:</label>
+            <select id="zap-scheduler-select" style="padding: 6px 10px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0); font-size: 0.85rem;">
+              <option value="none">Manual Only</option>
+              <option value="daily">Daily Auto-Scan</option>
+              <option value="weekly">Weekly Auto-Scan</option>
+              <option value="monthly">Monthly Auto-Scan</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 1rem; margin-bottom: 1.25rem;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Target Scan URL:</label>
+            <input type="url" id="zap-target-url" placeholder="https://example.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">Scan Type:</label>
+            <select id="zap-scan-type" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; box-sizing: border-box;">
+              <option value="spider">Spider Scan</option>
+              <option value="active">Active Penetration Scan</option>
+              <option value="ajaxSpider">Ajax Spider Scan</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button id="btn-launch-zap-scan" class="btn-primary" style="padding: 9px 18px; font-size: 0.85rem; font-weight: bold; background: var(--theme-color-danger, #e53e3e); border: none; cursor: pointer; height: 34px;">
+              Launch ZAP Scan
+            </button>
+          </div>
+        </div>
+
+        <!-- Real-time progress bar -->
+        <div id="zap-progress-container" style="display: none; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;">
+            <span id="zap-progress-label">ZAP Scan Progress:</span>
+            <span id="zap-progress-percentage">0%</span>
+          </div>
+          <div style="width: 100%; height: 16px; background: #edf2f7; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+            <div id="zap-progress-bar" style="width: 0%; height: 100%; background: var(--theme-color-danger, #e53e3e); transition: width 0.3s ease-in-out;"></div>
+          </div>
+        </div>
+
+        <!-- Findings Table -->
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+            <thead>
+              <tr style="background: var(--theme-color-background, #f7fafc); border-bottom: 2px solid var(--theme-color-border, #e2e8f0);">
+                <th style="padding: 10px; width: 15%;">Risk Level</th>
+                <th style="padding: 10px; width: 25%;">Alert Name</th>
+                <th style="padding: 10px; width: 10%;">CWE ID</th>
+                <th style="padding: 10px; width: 15%;">Parameter</th>
+                <th style="padding: 10px; width: 35%;">Remediation Advice</th>
+              </tr>
+            </thead>
+            <tbody id="zap-findings-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem; font-style: italic;">
+                  No ZAP scans executed yet. Enter target URL and click "Launch ZAP Scan" to run security audit.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
