@@ -12,20 +12,26 @@ export const defaultConfig = {
   isInstalled: false,
   adminEmails: [],
   site: {
-    isConfigured: false
+    isConfigured: false,
+    companyName: "",
+    siteName: ""
   },
   api: {
     isConfigured: false
   },
   firebase: {
     apiKey: "",
-    projectId: ""
+    projectId: "",
+    authDomain: ""
   },
   thirdParty: {
     lookerStudioEmbedUrl: "",
     ga4PropertyId: ""
   },
   cloudflare: {
+    zoneId: "",
+    pagesUrl: "",
+    workerApiKey: "",
     workflowUrl: "/api/workflow-trigger",
     vtUrl: "/api/virustotal-scan"
   },
@@ -94,7 +100,8 @@ export const defaultConfig = {
   },
   google: {
     clientId: "",
-    clientSecret: ""
+    clientSecret: "",
+    ownerEmail: ""
   },
   aiConfig: {
     geminiApiKey: "",
@@ -275,6 +282,33 @@ class ConfigEngine {
   }
 
   /**
+   * Sequential Wizard readiness getters
+   */
+  isGoogleWorkspaceConfigured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    const g = local.google || {};
+    return !!(g.clientId && g.clientSecret && g.ownerEmail && g.clientId !== '' && g.clientSecret !== '');
+  }
+
+  isFirebaseConfigured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    const fb = local.firebase || {};
+    return !!(fb.apiKey && fb.projectId && fb.authDomain && fb.apiKey !== '' && fb.projectId !== '');
+  }
+
+  isCloudflareConfigured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    const cf = local.cloudflare || {};
+    return !!(cf.zoneId && cf.pagesUrl && cf.workerApiKey && cf.zoneId !== '');
+  }
+
+  isLastpassConfigured() {
+    const local = this.#getLocalStorageConfig() || this.current;
+    const lp = local.lastpass || {};
+    return !!(lp.provisioningHash && lp.companyId && lp.provisioningHash !== '');
+  }
+
+  /**
    * Explicit readiness guards for every admin section
    */
   isBrandConfigured() {
@@ -285,15 +319,7 @@ class ConfigEngine {
   }
 
   isApiKeysConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
-    const isFlagged = local.api?.isConfigured === true;
-    const fb = local.firebase || {};
-    const google = local.google || {};
-    const ai = local.aiConfig || {};
-    const hasFb = !!(fb.apiKey && fb.projectId && fb.apiKey !== 'YOUR_API_KEY' && fb.projectId !== 'YOUR_PROJECT_ID' && fb.apiKey !== '');
-    const hasGoogle = !!(google.clientId && google.clientSecret && google.clientId !== '');
-    const hasAi = !!((ai.geminiApiKey || ai.openaiApiKey) && (ai.geminiApiKey !== '' || ai.openaiApiKey !== ''));
-    return isFlagged || (hasFb && hasGoogle && hasAi);
+    return this.isGoogleWorkspaceConfigured() && this.isFirebaseConfigured() && this.isCloudflareConfigured();
   }
 
   isBusinessConfigured() {
@@ -308,13 +334,6 @@ class ConfigEngine {
     const isFlagged = local.stripe?.isConfigured === true;
     const stripe = local.stripe || {};
     return isFlagged || !!(stripe.secretKey && stripe.publishableKey && stripe.priceId && stripe.achFee !== undefined && stripe.secretKey !== '');
-  }
-
-  isLastpassConfigured() {
-    const local = this.#getLocalStorageConfig() || this.current;
-    const isFlagged = local.lastpass?.isConfigured === true;
-    const lp = local.lastpass || {};
-    return isFlagged || !!(lp.provisioningHash && lp.companyId && lp.provisioningHash !== '');
   }
 
   isMarketingConfigured() {
@@ -404,8 +423,12 @@ class ConfigEngine {
         { key: 'siteDomain', path: 'siteDomain', label: 'Site Domain' }
       ],
       'api-keys': [
+        { key: 'google.clientId', path: 'google.clientId', label: 'Google Client ID' },
+        { key: 'google.clientSecret', path: 'google.clientSecret', label: 'Google Client Secret' },
         { key: 'firebase.apiKey', path: 'firebase.apiKey', label: 'Firebase API Key' },
-        { key: 'firebase.projectId', path: 'firebase.projectId', label: 'Firebase Project ID' }
+        { key: 'firebase.projectId', path: 'firebase.projectId', label: 'Firebase Project ID' },
+        { key: 'cloudflare.zoneId', path: 'cloudflare.zoneId', label: 'Cloudflare Zone ID' },
+        { key: 'cloudflare.workerApiKey', path: 'cloudflare.workerApiKey', label: 'Cloudflare Worker API Key' }
       ],
       'business-legal': [
         { key: 'businessProfile.legalName', path: 'businessProfile.legalName', label: 'Business Name' },

@@ -217,9 +217,17 @@ export function initAdminPage() {
       e.stopPropagation();
 
       let wizardKey = g.wizardKey;
-      if (g.tabId === 'tab-security') {
+      if (g.tabId === 'tab-config') {
+        if (!configManager.isGoogleWorkspaceConfigured()) {
+          wizardKey = 'google_workspace';
+        } else if (!configManager.isFirebaseConfigured()) {
+          wizardKey = 'firebase_cloud';
+        } else if (!configManager.isCloudflareConfigured()) {
+          wizardKey = 'cloudflare_edge';
+        }
+      } else if (g.tabId === 'tab-security') {
         if (!configManager.isLastpassConfigured()) {
-          wizardKey = 'lastpass';
+          wizardKey = 'lastpass_vault';
         } else if (!configManager.isSecurityConfigured()) {
           wizardKey = 'security';
         } else {
@@ -235,9 +243,17 @@ export function initAdminPage() {
 
     if (!isAlreadyConfigured) {
       let wizardKey = g.wizardKey;
-      if (g.tabId === 'tab-security') {
+      if (g.tabId === 'tab-config') {
+        if (!configManager.isGoogleWorkspaceConfigured()) {
+          wizardKey = 'google_workspace';
+        } else if (!configManager.isFirebaseConfigured()) {
+          wizardKey = 'firebase_cloud';
+        } else if (!configManager.isCloudflareConfigured()) {
+          wizardKey = 'cloudflare_edge';
+        }
+      } else if (g.tabId === 'tab-security') {
         if (!configManager.isLastpassConfigured()) {
-          wizardKey = 'lastpass';
+          wizardKey = 'lastpass_vault';
         } else if (!configManager.isSecurityConfigured()) {
           wizardKey = 'security';
         }
@@ -247,7 +263,24 @@ export function initAdminPage() {
         title: g.title,
         missingPrereqs: g.getMissing(),
         onLaunchWizard: () => {
-          AdminSetupWizards.launch(wizardKey, () => {
+          let targetWizardKey = wizardKey;
+          if (g.tabId === 'tab-config') {
+            if (!configManager.isGoogleWorkspaceConfigured()) {
+              targetWizardKey = 'google_workspace';
+            } else if (!configManager.isFirebaseConfigured()) {
+              targetWizardKey = 'firebase_cloud';
+            } else if (!configManager.isCloudflareConfigured()) {
+              targetWizardKey = 'cloudflare_edge';
+            }
+          } else if (g.tabId === 'tab-security') {
+            if (!configManager.isLastpassConfigured()) {
+              targetWizardKey = 'lastpass_vault';
+            } else if (!configManager.isSecurityConfigured()) {
+              targetWizardKey = 'security';
+            }
+          }
+
+          AdminSetupWizards.launch(targetWizardKey, () => {
             AdminSetupCard.unlock(panel);
             checkAndInitTab(tabId);
           });
