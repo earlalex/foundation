@@ -360,6 +360,54 @@ export class AdminSetupWizards {
             }
           }
         ]
+      },
+      security: {
+        title: "Step 8: OWASP ZAP & Security Setup Wizard",
+        steps: [
+          {
+            title: "OWASP ZAP Integration & Threat Configuration",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure ZAP Daemon API endpoint parameters for threat testing.</p>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">ZAP API Base URL:</label>
+                  <input type="text" id="wz-zap-url" value="https://wwtesw.zaproxy.org" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">ZAP API Key:</label>
+                  <input type="password" id="wz-zap-key" placeholder="Enter ZAP API Key" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <button type="button" id="btn-wz-test-zap" style="
+                    padding: 8px 16px;
+                    background: var(--theme-color-accent, #38a169);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    font-size: 0.85rem;
+                  ">
+                    Test ZAP Connection
+                  </button>
+                </div>
+                <div id="wz-zap-test-feedback" style="display: none; padding: 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem;"></div>
+              </div>
+            `,
+            validate: () => {
+              const url = document.getElementById('wz-zap-url')?.value;
+              if (!url) throw new Error("ZAP API Base URL is required!");
+            },
+            save: (data) => {
+              data.security = {
+                ...(configManager.current.security || {}),
+                zapApiUrl: document.getElementById('wz-zap-url').value,
+                zapApiKey: document.getElementById('wz-zap-key').value,
+                isConfigured: true
+              };
+            }
+          }
+        ]
       }
     };
 
@@ -419,6 +467,51 @@ export class AdminSetupWizards {
         });
       }
 
+      const testZapBtn = modal.querySelector('#btn-wz-test-zap');
+      if (testZapBtn) {
+        testZapBtn.addEventListener('click', async () => {
+          const url = modal.querySelector('#wz-zap-url').value;
+          const key = modal.querySelector('#wz-zap-key').value;
+          const feedback = modal.querySelector('#wz-zap-test-feedback');
+
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#ebf8ff';
+            feedback.style.color = '#2b6cb0';
+            feedback.textContent = 'Testing connection to ZAP daemon...';
+          }
+
+          try {
+            const res = await fetch('/api/zap-scan', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'test-connection', baseUrl: url, apiKey: key })
+            });
+            const data = await res.json();
+            if (feedback) {
+              if (data.success) {
+                feedback.style.background = '#f0fdf4';
+                feedback.style.color = '#166534';
+                feedback.textContent = `Success: Connected. ZAP version: ${data.version}`;
+                toast.success('Successfully connected to ZAP Daemon API!');
+              } else {
+                feedback.style.background = '#fff5f5';
+                feedback.style.color = '#c53030';
+                feedback.textContent = `Failed: ${data.error || 'Connection error'}`;
+                toast.error('Failed to connect to ZAP Daemon API');
+              }
+            }
+          } catch (e) {
+            if (feedback) {
+              feedback.style.background = '#fff5f5';
+              feedback.style.color = '#c53030';
+              feedback.textContent = `Error: ${e.message}`;
+              toast.error('Connection failed.');
+            }
+          }
+        });
+      }
+
       // Next / Finish step listener
       modal.querySelector('#wz-next').addEventListener('click', async (e) => {
         e.preventDefault();
@@ -460,7 +553,8 @@ export class AdminSetupWizards {
               cloudflare_edge: 'cloudflare',
               lastpass_vault: 'lastpass',
               business: 'businessProfile',
-              finances: 'stripe'
+              finances: 'stripe',
+              security: 'security'
             };
 
             const configKey = wizardTypeToConfigKey[wizardType];
