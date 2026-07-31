@@ -2,8 +2,129 @@
 import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { invoiceTracker } from '../../core/invoice-tracker.js';
+import { stripeService } from '../../core/stripe.js';
 import { toast } from '../../utils/toast.js';
 import { errorHandler } from '../../core/error-handler.js';
+
+/**
+ * Render dynamic financial summary metrics dashboard
+ * @param {Object} stripeRevenue - Stats from Stripe Proxy
+ * @param {Object} localExpenses - Operational expenses from invoiceTracker
+ */
+export function renderFinancialSummary(stripeRevenue, localExpenses) {
+  const netIncome = stripeRevenue.totalGross - localExpenses.totalExpenses;
+  const margin = stripeRevenue.totalGross > 0
+    ? ((netIncome / stripeRevenue.totalGross) * 100).toFixed(1)
+    : 0;
+
+  const cashFlowVelocity = stripeRevenue.mrr || 0;
+
+  // Visual CSS Bar Chart calculation
+  const totalAmount = stripeRevenue.totalGross + localExpenses.totalExpenses || 1;
+  const incomePct = Math.round((stripeRevenue.totalGross / totalAmount) * 100);
+  const expensePct = Math.round((localExpenses.totalExpenses / totalAmount) * 100);
+
+  return `
+    <style>
+      .finance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+      }
+      .stat-card {
+        background: var(--theme-color-surface, #ffffff);
+        border: 1px solid var(--theme-color-border, #e2e8f0);
+        border-radius: var(--theme-layout-border-radius, 8px);
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .stat-card.primary {
+        border-left: 4px solid var(--theme-color-primary, #2b6cb0);
+      }
+      .stat-card.danger {
+        border-left: 4px solid var(--theme-color-danger, #e53e3e);
+      }
+      .stat-card.success {
+        border-left: 4px solid var(--theme-color-accent, #38a169);
+      }
+      .stat-card.warning {
+        border-left: 4px solid #dd6b20;
+      }
+      .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0.5rem 0 0.25rem 0;
+      }
+      .sub-text {
+        font-size: 0.85rem;
+        color: var(--theme-color-text-secondary, #718096);
+      }
+      .chart-container {
+        background: var(--theme-color-surface, #ffffff);
+        border: 1px solid var(--theme-color-border, #e2e8f0);
+        border-radius: var(--theme-layout-border-radius, 8px);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      .bar-wrapper {
+        display: flex;
+        height: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #edf2f7;
+        margin: 1rem 0;
+        border: 1px solid var(--theme-color-border, #cbd5e0);
+      }
+      .bar-income {
+        background: var(--theme-color-accent, #38a169);
+        height: 100%;
+        transition: width 0.5s ease-in-out;
+      }
+      .bar-expense {
+        background: var(--theme-color-danger, #e53e3e);
+        height: 100%;
+        transition: width 0.5s ease-in-out;
+      }
+    </style>
+
+    <div class="finance-grid">
+      <div class="stat-card primary">
+        <h3 style="margin:0; font-size: 0.85rem; text-transform: uppercase; color: var(--theme-color-text-secondary, #718096); letter-spacing: 0.5px; font-weight: bold;">Gross Stripe Revenue</h3>
+        <p class="stat-value">$${stripeRevenue.totalGross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+        <span class="sub-text">${stripeRevenue.paidInvoicesCount} Paid Invoices</span>
+      </div>
+      <div class="stat-card danger">
+        <h3 style="margin:0; font-size: 0.85rem; text-transform: uppercase; color: var(--theme-color-text-secondary, #718096); letter-spacing: 0.5px; font-weight: bold;">Operational Expenses</h3>
+        <p class="stat-value">$${localExpenses.totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+        <span class="sub-text">${localExpenses.count} Logged Expenses</span>
+      </div>
+      <div class="stat-card ${netIncome >= 0 ? 'success' : 'warning'}">
+        <h3 style="margin:0; font-size: 0.85rem; text-transform: uppercase; color: var(--theme-color-text-secondary, #718096); letter-spacing: 0.5px; font-weight: bold;">Net Operating Profit</h3>
+        <p class="stat-value">$${netIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+        <span class="sub-text">${margin}% Operating Margin</span>
+      </div>
+    </div>
+
+    <!-- CSS Bar Chart Component -->
+    <div class="chart-container">
+      <h3 style="margin-top: 0; font-size: 1.1rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c);">Operating Flow Allocation Ratio</h3>
+      <div class="bar-wrapper">
+        <div class="bar-income" style="width: ${incomePct}%" title="Revenue: ${incomePct}%"></div>
+        <div class="bar-expense" style="width: ${expensePct}%" title="Expenses: ${expensePct}%"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; flex-wrap: wrap; gap: 0.5rem;">
+        <span style="color: var(--theme-color-accent, #38a169);">● Live Revenue (${incomePct}%)</span>
+        <span style="color: var(--theme-color-text-secondary, #718096);">Cash Velocity (MRR): $${cashFlowVelocity.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}/mo</span>
+        <span style="color: var(--theme-color-danger, #e53e3e);">● Expenses & Payroll (${expensePct}%)</span>
+      </div>
+    </div>
+  `;
+}
 
 export function initFinancesTab() {
   setupSubTabs();
@@ -90,7 +211,6 @@ function initExpensesTracker() {
         let attachment = null;
         if (receiptInput && receiptInput.files.length > 0) {
           const file = receiptInput.files[0];
-          // Make sure receipts are uploaded as private document
           file.isPrivateDoc = true;
           attachment = await uploadFileToDrive(file);
         }
@@ -107,8 +227,9 @@ function initExpensesTracker() {
           } : null
         };
 
-        await contentDB.saveExpense(expenseData);
-        toast.success(`Expense "${title}" saved successfully!`);
+        // Save to IndexedDB & Dual-Sync with Firestore
+        await invoiceTracker.saveExpense(expenseData);
+        toast.success(`Expense "${title}" logged and synchronized successfully!`);
         expenseForm.reset();
 
         // Reload list and update cashflow/budgets
@@ -159,7 +280,8 @@ async function loadExpensesList() {
 
   try {
     const categoryFilter = filterSelect ? filterSelect.value : 'all';
-    const expenses = await contentDB.getExpenses({ category: categoryFilter });
+    // Fetch from our local IndexedDB operational cost ledger
+    const expenses = await invoiceTracker.getExpenses({ category: categoryFilter });
 
     if (expenses.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">No expenses found matching the criteria.</td></tr>';
@@ -170,7 +292,7 @@ async function loadExpensesList() {
     // Calculate current month's expenses
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-11
+    const currentMonth = now.getMonth();
 
     let totalMonthlyAmount = 0;
 
@@ -211,7 +333,7 @@ async function exportExpensesToCsv() {
   try {
     const filterSelect = document.getElementById('expense-filter-select');
     const categoryFilter = filterSelect ? filterSelect.value : 'all';
-    const expenses = await contentDB.getExpenses({ category: categoryFilter });
+    const expenses = await invoiceTracker.getExpenses({ category: categoryFilter });
 
     if (expenses.length === 0) {
       toast.warning('No expenses available to export.');
@@ -500,6 +622,20 @@ async function initBudgetAndCashflow() {
   const netText = document.getElementById('cashflow-net-profit');
   const netBanner = document.getElementById('cashflow-profit-banner');
 
+  // Insert/Target our dedicated Stripe financial analytics summary dashboard container on the fly
+  let dashboardContainer = document.getElementById('stripe-financial-dashboard-container');
+  if (!dashboardContainer) {
+    const parentPanel = document.getElementById('panel-subtab-budget');
+    if (parentPanel) {
+      const outerDiv = parentPanel.querySelector('div');
+      if (outerDiv) {
+        dashboardContainer = document.createElement('div');
+        dashboardContainer.id = 'stripe-financial-dashboard-container';
+        outerDiv.insertBefore(dashboardContainer, outerDiv.firstChild);
+      }
+    }
+  }
+
   let targets = { totalExpensesBudget: 5000, payrollBudget: 10000 };
   try {
     targets = await contentDB.getBudgets();
@@ -529,16 +665,26 @@ async function initBudgetAndCashflow() {
         errorHandler.handleError(err, 'Admin Finances - Save Budget Targets');
         toast.error(`Failed to sync budget targets: ${err.message}`);
       } finally {
-        if (submitBtn) submitBtn.disabled = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
       }
     };
   }
 
   // Retrieve current stats
   try {
-    const expenses = await contentDB.getExpenses();
+    // A: Query local expenses from IndexedDB expense ledger
+    const expenses = await invoiceTracker.getExpenses();
     const payruns = await contentDB.getPayrollRecords();
-    const invoices = await invoiceTracker.getAllInvoices();
+
+    // B: Fetch Real-Time Analytics from Stripe proxy
+    let stripeStats = { totalGross: 0, paidInvoicesCount: 0, pendingInvoicesCount: 0, pendingAmount: 0, failedPaymentsCount: 0, failedAmount: 0, mrr: 0 };
+    try {
+      stripeStats = await stripeService.retrieveLiveRevenueStats();
+    } catch (e) {
+      console.warn('[BudgetAndCashflow] Failed to retrieve live revenue statistics:', e);
+    }
 
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -578,7 +724,6 @@ async function initBudgetAndCashflow() {
     if (expProgress) expProgress.style.width = `${expPct}%`;
     if (payProgress) payProgress.style.width = `${payPct}%`;
 
-    // Dynamic coloring based on budget threshold alerts
     if (expProgress) {
       expProgress.style.background = expPct >= 100 ? 'var(--theme-color-danger, #e53e3e)' : 'var(--theme-color-primary, #2b6cb0)';
     }
@@ -593,24 +738,22 @@ async function initBudgetAndCashflow() {
       payMetricText.textContent = `$${currentMonthPayroll.toFixed(2)} / $${payrollTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${payPct}%)`;
     }
 
-    // 4. Invoiced/Paid sales from Stripe
-    let totalPaidInvoicedSales = 0;
-    invoices.forEach(inv => {
-      // Sum up amount paid from successful payments
-      if (inv.status === 'paid') {
-        totalPaidInvoicedSales += (inv.amount || 0);
-      } else if (inv.status === 'partial') {
-        totalPaidInvoicedSales += (inv.amountPaid || 0);
-      }
-    });
+    // 4. Render financial summary dashboard component (template literals with live metrics)
+    const totalOutwardCostAllTime = totalAllTimeExpenses + totalAllTimePayroll;
+    if (dashboardContainer) {
+      dashboardContainer.innerHTML = renderFinancialSummary(stripeStats, {
+        totalExpenses: totalOutwardCostAllTime,
+        count: expenses.length
+      });
+    }
 
-    // Display total cashflow metrics
-    if (salesText) salesText.textContent = `$${totalPaidInvoicedSales.toFixed(2)}`;
+    // 5. Update other net cashflow summary elements
+    if (salesText) salesText.textContent = `$${stripeStats.totalGross.toFixed(2)}`;
     if (expText) expText.textContent = `$${totalAllTimeExpenses.toFixed(2)}`;
     if (payText) payText.textContent = `$${totalAllTimePayroll.toFixed(2)}`;
 
     // Net Profit calculation
-    const netProfit = totalPaidInvoicedSales - (totalAllTimeExpenses + totalAllTimePayroll);
+    const netProfit = stripeStats.totalGross - totalOutwardCostAllTime;
     if (netText) {
       netText.textContent = `${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`;
     }

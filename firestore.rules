@@ -83,5 +83,11 @@ service cloud.firestore {
     match /finances_employees/{employeeId} {
       allow read, write: if isAdmin();
     }
+    match /finances/{docId} {
+      allow read, write: if isAdmin();
+      match /expenses/{expenseId} {
+        allow read, write: if isAdmin();
+      }
+    }
   }
 }
