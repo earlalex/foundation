@@ -1765,6 +1765,133 @@ export class ContentDB {
     const templates = await this.getEmailTemplates();
     return templates.find(t => t.id === id) || null;
   }
+
+  // --- Event Management Helpers ---
+  async saveEvent(eventData) {
+    const payload = {
+      ...eventData,
+      type: 'event'
+    };
+    return this.saveContent(payload);
+  }
+
+  async getEventBySlug(slug) {
+    const all = await this.getAllEvents();
+    return all.find(e => e.slug === slug || e.id === slug) || null;
+  }
+
+  async getAllEvents() {
+    const all = await this.getAllContent();
+    return all.filter(e => e.type === 'event');
+  }
+
+  async updateTicketAvailability(eventId, ticketTypeId, quantity) {
+    const event = await this.getContentById(eventId);
+    if (!event) return false;
+
+    let updated = false;
+
+    if (event.ticketTypes) {
+      const tType = event.ticketTypes.find(t => t.id === ticketTypeId);
+      if (tType) {
+        tType.sold = (tType.sold || 0) + quantity;
+        updated = true;
+      }
+    }
+
+    if (event.vendorPackages) {
+      const vPkg = event.vendorPackages.find(v => v.id === ticketTypeId);
+      if (vPkg) {
+        vPkg.capacity = Math.max(0, (vPkg.capacity || 0) - quantity);
+        vPkg.sold = (vPkg.sold || 0) + quantity;
+        updated = true;
+      }
+    }
+
+    if (event.sponsorshipPackages) {
+      const sPkg = event.sponsorshipPackages.find(s => s.id === ticketTypeId);
+      if (sPkg) {
+        sPkg.capacity = Math.max(0, (sPkg.capacity || 0) - quantity);
+        sPkg.sold = (sPkg.sold || 0) + quantity;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      return this.saveEvent(event);
+    }
+    return false;
+  }
+
+  async saveRegistration(regData) {
+    const db = getFirestoreDB();
+    const id = regData.id || `reg_${Date.now()}`;
+    const payload = { ...regData, id, updatedAt: new Date().toISOString() };
+
+    // Save to local storage fallback
+    try {
+      const local = JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+      const index = local.findIndex(r => r.id === id);
+      if (index !== -1) {
+        local[index] = payload;
+      } else {
+        local.push(payload);
+      }
+      localStorage.setItem('foundation_local_registrations', JSON.stringify(local));
+    } catch (e) {
+      console.warn('Failed to save registration locally', e);
+    }
+
+    if (!db) return payload;
+
+    try {
+      const docRef = doc(db, 'registrations', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore registration save error.', err.message);
+      return payload;
+    }
+  }
+
+  async getRegistrationsByUser(email) {
+    const db = getFirestoreDB();
+    if (!db) {
+      const local = JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+      return local.filter(r => r.email === email);
+    }
+    try {
+      const q = query(collection(db, 'registrations'), where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach(docSnap => {
+        results.push(docSnap.data());
+      });
+      if (results.length > 0) return results;
+    } catch (e) {
+      console.warn('[DB]: Failed to query registrations from firestore, falling back', e);
+    }
+    const local = JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+    return local.filter(r => r.email === email);
+  }
+
+  async getAllRegistrations() {
+    const db = getFirestoreDB();
+    if (!db) {
+      return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+    }
+    try {
+      const querySnapshot = await getDocs(collection(db, 'registrations'));
+      const results = [];
+      querySnapshot.forEach(docSnap => {
+        results.push(docSnap.data());
+      });
+      if (results.length > 0) return results;
+    } catch (err) {
+      console.warn('[DB]: Failed to fetch registrations, falling back', err);
+    }
+    return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+  }
 }
 
 /**

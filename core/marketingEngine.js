@@ -90,6 +90,9 @@ class MarketingEngine {
         case 'event_attendance':
           score += 25;
           break;
+        case 'event_registration':
+          score += 50;
+          break;
         case 'course_read':
           score += 20;
           break;
@@ -351,6 +354,71 @@ class MarketingEngine {
 
     toast.success(`Newsletter successfully broadcasted to ${users.length} segment users!`);
     return users.length;
+  }
+
+  async triggerEventRegistered(user, eventDetails, registrationDetails) {
+    // 1. Boost Lead Score (+50)
+    await this.calculateLeadScore(user, [{ type: 'event_registration', scored: false }]);
+
+    // 2. Generate calendar invite (.ics)
+    const icsContent = this.generateIcsFile(eventDetails);
+
+    // 3. Dispatch welcome email with pass & receipt details
+    const venueStr = eventDetails.location?.venueName || eventDetails.location || 'Online';
+    const emailBody = `
+      Hi ${user.displayName || user.name || 'Attendee'},\r\n\r\n
+      Thank you for registering for "${eventDetails.title}"!\r\n\r\n
+      Your official digital pass has been confirmed:\r\n
+      - Access Code: ${registrationDetails.accessCode}\r\n
+      - Date: ${eventDetails.date}\r\n
+      - Venue/Location: ${venueStr}\r\n\r\n
+      We have attached your standard calendar invite file (.ics) below:\r\n\r\n
+      ${icsContent}\r\n\r\n
+      See you there!\r\n
+      -- The Team
+    `;
+
+    await sendGmailNotification({
+      toEmail: user.email,
+      subject: `Your Branded Ticket Pass & Receipt: ${eventDetails.title}`,
+      messageBody: emailBody
+    }).catch(e => {
+      console.warn('[Marketing Engine]: Mail delivery offline. Mocking welcome branded pass dispatch.', e.message);
+    });
+
+    // 4. Enroll attendee in pre-event drip journeys
+    try {
+      const journeys = await contentDB.getMarketingWorkflows();
+      const eventJourneys = journeys.filter(j => j.active && j.trigger?.type === 'event_registered');
+      for (const j of eventJourneys) {
+        await this.executeJourneyForUser(j, user, { productTitle: eventDetails.title, amount: registrationDetails.totalAmount || 0 });
+      }
+    } catch (e) {
+      console.warn('[Marketing Engine]: Failed to enroll user in pre-event sequences', e);
+    }
+  }
+
+  generateIcsFile(eventDetails) {
+    const dateClean = (eventDetails.date || '2026-08-25').replace(/-/g, '');
+    const startTimeClean = (eventDetails.startTime || '14:00').replace(/:/g, '');
+    const endTimeClean = (eventDetails.endTime || '15:00').replace(/:/g, '');
+    const locStr = eventDetails.location?.venueName || eventDetails.location || 'Virtual';
+
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Foundation//Event Invites//EN',
+      'BEGIN:VEVENT',
+      `UID:evt-${eventDetails.id}@foundation.com`,
+      `DTSTAMP:${dateClean}T000000Z`,
+      `DTSTART:${dateClean}T${startTimeClean}00`,
+      `DTEND:${dateClean}T${endTimeClean}00`,
+      `SUMMARY:${eventDetails.title}`,
+      `DESCRIPTION:${eventDetails.description || ''}`,
+      `LOCATION:${locStr}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
   }
 }
 

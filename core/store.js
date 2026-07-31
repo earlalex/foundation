@@ -155,7 +155,8 @@ const stateSchemas = {
     validateSchema(ChatLogSchema, val, 'store.state.chatLogs.item');
     return true;
   })),
-  simulatedUserTier: Type.optional(Type.string) // optional string simulation flag ("prospect", "subscriber", "member", "affiliate", "editor", "admin")
+  simulatedUserTier: Type.optional(Type.string), // optional string simulation flag ("prospect", "subscriber", "member", "affiliate", "editor", "admin")
+  cart: Type.optional(Type.object)
 };
 
 const initialDevMode = localStorage.getItem('foundation_dev_mode') === 'true';
@@ -168,11 +169,13 @@ export const store = new Store({
   contentFeed: [],
   history: [],
   chatLogs: [],
-  simulatedUserTier: null
+  simulatedUserTier: null,
+  cart: { eventId: null, items: [] }
 }, stateSchemas);
 
 // --- REGISTER STORE ACTIONS ---
 store.registerAction('SET_USER', (state, userPayload) => ({ ...state, user: userPayload }));
+store.registerAction('SET_CART', (state, cartPayload) => ({ ...state, cart: cartPayload || { eventId: null, items: [] } }));
 store.registerAction('LOGOUT', (state) => ({ ...state, user: null, simulatedUserTier: null }));
 store.registerAction('TOGGLE_THEME', (state) => ({
   ...state,
