@@ -1,15 +1,144 @@
 <!-- pages/events/events.html -->
-<section style="max-width: 1000px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
+<section style="max-width: 1200px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
   <div style="text-align: center; margin-bottom: 3rem;">
     <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 0.5rem;">
-      Upcoming Events & Live Video Meets
+      Upcoming Events, Ticketing & Sponsorships
     </h1>
     <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 1.1rem;">
-      Participate in upcoming webinars, Google Meet workshops, and community sessions.
+      Purchase multi-tier tickets, register as a vendor, or sponsor our premier summits.
     </p>
   </div>
 
-  <div id="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+  <!-- Event Grid Feed -->
+  <div id="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem;">
     <p style="color: #a0aec0; text-align: center; grid-column: 1 / -1;">Loading event calendar...</p>
   </div>
+
+  <!-- Dynamic Event Interactive Registration Panel / Modal -->
+  <div id="booking-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div style="background: var(--theme-color-surface, #ffffff); border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+
+      <!-- Modal Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); background: var(--theme-color-background, #f7fafc); border-radius: 12px 12px 0 0;">
+        <div>
+          <h2 id="modal-event-title" style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">Event Registration</h2>
+          <p id="modal-event-date" style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: var(--theme-color-primary, #2b6cb0); font-weight: bold;"></p>
+        </div>
+        <button id="btn-close-booking" style="background: transparent; border: none; font-size: 2rem; line-height: 1; cursor: pointer; color: var(--theme-color-text-secondary, #a0aec0);">&times;</button>
+      </div>
+
+      <!-- Modal Body (Dynamic registration options) -->
+      <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 2rem;">
+
+        <!-- Tab selector for booking type -->
+        <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--theme-color-border, #e2e8f0); padding-bottom: 0.25rem;">
+          <button class="booking-tab-btn active" data-tab="tickets" style="padding: 10px 16px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; background: transparent; color: var(--theme-color-primary, #2b6cb0); border-bottom: 3px solid var(--theme-color-primary, #2b6cb0);">
+            1. Select Tickets
+          </button>
+          <button class="booking-tab-btn" data-tab="vendors" style="padding: 10px 16px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; background: transparent; color: var(--theme-color-text-secondary, #4a5568); border-bottom: 3px solid transparent;">
+            2. Vendor Spaces
+          </button>
+          <button class="booking-tab-btn" data-tab="sponsors" style="padding: 10px 16px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; background: transparent; color: var(--theme-color-text-secondary, #4a5568); border-bottom: 3px solid transparent;">
+            3. Sponsorship Packages
+          </button>
+        </div>
+
+        <!-- Section: Ticket Tiers -->
+        <div id="booking-sec-tickets" class="booking-section-panel" style="display: block;">
+          <h3 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; color: var(--theme-color-text-primary, #2d3748);">Choose Ticket Tier</h3>
+          <div id="ticket-tiers-container" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Ticket cards rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Section: Vendor Packages -->
+        <div id="booking-sec-vendors" class="booking-section-panel" style="display: none;">
+          <h3 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; color: var(--theme-color-text-primary, #2d3748);">Exhibition & Booth Spaces</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">
+                  <th style="padding: 10px;">Booth Package</th>
+                  <th style="padding: 10px;">Included Perks</th>
+                  <th style="padding: 10px;">Price</th>
+                  <th style="padding: 10px; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="vendor-packages-tbody">
+                <!-- Vendor packages loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section: Sponsorship Packages -->
+        <div id="booking-sec-sponsors" class="booking-section-panel" style="display: none;">
+          <h3 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; color: var(--theme-color-text-primary, #2d3748);">Corporate Sponsorship Packages</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">
+                  <th style="padding: 10px;">Sponsorship Tier</th>
+                  <th style="padding: 10px;">Logo Placement</th>
+                  <th style="padding: 10px; text-align: center;">Complimentary Passes</th>
+                  <th style="padding: 10px;">Price</th>
+                  <th style="padding: 10px; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="sponsorship-packages-tbody">
+                <!-- Sponsors packages loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING / SLIDE-OUT CART OVERLAY -->
+  <div id="cart-sidebar" style="position: fixed; top: 0; right: -420px; width: 100%; max-width: 400px; height: 100%; background: var(--theme-color-surface, #ffffff); box-shadow: -10px 0 30px rgba(0,0,0,0.15); z-index: 1100; transition: right 0.3s ease-in-out; display: flex; flex-direction: column;">
+    <!-- Cart Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); background: var(--theme-color-background, #f7fafc);">
+      <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); display: flex; align-items: center; gap: 0.5rem;">
+        <span>🛒</span> Event Registration Cart
+      </h3>
+      <button id="btn-close-cart" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--theme-color-text-secondary, #a0aec0); font-weight: bold;">&times;</button>
+    </div>
+
+    <!-- Cart Items list -->
+    <div id="cart-items-container" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+      <p style="color: #a0aec0; text-align: center; margin-top: 3rem; font-style: italic;">Your registration cart is empty.</p>
+    </div>
+
+    <!-- Cart Footer & Line Totals -->
+    <div style="padding: 1.5rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); background: var(--theme-color-background, #f7fafc); display: flex; flex-direction: column; gap: 0.75rem;">
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--theme-color-text-secondary, #4a5568);">
+        <span>Subtotal:</span>
+        <span id="cart-lbl-subtotal">$0.00</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--theme-color-text-secondary, #4a5568);">
+        <span>Event Tax (8.25%):</span>
+        <span id="cart-lbl-tax">$0.00</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--theme-color-text-secondary, #4a5568);">
+        <span>Platform Service Fee:</span>
+        <span id="cart-lbl-fee">$0.00</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.25rem; color: var(--theme-color-text-primary, #1a202c); border-top: 1px solid var(--theme-color-border, #cbd5e0); padding-top: 0.5rem; margin-top: 0.25rem;">
+        <span>Grand Total:</span>
+        <span id="cart-lbl-total">$0.00</span>
+      </div>
+
+      <button id="btn-cart-checkout" class="btn-primary" style="margin-top: 0.5rem; padding: 12px; font-weight: bold; border-radius: 6px; text-align: center; font-size: 1rem; width: 100%;">
+        Proceed to Secure Checkout
+      </button>
+    </div>
+  </div>
+
+  <!-- FLOATING CART BUTTON TRIGGER -->
+  <button id="btn-floating-cart" style="position: fixed; bottom: 2rem; right: 2rem; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; font-size: 1.5rem; transition: transform 0.2s;">
+    <span>🛒</span>
+    <span id="cart-count-badge" style="position: absolute; top: 0; right: 0; background: var(--theme-color-danger, #e53e3e); color: white; font-size: 0.75rem; font-weight: bold; border-radius: 50%; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 2px;">0</span>
+  </button>
 </section>

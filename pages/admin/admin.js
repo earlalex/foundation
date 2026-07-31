@@ -39,6 +39,7 @@ import { initSecurityTab } from './admin-security.js';
 import { initPagesTab } from './admin-pages.js';
 import { initVasTab } from './admin-vas.js';
 import { initPluginsTab } from './admin-plugins.js';
+import { initAdminEventsTab } from './admin-events.js';
 
 export function initAdminPage() {
   // --- 0.1 ROLE-BASED ACCESS CONTROL (RBAC) DISPLAY GUARD ---
@@ -148,6 +149,14 @@ export function initAdminPage() {
     },
 
     // Section 2 Tabs
+    {
+      tabId: 'tab-events',
+      title: "Event Operations",
+      wizardKey: 'section2',
+      isConfigured: () => configManager.isSection2Configured(),
+      getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
+      initFn: initAdminEventsTab
+    },
     {
       tabId: 'tab-business',
       title: "Business & Legal",
@@ -358,8 +367,8 @@ export function initAdminPage() {
     const isOk = checkAndInitTab(targetTab);
     if (!isOk) return; // Stop further on-demand initialization if unconfigured
 
-    if (targetTab === 'site') {
-      initSiteSettingsTab();
+    if (targetTab === 'events') {
+      initAdminEventsTab();
     } else if (targetTab === 'users') {
       initUserDirectoryTab();
     } else if (targetTab === 'pages') {
