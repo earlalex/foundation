@@ -90,6 +90,57 @@ const THEME_PRESETS = {
 export function initSiteSettingsTab() {
   const currentCfg = configManager.current || {};
   
+  // Check and render Factory Reset trigger strictly for admins
+  const currentUser = store.state.user;
+  const simulatedUserTier = store.state.simulatedUserTier;
+  const currentRole = simulatedUserTier || currentUser?.role || 'prospect';
+  // Allow if explicitly Dev Mode / Emergency Bypass or role is admin
+  const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
+  const isAdmin = currentUser?.isAdmin === true || currentRole === 'admin' || isDevConsoleBypass;
+  const resetSectionId = 'factory-reset-section-wrapper';
+  let resetSection = document.getElementById(resetSectionId);
+
+  if (isAdmin || isDevConsoleBypass) {
+    if (!resetSection) {
+      resetSection = document.createElement('div');
+      resetSection.id = resetSectionId;
+      resetSection.style.marginTop = '2rem';
+      resetSection.innerHTML = `
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-danger, #ef4444); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+          <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-danger, #ef4444);">Emergency Operations</h2>
+          <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.875rem;">
+            Wipe configurations and reset the platform back to pristine state.
+          </p>
+          <button type="button" id="btn-factory-reset-trigger" style="padding: 10px 20px; background: var(--theme-color-danger, #ef4444); color: white; border: none; border-radius: var(--theme-layout-border-radius, 8px); font-weight: bold; cursor: pointer; transition: opacity 0.2s;">
+            Factory Reset Platform
+          </button>
+        </div>
+      `;
+      // Append to the parent container of the forms or inside tab-site
+      const tabSite = document.getElementById('tab-site');
+      if (tabSite) {
+        tabSite.appendChild(resetSection);
+      } else {
+        document.body.appendChild(resetSection);
+      }
+    }
+
+    // Bind event trigger
+    const btnTrigger = document.getElementById('btn-factory-reset-trigger');
+    if (btnTrigger) {
+      // Clear previous triggers if re-initialized to prevent multiple bindings
+      const newBtn = btnTrigger.cloneNode(true);
+      btnTrigger.parentNode.replaceChild(newBtn, btnTrigger);
+      newBtn.addEventListener('click', () => {
+        launchFactoryResetModal();
+      });
+    }
+  } else {
+    if (resetSection) {
+      resetSection.remove();
+    }
+  }
+
   // Site identity form
   const siteTitleInput = document.getElementById('site-title');
   const siteTaglineInput = document.getElementById('site-tagline');
@@ -329,4 +380,131 @@ function initThemeEngine() {
       toast.success('Theme reset to default.');
     }
   });
+}
+
+function launchFactoryResetModal() {
+  const modal = document.createElement('div');
+  modal.id = 'factory-reset-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 100002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+  `;
+
+  let currentStep = 1;
+  const confirmationPhrase = 'RESET-FOUNDATION';
+
+  const renderModalContent = () => {
+    if (currentStep === 1) {
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; color: #1a202c; text-align: left;">
+          <h3 style="margin-top: 0; font-size: 1.4rem; font-weight: 800; color: #e53e3e; border-bottom: 2px solid #edf2f7; padding-bottom: 0.75rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚠️</span> Safety Verification: Step 1 of 2
+          </h3>
+          <p style="color: #2d3748; font-size: 0.95rem; line-height: 1.6; font-weight: bold; margin-bottom: 1.5rem; background: #fff5f5; border: 1px solid #fed7d7; padding: 12px; border-radius: 6px;">
+            "WARNING: This action will permanently wipe all local cached settings, disconnect Firestore configurations, clear session storage, log you out, and return the application to its fresh out-of-the-box installation state."
+          </p>
+          <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid #edf2f7; padding-top: 1.25rem;">
+            <button id="btn-reset-cancel" style="background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; color: #4a5568;">
+              Cancel
+            </button>
+            <button id="btn-reset-next" style="background: #e53e3e; color: white; border: none; border-radius: 6px; padding: 8px 20px; font-weight: bold; cursor: pointer;">
+              Understand & Continue
+            </button>
+          </div>
+        </div>
+      `;
+
+      modal.querySelector('#btn-reset-cancel').addEventListener('click', () => {
+        modal.remove();
+      });
+
+      modal.querySelector('#btn-reset-next').addEventListener('click', () => {
+        currentStep = 2;
+        renderModalContent();
+      });
+    } else if (currentStep === 2) {
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; color: #1a202c; text-align: left;">
+          <h3 style="margin-top: 0; font-size: 1.4rem; font-weight: 800; color: #e53e3e; border-bottom: 2px solid #edf2f7; padding-bottom: 0.75rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚠️</span> Safety Verification: Step 2 of 2
+          </h3>
+          <p style="color: #4a5568; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.5;">
+            To confirm this highly destructive action, please type the confirmation phrase exactly as shown below:
+          </p>
+          <div style="background: #f7fafc; padding: 10px; border-radius: 6px; text-align: center; font-weight: bold; font-family: monospace; font-size: 1.1rem; letter-spacing: 2px; border: 1px dashed #cbd5e0; margin-bottom: 1rem;">
+            ${confirmationPhrase}
+          </div>
+          <input type="text" id="input-confirm-phrase" placeholder="Type phrase here..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 1rem; box-sizing: border-box; text-align: center; font-family: monospace; font-weight: bold; margin-bottom: 1.5rem;" />
+          <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid #edf2f7; padding-top: 1.25rem;">
+            <button id="btn-reset-back" style="background: #edf2f7; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; color: #4a5568;">
+              Back
+            </button>
+            <button id="btn-reset-confirm" disabled style="background: #e53e3e; color: white; border: none; border-radius: 6px; padding: 8px 20px; font-weight: bold; cursor: not-allowed; opacity: 0.5; transition: opacity 0.2s;">
+              Confirm & Wipe Everything
+            </button>
+          </div>
+        </div>
+      `;
+
+      const input = modal.querySelector('#input-confirm-phrase');
+      const confirmBtn = modal.querySelector('#btn-reset-confirm');
+
+      input.focus();
+
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (val === confirmationPhrase) {
+          confirmBtn.disabled = false;
+          confirmBtn.style.cursor = 'pointer';
+          confirmBtn.style.opacity = '1';
+        } else {
+          confirmBtn.disabled = true;
+          confirmBtn.style.cursor = 'not-allowed';
+          confirmBtn.style.opacity = '0.5';
+        }
+      });
+
+      modal.querySelector('#btn-reset-back').addEventListener('click', () => {
+        currentStep = 1;
+        renderModalContent();
+      });
+
+      confirmBtn.addEventListener('click', async () => {
+        if (input.value.trim() === confirmationPhrase) {
+          modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; width: 100%; max-width: 400px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">🧹</div>
+              <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-weight: 800;">Purging State...</h3>
+              <p style="color: #718096; font-size: 0.9rem; margin-bottom: 0;">Executing factory reset pipeline...</p>
+            </div>
+          `;
+          try {
+            await configManager.resetPlatform();
+            toast.success("Platform has been factory reset successfully.");
+            modal.remove();
+            setTimeout(() => {
+              window.location.href = window.location.origin + '/admin';
+            }, 1000);
+          } catch (err) {
+            console.error('Factory reset failed:', err);
+            toast.error('Factory reset failed: ' + err.message);
+            modal.remove();
+          }
+        }
+      });
+    }
+  };
+
+  document.body.appendChild(modal);
+  renderModalContent();
 }

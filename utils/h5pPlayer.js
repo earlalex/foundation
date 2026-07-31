@@ -11,6 +11,14 @@ export async function renderH5PContent(containerEl, h5pFolderPath, onProgressUpd
   containerEl.innerHTML = '<div id="h5p-container" style="width: 100%; min-height: 450px;"></div>';
   const el = document.getElementById('h5p-container');
 
+  // Defer preloading or prefetching CSS stylesheets for H5P standalone dynamic triggers
+  if (!document.querySelector('link[href*="h5p.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/h5p-standalone@latest/dist/styles/h5p.css';
+    document.head.appendChild(link);
+  }
+
   try {
     // Dynamic import of H5P standalone to satisfy zero-build Native ES module standards
     const module = await import('https://cdn.jsdelivr.net/npm/h5p-standalone@latest/dist/main.bundle.js');
