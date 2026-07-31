@@ -46,6 +46,17 @@ class SchemaRegistry {
     this.register('zap_scans', ZapScanSchema);
     this.register('marketing_segments', MarketingSegmentSchema);
     this.register('marketing_journeys', MarketingJourneySchema);
+    this.register('finances_expenses', {
+      type: Type.literal('finances_expenses'),
+      id: Type.string,
+      category: Type.string,
+      vendor: Type.string,
+      amount: Type.number,
+      date: Type.string,
+      isRecurring: Type.optional(Type.boolean),
+      notes: Type.optional(Type.string),
+      title: Type.optional(Type.string)
+    });
   }
 
   register(contentType, schemaDefinition) {

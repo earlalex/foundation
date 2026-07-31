@@ -5,141 +5,44 @@ import { errorHandler } from './error-handler.js';
 /**
  * Stripe Service for payment processing
  * Handles product creation, payment intents, and invoice generation
+ * Securely communicates with `/api/stripe-proxy` to avoid secret key exposure in client-side code.
  */
 export class StripeService {
   constructor() {
-    this.apiKey = configManager.current.stripe?.secretKey || null;
     this.publishableKey = configManager.current.stripe?.publishableKey || null;
   }
 
   /**
-   * Create a Stripe product
-   * @param {Object} productData - Product details
-   * @returns {Promise<Object>} Stripe product object
+   * Helper to retrieve authenticated headers with Firebase IdToken or simulated fallback
    */
-  async createProduct(productData) {
-    if (!this.apiKey) {
-      const error = new Error('Stripe API key not configured');
-      errorHandler.handleError(error, 'Stripe Configuration');
-      throw error;
-    }
-
+  async getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
     try {
-      const response = await fetch('https://api.stripe.com/v1/products', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          name: productData.title,
-          description: productData.description || '',
-          metadata: {
-            category: productData.category,
-            foundation_product_id: productData.id
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = new Error(errorData.error?.message || 'Failed to create Stripe product');
-        errorHandler.handleError(error, 'Stripe Product Creation');
-        throw error;
+      const { auth } = await import('./auth.js');
+      if (auth?.currentUser) {
+        const idToken = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${idToken}`;
+      } else {
+        const { store } = await import('./store.js');
+        const user = store.state.user;
+        const currentRole = store.state.simulatedUserTier || user?.role || 'admin';
+        const email = user?.email || 'admin@example.com';
+        headers['Authorization'] = `Bearer mock_${currentRole}_${email}`;
       }
-
-      return await response.json();
-    } catch (err) {
-      errorHandler.handleError(err, 'Stripe Product Creation');
-      throw err;
+    } catch (e) {
+      console.warn('[StripeService] Auth retrieve warning:', e);
+      headers['Authorization'] = 'Bearer mock_admin_admin@example.com';
     }
+    return headers;
   }
 
   /**
-   * Create a Stripe price for a product
-   * @param {string} productId - Stripe product ID
-   * @param {number} amount - Price in cents
-   * @param {string} currency - Currency code (e.g., 'usd')
-   * @returns {Promise<Object>} Stripe price object
+   * Create a Stripe customer
+   * @param {Object} customerData - Customer details
+   * @returns {Promise<Object>} Customer object
    */
-  async createPrice(productId, amount, currency = 'usd') {
-    if (!this.apiKey) {
-      const error = new Error('Stripe API key not configured');
-      errorHandler.handleError(error, 'Stripe Configuration');
-      throw error;
-    }
-
-    try {
-      const response = await fetch('https://api.stripe.com/v1/prices', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          product: productId,
-          unit_amount: amount,
-          currency: currency.toLowerCase(),
-          recurring: JSON.stringify({
-            interval: 'month'
-          })
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = new Error(errorData.error?.message || 'Failed to create Stripe price');
-        errorHandler.handleError(error, 'Stripe Price Creation');
-        throw error;
-      }
-
-      return await response.json();
-    } catch (err) {
-      errorHandler.handleError(err, 'Stripe Price Creation');
-      throw err;
-    }
-  }
-
-  /**
-   * Create a payment intent for one-time payment
-   * @param {number} amount - Amount in cents
-   * @param {string} currency - Currency code
-   * @param {Object} metadata - Additional metadata
-   * @returns {Promise<Object>} Payment intent object
-   */
-  async createPaymentIntent(amount, currency = 'usd', metadata = {}) {
-    if (!this.apiKey) {
-      const error = new Error('Stripe API key not configured');
-      errorHandler.handleError(error, 'Stripe Configuration');
-      throw error;
-    }
-
-    try {
-      const response = await fetch('https://api.stripe.com/v1/payment_intents', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          amount: amount,
-          currency: currency.toLowerCase(),
-          metadata: JSON.stringify(metadata)
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const error = new Error(errorData.error?.message || 'Failed to create payment intent');
-        errorHandler.handleError(error, 'Stripe Payment Intent');
-        throw error;
-      }
-
-      return await response.json();
-    } catch (err) {
-      errorHandler.handleError(err, 'Stripe Payment Intent');
-      throw err;
-    }
+  async createCustomer(customerData) {
+    return this.createStripeCustomer(customerData);
   }
 
   /**
@@ -149,34 +52,167 @@ export class StripeService {
    * @returns {Promise<Object>} Invoice object
    */
   async createInvoice(customerId, invoiceData) {
-    if (!this.apiKey) {
-      const error = new Error('Stripe API key not configured');
-      errorHandler.handleError(error, 'Stripe Configuration');
-      throw error;
-    }
+    const lineItems = invoiceData.lineItems || [{
+      amount: invoiceData.amount || 2900,
+      name: invoiceData.description || 'Invoice Charge',
+      quantity: 1
+    }];
+    return this.createAndSendInvoice(customerId, lineItems, {
+      description: invoiceData.description || '',
+      daysUntilDue: 30,
+      currency: invoiceData.currency || 'usd',
+      send: true
+    });
+  }
 
+  /**
+   * Create a Stripe product (relayed via generic proxy)
+   */
+  async createProduct(productData) {
     try {
-      const response = await fetch('https://api.stripe.com/v1/invoices', {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          customer: customerId,
-          description: invoiceData.description || '',
-          metadata: JSON.stringify(invoiceData.metadata || {}),
-          due_date: Math.floor(new Date(invoiceData.dueDate).getTime() / 1000)
+        headers,
+        body: JSON.stringify({
+          action: 'generic_relay',
+          endpoint: 'products',
+          method: 'POST',
+          payloadBody: {
+            name: productData.title,
+            description: productData.description || '',
+            'metadata[category]': productData.category || '',
+            'metadata[foundation_product_id]': productData.id || ''
+          }
         })
       });
-
       if (!response.ok) {
         const errorData = await response.json();
-        const error = new Error(errorData.error?.message || 'Failed to create invoice');
-        errorHandler.handleError(error, 'Stripe Invoice Creation');
-        throw error;
+        throw new Error(errorData.error || 'Failed to create Stripe product');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Product Creation');
+      throw err;
+    }
+  }
+
+  /**
+   * Create a Stripe price (relayed via generic proxy)
+   */
+  async createPrice(productId, amount, currency = 'usd') {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'generic_relay',
+          endpoint: 'prices',
+          method: 'POST',
+          payloadBody: {
+            product: productId,
+            unit_amount: String(amount),
+            currency: currency.toLowerCase(),
+            'recurring[interval]': 'month'
+          }
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create Stripe price');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Price Creation');
+      throw err;
+    }
+  }
+
+  /**
+   * Create a payment intent (relayed via generic proxy)
+   */
+  async createPaymentIntent(amount, currency = 'usd', metadata = {}) {
+    try {
+      const headers = await this.getAuthHeaders();
+      const payloadBody = {
+        amount: String(amount),
+        currency: currency.toLowerCase()
+      };
+      for (const [k, v] of Object.entries(metadata)) {
+        payloadBody[`metadata[${k}]`] = String(v);
       }
 
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'generic_relay',
+          endpoint: 'payment_intents',
+          method: 'POST',
+          payloadBody
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create payment intent');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Payment Intent');
+      throw err;
+    }
+  }
+
+  // --- Client-Side REST Bridge Proxy Wrappers ---
+
+  /**
+   * Expose intuitive wrapper to create Stripe Customer
+   */
+  async createStripeCustomer(userData) {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'create_customer',
+          email: userData.email,
+          name: userData.name,
+          metadata: userData.metadata || {}
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create customer');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Customer Creation');
+      throw err;
+    }
+  }
+
+  /**
+   * Expose intuitive wrapper to create and send Stripe invoice with hosted billing page
+   */
+  async createAndSendInvoice(customerId, lineItems, options = {}) {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'create_and_send_invoice',
+          customerId,
+          lineItems,
+          options
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create and send invoice');
+      }
       return await response.json();
     } catch (err) {
       errorHandler.handleError(err, 'Stripe Invoice Creation');
@@ -185,41 +221,77 @@ export class StripeService {
   }
 
   /**
-   * Create a customer in Stripe
-   * @param {Object} customerData - Customer details
-   * @returns {Promise<Object>} Customer object
+   * Expose intuitive wrapper to retrieve all invoices of a customer
    */
-  async createCustomer(customerData) {
-    if (!this.apiKey) {
-      const error = new Error('Stripe API key not configured');
-      errorHandler.handleError(error, 'Stripe Configuration');
-      throw error;
-    }
-
+  async listCustomerInvoices(customerId) {
     try {
-      const response = await fetch('https://api.stripe.com/v1/customers', {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          email: customerData.email,
-          name: customerData.name,
-          metadata: JSON.stringify(customerData.metadata || {})
+        headers,
+        body: JSON.stringify({
+          action: 'list_customer_invoices',
+          customerId
         })
       });
-
       if (!response.ok) {
         const errorData = await response.json();
-        const error = new Error(errorData.error?.message || 'Failed to create customer');
-        errorHandler.handleError(error, 'Stripe Customer Creation');
-        throw error;
+        throw new Error(errorData.error || 'Failed to list customer invoices');
       }
+      const data = await response.json();
+      return data.data || [];
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Invoice Retrieval');
+      throw err;
+    }
+  }
 
+  /**
+   * Expose intuitive wrapper to void or finalize a specific invoice
+   */
+  async voidOrFinalizeInvoice(invoiceId, action) {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'void_or_finalize_invoice',
+          invoiceId,
+          action
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${action} invoice`);
+      }
       return await response.json();
     } catch (err) {
-      errorHandler.handleError(err, 'Stripe Customer Creation');
+      errorHandler.handleError(err, `Stripe Invoice Action ${action}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Expose intuitive wrapper to fetch live revenue dashboard analytics
+   */
+  async retrieveLiveRevenueStats() {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'retrieve_live_revenue_stats'
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to retrieve revenue stats');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Revenue Statistics');
       throw err;
     }
   }

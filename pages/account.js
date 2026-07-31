@@ -3,6 +3,7 @@ import { store } from '../core/store.js';
 import { contentDB } from '../core/db.js';
 import { authManager } from '../core/auth.js';
 import { toast } from '../utils/toast.js';
+import { stripeService } from '../core/stripe.js';
 
 export async function initAccountPage() {
   const user = store.state.user;
@@ -538,32 +539,92 @@ async function loadOrdersLedger(email) {
   const tbody = document.getElementById('acc-purchases-tbody');
   if (!tbody) return;
 
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">Loading invoices...</td></tr>`;
+
   try {
-    const orders = await contentDB.getUserPurchases(email);
-    if (orders.length === 0) {
+    const user = store.state.user;
+    let stripeInvoices = [];
+    if (user && user.stripeCustomerId) {
+      try {
+        stripeInvoices = await stripeService.listCustomerInvoices(user.stripeCustomerId);
+      } catch (stripeErr) {
+        console.warn('[Account Portal] Failed to load Stripe invoices:', stripeErr);
+      }
+    }
+
+    const localInvoices = await contentDB.getUserPurchases(email);
+
+    // If both empty
+    if (stripeInvoices.length === 0 && localInvoices.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="4" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">No past order receipts found.</td>
+          <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #a0aec0); padding: 1.5rem;">No past order receipts found.</td>
         </tr>
       `;
       return;
     }
 
-    tbody.innerHTML = orders.map(ord => `
-      <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
-        <td style="padding: 10px;">${ord.date || ord.dueDate || 'Recent'}</td>
-        <td style="padding: 10px;">
-          <strong>${ord.id}</strong>
-          <div style="font-size: 0.75rem; color: #718096;">Product Code Settlement</div>
-        </td>
-        <td style="padding: 10px; font-weight: bold;">$${(ord.amount || ord.totalAmount || 0).toFixed(2)}</td>
-        <td style="padding: 10px;">
-          <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #edf2f7; color: #4a5568;">Paid</span>
-        </td>
-      </tr>
-    `).join('');
+    // Build unified list of rows
+    const rows = [];
+
+    // 1. Add Stripe invoices
+    stripeInvoices.forEach(inv => {
+      const dateStr = inv.created ? new Date(inv.created * 1000).toLocaleDateString() : 'Recent';
+      const amount = (inv.total || inv.amount_due || 0) / 100;
+      const status = inv.status || 'Paid';
+
+      const pdfLink = inv.invoice_pdf
+        ? `<a href="${inv.invoice_pdf}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">Download PDF</a>`
+        : '';
+      const hostedLink = inv.hosted_invoice_url
+        ? `<a href="${inv.hosted_invoice_url}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline; margin-left: 8px;">Payment Link</a>`
+        : '';
+
+      const actions = [pdfLink, hostedLink].filter(Boolean).join(' | ') || '<span style="color: #a0aec0; font-style: italic;">No link</span>';
+
+      rows.push(`
+        <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+          <td style="padding: 10px;">${dateStr}</td>
+          <td style="padding: 10px;">
+            <strong>${inv.id}</strong>
+            <div style="font-size: 0.75rem; color: #718096;">Stripe Native Invoice</div>
+          </td>
+          <td style="padding: 10px; font-weight: bold;">$${amount.toFixed(2)}</td>
+          <td style="padding: 10px;">
+            <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #e6fffa; color: #319795; text-transform: capitalize;">${status}</span>
+          </td>
+          <td style="padding: 10px;">${actions}</td>
+        </tr>
+      `);
+    });
+
+    // 2. Add local fallback invoices
+    localInvoices.forEach(ord => {
+      rows.push(`
+        <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+          <td style="padding: 10px;">${ord.date || ord.dueDate || 'Recent'}</td>
+          <td style="padding: 10px;">
+            <strong>${ord.id}</strong>
+            <div style="font-size: 0.75rem; color: #718096;">Product Code Settlement</div>
+          </td>
+          <td style="padding: 10px; font-weight: bold;">$${(ord.amount || ord.totalAmount || 0).toFixed(2)}</td>
+          <td style="padding: 10px;">
+            <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #edf2f7; color: #4a5568;">Paid</span>
+          </td>
+          <td style="padding: 10px; color: #a0aec0; font-style: italic;">N/A (Local)</td>
+        </tr>
+      `);
+    });
+
+    tbody.innerHTML = rows.join('');
+
   } catch (e) {
-    console.warn('Orders ledger query skipped:', e);
+    console.error('[Account Portal] Invoices table load failed:', e);
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; color: var(--theme-color-danger, #e53e3e); padding: 1.5rem;">Failed to load invoices history.</td>
+      </tr>
+    `;
   }
 }
 

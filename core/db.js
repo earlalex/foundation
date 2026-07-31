@@ -44,6 +44,18 @@ const VAULT_CREDENTIALS_COLLECTION = 'vault_credentials';
  * @returns {Object|null} Firestore instance or null if uninitialized
  */
 function getFirestoreDB() {
+  const currentFbConfig = configManager.current.firebase;
+  const isConfigured = currentFbConfig &&
+                        currentFbConfig.projectId &&
+                        currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
+                        currentFbConfig.projectId !== "demo-foundation-app" &&
+                        currentFbConfig.apiKey !== "" &&
+                        currentFbConfig.apiKey !== "YOUR_API_KEY";
+
+  if (!isConfigured) {
+    return null;
+  }
+
   try {
     return getFirestore();
   } catch (e) {
