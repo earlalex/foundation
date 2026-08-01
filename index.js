@@ -255,26 +255,6 @@ window.addEventListener('pageLoaded', (e) => {
       i18n.translatePage();
     } catch (err) {}
   }, 100);
-
-  // Trigger Intersection Observer Scroll Reveal cleanly
-  setTimeout(async () => {
-    try {
-      const { initScrollReveal } = await import('./utils/observer.js');
-      initScrollReveal();
-    } catch (err) {
-      console.warn('[Scroll Reveal]: Failed to trigger observer on route transition:', err);
-    }
-  }, 150);
-
-  // Trigger Dynamic Hero Banner rendering cleanly right after route loads
-  setTimeout(async () => {
-    try {
-      const { renderHeroSection } = await import('./utils/heroEngine.js');
-      await renderHeroSection(e.detail.path);
-    } catch (err) {
-      console.warn('[Hero Engine]: Failed to render dynamic hero section:', err);
-    }
-  }, 30);
   
   // Guard: Skip page controllers if platform is unconfigured / running setup wizard
   const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
