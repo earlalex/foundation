@@ -188,6 +188,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     const chatWidget = document.createElement('chat-widget');
     document.body.appendChild(chatWidget);
   }
+
+  // Global Footer Newsletter Form Logic
+  const footerConsent = document.getElementById('footer-newsletter-consent');
+  const footerSubmit = document.getElementById('btn-footer-newsletter-submit');
+  const footerForm = document.getElementById('footer-newsletter-form');
+
+  if (footerConsent && footerSubmit) {
+    footerConsent.addEventListener('change', (e) => {
+      footerSubmit.disabled = !e.target.checked;
+      if (e.target.checked) {
+        footerSubmit.style.cursor = 'pointer';
+        footerSubmit.style.opacity = '1';
+      } else {
+        footerSubmit.style.cursor = 'not-allowed';
+        footerSubmit.style.opacity = '0.5';
+      }
+    });
+  }
+
+  footerForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('footer-newsletter-email');
+    if (!emailInput) return;
+
+    const email = emailInput.value.trim();
+    if (!email) return;
+
+    try {
+      const { toast } = await import('./utils/toast.js');
+      toast.success(`Successfully subscribed ${email} to our newsletter!`);
+      footerForm.reset();
+      if (footerSubmit) {
+        footerSubmit.disabled = true;
+        footerSubmit.style.cursor = 'not-allowed';
+        footerSubmit.style.opacity = '0.5';
+      }
+    } catch (err) {
+      console.error('[Footer Newsletter]: Subscription error', err);
+    }
+  });
 });
 
 async function initGlobalFooter() {

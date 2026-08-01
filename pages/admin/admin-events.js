@@ -4,12 +4,15 @@ import { toast } from '../../utils/toast.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { store } from '../../core/store.js';
 import { stripeService } from '../../core/stripe.js';
+import { configManager } from '../../core/config.js';
 
 let activeEventId = 'sample-summit'; // default active event workspace
 
 export async function initAdminEventsTab() {
   setupDynamicRowAdding();
   setupLocationToggle();
+  setupAppointmentConfigurator();
+  await ensureMockRegistrationsSeeded();
   await loadEventBuilderWorkspace();
   await loadRegistrantsRoster();
 
@@ -554,4 +557,124 @@ async function broadcastToAttendees() {
   } catch (e) {
     toast.error('Failed to pre-load broadcast roster.');
   }
+}
+
+function setupAppointmentConfigurator() {
+  const form = document.getElementById('appointment-config-form');
+  if (!form) return;
+
+  const apptCfg = configManager.current.appointments || {};
+
+  // Populate days checkboxes
+  const dayCheckboxes = form.querySelectorAll('input[name="appt-days"]');
+  const operatingDays = apptCfg.operatingDays || ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  dayCheckboxes.forEach(cb => {
+    cb.checked = operatingDays.includes(cb.value);
+  });
+
+  // Populate basic inputs
+  const startTime = document.getElementById('appt-cfg-start');
+  const endTime = document.getElementById('appt-cfg-end');
+  const duration = document.getElementById('appt-cfg-duration');
+  const buffer = document.getElementById('appt-cfg-buffer');
+
+  if (startTime) startTime.value = apptCfg.operatingHoursStart || "09:00";
+  if (endTime) endTime.value = apptCfg.operatingHoursEnd || "17:00";
+  if (duration) duration.value = apptCfg.slotDuration || "30";
+  if (buffer) buffer.value = apptCfg.bufferTime || "15";
+
+  // Populate payment rule checkbox
+  const requirePayment = document.getElementById('appt-cfg-require-payment');
+  const monetizationDetails = document.getElementById('appt-monetization-details');
+
+  if (requirePayment) {
+    requirePayment.checked = !!apptCfg.requirePayment;
+    if (monetizationDetails) {
+      monetizationDetails.style.display = requirePayment.checked ? 'flex' : 'none';
+    }
+
+    requirePayment.addEventListener('change', (e) => {
+      if (monetizationDetails) {
+        monetizationDetails.style.display = e.target.checked ? 'flex' : 'none';
+      }
+    });
+  }
+
+  // Populate monetization details
+  const totalFee = document.getElementById('appt-cfg-total-fee');
+  const depositAmount = document.getElementById('appt-cfg-deposit-amount');
+  const depositPercentage = document.getElementById('appt-cfg-deposit-percentage');
+  const autoInvoice = document.getElementById('appt-cfg-auto-invoice');
+
+  if (totalFee) totalFee.value = ((apptCfg.totalFee || 15000) / 100).toFixed(2);
+  if (depositAmount) depositAmount.value = ((apptCfg.depositAmount || 5000) / 100).toFixed(2);
+  if (depositPercentage) depositPercentage.value = apptCfg.depositPercentage || 50;
+  if (autoInvoice) autoInvoice.checked = !!apptCfg.autoInvoice;
+
+  // Radio button for deposit structure
+  const structures = form.querySelectorAll('input[name="appt-cfg-structure"]');
+  structures.forEach(rad => {
+    rad.checked = rad.value === (apptCfg.depositStructure || "full");
+  });
+
+  // Populate notifications
+  const notifyAdmin = document.getElementById('appt-cfg-notify-admin');
+  const notifyAppointee = document.getElementById('appt-cfg-notify-appointee');
+  const dashboardAlerts = document.getElementById('appt-cfg-dashboard-alerts');
+
+  if (notifyAdmin) notifyAdmin.checked = !!apptCfg.notifyAdminEmail;
+  if (notifyAppointee) notifyAppointee.checked = !!apptCfg.notifyAppointeeEmail;
+  if (dashboardAlerts) dashboardAlerts.checked = !!apptCfg.dashboardAlerts;
+
+  // Handle Save
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = form.querySelector('button[type="submit"]');
+    const originalText = saveBtn?.textContent;
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const selectedDays = Array.from(form.querySelectorAll('input[name="appt-days"]:checked')).map(cb => cb.value);
+      const activeStructure = form.querySelector('input[name="appt-cfg-structure"]:checked')?.value || 'full';
+
+      const updatedAppointments = {
+        operatingDays: selectedDays,
+        operatingHoursStart: startTime?.value || "09:00",
+        operatingHoursEnd: endTime?.value || "17:00",
+        slotDuration: duration?.value || "30",
+        bufferTime: buffer?.value || "15",
+        requirePayment: !!requirePayment?.checked,
+        totalFee: Math.round(parseFloat(totalFee?.value || "150.00") * 100),
+        depositStructure: activeStructure,
+        depositAmount: Math.round(parseFloat(depositAmount?.value || "50.00") * 100),
+        depositPercentage: parseInt(depositPercentage?.value || "50", 10),
+        autoInvoice: !!autoInvoice?.checked,
+        notifyAdminEmail: !!notifyAdmin?.checked,
+        notifyAppointeeEmail: !!notifyAppointee?.checked,
+        dashboardAlerts: !!dashboardAlerts?.checked
+      };
+
+      const success = await configManager.saveToFirebase({
+        ...configManager.current,
+        appointments: updatedAppointments
+      });
+
+      if (success) {
+        toast.success('Consultation & Appointment settings saved successfully!');
+      } else {
+        toast.error('Failed to save settings. Please try again.');
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Events - Appointment Config Save');
+      toast.error(`Error saving settings: ${err.message}`);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+      }
+    }
+  });
 }
