@@ -177,7 +177,7 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 4/4: API Keys & Cloud Configuration",
+            title: "Step 4/5: API Keys & Cloud Configuration",
             html: `
               <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px; box-sizing: border-box;">
                 <p style="font-size: 0.8rem; color: #718096; margin-bottom: 0.25rem;">Provide third-party service credentials securely to wire up platform features.</p>
@@ -419,6 +419,51 @@ export class AdminSetupWizards {
               };
               data.isInstalled = true;
               data.adminEmails = [document.getElementById('wz-google-owner')?.value || "admin@example.com"];
+            }
+          },
+          {
+            title: "Step 5/5: Analytics & SEO Engine",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-weight: 800; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0);">Google Analytics & Search Console Setup</span>
+                  <a href="${FRAMEWORK_AFFILIATES.googleAnalytics.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; background: #e6fffa; color: #319795; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-decoration: none; border: 1px solid #b2f5ea; display: inline-flex; align-items: center; gap: 4px;">
+                    Powered by Google Analytics
+                  </a>
+                </div>
+
+                <div style="border-left: 3px solid #2b6cb0; padding-left: 6px; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.85rem; color: #2b6cb0;">Step 1: Google Search Console (GSC) Domain Setup</div>
+                <div style="background: #f7fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 10px; font-size: 0.8rem; color: #4a5568; line-height: 1.5; margin-bottom: 0.75rem;">
+                  <strong>Domain Ownership Verification & Page Indexing Guide:</strong>
+                  <ol style="margin: 4px 0 0 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 4px;">
+                    <li>Add your base domain as a property inside your <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" style="color: #2b6cb0; text-decoration: underline; font-weight: bold;">Google Search Console Dashboard</a>.</li>
+                    <li>Copy the TXT verification record and insert it into your DNS records (Cloudflare Pages settings or domain registrar). Click <strong>Verify</strong>.</li>
+                    <li>Submit your sitemap at: <code>https://yourdomain.com/sitemap.xml</code>. This allows Google and AI crawlers to fully index your GrapesJS and CMS custom routes.</li>
+                  </ol>
+                </div>
+
+                <div style="border-left: 3px solid #38a169; padding-left: 6px; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.85rem; color: #38a169;">Step 2: Google Analytics 4 (GA4) Measurement ID</div>
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    GA4 Measurement ID (G-XXXXXXXXXX):
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Create a GA4 Property, navigate to Admin -> Data Streams -> Web, and copy the Measurement ID matching 'G-XXXXXXXXXX'.</span>
+                    </span>
+                  </label>
+                  <input type="text" id="wz-ga4-measurement-id" value="${configManager.current.analytics?.googleAnalyticsId || ''}" placeholder="G-XXXXXXXXXX" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Used to dynamically inject GA4 gtag tracking scripts for virtual pageviews & ecommerce metrics.</span>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const id = document.getElementById('wz-ga4-measurement-id')?.value;
+              if (!id) throw new Error("GA4 Measurement ID is required to wire up routing event logs.");
+            },
+            save: (data) => {
+              data.analytics = {
+                googleAnalyticsId: document.getElementById('wz-ga4-measurement-id').value
+              };
             }
           }
         ]

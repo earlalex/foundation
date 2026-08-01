@@ -1,26 +1,32 @@
-// utils/observer.js
-// Zero-dependency Scroll Reveal Intersection Observer Utility
+// utils/observer.js - Scroll-Reveal Intersection Observer
 
+/**
+ * Initializes IntersectionObserver to trigger smooth 300ms fade-in
+ * and subtle 10px Y-axis slide-up transitions (.fade-in-up) as cards scroll into view.
+ */
 export function initScrollReveal() {
-  if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+  const options = {
+    root: null,
+    rootMargin: '0px 0px -50px 0px',
+    threshold: 0.1
+  };
 
-  const observer = new IntersectionObserver((entries, obs) => {
+  const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('fade-in-up');
-        obs.unobserve(entry.target);
+        entry.target.classList.add('revealed');
+        observer.unobserve(entry.target); // Unobserve to trigger only once
       }
     });
-  }, {
-    threshold: 0.05,
-    rootMargin: '0px 0px -20px 0px'
-  });
+  }, options);
 
-  const targets = document.querySelectorAll('.card, section, .reveal-on-scroll, content-card, hero-banner');
-  targets.forEach(el => {
-    if (!el.classList.contains('fade-in-up')) {
-      el.classList.add('reveal-on-scroll');
-      observer.observe(el);
+  // Find all elements with .fade-in-up class and observe them
+  const targets = document.querySelectorAll('.fade-in-up, .reveal-on-scroll');
+  targets.forEach(target => {
+    // Add default base class if not present
+    if (!target.classList.contains('fade-in-up')) {
+      target.classList.add('fade-in-up');
     }
+    observer.observe(target);
   });
 }

@@ -40,5 +40,10 @@ export const FRAMEWORK_AFFILIATES = Object.freeze({
     name: "OnlineJobs.ph",
     url: "YOUR_ONLINEJOBS_AFFILIATE_LINK_HERE",
     description: "Source top-tier technical and VA talent directly from the Philippines."
+  },
+  googleAnalytics: {
+    name: "Google Analytics 4",
+    url: "https://analytics.google.com",
+    description: "Industry-standard visitor and event tracking."
   }
 });

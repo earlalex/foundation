@@ -10,8 +10,7 @@ import {
   saveEmailTemplate, getEmailTemplates, getEmailTemplateById,
   saveVaultCredential, getVaultCredentials, deleteVaultCredential,
   saveVaCandidate, getVaCandidates, getVaActivityLogs, assignLastpassVaultAccess,
-  saveMarketingWorkflow, getMarketingWorkflows, deleteMarketingWorkflow,
-  saveHeroConfig, getHeroConfig
+  saveMarketingWorkflow, getMarketingWorkflows, deleteMarketingWorkflow
 } from './db-content.js';
 
 import {
@@ -121,8 +120,6 @@ export class ContentDB {
   async getCustomPageBySlug(slug) { return getCustomPageBySlug(slug); }
   async getAllCustomPages() { return getAllCustomPages(); }
   async getCustomPages() { return getAllCustomPages(); }
-  async saveHeroConfig(pageId, heroData) { return saveHeroConfig(pageId, heroData); }
-  async getHeroConfig(pageId) { return getHeroConfig(pageId); }
 
   // Delegated user methods
   async getAllUsers() { return getAllUsers(); }

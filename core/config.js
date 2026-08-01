@@ -34,6 +34,9 @@ export const defaultConfig = {
     lookerStudioEmbedUrl: "",
     ga4PropertyId: ""
   },
+  analytics: {
+    googleAnalyticsId: ""
+  },
   cloudflare: {
     zoneId: "",
     pagesUrl: "",
