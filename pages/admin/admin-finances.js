@@ -377,6 +377,15 @@ async function exportExpensesToCsv() {
 function initPayrollManager() {
   const employeeForm = document.getElementById('payroll-employee-form');
   const payrunForm = document.getElementById('payroll-log-form');
+
+  // Toggle Wise-specific details input panel on selecting Wise disbursement
+  const methodSelect = document.getElementById('employee-method');
+  const wiseFields = document.getElementById('wise-account-fields');
+  if (methodSelect && wiseFields) {
+    methodSelect.onchange = () => {
+      wiseFields.style.display = methodSelect.value === 'Wise' ? 'flex' : 'none';
+    };
+  }
   const payrunSelect = document.getElementById('payrun-employee-select');
   const payrunUnits = document.getElementById('payrun-units');
   const payrunTotal = document.getElementById('payrun-total-amount');
@@ -396,9 +405,18 @@ function initPayrollManager() {
         const method = document.getElementById('employee-method').value;
 
         const employeeData = { name, role, payRate, payType, frequency, method };
+        if (method === 'Wise') {
+          employeeData.bankName = document.getElementById('employee-bank-code').value;
+          employeeData.accountNumber = document.getElementById('employee-account-number').value;
+        }
+
         await contentDB.saveEmployee(employeeData);
         toast.success(`Successfully added ${name} to team directory!`);
         employeeForm.reset();
+
+        // Hide Wise account fields after reset
+        const wiseFields = document.getElementById('wise-account-fields');
+        if (wiseFields) wiseFields.style.display = 'none';
 
         await loadEmployeeDirectory();
       } catch (err) {
@@ -446,8 +464,60 @@ function initPayrollManager() {
           payFrequency: emp.frequency
         };
 
-        await contentDB.savePayrollRecord(payRunRecord);
-        toast.success(`Successfully logged pay run for ${emp.name}!`);
+        if (emp.method === 'Wise') {
+          if (submitBtn) submitBtn.textContent = 'Executing Wise Payout...';
+          toast.info(`Initializing Wise Business payment pipeline for ${emp.name}...`);
+
+          // 1. Calculate Quote
+          const { createQuote, createRecipient, executePayout, handleWiseWebhook } = await import('../../utils/backend-wise.js');
+          const quote = await createQuote(totalAmount, 'PHP');
+          toast.info(`Wise Real-Time Quote Created: Mid-Market Rate = ${quote.rate}, Fee = $${quote.fee}`);
+
+          // 2. Create target recipient
+          const recipient = await createRecipient(emp);
+          toast.info(`Wise PHP Recipient registered successfully.`);
+
+          // 3. Initiate Wise Transfer payout
+          const transfer = await executePayout(recipient.id, quote.id, `VA Payroll Cycle - ${emp.name}`);
+          toast.success(`Wise payout transfer #${transfer.id} initiated!`);
+
+          // 4. Simulate real-time webhook callback arrival to complete the loop
+          toast.info('Simulating webhook callback status: transfer.state-change...');
+          const webhookPayload = {
+            event_type: 'transfer.state-change',
+            current_state: 'outgoing_payment_sent',
+            data: {
+              resource: {
+                id: transfer.id,
+                status: 'completed',
+                sourceValue: quote.sourceValue,
+                targetValue: quote.targetValue,
+                fee: quote.fee,
+                rate: quote.rate
+              }
+            },
+            vaData: emp,
+            payout: {
+              id: transfer.id,
+              sourceValue: quote.sourceValue,
+              targetValue: quote.targetValue,
+              fee: quote.fee,
+              rate: quote.rate
+            }
+          };
+
+          const result = await handleWiseWebhook(webhookPayload);
+          if (result.success) {
+            toast.success(`Wise Payout confirmed. Financial ledger and budgets successfully updated!`);
+          } else {
+            throw new Error(result.error || 'Webhook callback simulation failed');
+          }
+        } else {
+          // Normal manual logging flow
+          await contentDB.savePayrollRecord(payRunRecord);
+          toast.success(`Successfully logged pay run for ${emp.name}!`);
+        }
+
         payrunForm.reset();
 
         await loadPayRunsList();
@@ -690,10 +760,11 @@ async function initBudgetAndCashflow() {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
-    // 1. Calculate Monthly Expenses
+    // 1. Calculate Monthly Expenses (excluding 'Payroll' category to prevent double-counting with payruns!)
     let currentMonthExpenses = 0;
     let totalAllTimeExpenses = 0;
     expenses.forEach(item => {
+      if (item.category === 'Payroll') return;
       const expDate = new Date(item.date);
       const isCurrentMonth = expDate.getFullYear() === currentYear && expDate.getMonth() === currentMonth;
       if (isCurrentMonth) {

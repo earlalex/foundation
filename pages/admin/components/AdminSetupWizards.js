@@ -429,7 +429,7 @@ export class AdminSetupWizards {
         title: "Section 2: Business Operations Wizard",
         steps: [
           {
-            title: "Step 1/3: Ticketing & Product Pricing Defaults",
+            title: "Step 1/4: Ticketing & Product Pricing Defaults",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096;">Configure baseline parameters for ticketing and digital product listings.</p>
@@ -469,7 +469,7 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 2/3: Finances & Payroll Options",
+            title: "Step 2/4: Finances & Payroll Options",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure flat fees and default contractor pay options. The ACH payment path enforces a flat $5.00 application fee parameter by default.</p>
@@ -521,7 +521,81 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 3/3: OnlineJobs.ph & VA Hub credentials",
+            title: "Step 3/4: Outbound Payroll & Payouts",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-weight: 800; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0);">Wise Business International Payroll Engine</span>
+                  <a href="${FRAMEWORK_AFFILIATES.wise.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; background: #e6fffa; color: #319795; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-decoration: none; border: 1px solid #b2f5ea; display: inline-flex; align-items: center; gap: 4px;">
+                    Powered by Wise
+                  </a>
+                </div>
+                <p style="font-size: 0.825rem; color: #718096; margin: 0 0 0.5rem 0; line-height: 1.4;">Zero-fee cross-border contractor payouts processed directly from your Wise USD balance at true mid-market exchange rates.</p>
+
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    Wise API Token:
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Generate an API token inside your Wise Business Dashboard under Settings -> API Tokens. Select 'Full Access' or 'Payout Access'.</span>
+                    </span>
+                  </label>
+                  <input type="password" id="wz-wise-key" value="${configManager.current.wise?.apiKey || ''}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Used to authenticate zero-fee cross-border payouts directly from your Wise USD balance.</span>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    Profile ID:
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Found under your Wise Account Details or automatically fetched when your API token is verified.</span>
+                    </span>
+                  </label>
+                  <input type="text" id="wz-wise-profile" value="${configManager.current.wise?.profileId || ''}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Your Wise Business Account ID.</span>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    Environment Mode:
+                  </label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="wz-wise-sandbox" ${configManager.current.wise?.sandbox !== false ? 'checked' : ''} style="cursor: pointer;" />
+                    <span style="font-size: 0.85rem; font-weight: 500;">Sandbox / Test Mode (Uncheck for Live Mode)</span>
+                  </div>
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Switch between Wise Live Production API and Sandbox testing.</span>
+                </div>
+
+                <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                  <button type="button" id="btn-wz-verify-wise" style="
+                    padding: 6px 12px;
+                    background: var(--theme-color-accent, #38a169);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    font-size: 0.85rem;
+                  ">Verify API Token & Fetch Profile ID</button>
+                  <span id="wise-verify-feedback" style="display: none; font-size: 0.8rem; font-weight: bold;"></span>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const k = document.getElementById('wz-wise-key')?.value;
+              if (!k) throw new Error("Wise API Token is required.");
+            },
+            save: (data) => {
+              data.wise = {
+                apiKey: document.getElementById('wz-wise-key').value,
+                profileId: document.getElementById('wz-wise-profile').value,
+                sandbox: document.getElementById('wz-wise-sandbox').checked
+              };
+            }
+          },
+          {
+            title: "Step 4/4: OnlineJobs.ph & VA Hub credentials",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure the active Virtual Assistant job pipeline credentials.</p>
@@ -837,6 +911,63 @@ export class AdminSetupWizards {
             toast.error('Dispatch failed: ' + e.message);
           } finally {
             testEmailBtn.textContent = 'Verify Email Dispatch';
+          }
+        };
+      }
+
+      // Bind Wise Profile ID verification click event
+      const verifyWiseBtn = modal.querySelector('#btn-wz-verify-wise');
+      if (verifyWiseBtn) {
+        verifyWiseBtn.onclick = async () => {
+          const keyInput = modal.querySelector('#wz-wise-key');
+          const profileInput = modal.querySelector('#wz-wise-profile');
+          const sandboxCheckbox = modal.querySelector('#wz-wise-sandbox');
+          const fb = modal.querySelector('#wise-verify-feedback');
+
+          if (!keyInput || !keyInput.value) {
+            toast.warning('Please input a Wise API Token.');
+            return;
+          }
+
+          verifyWiseBtn.textContent = 'Verifying...';
+          if (fb) {
+            fb.style.display = 'inline';
+            fb.style.color = '#2b6cb0';
+            fb.textContent = 'Verifying token...';
+          }
+
+          // Dynamically set temp wise config for the API call to work
+          const originalWise = configManager.current.wise || {};
+          configManager.current.wise = {
+            apiKey: keyInput.value,
+            sandbox: sandboxCheckbox ? sandboxCheckbox.checked : true
+          };
+
+          try {
+            const { getWiseProfile } = await import('../../../utils/backend-wise.js');
+            const profile = await getWiseProfile();
+            if (profile && profile.id) {
+              if (profileInput) {
+                profileInput.value = profile.id;
+              }
+              if (fb) {
+                fb.style.color = '#38a169';
+                fb.textContent = `Verified! Profile ID: ${profile.id}`;
+              }
+              toast.success(`Wise API Connection verified successfully! Auto-populated Profile ID: ${profile.id}`);
+            } else {
+              throw new Error('No profile data returned');
+            }
+          } catch (e) {
+            if (fb) {
+              fb.style.color = '#e53e3e';
+              fb.textContent = 'Verification failed';
+            }
+            toast.error('Wise verification failed: ' + e.message);
+          } finally {
+            verifyWiseBtn.textContent = 'Verify API Token & Fetch Profile ID';
+            // Restore config just in case
+            configManager.current.wise = originalWise;
           }
         };
       }
