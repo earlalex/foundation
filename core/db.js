@@ -256,6 +256,9 @@ export class ContentDB {
         startTime: "09:00",
         endTime: "17:00",
         meetUrl: "https://meet.google.com/mock-summit",
+        flyerUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
+        bannerUrl: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80",
+        promoVideoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
         ticketTypes: [
           { id: "general", name: "General Admission", price: 99, capacity: 200, sold: 1 }
         ],

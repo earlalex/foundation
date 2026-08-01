@@ -220,6 +220,17 @@ async function loadEventBuilderWorkspace() {
     document.getElementById('admin-event-desc').value = event.description || '';
     document.getElementById('admin-event-access').value = event.accessVisibility || event.access?.visibility || 'public';
 
+    // Prefill Media fields
+    if (document.getElementById('admin-event-flyer')) {
+      document.getElementById('admin-event-flyer').value = event.flyerUrl || '';
+    }
+    if (document.getElementById('admin-event-banner')) {
+      document.getElementById('admin-event-banner').value = event.bannerUrl || '';
+    }
+    if (document.getElementById('admin-event-promo')) {
+      document.getElementById('admin-event-promo').value = event.promoVideoUrl || '';
+    }
+
     if (event.location?.type === 'virtual') {
       document.getElementById('admin-event-loc-type').value = 'virtual';
       document.getElementById('admin-event-meeturl').value = event.location?.meetingUrl || event.meetUrl || '';
@@ -268,6 +279,10 @@ async function handleEventSave() {
     const desc = document.getElementById('admin-event-desc').value;
     const locType = document.getElementById('admin-event-loc-type').value;
     const accessVisibility = document.getElementById('admin-event-access').value;
+
+    const flyerUrl = document.getElementById('admin-event-flyer')?.value || '';
+    const bannerUrl = document.getElementById('admin-event-banner')?.value || '';
+    const promoVideoUrl = document.getElementById('admin-event-promo')?.value || '';
 
     const location = {
       type: locType,
@@ -387,6 +402,9 @@ async function handleEventSave() {
       date,
       description: desc,
       location,
+      flyerUrl,
+      bannerUrl,
+      promoVideoUrl,
       ticketTypes,
       vendorPackages,
       sponsorshipPackages,
