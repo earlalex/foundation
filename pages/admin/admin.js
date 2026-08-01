@@ -20,15 +20,18 @@ import { initUserDirectoryTab } from './admin-user-directory.js';
 import { initPagesTab } from './admin-pages.js';
 import { initVasTab } from './admin-vas.js';
 import { initPluginsTab } from './admin-plugins.js';
+import { initPublicProfileTab } from './admin-public-profile.js';
 
 // Import newly split domain modules
 import { initAdminIdentity } from './modules/admin-identity.js';
+import { initAdminCms } from './modules/admin-cms.js';
 import { initAdminCommerce } from './modules/admin-commerce.js';
 import { initAdminEventsOps, initAppointmentConfig } from './modules/admin-events-ops.js';
 import { initAdminGrowth, loadChatbotAndVoiceTab } from './modules/admin-growth.js';
 import { initAdminOps, loadGscSecurityThreats, loadPerformanceTab, loadSeoAndAnalyticsTab } from './modules/admin-ops.js';
 
 export function initAdminPage() {
+  console.log('[Admin Page]: initAdminPage triggered');
   // --- 0.0 APPOINTMENT SCHEDULER CONFIGURATOR SETUP ---
   initAppointmentConfig();
 
@@ -260,6 +263,7 @@ export function initAdminPage() {
   ];
 
   function checkAndInitTab(tabId) {
+    console.log('[checkAndInitTab] Checking tabId:', tabId);
     const g = sectionGuards.find(x => x.tabId === `tab-${tabId}`);
     if (!g) return true;
 
@@ -370,12 +374,17 @@ export function initAdminPage() {
       initAdminGrowth();
     } else if (targetTab === 'plugins') {
       initPluginsTab();
+    } else if (targetTab === 'cms') {
+      initAdminCms();
     }
   });
 
   const activeTabBtn = document.querySelector('.admin-tab.active');
   const activeTab = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'site';
   checkAndInitTab(activeTab);
+  if (activeTab === 'cms') {
+    initAdminCms();
+  }
 
   store.subscribe(() => {
     const activeBtn = document.querySelector('.admin-tab.active');

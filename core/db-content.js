@@ -2,7 +2,8 @@
 import {
   getFirestoreDB, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, limit,
   originalGetDocs, queryWith3SecTimeout, CONTENT_COLLECTION, PAGES_COLLECTION,
-  VAULT_CREDENTIALS_COLLECTION, schemaRegistry, store
+  VAULT_CREDENTIALS_COLLECTION, schemaRegistry, store,
+  getLocalContent, saveLocalContent, getLocalPages, saveLocalPages
 } from './db-shared.js';
 
 export async function saveContent(contentData) {
@@ -650,27 +651,3 @@ export async function assignLastpassVaultAccess(vaultId, editorId) {
   return saveVaultCredential(cred);
 }
 
-// Helpers
-function getLocalContent() {
-  try {
-    return JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
-  } catch (e) {
-    return {};
-  }
-}
-
-function saveLocalContent(data) {
-  localStorage.setItem('foundation_local_content', JSON.stringify(data));
-}
-
-function getLocalPages() {
-  try {
-    return JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
-  } catch (e) {
-    return {};
-  }
-}
-
-function saveLocalPages(data) {
-  localStorage.setItem('foundation_local_pages', JSON.stringify(data));
-}

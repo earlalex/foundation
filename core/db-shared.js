@@ -71,6 +71,254 @@ export function getFirestoreDB() {
   }
 }
 
+// Loader helpers with automated seeding for exactly 1 item per schema type
+export function getLocalContent() {
+  try {
+    const local = JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
+    const isSeeded = localStorage.getItem('foundation_content_seeded') === 'true';
+
+    if (!isSeeded) {
+      // 1. Blog (blog)
+      const sampleBlog = {
+        type: 'blog',
+        id: 'welcome-to-foundation-framework',
+        title: 'Welcome to Foundation Framework',
+        description: 'Discover the power of our zero-build modern framework architecture.',
+        longFormText: [
+          'Foundation is built to simplify web application engineering.',
+          'No complex bundlers or build steps required.'
+        ],
+        author: 'Jane Doe',
+        date: '2026-08-01',
+        access: { visibility: 'public' }
+      };
+
+      // 2. Book (book)
+      const sampleBook = {
+        type: 'book',
+        id: 'zero-build-architecture-handbook',
+        title: 'Zero-Build Architecture Handbook',
+        description: 'Learn the patterns and principles of modern zero-build engineering.',
+        isbn: '978-3-16-148410-0',
+        formats: ['PDF', 'Epub'],
+        access: { visibility: 'public' },
+        product: {
+          isPurchasable: true,
+          price: 29.99,
+          currency: 'USD',
+          stripePriceId: 'price_book_handbook'
+        }
+      };
+
+      // 3. Education (education)
+      const sampleEducation = {
+        type: 'education',
+        id: 'vanilla-js-professional-course',
+        title: 'Vanilla JS Professional Course',
+        description: 'Master Vanilla JS, custom reactive stores, and native visual GrapesJS builder flows.',
+        access: { visibility: 'public' },
+        longFormText: ['Become a professional JS developer.', 'Build high performance applications.'],
+        modules: [
+          {
+            id: 'm1',
+            title: 'Module 1: Getting Started',
+            lessons: [
+              {
+                id: 'l1',
+                title: 'Lesson 1: Introduction',
+                contentType: 'rich-text',
+                body: 'Welcome to the Vanilla JS course!',
+                requiredRole: 'subscriber'
+              }
+            ]
+          }
+        ],
+        quizQuestions: [
+          {
+            id: 'q1',
+            prompt: 'What is the primary benefit of zero-build?',
+            type: 'multiple-choice',
+            options: ['No complex tooling', 'Faster compilation', 'Better security']
+          }
+        ]
+      };
+
+      // 4. Event (event)
+      const sampleEvent = {
+        type: 'event',
+        id: 'ascension-summit-2026',
+        title: 'Ascension Avenue Summit 2026',
+        slug: 'ascension-summit-2026',
+        date: '2026-08-25',
+        description: 'Join us at the signature Ascension Avenue Summit of 2026 for high-impact workshops, direct networking, and keynotes on zero-build web technologies and business automation.',
+        location: {
+          type: 'physical',
+          venueName: 'Grand Empowerment Hall',
+          address: '123 Elevation Way, San Francisco, CA',
+          meetingUrl: ''
+        },
+        flyerUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87',
+        bannerUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87',
+        promoVideoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        ticketTypes: [
+          {
+            id: 't-early',
+            name: 'Early Bird Pass',
+            price: 49.00,
+            capacity: 30,
+            sold: 25,
+            description: 'Standard admission at our earliest promotional discount rate.'
+          }
+        ],
+        vendorPackages: [
+          {
+            id: 'v-std',
+            name: 'Standard Vendor Booth',
+            price: 499.00,
+            capacity: 10,
+            sold: 0,
+            perks: ['1x Display Table']
+          }
+        ],
+        sponsorshipPackages: [
+          {
+            id: 's-head',
+            tier: 'Headline Partner',
+            price: 2500.00,
+            logoPlacement: 'Main Stage',
+            complimentaryTickets: 5,
+            capacity: 1,
+            sold: 0
+          }
+        ],
+        accessVisibility: 'public'
+      };
+
+      // 5. How-To (howto)
+      const sampleHowto = {
+        type: 'howto',
+        id: 'how-to-deploy-serverless-workers',
+        title: 'How to Deploy Serverless Workers',
+        description: 'A comprehensive guide on deploying zero-dependency serverless edge workers.',
+        longFormText: ['Serverless workers are fast.', 'Learn step by step.'],
+        author: 'Jane Doe',
+        date: '2026-08-01',
+        access: { visibility: 'public' }
+      };
+
+      // 6. Podcast (podcast)
+      const samplePodcast = {
+        type: 'podcast',
+        id: 'episode-1-the-no-build-philosophy',
+        title: 'Episode 1: The No-Build Philosophy',
+        description: 'In this episode, we outline our design philosophy and how to break free from bundler fatigue.',
+        longFormText: ['Audio transcription available.'],
+        author: 'Jane Doe',
+        date: '2026-08-01',
+        access: { visibility: 'public' }
+      };
+
+      // 7. Portfolio (portfolio)
+      const samplePortfolio = {
+        type: 'portfolio',
+        id: 'e-commerce-redesign',
+        title: 'E-Commerce Redesign',
+        description: 'Case study of our high-conversion e-commerce storefront redesign.',
+        longFormText: ['The redesign boosted conversion by 45%.'],
+        author: 'Jane Doe',
+        date: '2026-08-01',
+        access: { visibility: 'public' }
+      };
+
+      // 8. Sponsor (sponsor)
+      const sampleSponsor = {
+        type: 'sponsor',
+        id: 'cloud-hosting-promo',
+        title: 'Cloud Hosting Promo',
+        description: 'Special partnership hosting promo code for enterprise performance.',
+        longFormText: ['Get 3 months free.'],
+        promoCode: 'FOUNDATION3',
+        expirationDate: '2026-12-31',
+        access: { visibility: 'public' }
+      };
+
+      // 9. Product / Service (product)
+      const sampleProduct = {
+        type: 'product',
+        id: '1-on-1-architecture-consultation',
+        title: '1-on-1 Architecture Consultation',
+        description: 'Strategic UI/UX and systems engineering consultation session.',
+        longFormText: ['Deep dive into system blueprints.', 'Receive custom action plan.'],
+        category: 'Consulting',
+        pricing: {
+          basePrice: 15000,
+          currency: 'USD',
+          paymentType: 'full_upfront'
+        },
+        access: { visibility: 'public' }
+      };
+
+      const samples = [
+        sampleBlog, sampleBook, sampleEducation, sampleEvent,
+        sampleHowto, samplePodcast, samplePortfolio, sampleSponsor, sampleProduct
+      ];
+
+      let updated = false;
+      samples.forEach(s => {
+        if (!local[s.id]) {
+          schemaRegistry.validate(s);
+          local[s.id] = s;
+          updated = true;
+        }
+      });
+
+      if (updated) {
+        localStorage.setItem('foundation_local_content', JSON.stringify(local));
+      }
+      localStorage.setItem('foundation_content_seeded', 'true');
+    }
+    return local;
+  } catch (e) {
+    console.error('[DB Shared]: Failed to seed default sample items', e);
+    return {};
+  }
+}
+
+export function saveLocalContent(data) {
+  localStorage.setItem('foundation_local_content', JSON.stringify(data));
+}
+
+export function getLocalPages() {
+  try {
+    const localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
+    const isSeeded = localStorage.getItem('foundation_pages_seeded') === 'true';
+
+    if (!isSeeded) {
+      const samplePage = {
+        type: 'page',
+        id: 'our-story',
+        slug: 'our-story',
+        title: 'Our Story',
+        compiledHtml: '<div>Our story began with a desire to build simple websites.</div>',
+        compiledCss: 'div { padding: 2rem; }',
+        access: { visibility: 'public' }
+      };
+      schemaRegistry.validate(samplePage);
+      localPages['our-story'] = samplePage;
+      localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
+      localStorage.setItem('foundation_pages_seeded', 'true');
+    }
+    return localPages;
+  } catch (e) {
+    console.error('[DB Shared]: Failed to seed default sample page', e);
+    return {};
+  }
+}
+
+export function saveLocalPages(data) {
+  localStorage.setItem('foundation_local_pages', JSON.stringify(data));
+}
+
 export {
   collection,
   doc,
