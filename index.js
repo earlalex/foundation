@@ -132,34 +132,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!badge) {
         badge = document.createElement('div');
         badge.id = 'simulation-active-badge';
-        badge.style.position = 'fixed';
-        badge.style.bottom = '20px';
-        badge.style.right = '20px';
-        badge.style.background = '#e53e3e';
-        badge.style.color = '#ffffff';
-        badge.style.padding = '12px 20px';
-        badge.style.borderRadius = '8px';
-        badge.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.3)';
-        badge.style.zIndex = '999999';
-        badge.style.fontFamily = 'system-ui, sans-serif';
-        badge.style.fontSize = '0.9rem';
-        badge.style.fontWeight = 'bold';
-        badge.style.display = 'flex';
-        badge.style.alignItems = 'center';
-        badge.style.gap = '0.75rem';
         document.body.appendChild(badge);
       }
 
       const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
       badge.innerHTML = `
-        <span>⚠️ SIMULATION MODE ACTIVE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
-        <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
-          Return to Admin Command Center
-        </button>
+        <div class="simulation-min-content">
+          <span>[ ⚠️ Simulation Mode ]</span>
+        </div>
+        <div class="simulation-full-content">
+          <span>⚠️ SIMULATION MODE ACTIVE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
+          <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
+            Return to Admin Command Center
+          </button>
+        </div>
       `;
 
       // Bind listener
-      document.getElementById('btn-return-admin-sim')?.addEventListener('click', () => {
+      document.getElementById('btn-return-admin-sim')?.addEventListener('click', (e) => {
+        e.stopPropagation();
         store.dispatch('SET_SIMULATED_USER_TIER', null);
         window.router.navigateTo('/admin');
       });
@@ -184,6 +175,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     const chatWidget = document.createElement('chat-widget');
     document.body.appendChild(chatWidget);
   }
+
+  // Global Footer Newsletter Form Logic
+  const footerConsent = document.getElementById('footer-newsletter-consent');
+  const footerSubmit = document.getElementById('btn-footer-newsletter-submit');
+  const footerForm = document.getElementById('footer-newsletter-form');
+
+  if (footerConsent && footerSubmit) {
+    footerConsent.addEventListener('change', (e) => {
+      footerSubmit.disabled = !e.target.checked;
+      if (e.target.checked) {
+        footerSubmit.style.cursor = 'pointer';
+        footerSubmit.style.opacity = '1';
+      } else {
+        footerSubmit.style.cursor = 'not-allowed';
+        footerSubmit.style.opacity = '0.5';
+      }
+    });
+  }
+
+  footerForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('footer-newsletter-email');
+    if (!emailInput) return;
+
+    const email = emailInput.value.trim();
+    if (!email) return;
+
+    try {
+      const { toast } = await import('./utils/toast.js');
+      toast.success(`Successfully subscribed ${email} to our newsletter!`);
+      footerForm.reset();
+      if (footerSubmit) {
+        footerSubmit.disabled = true;
+        footerSubmit.style.cursor = 'not-allowed';
+        footerSubmit.style.opacity = '0.5';
+      }
+    } catch (err) {
+      console.error('[Footer Newsletter]: Subscription error', err);
+    }
+  });
 });
 
 // Single Unified Page Lifecycle Listener

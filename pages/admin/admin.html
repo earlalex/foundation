@@ -387,6 +387,142 @@
         </div>
       </div>
 
+      <!-- Appointment & Paid Consultation Configurator Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0);">Appointment & Paid Consultation Configurator</h3>
+        <p style="margin: 0.25rem 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.8rem;">
+          Configure your operational calendar, slot durations, consultation monetization structures, and automatic invoicing parameters.
+        </p>
+
+        <form id="appointment-config-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <!-- Operating Days -->
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.5rem;">Operating Days:</label>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Mon" /> Mon
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Tue" /> Tue
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Wed" /> Wed
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Thu" /> Thu
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Fri" /> Fri
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Sat" /> Sat
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem;">
+                <input type="checkbox" name="appt-days" value="Sun" /> Sun
+              </label>
+            </div>
+          </div>
+
+          <!-- Operating Hours & Slots -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Daily Start Time:</label>
+              <input type="time" id="appt-cfg-start" value="09:00" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Daily End Time:</label>
+              <input type="time" id="appt-cfg-end" value="17:00" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Appointment Duration:</label>
+              <select id="appt-cfg-duration" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;">
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Buffer Time Between:</label>
+              <select id="appt-cfg-buffer" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;">
+                <option value="0">0 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Monetization Rules -->
+          <div style="background: #f7fafc; padding: 1rem; border-radius: 6px; border: 1px solid #edf2f7; display: flex; flex-direction: column; gap: 1rem;">
+            <h4 style="margin: 0; font-size: 0.9rem; color: var(--theme-color-text-primary, #1a202c);">Consultation Fee & Deposit Rules</h4>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="checkbox" id="appt-cfg-require-payment" />
+              <label for="appt-cfg-require-payment" style="font-weight: bold; font-size: 0.85rem; cursor: pointer;">Require Payment to Book</label>
+            </div>
+
+            <div id="appt-monetization-details" style="display: none; flex-direction: column; gap: 1rem;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: flex-end;">
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Total Fee Amount ($):</label>
+                  <input type="number" id="appt-cfg-total-fee" value="150.00" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Fixed Deposit ($):</label>
+                  <input type="number" id="appt-cfg-deposit-amount" value="50.00" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Percentage Deposit (%):</label>
+                  <input type="number" id="appt-cfg-deposit-percentage" value="50" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;" />
+                </div>
+              </div>
+
+              <div>
+                <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.5rem;">Deposit Structure:</label>
+                <div style="display: flex; gap: 1.5rem;">
+                  <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                    <input type="radio" name="appt-cfg-structure" value="full" /> Full Amount Upfront
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                    <input type="radio" name="appt-cfg-structure" value="fixed" /> Fixed Deposit Amount
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                    <input type="radio" name="appt-cfg-structure" value="percentage" /> Percentage Deposit
+                  </label>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                <input type="checkbox" id="appt-cfg-auto-invoice" />
+                <label for="appt-cfg-auto-invoice" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;">Automated Post-Appointment Invoicing (Dispatch next day for remaining balance)</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reminders & Notifications -->
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.5rem;">Reminders & Notifications:</label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="appt-cfg-notify-admin" /> Admin Email Notification
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="appt-cfg-notify-appointee" /> Appointee Email Confirmation
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="appt-cfg-dashboard-alerts" /> Admin Dashboard Alerts
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <button type="submit" class="btn-primary" style="padding: 10px 20px; font-weight: bold; border-radius: 6px;">
+              Save Consultation Settings
+            </button>
+          </div>
+        </form>
+      </div>
+
     </div>
   </div>
 
@@ -565,6 +701,35 @@
           </button>
         </form>
       </div>
+
+      <!-- Icon Set Upload & Default Icon Library Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Icon Set Select & Custom Upload</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Select your active UI icon set package or upload a custom JSON pack. Custom packs should map actions (e.g. calendar, clock) to raw inline SVG strings.
+        </p>
+
+        <form id="icon-set-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Icon Set Selector:</label>
+            <select id="icon-set-select" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+              <option value="default">Default Foundation Set</option>
+              <option value="custom">Custom SVG Pack</option>
+            </select>
+          </div>
+
+          <div id="custom-icon-upload-container" style="display: none;">
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Upload Custom JSON Icon Set:</label>
+            <input type="file" id="custom-icon-file" accept=".json" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            <span style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: block; margin-top: 0.25rem;">Select a valid .json file containing SVG mappings.</span>
+          </div>
+
+          <div>
+            <button type="submit" class="btn-primary" style="align-self: flex-start;">Save Active Icon Set</button>
+          </div>
+        </form>
+      </div>
+
     </div>
   </div>
 

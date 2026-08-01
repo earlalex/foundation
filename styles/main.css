@@ -168,3 +168,70 @@ h3 {
 .admin-panel select {
   max-width: 100% !important;
 }
+
+/* --- LAYER LAYERING & Z-INDEX HIERARCHY --- */
+.setup-wizard-modal,
+.action-settings-modal,
+#booking-modal,
+#lesson-grapesjs-modal,
+.modal,
+.slide-over-cart {
+  z-index: 999990 !important;
+}
+
+/* Hover-Minimizing Simulation Active Badge */
+#simulation-active-badge {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--theme-color-danger, #e53e3e);
+  color: #ffffff;
+  border-radius: 50px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  z-index: 999900 !important;
+  font-family: var(--theme-font-font-family, system-ui, sans-serif);
+  font-size: 0.85rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  max-width: 165px; /* Collapsed width */
+  height: 40px;
+  padding: 0 16px;
+  transition: max-width 0.4s cubic-bezier(0.25, 1, 0.5, 1), border-radius 0.3s ease, padding 0.3s ease;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#simulation-active-badge:hover {
+  max-width: 700px; /* Expanded width to fit full text and button */
+  border-radius: 8px;
+  padding: 0 20px;
+}
+
+/* Toggle displays of full vs. collapsed contents */
+#simulation-active-badge .simulation-full-content {
+  display: none;
+  opacity: 0;
+  align-items: center;
+  gap: 0.75rem;
+  transition: opacity 0.3s ease;
+}
+
+#simulation-active-badge:hover .simulation-full-content {
+  display: flex;
+  opacity: 1;
+}
+
+#simulation-active-badge .simulation-min-content {
+  display: inline-flex;
+  opacity: 1;
+  align-items: center;
+}
+
+#simulation-active-badge:hover .simulation-min-content {
+  display: none;
+  opacity: 0;
+}

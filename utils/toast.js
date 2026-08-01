@@ -12,7 +12,7 @@ export class ToastManager {
       position: fixed;
       top: 20px;
       right: 20px;
-      z-index: 100000;
+      z-index: 2147483647;
       display: flex;
       flex-direction: column;
       gap: 10px;

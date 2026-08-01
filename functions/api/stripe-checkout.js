@@ -21,7 +21,8 @@ export async function onRequestPost(context) {
       enableAch,
       priceId,
       mode,
-      affiliateId
+      affiliateId,
+      successUrl
     } = body;
 
     const domain = new URL(request.url).origin;
@@ -93,7 +94,8 @@ export async function onRequestPost(context) {
       params.append('line_items[0][quantity]', '1');
     }
 
-    params.append('success_url', `${domain}/home?session_id={CHECKOUT_SESSION_ID}`);
+    const finalSuccessUrl = successUrl || `${domain}/home?session_id={CHECKOUT_SESSION_ID}`;
+    params.append('success_url', finalSuccessUrl);
     params.append('cancel_url', `${domain}/contact`);
 
     // Add Metadata
