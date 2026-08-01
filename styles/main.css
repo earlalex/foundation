@@ -46,6 +46,17 @@
   --spacing-64: 4rem;
 }
 
+[data-high-contrast="true"] {
+  --theme-color-background: #000000 !important;
+  --theme-color-surface: #000000 !important;
+  --theme-color-text-primary: #ffffff !important;
+  --theme-color-text-secondary: #ffff00 !important; /* High-visibility yellow */
+  --theme-color-border: #ffffff !important;
+  --theme-color-primary: #ffff00 !important;
+  --theme-color-accent: #00ff00 !important;
+  --theme-color-danger: #ff0000 !important;
+}
+
 /* --- CSS RESET & BOX-SIZING --- */
 *, *::before, *::after {
   box-sizing: border-box;

@@ -72,6 +72,7 @@ export const defaultConfig = {
     apiEndpoint: "https://lastpass.com/enterprise/api.php",
     isConfigured: false
   },
+  vault: {},
   // Newly added structured configs for section setup wizards
   businessProfile: {
     legalName: "",

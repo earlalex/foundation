@@ -163,6 +163,27 @@ export class ThemeEngine {
       }
     }
     this.applyTheme(activeTheme);
+
+    // Initialize High-Contrast Mode from local storage
+    const highContrast = localStorage.getItem('foundation_high_contrast') === 'true';
+    this.setHighContrastMode(highContrast);
+  }
+
+  /**
+   * Toggles or sets High-Contrast mode explicitly
+   * @param {boolean} enabled
+   */
+  setHighContrastMode(enabled) {
+    const value = !!enabled;
+    document.documentElement.setAttribute('data-high-contrast', value ? 'true' : 'false');
+    localStorage.setItem('foundation_high_contrast', String(value));
+
+    // Sync to store state if exists
+    try {
+      store.dispatch('SET_HIGH_CONTRAST', value);
+    } catch (e) {}
+
+    console.log(`[ThemeEngine]: High-Contrast mode ${value ? 'ENABLED' : 'DISABLED'}`);
   }
 
   /**

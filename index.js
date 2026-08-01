@@ -133,6 +133,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. Initialize Top Global Navbar Header
   initNavbar();
 
+  // Initialize Translation Engine
+  try {
+    const { i18n } = await import('./core/i18n.js');
+    i18n.translatePage();
+  } catch (err) {
+    console.warn('[Translation Engine]: Failed to trigger on boot:', err);
+  }
+
   // Initialize Global Website Footer Features
   initGlobalFooter();
 
@@ -239,6 +247,14 @@ async function initGlobalFooter() {
 // Single Unified Page Lifecycle Listener
 window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
+
+  // Re-translate page items dynamically on transition
+  setTimeout(async () => {
+    try {
+      const { i18n } = await import('./core/i18n.js');
+      i18n.translatePage();
+    } catch (err) {}
+  }, 100);
   
   // Guard: Skip page controllers if platform is unconfigured / running setup wizard
   const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
