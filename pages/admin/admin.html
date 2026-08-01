@@ -420,6 +420,111 @@
         </form>
       </div>
 
+      <!-- Top Navigation Editor -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem;">Top Navigation Link Structure</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Add, edit, reorder, or remove main header navigation links. Configure required roles to restrict link visibility.
+        </p>
+        <form id="nav-links-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div id="nav-links-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Rendered dynamically via JS -->
+          </div>
+          <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+            <button type="button" id="btn-add-nav-link" class="btn-primary" style="background: var(--theme-color-accent, #38a169); font-size: 0.85rem; padding: 6px 12px; border: none; cursor: pointer;">
+              + Add Link Node
+            </button>
+            <button type="submit" class="btn-primary" style="font-size: 0.85rem; padding: 6px 14px; border: none; cursor: pointer;">
+              Save Navigation Structure
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Footer Layout Workspace -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem;">Global Footer Layout Settings</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Toggle columns visibility, edit brand/legal information, newsletter copy, and social media links directly.
+        </p>
+        <form id="footer-layout-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <!-- Brand Info -->
+          <div style="border-left: 3px solid var(--theme-color-primary, #2b6cb0); padding-left: 0.75rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 0.95rem; margin-bottom: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="footer-brand-show" style="cursor: pointer;" /> Brand Info Column
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Brand Name / Title:</label>
+                <input type="text" id="footer-brand-title" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tagline / Slogan:</label>
+                <input type="text" id="footer-brand-tagline" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Legal Policies -->
+          <div style="border-left: 3px solid var(--theme-color-primary, #2b6cb0); padding-left: 0.75rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 0.95rem; margin-bottom: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="footer-legal-show" style="cursor: pointer;" /> Legal Links Column
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Heading Label:</label>
+                <input type="text" id="footer-legal-heading" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div id="footer-legal-links-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- Links list -->
+              </div>
+              <button type="button" id="btn-add-footer-legal" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 600; align-self: flex-start; cursor: pointer; border: 1px solid #cbd5e0; background: transparent; border-radius: 4px;">
+                + Add Legal Link
+              </button>
+            </div>
+          </div>
+
+          <!-- Newsletter Column -->
+          <div style="border-left: 3px solid var(--theme-color-primary, #2b6cb0); padding-left: 0.75rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 0.95rem; margin-bottom: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="footer-newsletter-show" style="cursor: pointer;" /> Newsletter Column
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Column Heading:</label>
+                <input type="text" id="footer-newsletter-heading" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Sub-text Description:</label>
+                <input type="text" id="footer-newsletter-text" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Newsletter Consent Copy:</label>
+              <textarea id="footer-newsletter-consent" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 40px; box-sizing: border-box;"></textarea>
+            </div>
+          </div>
+
+          <!-- Social Links Column -->
+          <div style="border-left: 3px solid var(--theme-color-primary, #2b6cb0); padding-left: 0.75rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 0.95rem; margin-bottom: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="footer-social-show" style="cursor: pointer;" /> Social Icons Column
+            </label>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Column Heading:</label>
+              <input type="text" id="footer-social-heading" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; margin-bottom: 0.5rem; box-sizing: border-box;" />
+            </div>
+            <div id="footer-social-links-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <!-- Social links -->
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" style="align-self: flex-start; border: none; cursor: pointer;">
+            Apply Footer Configuration
+          </button>
+        </form>
+      </div>
+
       <!-- Live Sales Breakdown & Roster Card -->
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
@@ -1260,21 +1365,45 @@
         <form id="firebase-config-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <div class="responsive-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Firebase API Key:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Firebase API Key:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Navigate to your Firebase Console > Project Settings > General > Web API Key.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-fb-key" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Firebase Project ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Firebase Project ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Found in your Firebase Console under Project Settings > General > Project ID.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-fb-project" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
           <div class="responsive-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Client ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Google Client ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Visit Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-google-client-id" placeholder="123456789-abc.apps.googleusercontent.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Client Secret:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Google Client Secret:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Obtained alongside your Google Client ID under OAuth 2.0 Credentials client configuration.</span>
+                </span>
+              </label>
               <input type="password" id="cfg-google-client-secret" placeholder="••••••••••••••••••••••••" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
@@ -1318,21 +1447,45 @@
         <form id="stripe-cloudflare-config-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Secret Key (Webhooks & API Payments):</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Stripe Secret Key:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Find this key under your Stripe Dashboard > Developers > API Keys > Secret key.</span>
+                </span>
+              </label>
               <input type="password" id="cfg-stripe-key" placeholder="sk_live_..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Monthly Membership Price ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Stripe Monthly Membership Price ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Acquired from a Price point configured under a Subscription Product on your Stripe Dashboard > Products.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-stripe-price-id" placeholder="price_1..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Analytics (GA4) Property ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Google Analytics (GA4) Property ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Get this 9-digit numeric ID inside Google Analytics Admin Console > Property Settings.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-ga4-property" placeholder="123456789" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">VirusTotal API Key (Cloudflare Pages Secret):</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                VirusTotal API Key:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Available in your VirusTotal profile menu dropdown under API Key section.</span>
+                </span>
+              </label>
               <input type="password" id="cfg-vt-apikey" placeholder="VIRUSTOTAL_API_KEY" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>

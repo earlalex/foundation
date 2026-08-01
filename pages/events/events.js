@@ -97,36 +97,9 @@ const SEED_EVENT = {
 };
 
 export async function initEventsPage() {
-  // 1. Persistent Page Overrides Check
-  try {
-    const override = await contentDB.getCustomPageBySlug('events');
-    if (override && override.compiledHtml) {
-      const appContainer = document.getElementById('app');
-      if (appContainer) {
-        appContainer.innerHTML = override.compiledHtml + (override.compiledCss ? `<style>${override.compiledCss}</style>` : '');
-        return;
-      }
-    }
-  } catch (err) {
-    console.warn('[Page Override]: Custom page override check failed for "events"', err);
-  }
-
-  await ensureEventsSeeded();
   renderEventsGrid();
   setupEventListeners();
   renderCart();
-}
-
-async function ensureEventsSeeded() {
-  try {
-    const events = await contentDB.getAllEvents();
-    if (!events || events.length === 0) {
-      console.log('[Events]: Seeding sample event into local storage...');
-      await contentDB.saveEvent(SEED_EVENT);
-    }
-  } catch (e) {
-    console.warn('[Events]: Failed to verify/seed events', e);
-  }
 }
 
 async function renderEventsGrid() {
@@ -137,8 +110,9 @@ async function renderEventsGrid() {
     const events = await contentDB.getAllEvents();
     if (!events || events.length === 0) {
       grid.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
-          <p style="color: #718096; margin: 0;">No upcoming events scheduled at this time.</p>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: var(--theme-color-surface, #ffffff); border-radius: 8px; border: 1px dashed var(--theme-color-border, #cbd5e0);">
+          <p style="color: #718096; margin: 0; font-size: 1.05rem; font-weight: 600;">No upcoming events scheduled yet.</p>
+          <p style="color: var(--theme-color-text-secondary); margin: var(--spacing-8) 0 0 0; font-size: 0.875rem;">No active items registered yet. Click 'Create Item' above to get started.</p>
         </div>
       `;
       return;

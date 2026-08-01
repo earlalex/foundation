@@ -257,6 +257,246 @@ export function initSiteSettingsTab() {
 
   initThemeEngine();
   initIconSetManager();
+  initNavigationEditor();
+  initFooterLayoutEditor();
+}
+
+function initNavigationEditor() {
+  const container = document.getElementById('nav-links-list-container');
+  const addBtn = document.getElementById('btn-add-nav-link');
+  const form = document.getElementById('nav-links-form');
+  if (!container || !form) return;
+
+  const currentCfg = configManager.current.navigation || [];
+
+  function renderLinks(links) {
+    container.innerHTML = links.map((link, idx) => `
+      <div class="nav-link-row" style="display: grid; grid-template-columns: 2fr 2fr 1fr 1.5fr auto; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+        <input type="text" placeholder="Label" class="nav-label-input" value="${link.label || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+        <input type="text" placeholder="URL" class="nav-url-input" value="${link.url || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+        <select class="nav-target-select" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+          <option value="_self" ${link.target === '_self' ? 'selected' : ''}>_self</option>
+          <option value="_blank" ${link.target === '_blank' ? 'selected' : ''}>_blank</option>
+        </select>
+        <select class="nav-role-select" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+          <option value="public" ${link.requiredRole === 'public' ? 'selected' : ''}>Public (Everyone)</option>
+          <option value="subscriber" ${link.requiredRole === 'subscriber' ? 'selected' : ''}>Subscriber (Logged In)</option>
+          <option value="member" ${link.requiredRole === 'member' ? 'selected' : ''}>Member (Paid)</option>
+          <option value="admin" ${link.requiredRole === 'admin' ? 'selected' : ''}>Admin (Admin only)</option>
+        </select>
+        <button type="button" class="btn-remove-nav-row" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-remove-nav-row').forEach((btn, idx) => {
+      btn.onclick = () => {
+        const rows = Array.from(container.querySelectorAll('.nav-link-row'));
+        rows[idx].remove();
+      };
+    });
+  }
+
+  renderLinks(currentCfg);
+
+  if (addBtn) {
+    addBtn.onclick = () => {
+      const div = document.createElement('div');
+      div.className = 'nav-link-row';
+      div.style.cssText = 'display: grid; grid-template-columns: 2fr 2fr 1fr 1.5fr auto; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;';
+      div.innerHTML = `
+        <input type="text" placeholder="Label" class="nav-label-input" value="" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+        <input type="text" placeholder="URL" class="nav-url-input" value="" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+        <select class="nav-target-select" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+          <option value="_self">_self</option>
+          <option value="_blank">_blank</option>
+        </select>
+        <select class="nav-role-select" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+          <option value="public">Public (Everyone)</option>
+          <option value="subscriber">Subscriber (Logged In)</option>
+          <option value="member">Member (Paid)</option>
+          <option value="admin">Admin (Admin only)</option>
+        </select>
+        <button type="button" class="btn-remove-nav-row" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
+      `;
+      div.querySelector('.btn-remove-nav-row').onclick = () => div.remove();
+      container.appendChild(div);
+    };
+  }
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const rows = container.querySelectorAll('.nav-link-row');
+    const updatedNavigation = [];
+    rows.forEach(row => {
+      updatedNavigation.push({
+        label: row.querySelector('.nav-label-input').value.trim(),
+        url: row.querySelector('.nav-url-input').value.trim(),
+        target: row.querySelector('.nav-target-select').value,
+        requiredRole: row.querySelector('.nav-role-select').value
+      });
+    });
+
+    try {
+      const updatedConfig = {
+        ...configManager.current,
+        navigation: updatedNavigation
+      };
+      const success = await configManager.saveToFirebase(updatedConfig);
+      if (success) {
+        toast.success("Header Top Navigation structure updated successfully!");
+        const { initNavbar } = await import('../../core/navbar.js');
+        initNavbar();
+      } else {
+        toast.error("Failed to save Top Navigation structure.");
+      }
+    } catch (err) {
+      toast.error(`Error saving Top Navigation structure: ${err.message}`);
+    }
+  };
+}
+
+function initFooterLayoutEditor() {
+  const form = document.getElementById('footer-layout-form');
+  if (!form) return;
+
+  const footerCfg = configManager.current.footer || {
+    brand: { show: true, title: "Foundation", tagline: "A custom zero-build web framework for modern serverless architectures." },
+    legal: { show: true, heading: "Legal & Policies", links: [{ label: "Terms of Use", url: "/terms" }, { label: "Privacy Policy", url: "/privacy" }, { label: "Cookie Settings", url: "/cookies" }] },
+    newsletter: { show: true, heading: "Newsletter", text: "Subscribe to our newsletter for exclusive updates.", consentCopy: "I agree to receive email communications and accept the privacy policy." },
+    social: { show: true, heading: "Follow Us", links: [{ name: "twitter", url: "https://x.com" }, { name: "linkedin", url: "https://linkedin.com" }, { name: "youtube", url: "https://youtube.com" }, { name: "github", url: "https://github.com" }, { name: "facebook", url: "https://facebook.com" }, { name: "instagram", url: "https://instagram.com" }] }
+  };
+
+  document.getElementById('footer-brand-show').checked = !!footerCfg.brand?.show;
+  document.getElementById('footer-brand-title').value = footerCfg.brand?.title || '';
+  document.getElementById('footer-brand-tagline').value = footerCfg.brand?.tagline || '';
+
+  document.getElementById('footer-legal-show').checked = !!footerCfg.legal?.show;
+  document.getElementById('footer-legal-heading').value = footerCfg.legal?.heading || '';
+
+  document.getElementById('footer-newsletter-show').checked = !!footerCfg.newsletter?.show;
+  document.getElementById('footer-newsletter-heading').value = footerCfg.newsletter?.heading || '';
+  document.getElementById('footer-newsletter-text').value = footerCfg.newsletter?.text || '';
+  document.getElementById('footer-newsletter-consent').value = footerCfg.newsletter?.consentCopy || '';
+
+  document.getElementById('footer-social-show').checked = !!footerCfg.social?.show;
+  document.getElementById('footer-social-heading').value = footerCfg.social?.heading || '';
+
+  const legalList = document.getElementById('footer-legal-links-list');
+  const addLegalBtn = document.getElementById('btn-add-footer-legal');
+
+  function renderLegalLinks(links) {
+    legalList.innerHTML = links.map(link => `
+      <div class="footer-legal-row" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+        <input type="text" placeholder="Label" class="legal-label-input" value="${link.label || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; flex: 1; box-sizing: border-box;" />
+        <input type="text" placeholder="URL" class="legal-url-input" value="${link.url || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; flex: 2; box-sizing: border-box;" />
+        <button type="button" class="btn-remove-legal-row" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
+      </div>
+    `).join('');
+
+    legalList.querySelectorAll('.btn-remove-legal-row').forEach((btn, idx) => {
+      btn.onclick = () => {
+        const rows = Array.from(legalList.querySelectorAll('.footer-legal-row'));
+        rows[idx].remove();
+      };
+    });
+  }
+
+  renderLegalLinks(footerCfg.legal?.links || []);
+
+  if (addLegalBtn) {
+    addLegalBtn.onclick = () => {
+      const div = document.createElement('div');
+      div.className = 'footer-legal-row';
+      div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;';
+      div.innerHTML = `
+        <input type="text" placeholder="Label" class="legal-label-input" value="" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; flex: 1; box-sizing: border-box;" />
+        <input type="text" placeholder="URL" class="legal-url-input" value="" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; flex: 2; box-sizing: border-box;" />
+        <button type="button" class="btn-remove-legal-row" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
+      `;
+      div.querySelector('.btn-remove-legal-row').onclick = () => div.remove();
+      legalList.appendChild(div);
+    };
+  }
+
+  const socialList = document.getElementById('footer-social-links-list');
+  const socialIcons = footerCfg.social?.links || [
+    { name: "twitter", url: "https://x.com" },
+    { name: "linkedin", url: "https://linkedin.com" },
+    { name: "youtube", url: "https://youtube.com" },
+    { name: "github", url: "https://github.com" },
+    { name: "facebook", url: "https://facebook.com" },
+    { name: "instagram", url: "https://instagram.com" }
+  ];
+
+  socialList.innerHTML = socialIcons.map(link => `
+    <div class="footer-social-row" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+      <span style="font-weight: bold; font-size: 0.85rem; text-transform: capitalize; width: 80px;">${link.name}:</span>
+      <input type="url" class="social-url-input" data-name="${link.name}" value="${link.url || ''}" style="flex: 1; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+    </div>
+  `).join('');
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+
+    const legalRows = legalList.querySelectorAll('.footer-legal-row');
+    const legalLinks = [];
+    legalRows.forEach(row => {
+      legalLinks.push({
+        label: row.querySelector('.legal-label-input').value.trim(),
+        url: row.querySelector('.legal-url-input').value.trim()
+      });
+    });
+
+    const socialRows = socialList.querySelectorAll('.footer-social-row');
+    const socialLinks = [];
+    socialRows.forEach(row => {
+      socialLinks.push({
+        name: row.querySelector('.social-url-input').getAttribute('data-name'),
+        url: row.querySelector('.social-url-input').value.trim()
+      });
+    });
+
+    const updatedFooter = {
+      brand: {
+        show: document.getElementById('footer-brand-show').checked,
+        title: document.getElementById('footer-brand-title').value.trim(),
+        tagline: document.getElementById('footer-brand-tagline').value.trim()
+      },
+      legal: {
+        show: document.getElementById('footer-legal-show').checked,
+        heading: document.getElementById('footer-legal-heading').value.trim(),
+        links: legalLinks
+      },
+      newsletter: {
+        show: document.getElementById('footer-newsletter-show').checked,
+        heading: document.getElementById('footer-newsletter-heading').value.trim(),
+        text: document.getElementById('footer-newsletter-text').value.trim(),
+        consentCopy: document.getElementById('footer-newsletter-consent').value.trim()
+      },
+      social: {
+        show: document.getElementById('footer-social-show').checked,
+        heading: document.getElementById('footer-social-heading').value.trim(),
+        links: socialLinks
+      }
+    };
+
+    try {
+      const updatedConfig = {
+        ...configManager.current,
+        footer: updatedFooter
+      };
+      const success = await configManager.saveToFirebase(updatedConfig);
+      if (success) {
+        toast.success("Global Footer layout settings applied successfully!");
+        const { initGlobalFooter } = await import('../../index.js');
+        initGlobalFooter();
+      } else {
+        toast.error("Failed to save Global Footer layout settings.");
+      }
+    } catch (err) {
+      toast.error(`Error saving Global Footer: ${err.message}`);
+    }
+  };
 }
 
 function initIconSetManager() {
