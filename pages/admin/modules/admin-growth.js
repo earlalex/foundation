@@ -2,6 +2,7 @@
 import { initKanbanTab } from '../admin-kanban.js';
 import { initMarketingTab } from '../admin-marketing.js';
 import { configManager } from '../../../core/config.js';
+import { FRAMEWORK_AFFILIATES } from '../../../core/affiliates.js';
 import { store } from '../../../core/store.js';
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
@@ -50,6 +51,44 @@ export async function loadChatbotAndVoiceTab() {
       'chat-name': [validationRules.required],
       'chat-welcome': [validationRules.required]
     });
+
+    // Display a beautiful telephony affiliate banner right above the form
+    let ctaBanner = document.getElementById('chat-telephony-affiliate-cta');
+    if (!ctaBanner) {
+      ctaBanner = document.createElement('div');
+      ctaBanner.id = 'chat-telephony-affiliate-cta';
+      ctaBanner.style.cssText = `
+        background: #f0fff4;
+        border: 1px solid #c6f6d5;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        color: #22543d;
+        font-size: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      `;
+      ctaBanner.innerHTML = `
+        <div>
+          <strong style="font-size: 0.95rem;">📞 Need Telephony, VoIP & SMS Integration?</strong>
+          <p style="margin: 4px 0 0 0; color: #2f855a;">${FRAMEWORK_AFFILIATES.telnyx.description}</p>
+        </div>
+        <a href="${FRAMEWORK_AFFILIATES.telnyx.url}" target="_blank" rel="noopener noreferrer" style="
+          background: #38a169;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 4px;
+          text-decoration: none;
+          font-weight: bold;
+          font-size: 0.8rem;
+          white-space: nowrap;
+        ">Get Telnyx Account</a>
+      `;
+      chatbotForm.parentNode.insertBefore(ctaBanner, chatbotForm);
+    }
   }
 
   document.getElementById('chatbot-settings-form')?.addEventListener('submit', async (e) => {

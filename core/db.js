@@ -1,5 +1,6 @@
 // core/db.js - Re-export and Delegation Hub
-import { getFirestoreDB } from './db-shared.js';
+import { getFirestoreDB, schemaRegistry, store, configManager } from './db-shared.js';
+import { FRAMEWORK_AFFILIATES } from './affiliates.js';
 
 import {
   saveContent, getContentById, getAllContent, getContentByType, deleteContent,
@@ -199,28 +200,6 @@ export class ContentDB {
   async getAllRegistrations() { return getAllRegistrations(); }
   async saveAppointment(data) { return saveAppointment(data); }
   async getAppointments() { return getAppointments(); }
-}
-
-export const contentDB = new ContentDB();
-
-export const db = {
-  get state() {
-    return {};
-  },
-  async set(id, data) {
-    return saveContent({ ...data, id });
-  },
-  async get(id) {
-    return getContentById(id);
-  },
-  async delete(id) {
-    return deleteContent(id);
-  },
-  async query(filterFn) {
-    const all = await getAllContent();
-    return all.filter(filterFn);
-  }
-};
 
   #saveLocalBudgets(budgets) {
     try {
@@ -238,11 +217,59 @@ export const db = {
     }
   }
 
+  #saveLocalExpenses(expenses) {
+    try {
+      localStorage.setItem('foundation_local_expenses', JSON.stringify(expenses));
+    } catch (e) {
+      console.error('[DB]: Failed to save expenses to localStorage', e);
+    }
+  }
+
+  #saveLocalPayroll(payroll) {
+    try {
+      localStorage.setItem('foundation_local_payroll', JSON.stringify(payroll));
+    } catch (e) {
+      console.error('[DB]: Failed to save payroll to localStorage', e);
+    }
+  }
+
   #saveLocalEmployees(employees) {
     try {
       localStorage.setItem('foundation_local_employees', JSON.stringify(employees));
     } catch (e) {
       console.error('[DB]: Failed to save employees to localStorage', e);
+    }
+  }
+
+  #getLocalMarketingWorkflows() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_marketing_workflows') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #getLocalBudgets() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_budgets') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #getLocalExpenses() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  #getLocalPayroll() {
+    try {
+      return JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
+    } catch (e) {
+      return {};
     }
   }
 

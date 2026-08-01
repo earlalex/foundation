@@ -120,6 +120,52 @@ function populateAssigneeSelect() {
   const staff = users.filter(u => u.role === 'editor' || u.role === 'admin' || u.isAdmin);
   select.innerHTML = '<option value="">Unassigned</option>' + 
     staff.map(user => `<option value="${user.id}">${user.name || user.displayName || user.email}</option>`).join('');
+
+  // Add the "Assign to Me" button for task creation form if not already added
+  let assignMeBtn = document.getElementById('btn-creation-assign-me');
+  if (!assignMeBtn) {
+    assignMeBtn = document.createElement('button');
+    assignMeBtn.id = 'btn-creation-assign-me';
+    assignMeBtn.type = 'button';
+    assignMeBtn.textContent = 'Assign to Me';
+    assignMeBtn.style.cssText = `
+      margin-top: 4px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      background: var(--theme-color-primary, #2b6cb0);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      display: inline-block;
+    `;
+    select.parentNode.appendChild(assignMeBtn);
+
+    assignMeBtn.addEventListener('click', () => {
+      const currentUser = store.state.user;
+      if (currentUser) {
+        let matched = false;
+        const searchVal = currentUser.id || currentUser.email;
+        for (let i = 0; i < select.options.length; i++) {
+          if (select.options[i].value === searchVal || select.options[i].value === currentUser.email) {
+            select.selectedIndex = i;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          const opt = document.createElement('option');
+          opt.value = currentUser.id || currentUser.email;
+          opt.textContent = currentUser.name || currentUser.displayName || currentUser.email;
+          opt.selected = true;
+          select.appendChild(opt);
+        }
+      } else {
+        toast.error('You must be logged in.');
+      }
+    });
+  }
 }
 
 function setupKanbanBoard() {
@@ -187,6 +233,35 @@ function renderKanbanBoard() {
         </div>
       ` : '';
 
+      // Visual Assignee Badges
+      let avatarHtml = '';
+      const assigneeObj = task.assignee;
+      if (assigneeObj) {
+        if (assigneeObj.avatar) {
+          avatarHtml = `<img src="${assigneeObj.avatar}" alt="${assigneeObj.name}" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--theme-color-primary, #2b6cb0);" title="${assigneeObj.name} (${assigneeObj.email})" />`;
+        } else {
+          const initials = (assigneeObj.name || assigneeObj.email || 'A').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+          avatarHtml = `<div style="width: 22px; height: 22px; border-radius: 50%; background: var(--theme-color-primary, #2b6cb0); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold;" title="${assigneeObj.name} (${assigneeObj.email})">${initials}</div>`;
+        }
+      } else {
+        const u = users.find(userObj => userObj.id === task.assigneeId);
+        if (u) {
+          const initials = (u.name || u.displayName || u.email || 'A').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+          avatarHtml = `<div style="width: 22px; height: 22px; border-radius: 50%; background: var(--theme-color-primary, #2b6cb0); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold;" title="${u.name || u.displayName || u.email}">${initials}</div>`;
+        } else {
+          avatarHtml = `<div style="width: 22px; height: 22px; border-radius: 50%; background: #e2e8f0; color: #718096; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;" title="Unassigned">👤</div>`;
+        }
+      }
+
+      const isAssignedToMe = currentUser && (task.assigneeId === currentUser.id || task.assigneeId === currentUser.email || (task.assignee && task.assignee.email === currentUser.email));
+      const assignToMeBtn = !isAssignedToMe ? `
+        <button onclick="window.assignTaskToMe('${task.id}')"
+                style="margin-top: 0.75rem; width: 100%; padding: 4px 8px; font-size: 0.75rem; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; display: block;"
+                onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+          Assign to Me
+        </button>
+      ` : '';
+
       return `
         <div class="kanban-card" draggable="true" data-task-id="${task.id}"
              style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0);
@@ -204,9 +279,13 @@ function renderKanbanBoard() {
             ${task.description || 'No description'}
           </p>
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #718096; flex-wrap: wrap; gap: 0.25rem;">
-            <span>👤 ${getAssigneeName(task.assigneeId)}</span>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              ${avatarHtml}
+              <span>${task.assignee ? task.assignee.name : getAssigneeName(task.assigneeId)}</span>
+            </div>
             <span>📅 ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}</span>
           </div>
+          ${assignToMeBtn}
           ${showCompletedNotes}
         </div>
       `;
@@ -238,6 +317,34 @@ function getAssigneeName(assigneeId) {
   const user = users.find(u => u.id === assigneeId);
   return user?.name || user?.displayName || user?.email || 'Unknown';
 }
+
+window.assignTaskToMe = async function(taskId) {
+  const currentUser = store.state.user;
+  if (!currentUser) {
+    toast.error('You must be logged in to assign tasks.');
+    return;
+  }
+
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  task.assigneeId = currentUser.id || currentUser.email;
+  task.assignee = {
+    email: currentUser.email,
+    name: currentUser.name || currentUser.displayName || 'Admin',
+    avatar: currentUser.avatarUrl || null
+  };
+  task.updatedAt = new Date().toISOString();
+
+  try {
+    await contentDB.saveKanbanTask(task);
+    renderKanbanBoard();
+    toast.success('Task self-assigned successfully!');
+  } catch (err) {
+    errorHandler.handleError(err, 'Admin Kanban - Self Assign');
+    toast.error('Failed to self-assign task');
+  }
+};
 
 async function updateTaskStatus(taskId, newStatus) {
   try {
@@ -318,6 +425,25 @@ function setupTaskForm() {
     const dueDate = document.getElementById('task-due-date').value;
     const assigneeId = document.getElementById('task-assignee').value;
 
+    let assigneeObj = null;
+    if (assigneeId) {
+      const assignedUser = users.find(u => u.id === assigneeId);
+      if (assignedUser) {
+        assigneeObj = {
+          email: assignedUser.email,
+          name: assignedUser.name || assignedUser.displayName || 'Admin',
+          avatar: assignedUser.avatarUrl || null
+        };
+      } else if (store.state.user && (assigneeId === store.state.user.id || assigneeId === store.state.user.email)) {
+        const u = store.state.user;
+        assigneeObj = {
+          email: u.email,
+          name: u.displayName || u.name || 'Admin',
+          avatar: u.avatarUrl || null
+        };
+      }
+    }
+
     const newTask = {
       id: `task_${Date.now()}`,
       title,
@@ -325,6 +451,7 @@ function setupTaskForm() {
       priority,
       dueDate,
       assigneeId,
+      assignee: assigneeObj,
       status: 'backlog',
       completionNotes: '',
       createdAt: new Date().toISOString(),
