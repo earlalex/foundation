@@ -1260,21 +1260,45 @@
         <form id="firebase-config-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <div class="responsive-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Firebase API Key:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Firebase API Key:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Navigate to your Firebase Console > Project Settings > General > Web API Key.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-fb-key" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Firebase Project ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Firebase Project ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Found in your Firebase Console under Project Settings > General > Project ID.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-fb-project" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
           <div class="responsive-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Client ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Google Client ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Visit Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-google-client-id" placeholder="123456789-abc.apps.googleusercontent.com" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Client Secret:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Google Client Secret:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Obtained alongside your Google Client ID under OAuth 2.0 Credentials client configuration.</span>
+                </span>
+              </label>
               <input type="password" id="cfg-google-client-secret" placeholder="••••••••••••••••••••••••" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
@@ -1318,21 +1342,45 @@
         <form id="stripe-cloudflare-config-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Secret Key (Webhooks & API Payments):</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Stripe Secret Key:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Find this key under your Stripe Dashboard > Developers > API Keys > Secret key.</span>
+                </span>
+              </label>
               <input type="password" id="cfg-stripe-key" placeholder="sk_live_..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Stripe Monthly Membership Price ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Stripe Monthly Membership Price ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Acquired from a Price point configured under a Subscription Product on your Stripe Dashboard > Products.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-stripe-price-id" placeholder="price_1..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Analytics (GA4) Property ID:</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                Google Analytics (GA4) Property ID:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Get this 9-digit numeric ID inside Google Analytics Admin Console > Property Settings.</span>
+                </span>
+              </label>
               <input type="text" id="cfg-ga4-property" placeholder="123456789" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">VirusTotal API Key (Cloudflare Pages Secret):</label>
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+                VirusTotal API Key:
+                <span class="tooltip-wrapper">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Available in your VirusTotal profile menu dropdown under API Key section.</span>
+                </span>
+              </label>
               <input type="password" id="cfg-vt-apikey" placeholder="VIRUSTOTAL_API_KEY" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>

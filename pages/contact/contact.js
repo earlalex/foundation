@@ -1,13 +1,15 @@
 // pages/contact/contact.js
 import { 
   createGoogleContact, 
-  sendGmailNotification, 
+  sendGmailNotification,
+  getFreeBusyIntervalsForRange,
   getAvailableAppointmentSlots, 
   getGoogleCalendarFreeBusy,
   bookAppointmentSlot 
 } from '../../core/google-services.js';
 import { contentDB } from '../../core/db.js';
 import { configManager } from '../../core/config.js';
+import { stripeService } from '../../core/stripe.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { configManager } from '../../core/config.js';
 import { contentDB } from '../../core/db.js';
@@ -372,6 +374,84 @@ export function initContactPage() {
       return;
     }
 
+    const apptConfig = configManager.current?.appointments || {
+      operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      operatingHours: { start: "09:00", end: "17:00" },
+      duration: 30,
+      buffer: 15,
+      depositRule: 'none',
+      appointmentPrice: 100.00,
+      depositValue: 0
+    };
+
+    const depositRule = apptConfig.depositRule || 'none';
+    const price = Number(apptConfig.appointmentPrice || 100.00);
+    const depositValue = Number(apptConfig.depositValue || 0);
+
+    let amountToPay = 0;
+    if (depositRule === 'full') {
+      amountToPay = price;
+    } else if (depositRule === 'fixed') {
+      amountToPay = depositValue;
+    } else if (depositRule === 'percentage') {
+      amountToPay = (price * depositValue) / 100;
+    }
+
+    if (amountToPay > 0) {
+      // Redirect to Stripe Checkout Session for required deposit
+      const btn = document.getElementById('btn-book-appt');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Redirecting to payment gateway...';
+      }
+      try {
+        const remainingBalance = price - amountToPay;
+        const response = await fetch('/api/stripe-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            productId: `Consultation Deposit: ${name}`,
+            amount: Math.round(amountToPay * 100), // in cents
+            currency: 'USD',
+            mode: 'payment',
+            metadata: {
+              type: 'appointment_booking',
+              name,
+              email,
+              date,
+              timeSlot,
+              notes,
+              depositRule,
+              amountPaid: String(amountToPay),
+              remainingBalance: String(remainingBalance)
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Failed to initialize payment session');
+        }
+
+        const resData = await response.json();
+        if (resData.url) {
+          window.location.href = resData.url;
+        } else {
+          throw new Error('No checkout URL returned from payment endpoint');
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Contact Page - Checkout Redirect');
+        toast.error(`Checkout failed: ${err.message}`);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Confirm Google Meet Appointment';
+        }
+      }
+      return;
+    }
+
+    // Direct booking flow (if no deposit is required)
     const btn = document.getElementById('btn-book-appt');
     if (btn) {
       btn.disabled = true;
@@ -379,19 +459,19 @@ export function initContactPage() {
     }
 
     try {
-      // Create and save booking in ContentDB (real-time sync)
       const bookingData = {
         name,
         email,
         date,
         timeSlot,
+        notes,
         createdAt: new Date().toISOString()
       };
 
-      // Call Google Calendar API service
-      const res = await bookAppointmentSlot({ name, email, date, timeSlot });
+      // Call Google Calendar API service with conferenceData enabled to generate a Google Meet link
+      const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
       bookingData.meetUrl = res?.meetUrl || 'https://meet.google.com/mock-meet';
-      bookingData.calendarEventId = res?.calendarEventId || `mock_event_${Date.now()}`;
+      bookingData.calendarEventId = res?.calendarEventId || `event_${Date.now()}`;
 
       await contentDB.saveAppointment(bookingData);
 
@@ -404,7 +484,6 @@ export function initContactPage() {
         slotSelect.innerHTML = '<option value="">Select a date on the calendar above first...</option>';
       }
 
-      // Re-render to block out the freshly booked slot
       renderSchedulingCalendar();
     } catch (err) {
       errorHandler.handleError(err, 'Contact Page - Appointment Booking');
@@ -416,6 +495,58 @@ export function initContactPage() {
       }
     }
   });
+}
+
+async function finalizeAppointmentBookingAfterPayment(sessionId) {
+  try {
+    toast.info('Verifying deposit payment and finalizing booking...');
+    const headers = await stripeService.getAuthHeaders();
+    const response = await fetch('/api/stripe-proxy', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        action: 'generic_relay',
+        endpoint: `checkout/sessions/${sessionId}`,
+        method: 'GET'
+      })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to retrieve checkout session details.');
+    }
+    const session = await response.json();
+    const metadata = session.metadata || {};
+
+    if (metadata.type === 'appointment_booking') {
+      const { name, email, date, timeSlot, notes } = metadata;
+
+      const bookingData = {
+        name,
+        email,
+        date,
+        timeSlot,
+        notes,
+        createdAt: new Date().toISOString()
+      };
+
+      // Call Google Calendar API service with conferenceData enabled to generate a Google Meet link
+      const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
+      bookingData.meetUrl = res?.meetUrl || 'https://meet.google.com/mock-meet';
+      bookingData.calendarEventId = res?.calendarEventId || `event_${Date.now()}`;
+
+      await contentDB.saveAppointment(bookingData);
+
+      toast.success(`Appointment confirmed for ${date} at ${timeSlot}! Google Meet link generated and calendar invitations sent.`);
+
+      // Clean query params from the URL bar cleanly
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Reload calendar to block the newly booked slot
+      renderSchedulingCalendar();
+    }
+  } catch (err) {
+    errorHandler.handleError(err, 'Contact Page - Finalize Booking');
+    toast.error('Failed to finalize booking details.');
+  }
 }
 
 async function renderSchedulingCalendar() {
@@ -433,17 +564,28 @@ async function renderSchedulingCalendar() {
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
 
-  // Load existing real-time appointment bookings to calculate fully booked days
+  // Detect Mobile width to render either 1 month (paginated) or 3 months (full desktop)
+  const isMobile = window.innerWidth < 768;
+  const totalMonthsToShow = isMobile ? 1 : 3;
+
+  const rangeStartDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset, 1);
+  const rangeEndDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset + totalMonthsToShow, 0);
+
+  // Fetch real-time Google Calendar freeBusy intervals across the 3-month range
+  let busyIntervals = [];
+  try {
+    busyIntervals = await getFreeBusyIntervalsForRange(rangeStartDate.toISOString(), rangeEndDate.toISOString());
+  } catch (err) {
+    console.warn('[Calendar real-time freeBusy]: Query failed, using local database/offline fallbacks.', err);
+  }
+
+  // Load existing local/synchronized appointment bookings
   let bookedAppointments = [];
   try {
     bookedAppointments = await contentDB.getAppointments();
   } catch (err) {
     console.warn('[Calendar Load]: Using local appointment array fallback.', err);
   }
-
-  // Detect Mobile width to render either 1 month (paginated) or 3 months (full desktop)
-  const isMobile = window.innerWidth < 768;
-  const totalMonthsToShow = isMobile ? 1 : 3;
 
   container.innerHTML = '';
 
@@ -496,10 +638,10 @@ async function renderSchedulingCalendar() {
       // Check against Operating Guidelines
       const isOperatingDay = apptConfig.operatingDays?.includes(dayOfWeekName);
 
-      // Check how many slots exist and how many are already booked
-      const totalPossibleSlots = calculatePossibleSlotsCount(apptConfig);
+      // Check how many slots exist and how many are available
       const bookedOnThisDay = bookedAppointments.filter(a => a.date === dateStr);
-      const isFullyBooked = bookedOnThisDay.length >= totalPossibleSlots;
+      const slotsForDay = calculateAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay, busyIntervals);
+      const isFullyBooked = slotsForDay.length === 0;
 
       const isAvailable = isOperatingDay && !isPast && !isFullyBooked;
 
@@ -520,8 +662,8 @@ async function renderSchedulingCalendar() {
           // Set date value
           document.getElementById('appt-date').value = dateStr;
 
-          // Render timeslots
-          loadAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay);
+          // Render timeslots using real-time calculated slots
+          loadAvailableSlotsForDate(slotsForDay);
         });
       }
 
@@ -553,10 +695,7 @@ function calculatePossibleSlotsCount(config) {
   return count;
 }
 
-function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
-  const select = document.getElementById('appt-timeslot');
-  if (!select) return;
-
+function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIntervals) {
   const duration = config.duration || 30;
   const buffer = config.buffer || 15;
   const startStr = config.operatingHours?.start || "09:00";
@@ -569,12 +708,21 @@ function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
   const slots = [];
 
   while (curr.getTime() + duration * 60000 <= end.getTime()) {
+    const slotStart = new Date(curr);
+    const slotEnd = new Date(slotStart.getTime() + duration * 60000);
     const slotTimeStr = curr.toTimeString().substring(0, 5);
 
-    // Check if slot is already booked on this day
-    const isBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
+    // Check if slot is already booked locally on this day
+    const isLocalBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
 
-    if (!isBooked) {
+    // Check if slot overlaps with busy intervals from Google Calendar
+    const isGoogleBusy = (busyIntervals || []).some(busy => {
+      const busyStart = new Date(busy.start).getTime();
+      const busyEnd = new Date(busy.end).getTime();
+      return (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart);
+    });
+
+    if (!isLocalBooked && !isGoogleBusy) {
       const displayLabel = curr.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       slots.push({
         time: slotTimeStr,
@@ -584,6 +732,12 @@ function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
 
     curr = new Date(curr.getTime() + (duration + buffer) * 60000);
   }
+  return slots;
+}
+
+function loadAvailableSlotsForDate(slots) {
+  const select = document.getElementById('appt-timeslot');
+  if (!select) return;
 
   if (slots.length === 0) {
     select.innerHTML = '<option value="">No open appointment slots remaining on this day.</option>';

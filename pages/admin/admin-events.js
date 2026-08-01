@@ -86,7 +86,7 @@ function addTicketRow(data = {}) {
   const stripeBadge = stripePriceId
     ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: flex; align-items: center; gap: 4px;">
          <span>ID: <code>${stripePriceId}</code></span>
-         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy ]</button>
+         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy Stripe ID ]</button>
          <a href="https://dashboard.stripe.com/test/products/${stripeProductId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
        </div>`
     : '<span style="font-size: 0.75rem; color: #a0aec0;">Unsynced</span>';
@@ -129,7 +129,7 @@ function addVendorRow(data = {}) {
   const stripeBadge = stripePriceId
     ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: flex; align-items: center; gap: 4px;">
          <span>ID: <code>${stripePriceId}</code></span>
-         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy ]</button>
+         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy Stripe ID ]</button>
          <a href="https://dashboard.stripe.com/test/products/${stripeProductId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
        </div>`
     : '<span style="font-size: 0.75rem; color: #a0aec0;">Unsynced</span>';
@@ -175,7 +175,7 @@ function addSponsorRow(data = {}) {
   const stripeBadge = stripePriceId
     ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: flex; align-items: center; gap: 4px;">
          <span>ID: <code>${stripePriceId}</code></span>
-         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy ]</button>
+         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy Stripe ID ]</button>
          <a href="https://dashboard.stripe.com/test/products/${stripeProductId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
        </div>`
     : '<span style="font-size: 0.75rem; color: #a0aec0;">Unsynced</span>';
@@ -409,55 +409,6 @@ async function handleEventSave() {
   }
 }
 
-async function ensureMockRegistrationsSeeded() {
-  try {
-    const list = await contentDB.getAllRegistrations();
-    if (!list || list.length === 0) {
-      console.log('[Admin Events]: Seeding sample registrations for attendee roster...');
-      const samples = [
-        {
-          id: 'reg_demo_1',
-          eventId: 'sample-summit',
-          email: 'corporate.lead@nike.com',
-          accessCode: 'EVT-NIK-9923',
-          qrPayload: 'FOUNDATION-PASS:EVT-NIK-9923',
-          cartItems: JSON.stringify([{ id: 't-vip', type: 'ticket', name: 'VIP Networking Pass', price: 299.00, quantity: 1 }]),
-          createdAt: '2026-07-15T14:30:00.000Z',
-          status: 'Confirmed'
-        },
-        {
-          id: 'reg_demo_2',
-          eventId: 'sample-summit',
-          email: 'va.partner@gmail.com',
-          accessCode: 'EVT-PAR-1145',
-          qrPayload: 'FOUNDATION-PASS:EVT-PAR-1145',
-          cartItems: JSON.stringify([
-            { id: 't-gen', type: 'ticket', name: 'General Admission', price: 99.00, quantity: 2 },
-            { id: 'v-std', type: 'vendor_booth', name: 'Standard Vendor Booth', price: 499.00, quantity: 1 }
-          ]),
-          createdAt: '2026-07-18T10:15:00.000Z',
-          status: 'Confirmed'
-        },
-        {
-          id: 'reg_demo_3',
-          eventId: 'sample-summit',
-          email: 'headline.sponsor@salesforce.com',
-          accessCode: 'EVT-SFC-8800',
-          qrPayload: 'FOUNDATION-PASS:EVT-SFC-8800',
-          cartItems: JSON.stringify([{ id: 's-head', type: 'sponsorship', name: 'Headline Partner Sponsor', price: 2500.00, quantity: 1 }]),
-          createdAt: '2026-07-20T09:00:00.000Z',
-          status: 'Confirmed'
-        }
-      ];
-
-      for (const s of samples) {
-        await contentDB.saveRegistration(s);
-      }
-    }
-  } catch (e) {
-    console.warn('[Admin Events]: Seed check error', e);
-  }
-}
 
 async function loadRegistrantsRoster() {
   const tbody = document.getElementById('admin-registrants-tbody');
@@ -473,7 +424,7 @@ async function loadRegistrantsRoster() {
     let sponsorsCount = 0;
 
     if (eventRegs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #a0aec0;">No registrations logged for this event.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #a0aec0; border: 1px dashed var(--theme-color-border);">No registrations logged for this event.<br><span style="font-size:0.8rem;color:#718096;">No active items registered yet. Click 'Create Item' above to get started.</span></td></tr>`;
       updateSalesCounters(0, 0, 0);
       return;
     }
