@@ -1,7 +1,8 @@
 // core/db-events.js
 import {
   getFirestoreDB, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, limit,
-  originalGetDocs, queryWith3SecTimeout, CONTENT_COLLECTION
+  originalGetDocs, queryWith3SecTimeout, CONTENT_COLLECTION,
+  getLocalContent, saveLocalContent
 } from './db-shared.js';
 
 export async function saveEvent(eventData) {
@@ -235,15 +236,3 @@ export async function getAppointments() {
   return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
 }
 
-// Helpers
-function getLocalContent() {
-  try {
-    return JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
-  } catch (e) {
-    return {};
-  }
-}
-
-function saveLocalContent(data) {
-  localStorage.setItem('foundation_local_content', JSON.stringify(data));
-}
