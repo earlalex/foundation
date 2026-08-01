@@ -1027,7 +1027,12 @@
             </select>
           </div>
 
-          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">Sync API Credentials</button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; align-items: center;">
+            <button type="submit" class="btn-primary">Sync API Credentials</button>
+            <button type="button" id="btn-test-firebase" class="btn-primary" style="background: #2b6cb0; font-size: 0.85rem;">Test Firebase Auth</button>
+            <button type="button" id="btn-test-gemini" class="btn-primary" style="background: #319795; font-size: 0.85rem;">Test Gemini API</button>
+            <button type="button" id="btn-test-openai" class="btn-primary" style="background: #805ad5; font-size: 0.85rem;">Test OpenAI API</button>
+          </div>
         </form>
       </div>
 
@@ -1064,7 +1069,11 @@
               <input type="text" id="cfg-cf-vt-url" value="/api/virustotal-scan" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
-          <button type="submit" class="btn-primary" style="align-self: flex-start;">Save Platform Keys</button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; align-items: center;">
+            <button type="submit" class="btn-primary">Save Platform Keys</button>
+            <button type="button" id="btn-test-stripe" class="btn-primary" style="background: #38a169; font-size: 0.85rem;">Test Stripe Connection</button>
+            <button type="button" id="btn-test-virustotal" class="btn-primary" style="background: #e53e3e; font-size: 0.85rem;">Test VirusTotal API</button>
+          </div>
         </form>
       </div>
 
@@ -1085,7 +1094,10 @@
               <input type="text" id="cfg-lastpass-company" placeholder="Enter Company ID / Account Hash" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
           </div>
-          <button type="submit" class="btn-primary" style="align-self: flex-start;">Save LastPass Integration</button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; align-items: center;">
+            <button type="submit" class="btn-primary">Save LastPass Integration</button>
+            <button type="button" id="btn-test-lastpass" class="btn-primary" style="background: #dd6b20; font-size: 0.85rem;">Test LastPass Connection</button>
+          </div>
         </form>
       </div>
     </div>

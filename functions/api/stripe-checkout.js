@@ -65,7 +65,20 @@ export async function onRequestPost(context) {
       params.append('customer_email', email);
     }
 
-    if (priceId) {
+    // Process lineItems array if passed from dynamic cart
+    if (body.lineItems && Array.isArray(body.lineItems) && body.lineItems.length > 0) {
+      body.lineItems.forEach((item, index) => {
+        if (item.priceId) {
+          params.append(`line_items[${index}][price]`, item.priceId);
+          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
+        } else {
+          params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
+          params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
+          params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
+          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
+        }
+      });
+    } else if (priceId) {
       params.append('line_items[0][price]', priceId);
       params.append('line_items[0][quantity]', '1');
     } else if (amount) {

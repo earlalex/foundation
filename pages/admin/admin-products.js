@@ -4,6 +4,7 @@ import { toast } from '../../utils/toast.js';
 import { FormValidator } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
+import { stripeService } from '../../core/stripe.js';
 
 let selectedCourse = null;
 let grapesLessonEditor = null;
@@ -99,12 +100,21 @@ export function initProductsTab() {
         const achBadge = product.stripe?.enableAch
           ? `<span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e6fffa; color: #319795; margin-left: 4px;">ACH Enabled</span>`
           : '';
+
+        const stripeInfo = product.stripe?.priceId
+          ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+               <span>Stripe ID: <code>${product.stripe.priceId}</code></span>
+               <button class="btn-copy-stripe-id" data-copy="${product.stripe.priceId}" style="padding: 1px 5px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy Stripe ID ]</button>
+               <a href="https://dashboard.stripe.com/test/products/${product.stripe.productId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
+             </div>`
+          : '<div style="font-size: 0.75rem; color: #a0aec0; margin-top: 4px;">No Stripe Sync</div>';
         
         return `
           <tr style="border-bottom: 1px solid var(--theme-color-border, #e2e8f0);">
             <td style="padding: 12px;">
               <div style="font-weight: 600; color: var(--theme-color-text-primary, #1a202c);">${product.title}</div>
               <div style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #4a5568);">${product.description?.substring(0, 50)}...</div>
+              ${stripeInfo}
             </td>
             <td style="padding: 12px;">${product.category}</td>
             <td style="padding: 12px;">${product.pricing?.currency || 'USD'} $${(product.pricing?.basePrice / 100).toFixed(2)}</td>
@@ -130,6 +140,15 @@ export function initProductsTab() {
   }
 
   function attachProductHandlers() {
+    productsTbody.querySelectorAll('.btn-copy-stripe-id').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const copyText = btn.getAttribute('data-copy');
+        navigator.clipboard.writeText(copyText);
+        toast.success(`Copied Stripe Price ID: ${copyText}`);
+      });
+    });
+
     productsTbody.querySelectorAll('.btn-delete-product').forEach(btn => {
       btn.addEventListener('click', async () => {
         const productId = btn.dataset.productId;
@@ -179,8 +198,8 @@ export function initProductsTab() {
       const paymentType = document.getElementById('product-payment-type').value;
       const retainerAmount = document.getElementById('product-retainer-amount').value;
       const retainerPercentage = document.getElementById('product-retainer-percentage').value;
-      const stripeProductId = document.getElementById('product-stripe-id').value;
-      const stripePriceId = document.getElementById('product-stripe-price-id').value;
+      let stripeProductId = document.getElementById('product-stripe-id').value;
+      let stripePriceId = document.getElementById('product-stripe-price-id').value;
       const enableAch = document.getElementById('product-enable-ach')?.checked || false;
       const invoiceDays = parseInt(document.getElementById('product-invoice-days').value) || 30;
       const googleContact = document.getElementById('product-google-contact').value;
@@ -188,6 +207,20 @@ export function initProductsTab() {
 
       // Convert price to cents for Stripe compatibility
       const basePrice = Math.round(price * 100);
+
+      // Auto-register Stripe product if empty
+      if (!stripeProductId || !stripePriceId) {
+        toast.info('Auto-syncing product with Stripe...');
+        const stripeRes = await stripeService.registerStripeProduct(
+          title,
+          description || `${category} - ${title}`,
+          basePrice,
+          currency,
+          false
+        );
+        stripeProductId = stripeRes.productId;
+        stripePriceId = stripeRes.priceId;
+      }
 
       const productData = {
         type: 'product',
@@ -219,7 +252,7 @@ export function initProductsTab() {
       };
 
       await contentDB.saveContent(productData);
-      toast.success('Product created successfully!');
+      toast.success('Product created successfully and synced with Stripe!');
       
       // Reset form
       productForm.reset();
