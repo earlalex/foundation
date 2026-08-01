@@ -605,7 +605,11 @@ export async function getVaActivityLogs(editorId) {
 
   try {
     const tasks = Object.values(JSON.parse(localStorage.getItem('foundation_local_kanban_tasks') || '{}'));
-    const assignedTasks = tasks.filter(t => t.assigneeId === editorId || t.assigneeId === editorEmail);
+    const assignedTasks = tasks.filter(t =>
+      t.assigneeId === editorId ||
+      t.assigneeId === editorEmail ||
+      (t.assignee && (t.assignee.email === editorEmail || t.assignee.email === editorId))
+    );
     assignedTasks.forEach(task => {
       logs.push({
         id: `log_task_${task.id}`,

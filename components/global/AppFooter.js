@@ -1,6 +1,7 @@
 // components/global/AppFooter.js
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
+import { FRAMEWORK_AFFILIATES } from '../../core/affiliates.js';
 
 export class AppFooter extends HTMLElement {
   connectedCallback() {
@@ -14,6 +15,12 @@ export class AppFooter extends HTMLElement {
       newsletter: { show: true, heading: "Newsletter", text: "Subscribe for exclusive updates.", consentCopy: "I agree to receive communications." },
       social: { show: true, heading: "Follow Us", links: [] }
     };
+
+    const uniqueId = Math.random().toString(36).substring(2, 9);
+    this.formId = `foundation-footer-newsletter-form-${uniqueId}`;
+    this.emailId = `foundation-newsletter-email-${uniqueId}`;
+    this.submitId = `foundation-newsletter-submit-${uniqueId}`;
+    this.consentId = `foundation-newsletter-consent-cb-${uniqueId}`;
 
     let colsHtml = '';
 
@@ -43,11 +50,11 @@ export class AppFooter extends HTMLElement {
         <div class="footer-column newsletter-column">
           <h4 class="footer-heading">${footerCfg.newsletter.heading || 'Newsletter'}</h4>
           <p class="newsletter-text">${footerCfg.newsletter.text || ''}</p>
-          <form id="footer-newsletter-form" class="newsletter-form">
-            <input type="email" id="newsletter-email" placeholder="Your Email Address" required class="newsletter-input" />
-            <button type="submit" id="newsletter-submit" class="btn-primary newsletter-btn" disabled>Subscribe</button>
+          <form id="${this.formId}" class="newsletter-form">
+            <input type="email" id="${this.emailId}" placeholder="Your Email Address" required class="newsletter-input" />
+            <button type="submit" id="${this.submitId}" class="btn-primary newsletter-btn" disabled>Subscribe</button>
             <label class="newsletter-consent">
-              <input type="checkbox" id="newsletter-consent-cb" required />
+              <input type="checkbox" id="${this.consentId}" required />
               <span>${footerCfg.newsletter.consentCopy || ''}</span>
             </label>
           </form>
@@ -68,7 +75,15 @@ export class AppFooter extends HTMLElement {
       `;
     }
 
-    this.innerHTML = `<div class="footer-container">${colsHtml}</div>`;
+    this.innerHTML = `
+      <div class="footer-container">${colsHtml}</div>
+      <div class="footer-attribution" style="margin-top: 2rem; border-top: 1px solid var(--theme-color-border, #edf2f7); padding-top: 1rem; font-size: 0.8rem; color: #a0aec0; text-align: center;">
+        Powered by
+        <a href="${FRAMEWORK_AFFILIATES.cloudflare.url}" target="_blank" rel="noopener noreferrer" style="color: #718096; text-decoration: underline; font-weight: 600;">Cloudflare Pages & Workers</a>,
+        <a href="${FRAMEWORK_AFFILIATES.stripe.url}" target="_blank" rel="noopener noreferrer" style="color: #718096; text-decoration: underline; font-weight: 600;">Stripe</a>, and
+        <a href="${FRAMEWORK_AFFILIATES.googleWorkspace.url}" target="_blank" rel="noopener noreferrer" style="color: #718096; text-decoration: underline; font-weight: 600;">Google Workspace</a>.
+      </div>
+    `;
 
     // Fetch SVG icons
     try {
@@ -98,9 +113,9 @@ export class AppFooter extends HTMLElement {
     }
 
     // Event listeners
-    const consentCb = this.querySelector('#newsletter-consent-cb');
-    const submitBtn = this.querySelector('#newsletter-submit');
-    const newsletterForm = this.querySelector('#footer-newsletter-form');
+    const consentCb = this.querySelector('#' + this.consentId);
+    const submitBtn = this.querySelector('#' + this.submitId);
+    const newsletterForm = this.querySelector('#' + this.formId);
 
     if (consentCb && submitBtn) {
       consentCb.addEventListener('change', (e) => {
@@ -110,7 +125,7 @@ export class AppFooter extends HTMLElement {
 
     newsletterForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = this.querySelector('#newsletter-email')?.value;
+      const email = this.querySelector('#' + this.emailId)?.value;
       if (!email) return;
 
       submitBtn.disabled = true;

@@ -11,6 +11,7 @@ import {
 } from '../../../core/drive-upload.js';
 import { contentDB } from '../../../core/db.js';
 import { sendGmailNotification } from '../../../core/google-services.js';
+import { FRAMEWORK_AFFILIATES } from '../../../core/affiliates.js';
 
 export class AdminSetupWizards {
   /**
@@ -212,7 +213,10 @@ export class AdminSetupWizards {
                   <input type="text" id="wz-fb-auth-domain" value="demo-proj-id.firebaseapp.com" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>
 
-                <div style="border-left: 3px solid #319795; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #319795;">Google Workspace OAuth:</div>
+                <div style="border-left: 3px solid #319795; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #319795; display: flex; justify-content: space-between; align-items: center;">
+                  <span>Google Workspace OAuth:</span>
+                  <a href="${FRAMEWORK_AFFILIATES.googleWorkspace.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #2b6cb0; text-decoration: underline; font-weight: bold;">Visit Google Workspace Console</a>
+                </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
@@ -261,7 +265,10 @@ export class AdminSetupWizards {
                   </div>
                 </div>
 
-                <div style="border-left: 3px solid #38a169; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #38a169;">Stripe Monetization:</div>
+                <div style="border-left: 3px solid #38a169; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #38a169; display: flex; justify-content: space-between; align-items: center;">
+                  <span>Stripe Monetization:</span>
+                  <a href="${FRAMEWORK_AFFILIATES.stripe.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #38a169; text-decoration: underline; font-weight: bold;">Set up Stripe Dashboard</a>
+                </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
@@ -305,25 +312,25 @@ export class AdminSetupWizards {
                     <input type="text" id="wz-ga4-property" value="987654321" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
-                    <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                      VirusTotal API Key:
-                      <span class="tooltip-wrapper">
-                        <span class="tooltip-icon">?</span>
-                        <span class="tooltip-text">Available in your VirusTotal profile menu dropdown under API Key section.</span>
-                      </span>
+                    <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: 100%; justify-content: space-between;">
+                      <span>VirusTotal API Key:</span>
+                      <a href="${FRAMEWORK_AFFILIATES.virusTotal.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.7rem; color: #2b6cb0; text-decoration: underline; font-weight: bold;">Get VirusTotal API Key</a>
                     </label>
                     <input type="password" id="wz-vt-key" value="vt_api_mock_token" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                 </div>
                 <div>
-                  <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                    LastPass Provisioning Key:
-                    <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Acquired in LastPass Admin Console > User Provisioning > API Tokens.</span></div>
+                  <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; width: 100%; justify-content: space-between;">
+                    <span>LastPass Provisioning Key:</span>
+                    <a href="${FRAMEWORK_AFFILIATES.lastpass.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.7rem; color: #2b6cb0; text-decoration: underline; font-weight: bold;">Get LastPass Key</a>
                   </label>
                   <input type="password" id="wz-lp-hash" value="lp_provision_mock_hash_11" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>
 
-                <div style="border-left: 3px solid #e53e3e; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #e53e3e;">Cloudflare Deployment:</div>
+                <div style="border-left: 3px solid #e53e3e; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #e53e3e; display: flex; justify-content: space-between; align-items: center;">
+                  <span>Cloudflare Deployment:</span>
+                  <a href="${FRAMEWORK_AFFILIATES.cloudflare.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #e53e3e; text-decoration: underline; font-weight: bold;">Deploy Cloudflare</a>
+                </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">

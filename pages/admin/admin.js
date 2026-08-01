@@ -1,5 +1,6 @@
 // pages/admin/admin.js - Overhauled & Code-Split Admin Controller
 import { authManager } from '../../core/auth.js';
+import { FRAMEWORK_AFFILIATES } from '../../core/affiliates.js';
 import { store } from '../../core/store.js';
 import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';

@@ -10,6 +10,9 @@ export class ChatWidget extends HTMLElement {
     this.isOpen = false;
     this.isAdmin = false;
     this.storageKey = 'foundation_chat_history';
+    const uniqueId = Math.random().toString(36).substring(2, 9);
+    this.chatFormId = `foundation-chat-form-${uniqueId}`;
+    this.chatInputId = `foundation-chat-input-${uniqueId}`;
   }
 
   connectedCallback() {
@@ -169,8 +172,8 @@ export class ChatWidget extends HTMLElement {
           </div>
 
           <!-- Message Input Form -->
-          <form id="chat-form" style="display: flex; border-top: 1px solid ${borderColor}; padding: 10px; background: ${surfaceColor}; gap: 8px; margin: 0;">
-            <input type="text" id="chat-input" placeholder="Type a message..." required autocomplete="off" style="flex: 1; border: 1px solid ${borderColor}; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; background: var(--theme-color-background, #f7fafc); color: ${textColor}; outline: none;" />
+          <form id="${this.chatFormId}" style="display: flex; border-top: 1px solid ${borderColor}; padding: 10px; background: ${surfaceColor}; gap: 8px; margin: 0;">
+            <input type="text" id="${this.chatInputId}" placeholder="Type a message..." required autocomplete="off" style="flex: 1; border: 1px solid ${borderColor}; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; background: var(--theme-color-background, #f7fafc); color: ${textColor}; outline: none;" />
             <button type="submit" style="background: ${primaryColor}; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -211,8 +214,8 @@ export class ChatWidget extends HTMLElement {
     const chatWindow = this.querySelector('#chat-window');
     const iconOpen = this.querySelector('#chat-icon-open');
     const iconClose = this.querySelector('#chat-icon-close');
-    const form = this.querySelector('#chat-form');
-    const input = this.querySelector('#chat-input');
+    const form = this.querySelector('#' + this.chatFormId);
+    const input = this.querySelector('#' + this.chatInputId);
     const clearHistoryBtn = this.querySelector('#chat-clear-history');
 
     const toggleChat = () => {

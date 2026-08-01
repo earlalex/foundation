@@ -213,7 +213,7 @@ function renderCredentialsList() {
         <div>
           <label style="font-weight: 600; color: #718096; font-size: 0.75rem;">Password:</label>
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 2px;">
-            <input type="password" id="password-${cred.id}" value="${'•'.repeat(12)}" readonly
+            <input type="password" id="foundation-vault-pass-${cred.id}" value="${'•'.repeat(12)}" readonly
                    style="flex: 1; padding: 4px 8px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.8rem; height: 28px;" />
             ${showCopyBtn}
             ${showRevealBtn}
@@ -302,7 +302,7 @@ window.togglePasswordVisibility = function(credentialId) {
   const credential = credentials.find(c => c.id === credentialId);
   if (!credential) return;
 
-  const passwordInput = document.getElementById(`password-${credentialId}`);
+  const passwordInput = document.getElementById(`foundation-vault-pass-${credentialId}`);
   if (passwordInput.type === 'password') {
     passwordInput.type = 'text';
     passwordInput.value = credential.encryptedPassKey;
@@ -370,6 +370,17 @@ function setupVaultForm() {
   const form = document.getElementById('vault-credential-form');
   if (!form) return;
 
+  const uniqueId = Date.now();
+  const serviceInput = document.getElementById('cred-service-name');
+  const urlInput = document.getElementById('cred-login-url');
+  const userInput = document.getElementById('cred-username');
+  const passInput = document.getElementById('cred-password');
+
+  if (serviceInput) serviceInput.id = `foundation-vault-service-${uniqueId}`;
+  if (urlInput) urlInput.id = `foundation-vault-url-${uniqueId}`;
+  if (userInput) userInput.id = `foundation-vault-username-${uniqueId}`;
+  if (passInput) passInput.id = `foundation-vault-pass-${uniqueId}`;
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -378,10 +389,10 @@ function setupVaultForm() {
       return;
     }
 
-    const serviceName = document.getElementById('cred-service-name').value;
-    const loginUrl = document.getElementById('cred-login-url').value;
-    const username = document.getElementById('cred-username').value;
-    const encryptedPassKey = document.getElementById('cred-password').value;
+    const serviceName = document.getElementById(`foundation-vault-service-${uniqueId}`).value;
+    const loginUrl = document.getElementById(`foundation-vault-url-${uniqueId}`).value;
+    const username = document.getElementById(`foundation-vault-username-${uniqueId}`).value;
+    const encryptedPassKey = document.getElementById(`foundation-vault-pass-${uniqueId}`).value;
 
     const newCredential = {
       id: `cred_${Date.now()}`,
