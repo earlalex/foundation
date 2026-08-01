@@ -513,27 +513,170 @@ export class Router {
 
   updateMetadata(path) {
     const routeInfo = this.routesManifest[path];
+    const siteTitle = configManager.current.siteTitle || 'Foundation';
+    const siteDomain = configManager.current.siteDomain || window.location.origin;
+    const siteLogo = configManager.current.siteLogo?.src || `${siteDomain}/assets/logo.png`;
+
+    let title = 'Home';
+    let description = 'Welcome to Foundation - A custom zero-build web framework.';
+
     if (routeInfo) {
-      document.title = `${routeInfo.title} | Foundation`;
-      if (routeInfo.description) {
-        this.setMetaDescription(routeInfo.description);
-      }
+      title = routeInfo.title;
+      description = routeInfo.description || description;
     } else {
       const segments = path.split('/').filter(Boolean);
       const rawTitle = segments.pop() || 'Home';
-      const formattedTitle = rawTitle.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      
-      document.title = `${formattedTitle} | Foundation`;
+      title = rawTitle.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
+
+    // Set traditional SEO
+    document.title = `${title} | ${siteTitle}`;
+    this.setMetaTag('name', 'description', description);
+    this.setMetaTag('name', 'keywords', `${title.toLowerCase()}, ${siteTitle.toLowerCase()}, zero-build, framework, single page application`);
+
+    // Set canonical link
+    const canonicalUrl = `${siteDomain}${path}`;
+    this.setLinkTag('canonical', canonicalUrl);
+
+    // Set Open Graph tags (SEO, AEO, AIO, GEO)
+    this.setMetaTag('property', 'og:title', `${title} | ${siteTitle}`);
+    this.setMetaTag('property', 'og:description', description);
+    this.setMetaTag('property', 'og:image', siteLogo);
+    this.setMetaTag('property', 'og:url', canonicalUrl);
+    this.setMetaTag('property', 'og:type', 'website');
+    this.setMetaTag('name', 'twitter:card', 'summary_large_image');
+
+    // Programmatic Structured JSON-LD Data Injection for AI and Search Crawlers
+    this.injectJsonLdSchema(path, title, description, canonicalUrl, siteTitle, siteDomain, siteLogo);
   }
 
-  setMetaDescription(descriptionText) {
-    let metaDesc = document.querySelector('meta[name="description"]');
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.name = 'description';
-      document.head.appendChild(metaDesc);
+  setMetaTag(attrType, attrValue, contentValue) {
+    let el = document.querySelector(`meta[${attrType}="${attrValue}"]`);
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute(attrType, attrValue);
+      document.head.appendChild(el);
     }
-    metaDesc.content = descriptionText;
+    el.content = contentValue;
+  }
+
+  setLinkTag(rel, href) {
+    let el = document.querySelector(`link[rel="${rel}"]`);
+    if (!el) {
+      el = document.createElement('link');
+      el.rel = rel;
+      document.head.appendChild(el);
+    }
+    el.href = href;
+  }
+
+  injectJsonLdSchema(path, title, description, canonicalUrl, siteTitle, siteDomain, siteLogo) {
+    // Remove existing dynamic json-ld scripts
+    document.querySelectorAll('script[type="application/ld+json"].dynamic-schema').forEach(el => el.remove());
+
+    const schemas = [];
+    const orgProfile = configManager.current.businessProfile || {};
+
+    // 1. Organization Schema
+    const orgSchema = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": `${siteDomain}/#organization`,
+      "name": orgProfile.legalName || siteTitle,
+      "url": siteDomain,
+      "logo": siteLogo,
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": orgProfile.phone || "",
+        "contactType": "customer service",
+        "email": orgProfile.supportEmail || orgProfile.email || ""
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": orgProfile.address || "",
+        "addressLocality": orgProfile.city || "",
+        "addressRegion": orgProfile.state || "",
+        "postalCode": orgProfile.zip || "",
+        "addressCountry": orgProfile.country || "US"
+      }
+    };
+    schemas.push(orgSchema);
+
+    // 2. Specific Page Schemas (AEO, AIO, GEO & GEO)
+    if (path === '/events') {
+      const eventSchema = {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": "Consultation & Strategic Strategy Sessions",
+        "startDate": new Date().toISOString(),
+        "endDate": new Date(Date.now() + 365*24*60*60*1000).toISOString(),
+        "eventStatus": "https://schema.org/EventScheduled",
+        "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+        "location": {
+          "@type": "VirtualLocation",
+          "url": `${siteDomain}/contact`
+        },
+        "description": "Premium strategic sessions to audit architectures, serverless workloads, and SPA scaling pipelines.",
+        "offers": {
+          "@type": "Offer",
+          "url": `${siteDomain}/contact`,
+          "price": "150.00",
+          "priceCurrency": "USD",
+          "availability": "https://schema.org/InStock"
+        }
+      };
+      schemas.push(eventSchema);
+    } else if (path === '/contact') {
+      const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I schedule a 1-on-1 strategic consultation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Select an available date and time slot directly on our interactive consultation calendar. Provide your contact info, pay any required upfront deposits securely via Stripe, and receive a Google Meet video conference link synced directly to your calendar."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the average response time for standard inquiries?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Our typical response turnaround is under 24 business hours for all standard messages delivered through our secure contact channels."
+            }
+          }
+        ]
+      };
+      schemas.push(faqSchema);
+    } else if (path === '/home') {
+      const prodSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": `${siteTitle} Developer Subscriptions`,
+        "description": "Gain full premium course learning materials, downloadable guides, and serverless developer bundles.",
+        "offers": {
+          "@type": "AggregateOffer",
+          "lowPrice": "29.00",
+          "highPrice": "150.00",
+          "priceCurrency": "USD",
+          "seller": {
+            "@type": "Organization",
+            "name": orgProfile.legalName || siteTitle
+          }
+        }
+      };
+      schemas.push(prodSchema);
+    }
+
+    // Inject scripts
+    schemas.forEach(schema => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.className = 'dynamic-schema';
+      script.text = JSON.stringify(schema);
+      document.head.appendChild(script);
+    });
   }
 }

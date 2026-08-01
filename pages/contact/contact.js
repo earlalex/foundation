@@ -12,9 +12,49 @@ import { configManager } from '../../core/config.js';
 import { stripeService } from '../../core/stripe.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { toast } from '../../utils/toast.js';
-import { stripeService } from '../../core/stripe.js';
 
 let calendarCurrentMonthOffset = 0; // Starts from current month
+
+function autoPopulateBusinessInfo() {
+  const profile = configManager.current.businessProfile || {};
+  const appointments = configManager.current.appointments || {};
+
+  const addressEl = document.getElementById('sidebar-biz-address');
+  const emailEl = document.getElementById('sidebar-biz-email');
+  const phoneEl = document.getElementById('sidebar-biz-phone');
+  const hoursEl = document.getElementById('sidebar-biz-hours');
+
+  if (addressEl) {
+    const fullAddress = [profile.address, profile.city, profile.state, profile.zip].filter(Boolean).join(', ');
+    addressEl.textContent = fullAddress || 'Not Configured';
+  }
+  if (emailEl) {
+    const email = profile.supportEmail || profile.email || 'support@example.com';
+    emailEl.textContent = email;
+    emailEl.setAttribute('href', `mailto:${email}`);
+  }
+  if (phoneEl) {
+    phoneEl.textContent = profile.phone || 'Not Configured';
+  }
+  if (hoursEl) {
+    const startHour = appointments.operatingHours?.start || '09:00';
+    const endHour = appointments.operatingHours?.end || '17:00';
+    const days = (appointments.operatingDays || []).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ');
+    hoursEl.textContent = days ? `${days} (${startHour} - ${endHour})` : 'Not Configured';
+  }
+}
+
+function handleSuccessRedirect() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    if (sessionId) {
+      finalizeAppointmentBookingAfterPayment(sessionId);
+    }
+  } catch (err) {
+    console.error('[handleSuccessRedirect] Error handling checkout success redirect:', err);
+  }
+}
 
 export async function initContactPage() {
   // 1. Persistent Page Overrides Check
@@ -215,7 +255,7 @@ export async function initContactPage() {
       await contentDB.saveAppointment(bookingData);
 
       // Remaining balance invoicing task
-      const remainingBalance = fee - depositRequired;
+      const remainingBalance = price - amountToPay;
       if (remainingBalance > 0) {
         // Queue draft invoice in ContentDB for post-meeting invoicing
         const draftInvoice = {

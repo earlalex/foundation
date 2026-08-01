@@ -20,7 +20,7 @@ export class AuthorCard extends HTMLElement {
 
     this.innerHTML = `
       <article class="author-card" style="border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 1.25rem; background: var(--theme-color-surface, #ffffff); display: flex; gap: 1.25rem; align-items: ${layout === 'full' ? 'flex-start' : 'center'};">
-        <img src="${avatar}" alt="${name}" style="width: ${layout === 'full' ? '80px' : '56px'}; height: ${layout === 'full' ? '80px' : '56px'}; border-radius: 50%; object-fit: cover; border: 2px solid var(--theme-color-primary, #2b6cb0);" />
+        <img src="${avatar}" alt="${name}" width="${layout === 'full' ? '80' : '56'}" height="${layout === 'full' ? '80' : '56'}" loading="lazy" style="width: ${layout === 'full' ? '80px' : '56px'}; height: ${layout === 'full' ? '80px' : '56px'}; border-radius: 50%; object-fit: cover; border: 2px solid var(--theme-color-primary, #2b6cb0);" />
         <div style="flex: 1;">
           <h3 style="margin: 0 0 0.25rem 0; font-size: 1.15rem; color: var(--theme-color-text-primary, #1a202c); font-weight: 700;">${name}</h3>
           <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 600; color: var(--theme-color-primary, #2b6cb0);">${role}</p>

@@ -1,109 +1,45 @@
-// core/db.js
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  getDoc as originalGetDoc,
-  getDocs as originalGetDocs,
-  setDoc as originalSetDoc,
-  deleteDoc as originalDeleteDoc,
-  query, 
-  where, 
-  limit 
-} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+// core/db.js - Re-export and Delegation Hub
+import { getFirestoreDB } from './db-shared.js';
 
-// Global Firestore timeout wrapper to prevent headless chromium test runner hangs in offline sandbox environments
-function withTimeout(promise, ms = 2000) {
-  promise.catch((err) => {
-    console.warn('[DB Timeout Wrapper]: original promise rejected post-timeout/settlement:', err.message || err);
-  });
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), ms))
-  ]);
-}
+import {
+  saveContent, getContentById, getAllContent, getContentByType, deleteContent,
+  saveCustomPage, getCustomPageBySlug, getAllCustomPages,
+  saveZapScanResult, getZapScanHistory, saveMarketingSegment, getMarketingSegments,
+  getMarketingSegmentById, evaluateSegmentUsers, saveMarketingJourney,
+  saveEmailTemplate, getEmailTemplates, getEmailTemplateById,
+  saveVaultCredential, getVaultCredentials, deleteVaultCredential,
+  saveVaCandidate, getVaCandidates, getVaActivityLogs, assignLastpassVaultAccess,
+  saveMarketingWorkflow, getMarketingWorkflows, deleteMarketingWorkflow
+} from './db-content.js';
 
-const getDoc = (docRef) => withTimeout(originalGetDoc(docRef));
-const getDocs = (queryRef) => withTimeout(originalGetDocs(queryRef));
-const setDoc = (docRef, data, options) => withTimeout(originalSetDoc(docRef, data, options));
-const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
+import {
+  getAllUsers, saveUser, getUser, deleteUser,
+  saveUserCourseProgress, getUserCourseProgress, getUserAllProgress
+} from './db-users.js';
 
-// Strict 3-second timeout query wrapper to avoid spamming uncaught promise rejections on latency or permission-denied
-function queryWith3SecTimeout(promise) {
-  promise.catch((err) => {
-    console.warn('[DB 3s Query Wrapper]: original query rejected post-timeout/settlement:', err.message || err);
-  });
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), 3000))
-  ]);
-}
+import {
+  saveInvoice, getInvoice, getAllInvoices, getInvoicesByCustomer, getInvoicesByGoogleContact, deleteInvoice,
+  saveExpense, getExpenses, savePayrollRecord, getPayrollRecords,
+  saveBudgetTargets, getBudgets, saveEmployee, getEmployees, deleteEmployee
+} from './db-finances.js';
 
-import { schemaRegistry } from '../schemas/registry.js';
-import { errorHandler } from './error-handler.js';
-import { configManager } from './config.js';
-import { store } from './store.js';
+import {
+  saveEvent, getEventBySlug, getAllEvents, updateTicketAvailability,
+  saveRegistration, getRegistrationsByUser, getAllRegistrations,
+  saveAppointment, getAppointments
+} from './db-events.js';
 
-const CONTENT_COLLECTION = 'content';
-const PAGES_COLLECTION = 'pages';
-const USERS_COLLECTION = 'users';
-const CHAT_LOGS_COLLECTION = 'chat_logs';
-const INVOICES_COLLECTION = 'invoices';
-const MARKETING_WORKFLOWS_COLLECTION = 'marketing_workflows';
-const KANBAN_TASKS_COLLECTION = 'kanban_tasks';
-const VAULT_CREDENTIALS_COLLECTION = 'vault_credentials';
-
-/**
- * Get Firestore database instance
- * @returns {Object|null} Firestore instance or null if uninitialized
- */
-function getFirestoreDB() {
-  const currentFbConfig = configManager.current.firebase;
-  const isConfigured = currentFbConfig &&
-                        currentFbConfig.projectId &&
-                        currentFbConfig.projectId !== "YOUR_PROJECT_ID" &&
-                        currentFbConfig.projectId !== "demo-foundation-app" &&
-                        currentFbConfig.apiKey !== "" &&
-                        currentFbConfig.apiKey !== "YOUR_API_KEY";
-
-  if (!isConfigured) {
-    return null;
-  }
-
-  try {
-    return getFirestore();
-  } catch (e) {
-    console.warn('[DB]: Firestore instance uninitialized.', e);
-    return null;
-  }
-}
-
-/**
- * ContentDB class abstracts Firestore interactions for content, users, and chat logs
- * Includes localStorage fallback for chat logs when Firestore is unavailable
- */
 export class ContentDB {
-  /**
-   * Getter for testing state compatibility
-   */
   get state() {
     return {};
   }
 
-  /**
-   * Retrieve content by ID (alias for getContentById)
-   * @param {string} id - Content ID
-   * @returns {Promise<Object|null>}
-   */
+  // Alias helper
   async getContent(id) {
     return this.getContentById(id);
   }
 
-  /**
-   * Get chat logs from localStorage fallback
-   * @private
-   * @returns {Array} Array of chat log objects
-   */
+  // Chat logs fallback
   #getLocalChatLogs() {
     try {
       return JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
@@ -112,22 +48,11 @@ export class ContentDB {
     }
   }
 
-  /**
-   * Save chat logs to localStorage fallback
-   * @private
-   * @param {Array} data - Array of chat log objects
-   */
   #saveLocalChatLogs(data) {
     localStorage.setItem('foundation_local_chat_logs', JSON.stringify(data));
   }
 
-  /**
-   * Save a chat log entry to Firestore or localStorage fallback
-   * @param {Object} logData - Chat log data with timestamp, sender, message, type
-   * @returns {Promise<boolean>} True if save was successful
-   */
   async saveChatLog(logData) {
-    // Basic validation matching schema guidelines (timestamp, sender, message, type)
     if (!logData.timestamp || !logData.sender || !logData.message) {
       throw new Error('[DB]: Missing required fields in chat log');
     }
@@ -142,12 +67,13 @@ export class ContentDB {
     if (!db) {
       const local = this.#getLocalChatLogs();
       local.push(payload);
-      this.#saveLocalChatLogs(local.slice(-100)); // Keep last 100 logs
+      this.#saveLocalChatLogs(local.slice(-100));
       return true;
     }
 
     try {
-      const docRef = doc(db, CHAT_LOGS_COLLECTION, payload.id);
+      const { doc, setDoc } = await import('./db-shared.js');
+      const docRef = doc(db, 'chat_logs', payload.id);
       await setDoc(docRef, payload, { merge: true });
       return true;
     } catch (err) {
@@ -159,16 +85,12 @@ export class ContentDB {
     }
   }
 
-  /**
-   * Get chat logs from Firestore or localStorage fallback
-   * @param {number} limitCount - Maximum number of logs to return
-   * @returns {Promise<Array>} Array of chat log objects sorted by date
-   */
   async getChatLogs(limitCount = 50) {
     const db = getFirestoreDB();
     if (db) {
       try {
-        const querySnapshot = await getDocs(collection(db, CHAT_LOGS_COLLECTION));
+        const { collection, getDocs } = await import('./db-shared.js');
+        const querySnapshot = await getDocs(collection(db, 'chat_logs'));
         const results = [];
         querySnapshot.forEach((docSnap) => {
           results.push({ id: docSnap.id, ...docSnap.data() });
@@ -180,749 +102,125 @@ export class ContentDB {
       }
     }
 
-    // fallback to local
     const local = this.#getLocalChatLogs();
     return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
   }
 
-  #generateDefaultSeededContent() {
-    return {
-      "welcome-to-foundation": {
-        type: "blog",
-        id: "welcome-to-foundation",
-        title: "Welcome to Foundation Framework",
-        description: "Learn how zero-build Vanilla JS architecture can boost your serverless SPA apps.",
-        longFormText: [
-          "Foundation is designed to build web applications without bundling complexity.",
-          "By using native browser ES Modules, we achieve near-instantaneous load times and clear separation of concerns."
-        ],
-        author: "Jane Doe",
-        date: "2026-07-24",
-        access: { visibility: "public" }
-      },
-      "zero-build-architecture-handbook": {
-        type: "book",
-        id: "zero-build-architecture-handbook",
-        title: "Zero-Build Architecture Handbook",
-        description: "The complete guide to developing fast, secure, and zero-dependency SPAs on Cloudflare Workers.",
-        isbn: "978-3-16-148410-0",
-        formats: ["PDF", "Epub", "Mobi"],
-        access: { visibility: "public" },
-        links: [
-          { label: "Amazon Buy Link", url: "https://amazon.com" }
-        ]
-      },
-      "vanilla-js-professional-course": {
-        type: "education",
-        id: "vanilla-js-professional-course",
-        title: "Vanilla JS Professional Course",
-        description: "Master modern Vanilla JavaScript, DOM Manipulation, and ES Modules with absolutely zero build steps.",
-        access: { visibility: "public" },
-        longFormText: [
-          "In this course you will learn modern JavaScript architectures.",
-          "We will explore Web Components, native routing, State management, and offline-first programming."
-        ],
-        worksheets: [
-          { title: "Syllabus Overview", pdfUrl: "/assets/docs/syllabus.pdf" }
-        ],
-        quizQuestions: [
-          { id: "q1", prompt: "Which standard allows native modules in browsers?", type: "multiple-choice", options: ["ES Modules"] }
-        ],
-        modules: [
-          {
-            id: "module-1",
-            title: "Section 1: ES Modules & Web Components",
-            lessons: [
-              {
-                id: "lesson-es-modules",
-                title: "Lesson 1: Introduction to ES Modules",
-                contentType: "rich-text",
-                body: "ES Modules are the official standard for modular JavaScript...",
-                requiredRole: "subscriber"
-              }
-            ]
-          }
-        ]
-      },
-      "ascension-avenue-summit-2026": {
-        type: "event",
-        id: "ascension-avenue-summit-2026",
-        title: "Ascension Avenue Summit 2026",
-        slug: "ascension-avenue-summit-2026",
-        date: "2026-10-15",
-        location: "Virtual Summit (Google Meet)",
-        description: "The premium zero-build web architecture gathering of the year. Featuring top architects and builders.",
-        eventType: "google-meet",
-        startTime: "09:00",
-        endTime: "17:00",
-        meetUrl: "https://meet.google.com/mock-summit",
-        flyerUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80",
-        bannerUrl: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80",
-        promoVideoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-        ticketTypes: [
-          { id: "general", name: "General Admission", price: 99, capacity: 200, sold: 1 }
-        ],
-        vendorPackages: [
-          { id: "booth", name: "Virtual Exhibitor Booth", price: 299, capacity: 10, sold: 0 }
-        ],
-        sponsorshipPackages: [
-          { id: "bronze", name: "Bronze Level Sponsor", price: 499, capacity: 5, sold: 0 }
-        ]
-      },
-      "how-to-deploy-serverless-workers": {
-        type: "howto",
-        id: "how-to-deploy-serverless-workers",
-        title: "How to Deploy Serverless Workers",
-        description: "Deploy fast, lightweight, and secure Cloudflare Workers globally in under 2 minutes with no Webpack or bundlers.",
-        longFormText: [
-          "Step 1: Install Wrangler CLI locally using npm.",
-          "Step 2: Authenticate with your Cloudflare account using 'wrangler login'.",
-          "Step 3: Run 'wrangler publish' to push your zero-build serverless script globally."
-        ],
-        difficulty: "Beginner",
-        access: { visibility: "public" }
-      },
-      "episode-1-the-no-build-philosophy": {
-        type: "podcast",
-        id: "episode-1-the-no-build-philosophy",
-        title: "Episode 1: The No-Build Philosophy",
-        description: "In our first episode, we explore the origins of zero-build architecture and why bundling became popular (and bloated).",
-        date: "2026-07-24",
-        episodeNumber: 1,
-        audio: { type: "audio", src: "https://example.com/podcast-ep1.mp3" },
-        access: { visibility: "public" }
-      },
-      "e-commerce-redesign": {
-        type: "portfolio",
-        id: "e-commerce-redesign",
-        title: "E-Commerce Redesign",
-        description: "A complete responsive overhaul of an enterprise e-commerce platform using clean Vanilla CSS and zero bundling.",
-        client: "Ascension Boutique",
-        techStack: ["HTML5", "Vanilla JS", "CSS Grid", "Service Workers"],
-        access: { visibility: "public" }
-      },
-      "cloud-hosting-promo": {
-        type: "sponsor",
-        id: "cloud-hosting-promo",
-        title: "Cloud Hosting Promo",
-        description: "Our premium partner Cloud Hosting is offering $100 in free credits for all new Foundation Framework users.",
-        longFormText: [
-          "Redeem this exclusive promo offer on Cloud Hosting to deploy your database and edge servers instantly."
-        ],
-        promoCode: "FOUNDATION100",
-        expirationDate: "2026-12-31",
-        access: { visibility: "public" }
-      },
-      "1-on-1-architecture-consultation": {
-        type: "product",
-        id: "1-on-1-architecture-consultation",
-        title: "1-on-1 Architecture Consultation",
-        description: "Book an exclusive, personalized 1-on-1 architecture design review session to audit your SPA.",
-        longFormText: [
-          "Review your database models, API routing, Cloudflare Workers configuration, and native frontend caching pipeline."
-        ],
-        pricing: {
-          basePrice: 25000,
-          currency: "USD",
-          paymentType: "full_upfront"
-        },
-        category: "Consultation Services",
-        access: { visibility: "public" }
-      },
-      "our-story": {
-        type: "page",
-        id: "our-story",
-        slug: "our-story",
-        title: "Our Story",
-        editorType: "grapesjs",
-        compiledHtml: `
-          <section style="padding: 40px 0; font-family: system-ui, sans-serif;">
-            <h1 style="color: #2b6cb0; font-weight: 800; font-size: 2rem; margin-bottom: 16px;">Our Story</h1>
-            <p style="color: #4a5568; line-height: 1.6; font-size: 1.05rem;">We started Foundation with a simple mission: to build fast, beautiful, and maintainable web platforms without the bloat of modern bundling tooling.</p>
-          </section>
-        `,
-        compiledCss: "",
-        access: { visibility: "public" }
-      }
-    };
-  }
+  // Delegated content methods
+  async saveContent(data) { return saveContent(data); }
+  async getContentById(id) { return getContentById(id); }
+  async getAllContent() { return getAllContent(); }
+  async getContentByType(type, max) { return getContentByType(type, max); }
+  async deleteContent(id) { return deleteContent(id); }
 
-  /**
-   * Get content from localStorage fallback
-   * @private
-   * @returns {Object} Content object from localStorage
-   */
-  #getLocalContent() {
+  // Delegated page methods
+  async saveCustomPage(data) { return saveCustomPage(data); }
+  async getCustomPageBySlug(slug) { return getCustomPageBySlug(slug); }
+  async getAllCustomPages() { return getAllCustomPages(); }
+  async getCustomPages() { return getAllCustomPages(); }
+
+  // Delegated user methods
+  async getAllUsers() { return getAllUsers(); }
+  async saveUser(data) { return saveUser(data); }
+  async getUser(id) { return getUser(id); }
+  async deleteUser(id) { return deleteUser(id); }
+  async getUserPurchases(userId) {
+    const allInvoices = await this.getAllInvoices();
+    return allInvoices.filter(inv => inv.userId === userId || inv.customerEmail === userId);
+  }
+  async getUserNotifications(userId) {
     try {
-      const stored = localStorage.getItem('foundation_local_content');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {}
-
-    const seeded = this.#generateDefaultSeededContent();
-    this.#saveLocalContent(seeded);
-    return seeded;
-  }
-
-  /**
-   * Save content to localStorage fallback
-   * @private
-   * @param {Object} data - Content object to save
-   */
-  #saveLocalContent(data) {
-    localStorage.setItem('foundation_local_content', JSON.stringify(data));
-  }
-
-  /**
-   * Get users from localStorage fallback
-   * @private
-   * @returns {Object} Users object from localStorage
-   */
-  #getLocalUsers() {
-    try {
-      return JSON.parse(localStorage.getItem('foundation_local_users') || '{}');
+      const announcements = await this.getContentByType('announcement');
+      return announcements.map(ann => ({
+        id: ann.id,
+        title: ann.title,
+        message: ann.description,
+        date: ann.date,
+        type: 'broadcast'
+      }));
     } catch (e) {
-      return {};
+      return [];
     }
   }
 
-  /**
-   * Save users to localStorage fallback
-   * @private
-   * @param {Object} data - Users object to save
-   */
-  #saveLocalUsers(data) {
-    localStorage.setItem('foundation_local_users', JSON.stringify(data));
+  // Delegated progress methods
+  async saveUserCourseProgress(u, c, p) { return saveUserCourseProgress(u, c, p); }
+  async getUserCourseProgress(u, c) { return getUserCourseProgress(u, c); }
+  async getUserAllProgress(u) { return getUserAllProgress(u); }
+
+  // Delegated finance methods
+  async saveInvoice(inv) { return saveInvoice(inv); }
+  async getInvoice(id) { return getInvoice(id); }
+  async getAllInvoices() { return getAllInvoices(); }
+  async getInvoicesByCustomer(email) { return getInvoicesByCustomer(email); }
+  async getInvoicesByGoogleContact(id) { return getInvoicesByGoogleContact(id); }
+  async deleteInvoice(id) { return deleteInvoice(id); }
+  async saveExpense(data) { return saveExpense(data); }
+  async getExpenses(filter) { return getExpenses(filter); }
+  async savePayrollRecord(data) { return savePayrollRecord(data); }
+  async getPayrollRecords() { return getPayrollRecords(); }
+  async saveBudgetTargets(data) { return saveBudgetTargets(data); }
+  async getBudgets() { return getBudgets(); }
+  async saveEmployee(data) { return saveEmployee(data); }
+  async getEmployees() { return getEmployees(); }
+  async deleteEmployee(id) { return deleteEmployee(id); }
+
+  // Delegated VA methods
+  async saveVaCandidate(data) { return saveVaCandidate(data); }
+  async getVaCandidates(f) { return getVaCandidates(f); }
+  async getVaActivityLogs(id) { return getVaActivityLogs(id); }
+  async assignLastpassVaultAccess(v, e) { return assignLastpassVaultAccess(v, e); }
+
+  // Delegated scan & marketing methods
+  async saveZapScanResult(data) { return saveZapScanResult(data); }
+  async getZapScanHistory() { return getZapScanHistory(); }
+  async saveMarketingSegment(data) { return saveMarketingSegment(data); }
+  async getMarketingSegments() { return getMarketingSegments(); }
+  async getMarketingSegmentById(id) { return getMarketingSegmentById(id); }
+  async evaluateSegmentUsers(id) { return evaluateSegmentUsers(id); }
+  async saveMarketingJourney(data) { return saveMarketingJourney(data); }
+  async saveEmailTemplate(data) { return saveEmailTemplate(data); }
+  async getEmailTemplates() { return getEmailTemplates(); }
+  async getEmailTemplateById(id) { return getEmailTemplateById(id); }
+  async saveMarketingWorkflow(data) { return saveMarketingWorkflow(data); }
+  async getMarketingWorkflows() { return getMarketingWorkflows(); }
+  async deleteMarketingWorkflow(id) { return deleteMarketingWorkflow(id); }
+  async saveVaultCredential(record) { return saveVaultCredential(record); }
+  async getVaultCredentials() { return getVaultCredentials(); }
+  async deleteVaultCredential(id) { return deleteVaultCredential(id); }
+
+  // Delegated event methods
+  async saveEvent(data) { return saveEvent(data); }
+  async getEventBySlug(slug) { return getEventBySlug(slug); }
+  async getAllEvents() { return getAllEvents(); }
+  async updateTicketAvailability(evId, tId, qty) { return updateTicketAvailability(evId, tId, qty); }
+  async saveRegistration(data) { return saveRegistration(data); }
+  async getRegistrationsByUser(email) { return getRegistrationsByUser(email); }
+  async getAllRegistrations() { return getAllRegistrations(); }
+  async saveAppointment(data) { return saveAppointment(data); }
+  async getAppointments() { return getAppointments(); }
+}
+
+export const contentDB = new ContentDB();
+
+export const db = {
+  get state() {
+    return {};
+  },
+  async set(id, data) {
+    return saveContent({ ...data, id });
+  },
+  async get(id) {
+    return getContentById(id);
+  },
+  async delete(id) {
+    return deleteContent(id);
+  },
+  async query(filterFn) {
+    const all = await getAllContent();
+    return all.filter(filterFn);
   }
-
-  /**
-   * Save content to Firestore or localStorage fallback
-   * @param {Object} contentData - Content data to save
-   * @returns {Promise<boolean>} True if save was successful
-   */
-  async saveContent(contentData) {
-    const dataWithDefaults = {
-      description: 'Default Description',
-      longFormText: [],
-      author: 'Default Author',
-      date: new Date().toISOString(),
-      ...contentData
-    };
-    schemaRegistry.validate(dataWithDefaults);
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalContent();
-      local[dataWithDefaults.id] = { ...dataWithDefaults, updatedAt: new Date().toISOString() };
-      this.#saveLocalContent(local);
-      return true;
-    }
-
-    try {
-      const docRef = doc(db, CONTENT_COLLECTION, dataWithDefaults.id);
-      await setDoc(docRef, {
-        ...dataWithDefaults,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      return true;
-    } catch (err) {
-      console.warn('[DB]: Firestore permission or write error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalContent();
-      local[dataWithDefaults.id] = { ...dataWithDefaults, updatedAt: new Date().toISOString() };
-      this.#saveLocalContent(local);
-      return true;
-    }
-  }
-
-  /**
-   * Get content by ID from Firestore or localStorage fallback
-   * @param {string} id - Content ID
-   * @returns {Promise<Object|null>} Content object or null if not found
-   */
-  async getContentById(id) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalContent();
-      if (local[id]) {
-        schemaRegistry.validate(local[id]);
-        return local[id];
-      }
-      return null;
-    }
-
-    try {
-      const docRef = doc(db, CONTENT_COLLECTION, id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        schemaRegistry.validate(data);
-        return data;
-      }
-    } catch (err) {
-      console.warn('[DB]: Firestore read error. Falling back to LocalStorage.', err.message);
-    }
-
-    const local = this.#getLocalContent();
-    if (local[id]) {
-      try {
-        schemaRegistry.validate(local[id]);
-        return local[id];
-      } catch (e) {}
-    }
-    return null;
-  }
-
-  /**
-   * Get all content from Firestore or localStorage fallback
-   * @returns {Promise<Array>} Array of content objects
-   */
-  async getAllContent() {
-    const results = [];
-    const db = getFirestoreDB();
-    if (db) {
-      try {
-        const user = store.state.user;
-        const isAdmin = user?.isAdmin;
-        let q;
-        const contentRef = collection(db, CONTENT_COLLECTION);
-        if (isAdmin) {
-          q = contentRef;
-        } else {
-          q = query(contentRef, where('access.visibility', '==', 'public'));
-        }
-        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          try {
-            schemaRegistry.validate(data);
-          } catch (e) {}
-          results.push(data);
-        });
-        if (results.length > 0) return results;
-      } catch (err) {
-        console.warn('[DB]: Cloud Firestore query bypassed or unreachable.', err.message);
-      }
-    }
-
-    // fallback to local
-    const local = this.#getLocalContent();
-    Object.values(local).forEach(item => {
-      try {
-        schemaRegistry.validate(item);
-      } catch (e) {}
-      results.push(item);
-    });
-    return results;
-  }
-
-  async getContentByType(type, maxItems = 12) {
-    if (type === 'all') {
-      const all = await this.getAllContent();
-      return all.slice(0, maxItems);
-    }
-    const results = [];
-    const db = getFirestoreDB();
-    if (db) {
-      try {
-        const user = store.state.user;
-        const isAdmin = user?.isAdmin;
-        let q;
-        const contentRef = collection(db, CONTENT_COLLECTION);
-        if (isAdmin) {
-          q = query(
-            contentRef,
-            where('type', '==', type),
-            limit(maxItems)
-          );
-        } else {
-          q = query(
-            contentRef,
-            where('type', '==', type),
-            where('access.visibility', '==', 'public'),
-            limit(maxItems)
-          );
-        }
-        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          try {
-            schemaRegistry.validate(data);
-            results.push(data);
-          } catch (e) {}
-        });
-        if (results.length > 0) return results;
-      } catch (err) {
-        console.warn('[DB]: Cloud Firestore query bypassed or unreachable.', err.message);
-      }
-    }
-
-    // fallback to local
-    const local = this.#getLocalContent();
-    Object.values(local).forEach(item => {
-      if (item.type === type && results.length < maxItems) {
-        try {
-          schemaRegistry.validate(item);
-          results.push(item);
-        } catch (e) {}
-      }
-    });
-    return results;
-  }
-
-  /**
-   * Get all users from Firestore or localStorage fallback
-   * @returns {Promise<Array>} Array of user objects
-   */
-  async getAllUsers() {
-    const users = [];
-    const db = getFirestoreDB();
-    if (db) {
-      try {
-        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(collection(db, USERS_COLLECTION)));
-        querySnapshot.forEach((docSnap) => {
-          users.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        if (users.length > 0) return users;
-      } catch (err) {
-        console.warn('[DB]: Could not fetch users collection from Firestore.', err.message);
-      }
-    }
-
-    // fallback to local
-    const local = this.#getLocalUsers();
-    return Object.values(local);
-  }
-
-  /**
-   * Save user data to Firestore or localStorage fallback
-   * @param {Object} userData - User data to save
-   * @returns {Promise<boolean>} True if save was successful
-   */
-  async saveUser(userData) {
-    const userId = userData.id || userData.email.replace(/[@.]/g, '_');
-    const payload = {
-      ...userData,
-      id: userId,
-      updatedAt: new Date().toISOString()
-    };
-
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalUsers();
-      local[userId] = payload;
-      this.#saveLocalUsers(local);
-      return payload;
-    }
-
-    try {
-      const docRef = doc(db, USERS_COLLECTION, userId);
-      await setDoc(docRef, payload, { merge: true });
-      return payload;
-    } catch (err) {
-      console.warn('[DB]: Firestore user save error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalUsers();
-      local[userId] = payload;
-      this.#saveLocalUsers(local);
-      return payload;
-    }
-  }
-
-  /**
-   * Delete user from Firestore or localStorage fallback
-   * @param {string} userId - User ID to delete
-   * @returns {Promise<boolean>} True if deletion was successful
-   */
-  async deleteUser(userId) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalUsers();
-      delete local[userId];
-      this.#saveLocalUsers(local);
-      return true;
-    }
-
-    try {
-      const docRef = doc(db, USERS_COLLECTION, userId);
-      await deleteDoc(docRef);
-      return true;
-    } catch (err) {
-      console.warn('[DB]: Firestore user delete error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalUsers();
-      delete local[userId];
-      this.#saveLocalUsers(local);
-      return true;
-    }
-  }
-
-  /**
-   * Save invoice to Firestore or localStorage fallback
-   * @param {Object} invoice - Invoice object to save
-   * @returns {Promise<Object>} Saved invoice
-   */
-  async saveInvoice(invoice) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalInvoices();
-      local[invoice.id] = invoice;
-      this.#saveLocalInvoices(local);
-      return invoice;
-    }
-
-    try {
-      const docRef = doc(db, INVOICES_COLLECTION, invoice.id);
-      await setDoc(docRef, invoice, { merge: true });
-      return invoice;
-    } catch (err) {
-      console.warn('[DB]: Firestore invoice save error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalInvoices();
-      local[invoice.id] = invoice;
-      this.#saveLocalInvoices(local);
-      return invoice;
-    }
-  }
-
-  /**
-   * Get invoice by ID from Firestore or localStorage fallback
-   * @param {string} invoiceId - Invoice ID
-   * @returns {Promise<Object|null>} Invoice object or null
-   */
-  async getInvoice(invoiceId) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalInvoices();
-      return local[invoiceId] || null;
-    }
-
-    try {
-      const docRef = doc(db, INVOICES_COLLECTION, invoiceId);
-      const docSnap = await getDoc(docRef);
-      return docSnap.exists() ? docSnap.data() : null;
-    } catch (err) {
-      console.warn('[DB]: Firestore invoice get error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalInvoices();
-      return local[invoiceId] || null;
-    }
-  }
-
-  /**
-   * Get all invoices from Firestore or localStorage fallback
-   * @returns {Promise<Array>} Array of invoice objects
-   */
-  async getAllInvoices() {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalInvoices();
-      return Object.values(local);
-    }
-
-    try {
-      const collectionRef = collection(db, INVOICES_COLLECTION);
-      const querySnapshot = await getDocs(collectionRef);
-      return querySnapshot.docs.map(doc => doc.data());
-    } catch (err) {
-      console.warn('[DB]: Firestore invoices get error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalInvoices();
-      return Object.values(local);
-    }
-  }
-
-  /**
-   * Get invoices by customer email from Firestore or localStorage fallback
-   * @param {string} customerEmail - Customer email
-   * @returns {Promise<Array>} Array of invoice objects
-   */
-  async getInvoicesByCustomer(customerEmail) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalInvoices();
-      return Object.values(local).filter(inv => inv.customerEmail === customerEmail);
-    }
-
-    try {
-      const collectionRef = collection(db, INVOICES_COLLECTION);
-      const q = query(collectionRef, where('customerEmail', '==', customerEmail));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => doc.data());
-    } catch (err) {
-      console.warn('[DB]: Firestore customer invoices get error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalInvoices();
-      return Object.values(local).filter(inv => inv.customerEmail === customerEmail);
-    }
-  }
-
-  /**
-   * Get invoices by Google Contact ID from Firestore or localStorage fallback
-   * @param {string} googleContactId - Google Contact ID
-   * @returns {Promise<Array>} Array of invoice objects
-   */
-  async getInvoicesByGoogleContact(googleContactId) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalInvoices();
-      return Object.values(local).filter(inv => inv.googleContactId === googleContactId);
-    }
-
-    try {
-      const collectionRef = collection(db, INVOICES_COLLECTION);
-      const q = query(collectionRef, where('googleContactId', '==', googleContactId));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => doc.data());
-    } catch (err) {
-      console.warn('[DB]: Firestore Google Contact invoices get error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalInvoices();
-      return Object.values(local).filter(inv => inv.googleContactId === googleContactId);
-    }
-  }
-
-  /**
-   * Delete invoice from Firestore or localStorage fallback
-   * @param {string} invoiceId - Invoice ID to delete
-   * @returns {Promise<boolean>} True if deletion was successful
-   */
-  async deleteInvoice(invoiceId) {
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalInvoices();
-      delete local[invoiceId];
-      this.#saveLocalInvoices(local);
-      return true;
-    }
-
-    try {
-      const docRef = doc(db, INVOICES_COLLECTION, invoiceId);
-      await deleteDoc(docRef);
-      return true;
-    } catch (err) {
-      console.warn('[DB]: Firestore invoice delete error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalInvoices();
-      delete local[invoiceId];
-      this.#saveLocalInvoices(local);
-      return true;
-    }
-  }
-
-  /**
-   * Get invoices from localStorage fallback
-   * @private
-   * @returns {Object} Object of invoice objects keyed by ID
-   */
-  #getLocalInvoices() {
-    try {
-      return JSON.parse(localStorage.getItem('foundation_local_invoices') || '{}');
-    } catch (e) {
-      return {};
-    }
-  }
-
-  /**
-   * Save invoices to localStorage fallback
-   * @private
-   * @param {Object} invoices - Object of invoice objects keyed by ID
-   */
-  #saveLocalInvoices(invoices) {
-    try {
-      localStorage.setItem('foundation_local_invoices', JSON.stringify(invoices));
-    } catch (e) {
-      console.error('[DB]: Failed to save invoices to localStorage', e);
-    }
-  }
-
-  /**
-   * Delete content from Firestore or localStorage fallback
-   * @param {string} id - Content ID to delete
-   * @returns {Promise<boolean>} True if deletion was successful
-   */
-  async deleteContent(id) {
-    const db = getFirestoreDB();
-
-    // Also delete from pages
-    const localPages = this.#getLocalPages();
-    if (localPages[id]) {
-      delete localPages[id];
-      this.#saveLocalPages(localPages);
-    }
-
-    if (!db) {
-      const local = this.#getLocalContent();
-      delete local[id];
-      this.#saveLocalContent(local);
-      return true;
-    }
-
-    try {
-      const docRef = doc(db, CONTENT_COLLECTION, id);
-      await deleteDoc(docRef);
-
-      // Also try deleting from pages collection
-      try {
-        const pageDocRef = doc(db, PAGES_COLLECTION, id);
-        await deleteDoc(pageDocRef);
-      } catch (e) {}
-
-      return true;
-    } catch (err) {
-      console.warn('[DB]: Firestore content delete error. Falling back to LocalStorage.', err.message);
-      const local = this.#getLocalContent();
-      delete local[id];
-      this.#saveLocalContent(local);
-      return true;
-    }
-  }
-
-  // --- Financial Persistence Helpers ---
-
-  #getLocalExpenses() {
-    try {
-      return JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
-    } catch (e) {
-      return {};
-    }
-  }
-
-  /**
-   * Get marketing workflows from localStorage fallback
-   * @private
-   * @returns {Object} Object of workflow objects keyed by ID
-   */
-  #getLocalMarketingWorkflows() {
-    try {
-      return JSON.parse(localStorage.getItem('foundation_local_marketing_workflows') || '{}');
-    } catch (e) {
-      return {};
-    }
-  }
-
-  #saveLocalExpenses(expenses) {
-    try {
-      localStorage.setItem('foundation_local_expenses', JSON.stringify(expenses));
-    } catch (e) {
-      console.error('[DB]: Failed to save expenses to localStorage', e);
-    }
-  }
-
-  #getLocalPayroll() {
-    try {
-      return JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
-    } catch (e) {
-      return {};
-    }
-  }
-
-  #saveLocalPayroll(payroll) {
-    try {
-      localStorage.setItem('foundation_local_payroll', JSON.stringify(payroll));
-    } catch (e) {
-      console.error('[DB]: Failed to save payroll to localStorage', e);
-    }
-  }
-
-  #getLocalBudgets() {
-    try {
-      return JSON.parse(localStorage.getItem('foundation_local_budgets') || '{}');
-    } catch (e) {
-      return {};
-    }
-  }
+};
 
   #saveLocalBudgets(budgets) {
     try {

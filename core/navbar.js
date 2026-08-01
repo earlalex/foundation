@@ -1,7 +1,4 @@
 // core/navbar.js
-import { store } from './store.js';
-import { configManager } from './config.js';
-
 export function initNavbar() {
   const headerContainer = document.getElementById('global-header');
   if (!headerContainer) return;
