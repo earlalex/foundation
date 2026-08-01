@@ -21,7 +21,8 @@ import {
 import {
   saveInvoice, getInvoice, getAllInvoices, getInvoicesByCustomer, getInvoicesByGoogleContact, deleteInvoice,
   saveExpense, getExpenses, savePayrollRecord, getPayrollRecords,
-  saveBudgetTargets, getBudgets, saveEmployee, getEmployees, deleteEmployee
+  saveBudgetTargets, getBudgets, saveEmployee, getEmployees, deleteEmployee,
+  updateBudgetTargetsOnPayout
 } from './db-finances.js';
 
 import {
@@ -160,6 +161,7 @@ export class ContentDB {
   async getExpenses(filter) { return getExpenses(filter); }
   async savePayrollRecord(data) { return savePayrollRecord(data); }
   async getPayrollRecords() { return getPayrollRecords(); }
+  async updateBudgetTargetsOnPayout(amountUSD, feeUSD) { return updateBudgetTargetsOnPayout(amountUSD, feeUSD); }
   async saveBudgetTargets(data) { return saveBudgetTargets(data); }
   async getBudgets() { return getBudgets(); }
   async saveEmployee(data) { return saveEmployee(data); }

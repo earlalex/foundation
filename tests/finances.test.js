@@ -164,6 +164,94 @@ export async function runFinancesTests() {
     await contentDB.deleteEmployee(empId);
   });
 
+  await assertTest('Wise Payout Adapter: Correctly simulates profile fetching, quotes, and transfers', async () => {
+    const { getWiseProfile, createQuote, createRecipient, executePayout } = await import('../utils/backend-wise.js');
+
+    // Test profile
+    const profile = await getWiseProfile();
+    if (!profile || !profile.id) {
+      throw new Error('Wise profile id is missing');
+    }
+
+    // Test quote
+    const quote = await createQuote(500.00, 'PHP');
+    if (!quote || quote.sourceValue !== 500.00 || !quote.rate) {
+      throw new Error('Wise quote calculation is incorrect');
+    }
+
+    // Test recipient
+    const recipient = await createRecipient({ name: 'Juan Dela Cruz', bankName: 'GCASH', phone: '09123456789' });
+    if (!recipient || !recipient.id) {
+      throw new Error('Wise recipient registration failed');
+    }
+
+    // Test transfer
+    const transfer = await executePayout(recipient.id, quote.id, 'Test Wise Transfer');
+    if (!transfer || !transfer.id) {
+      throw new Error('Wise payout execution failed');
+    }
+  });
+
+  await assertTest('Wise Webhook Handler: Records payroll entries and automates budget target adjustments', async () => {
+    const { handleWiseWebhook } = await import('../utils/backend-wise.js');
+
+    const initialBudgets = await contentDB.getBudgets();
+    const initialPayrollBudget = initialBudgets.payrollBudget || 10000;
+    const initialExpensesBudget = initialBudgets.totalExpensesBudget || 5000;
+
+    const mockTransferId = `trf_test_${Date.now()}`;
+    const webhookPayload = {
+      event_type: 'transfer.state-change',
+      current_state: 'outgoing_payment_sent',
+      data: {
+        resource: {
+          id: mockTransferId,
+          status: 'completed',
+          sourceValue: 250.00,
+          targetValue: 14000.00,
+          fee: 2.50,
+          rate: 56.00
+        }
+      },
+      vaData: { id: 'emp_test_wise_1', name: 'Wise Assistant' },
+      payout: {
+        id: mockTransferId,
+        sourceValue: 250.00,
+        targetValue: 14000.00,
+        fee: 2.50,
+        rate: 56.00
+      }
+    };
+
+    const webhookResult = await handleWiseWebhook(webhookPayload);
+    if (!webhookResult.success) {
+      throw new Error(`Wise webhook processing failed: ${webhookResult.error || webhookResult.reason}`);
+    }
+
+    // Check budget target automatic adjustment
+    const updatedBudgets = await contentDB.getBudgets();
+    if (updatedBudgets.payrollBudget !== initialPayrollBudget + 250.00) {
+      throw new Error(`Budget payrollTarget did not automatically adjust. Expected ${initialPayrollBudget + 250.00}, got ${updatedBudgets.payrollBudget}`);
+    }
+    if (updatedBudgets.totalExpensesBudget !== initialExpensesBudget + 2.50) {
+      throw new Error(`Budget totalExpensesBudget did not automatically adjust. Expected ${initialExpensesBudget + 2.50}, got ${updatedBudgets.totalExpensesBudget}`);
+    }
+
+    // Verify payroll record logged
+    const records = await contentDB.getPayrollRecords();
+    const recordedPayroll = records.find(p => p.wiseTransferId === mockTransferId);
+    if (!recordedPayroll || recordedPayroll.amountUSD !== 250.00) {
+      throw new Error('Wise payroll record was not stored correctly inside contentDB');
+    }
+
+    // Verify expense logged
+    const expenses = await contentDB.getExpenses();
+    const recordedExpense = expenses.find(e => e.title.includes(mockTransferId));
+    if (!recordedExpense || recordedExpense.amount !== 252.50) {
+      throw new Error('Wise operational expense record was not stored correctly inside contentDB');
+    }
+  });
+
   await assertTest('ACH Payment: Validates checkout payload with Stripe application_fee_amount', async () => {
     // Generate checkout payload for testing
     const buildCheckoutPayload = (enableAch, amount) => {

@@ -2065,7 +2065,24 @@
                       <option value="ACH">ACH Direct Deposit</option>
                       <option value="Check">Company Check</option>
                       <option value="Direct">Direct Wire</option>
+                      <option value="Wise">Wise Business Payout Adapter</option>
                     </select>
+                  </div>
+                </div>
+                <div id="wise-account-fields" style="display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; border-left: 3px solid #319795; padding-left: 8px;">
+                  <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Wise Bank/Wallet Partner:</label>
+                    <select id="employee-bank-code" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                      <option value="BDO">BDO (Banco de Oro)</option>
+                      <option value="BPI">BPI (Bank of the Philippine Islands)</option>
+                      <option value="UNIONBANK">UnionBank of the Philippines</option>
+                      <option value="GCASH">GCash E-Wallet</option>
+                      <option value="PAYMAYA">PayMaya / Maya</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Wise Account/Phone Number:</label>
+                    <input type="text" id="employee-account-number" placeholder="e.g. 09123456789 or bank account number" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
                   </div>
                 </div>
                 <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem; padding: 8px 14px; font-size: 0.85rem;">

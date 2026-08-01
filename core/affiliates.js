@@ -30,5 +30,10 @@ export const FRAMEWORK_AFFILIATES = Object.freeze({
     name: "Telnyx / Twilio Telephony",
     url: "YOUR_TELNYX_REFERRAL_LINK_HERE",
     description: "Voice and SMS webhook integration for AI support."
+  },
+  wise: {
+    name: "Wise Business",
+    url: "YOUR_WISE_AFFILIATE_LINK_HERE",
+    description: "Send international contractor payroll at true mid-market exchange rates."
   }
 });
