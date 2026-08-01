@@ -4,6 +4,7 @@ import { toast } from '../../utils/toast.js';
 import { store } from '../../core/store.js';
 import { configManager } from '../../core/config.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
+import { AdminSetupWizards } from './components/AdminSetupWizards.js';
 
 let editorInstance = null;
 let editingPageId = null; // Track if we are editing an existing page
@@ -447,6 +448,31 @@ export function initPagesTab() {
     } catch (err) {
       toast.error(`Publishing Failed: ${err.message}`);
     }
+  });
+
+  // Default Pages Configurator Wizards trigger bindings
+  document.getElementById('btn-wizard-home')?.addEventListener('click', () => {
+    AdminSetupWizards.launchPageWizard('home', () => {
+      loadExistingPages();
+    });
+  });
+
+  document.getElementById('btn-wizard-about')?.addEventListener('click', () => {
+    AdminSetupWizards.launchPageWizard('about', () => {
+      loadExistingPages();
+    });
+  });
+
+  document.getElementById('btn-wizard-events')?.addEventListener('click', () => {
+    AdminSetupWizards.launchPageWizard('events', () => {
+      loadExistingPages();
+    });
+  });
+
+  document.getElementById('btn-wizard-contact')?.addEventListener('click', () => {
+    AdminSetupWizards.launchPageWizard('contact', () => {
+      loadExistingPages();
+    });
   });
 
   // Initial load

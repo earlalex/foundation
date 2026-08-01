@@ -997,4 +997,623 @@ export class AdminSetupWizards {
     document.body.appendChild(modal);
     renderStep();
   }
+
+  /**
+   * Launch a wizard modal specifically for default page overrides (home, about, events, contact)
+   * @param {string} pageId - One of: 'home', 'about', 'events', 'contact'
+   * @param {Function} onComplete - Callback executed upon successful setup completion
+   */
+  static launchPageWizard(pageId, onComplete) {
+    const modal = document.createElement('div');
+    modal.className = 'setup-wizard-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+    `;
+
+    const cfg = configManager.current || {};
+    const biz = cfg.businessProfile || {};
+    const profile = cfg.author || cfg.publicProfile || {};
+    const appts = cfg.appointments || {};
+
+    let title = "";
+    let formHtml = "";
+    let saveHandler = null;
+
+    if (pageId === 'home') {
+      title = "Home Page Wizard Configurator";
+      const prefilledHeadline = `${cfg.siteTitle || 'Ascension Avenue Academy'} - ${cfg.siteTagline || 'Enterprise Growth'}`;
+      const prefilledSubheadline = cfg.siteTagline || "Book a 1-on-1 strategic video consultation synchronized with Google Calendar.";
+      const prefilledBg = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80";
+      const prefilledSections = "blog, event, podcast, education";
+      const prefilledCta = "Explore Platform, Join Academy";
+
+      formHtml = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
+          <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure the default visual sections of your home page.</p>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Hero Headline:</label>
+            <input type="text" id="wz-home-headline" value="${prefilledHeadline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Hero Sub-headline:</label>
+            <input type="text" id="wz-home-subheadline" value="${prefilledSubheadline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Banner Background Image URL:</label>
+            <input type="url" id="wz-home-bg" value="${prefilledBg}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Featured Section Order (comma separated):</label>
+            <input type="text" id="wz-home-sections" value="${prefilledSections}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Primary CTA Buttons (comma separated):</label>
+            <input type="text" id="wz-home-cta" value="${prefilledCta}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+        </div>
+      `;
+
+      saveHandler = async () => {
+        const headline = document.getElementById('wz-home-headline').value;
+        const subheadline = document.getElementById('wz-home-subheadline').value;
+        const bg = document.getElementById('wz-home-bg').value;
+        const sections = document.getElementById('wz-home-sections').value;
+        const cta = document.getElementById('wz-home-cta').value;
+
+        const compiledHtml = `
+          <section style="max-width: 1000px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
+            <div style="background-image: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('${bg}'); background-size: cover; background-position: center; border-radius: 12px; padding: 6rem 2rem; text-align: center; color: white; margin-bottom: 3.5rem;">
+              <h1 style="font-size: 2.85rem; font-weight: 800; margin-bottom: 1rem; color: #ffffff; letter-spacing: -0.025em; line-height: 1.2;">
+                ${headline}
+              </h1>
+              <p style="font-size: 1.25rem; color: #f7fafc; max-width: 650px; margin: 0 auto 2.5rem auto; line-height: 1.6;">
+                ${subheadline}
+              </p>
+              <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                ${cta.split(',').map((btnText, idx) => `
+                  <a href="${idx === 0 ? '/contact' : '/events'}" class="btn-primary" style="padding: 12px 28px; background: ${idx === 0 ? 'var(--theme-color-primary, #2b6cb0)' : '#ffffff'}; color: ${idx === 0 ? '#ffffff' : '#2b6cb0'}; font-weight: bold; border-radius: 6px; text-decoration: none; border: ${idx === 0 ? 'none' : '1px solid #2b6cb0'}; display: inline-block;">
+                    ${btnText.trim()}
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+            <div id="home-sections-container" style="display: flex; flex-direction: column; gap: 3rem;">
+              <p style="color: #a0aec0; text-align: center;">Loading publication sections...</p>
+            </div>
+          </section>
+        `;
+
+        return {
+          id: 'home',
+          title: "Home Page Override",
+          description: subheadline,
+          compiledHtml,
+          compiledCss: "section { margin-top: 2rem; }"
+        };
+      };
+
+    } else if (pageId === 'about') {
+      title = "About Page Wizard Configurator";
+      const prefilledFounderStory = "We started Ascension Avenue Academy to provide a premium browser-first web experience and enterprise scaling.";
+      const prefilledMission = "To cultivate operational excellence, zero-build simplicity, and robust digital identity.";
+      const prefilledTimeline = "2024: Foundation Beta, 2025: Production Release, 2026: V2 Launch";
+      const prefilledBio = profile.bio || "Jane Doe is the Lead Systems Architect and Founder of Ascension Avenue Academy.";
+
+      formHtml = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
+          <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Customize Founder details, Mission timeline, and story highlights.</p>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Founder/Team Story:</label>
+            <textarea id="wz-about-story" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 80px; box-sizing: border-box;">${prefilledFounderStory}</textarea>
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Mission Statement:</label>
+            <input type="text" id="wz-about-mission" value="${prefilledMission}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Milestones Timeline (comma separated Year:Event):</label>
+            <input type="text" id="wz-about-timeline" value="${prefilledTimeline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Executive Bio:</label>
+            <textarea id="wz-about-bio" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 80px; box-sizing: border-box;">${prefilledBio}</textarea>
+          </div>
+        </div>
+      `;
+
+      saveHandler = async () => {
+        const story = document.getElementById('wz-about-story').value;
+        const mission = document.getElementById('wz-about-mission').value;
+        const timeline = document.getElementById('wz-about-timeline').value;
+        const bio = document.getElementById('wz-about-bio').value;
+
+        const compiledHtml = `
+          <section style="max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
+            <div style="text-align: center; margin-bottom: 3rem;">
+              <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 0.5rem;">
+                About Our Organization
+              </h1>
+              <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 1.1rem;">
+                Meet the architect behind the zero-build Foundation.
+              </p>
+            </div>
+
+            <div style="margin-bottom: 3rem;">
+              <author-card layout="full"></author-card>
+            </div>
+
+            <div class="card" style="line-height: 1.8; font-size: 1.05rem; color: var(--theme-color-text-primary, #2d3748); padding: 2rem; border-radius: 8px; background: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 4px solid var(--theme-color-primary, #2b6cb0); display: flex; flex-direction: column; gap: 1.5rem;">
+              <div>
+                <h3 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.75rem;">Our Mission</h3>
+                <p style="margin: 0; line-height: 1.6;">${mission}</p>
+              </div>
+
+              <div>
+                <h3 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.75rem;">Founder's Story</h3>
+                <p style="margin: 0; line-height: 1.6;">${story}</p>
+              </div>
+
+              <div>
+                <h3 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.75rem;">Executive Bio</h3>
+                <p style="margin: 0; line-height: 1.6;">${bio}</p>
+              </div>
+
+              <div>
+                <h3 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 1rem;">Key Milestones</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; border-left: 2px solid #edf2f7; padding-left: 1rem; margin-left: 0.5rem;">
+                  ${timeline.split(',').map(m => {
+                    const parts = m.split(':');
+                    const yr = parts[0]?.trim() || '';
+                    const val = parts.slice(1).join(':')?.trim() || '';
+                    return `
+                      <div>
+                        <strong style="color: var(--theme-color-primary, #2b6cb0);">${yr}</strong>
+                        <span style="color: var(--theme-color-text-secondary, #4a5568); margin-left: 0.5rem;">${val}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+          </section>
+        `;
+
+        return {
+          id: 'about',
+          title: "About Page Override",
+          description: mission,
+          compiledHtml,
+          compiledCss: ""
+        };
+      };
+
+    } else if (pageId === 'events') {
+      title = "Events Page Wizard Configurator";
+      const prefilledHeaderCopy = "Upcoming Premium Events, Ticketing & Sponsorships";
+      const prefilledTicketTerms = "All passes grant full access to stages, networking panels, and standard seating.";
+      const prefilledRefundPolicy = biz.refundUrl ? `Refer to refunds policy at ${biz.refundUrl}` : "Non-refundable. Transfers allowed up to 48 hours prior.";
+      const prefilledVendorNotice = "Spaces are extremely limited. Select Standard or Premium packages below.";
+
+      formHtml = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
+          <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Establish policies, Terms, and headlines for the Events Subsystem.</p>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Event Header Copy:</label>
+            <input type="text" id="wz-events-header" value="${prefilledHeaderCopy}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Default Ticket Terms:</label>
+            <input type="text" id="wz-events-terms" value="${prefilledTicketTerms}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Refund Policy:</label>
+            <textarea id="wz-events-refund" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;">${prefilledRefundPolicy}</textarea>
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Vendor Space Notices:</label>
+            <textarea id="wz-events-vendor-notice" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;">${prefilledVendorNotice}</textarea>
+          </div>
+        </div>
+      `;
+
+      saveHandler = async () => {
+        const headerCopy = document.getElementById('wz-events-header').value;
+        const ticketTerms = document.getElementById('wz-events-terms').value;
+        const refundPolicy = document.getElementById('wz-events-refund').value;
+        const vendorNotice = document.getElementById('wz-events-vendor-notice').value;
+
+        const compiledHtml = `
+          <section style="max-width: 1200px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
+            <div style="text-align: center; margin-bottom: 3rem;">
+              <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 0.5rem;">
+                ${headerCopy}
+              </h1>
+              <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 1.1rem; max-width: 700px; margin: 0 auto;">
+                ${ticketTerms}
+              </p>
+            </div>
+
+            <!-- Alert / Policies Box -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem;">
+              <div style="background: #fffaf0; border: 1px solid #fbd38d; border-radius: 8px; padding: 1.25rem; color: #c05621;">
+                <strong style="font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">⚖️ Cancellation & Refund Policy</strong>
+                <p style="margin: 0; font-size: 0.85rem; line-height: 1.5;">${refundPolicy}</p>
+              </div>
+              <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 8px; padding: 1.25rem; color: #2b6cb0;">
+                <strong style="font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">📢 Vendor & Exhibition Space Information</strong>
+                <p style="margin: 0; font-size: 0.85rem; line-height: 1.5;">${vendorNotice}</p>
+              </div>
+            </div>
+
+            <!-- Event Grid Feed -->
+            <div id="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem;">
+              <p style="color: #a0aec0; text-align: center; grid-column: 1 / -1;">Loading event calendar...</p>
+            </div>
+
+            <!-- Dynamic Event Interactive Registration Panel / Modal -->
+            <div id="booking-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 1.5rem;">
+              <div style="background: var(--theme-color-surface, #ffffff); border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); background: var(--theme-color-background, #f7fafc); border-radius: 12px 12px 0 0;">
+                  <div>
+                    <h2 id="modal-event-title" style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">Event Registration</h2>
+                    <p id="modal-event-date" style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: var(--theme-color-primary, #2b6cb0); font-weight: bold;"></p>
+                  </div>
+                  <button id="btn-close-booking" style="background: transparent; border: none; font-size: 2rem; line-height: 1; cursor: pointer; color: var(--theme-color-text-secondary, #a0aec0);">&times;</button>
+                </div>
+                <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 2rem;">
+                  <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--theme-color-border, #e2e8f0); padding-bottom: 0.25rem;">
+                    <button class="booking-tab-btn active" data-tab="tickets" style="padding: 10px 16px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; background: transparent; color: var(--theme-color-primary, #2b6cb0); border-bottom: 3px solid var(--theme-color-primary, #2b6cb0);">1. Select Tickets</button>
+                    <button class="booking-tab-btn" data-tab="vendors" style="padding: 10px 16px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; background: transparent; color: var(--theme-color-text-secondary, #4a5568); border-bottom: 3px solid transparent;">2. Vendor Spaces</button>
+                    <button class="booking-tab-btn" data-tab="sponsors" style="padding: 10px 16px; font-weight: bold; font-size: 0.95rem; cursor: pointer; border: none; background: transparent; color: var(--theme-color-text-secondary, #4a5568); border-bottom: 3px solid transparent;">3. Sponsorship Packages</button>
+                  </div>
+                  <div id="booking-sec-tickets" class="booking-section-panel" style="display: block;">
+                    <h3 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; color: var(--theme-color-text-primary, #2d3748);">Choose Ticket Tier</h3>
+                    <div id="ticket-tiers-container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                  </div>
+                  <div id="booking-sec-vendors" class="booking-section-panel" style="display: none;">
+                    <h3 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; color: var(--theme-color-text-primary, #2d3748);">Exhibition & Booth Spaces</h3>
+                    <div style="overflow-x: auto;">
+                      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                          <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">
+                            <th style="padding: 10px;">Booth Package</th>
+                            <th style="padding: 10px;">Included Perks</th>
+                            <th style="padding: 10px;">Price</th>
+                            <th style="padding: 10px; text-align: right;">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody id="vendor-packages-tbody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div id="booking-sec-sponsors" class="booking-section-panel" style="display: none;">
+                    <h3 style="margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; color: var(--theme-color-text-primary, #2d3748);">Corporate Sponsorship Packages</h3>
+                    <div style="overflow-x: auto;">
+                      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                          <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568);">
+                            <th style="padding: 10px;">Sponsorship Tier</th>
+                            <th style="padding: 10px;">Logo Placement</th>
+                            <th style="padding: 10px; text-align: center;">Complimentary Passes</th>
+                            <th style="padding: 10px;">Price</th>
+                            <th style="padding: 10px; text-align: right;">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody id="sponsorship-packages-tbody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- FLOATING / SLIDE-OUT CART OVERLAY -->
+            <div id="cart-sidebar" style="position: fixed; top: 0; right: -420px; width: 100%; max-width: 400px; height: 100%; background: var(--theme-color-surface, #ffffff); box-shadow: -10px 0 30px rgba(0,0,0,0.15); z-index: 1100; transition: right 0.3s ease-in-out; display: flex; flex-direction: column;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); background: var(--theme-color-background, #f7fafc);">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); display: flex; align-items: center; gap: 0.5rem;">
+                  <span>🛒</span> Event Registration Cart
+                </h3>
+                <button id="btn-close-cart" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--theme-color-text-secondary, #a0aec0); font-weight: bold;">&times;</button>
+              </div>
+              <div id="cart-items-container" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;"></div>
+              <div style="padding: 1.5rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); background: var(--theme-color-background, #f7fafc); display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--theme-color-text-secondary, #4a5568);">
+                  <span>Subtotal:</span>
+                  <span id="cart-lbl-subtotal">$0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--theme-color-text-secondary, #4a5568);">
+                  <span>Event Tax (8.25%):</span>
+                  <span id="cart-lbl-tax">$0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--theme-color-text-secondary, #4a5568);">
+                  <span>Platform Service Fee:</span>
+                  <span id="cart-lbl-fee">$0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.25rem; color: var(--theme-color-text-primary, #1a202c); border-top: 1px solid var(--theme-color-border, #cbd5e0); padding-top: 0.5rem; margin-top: 0.25rem;">
+                  <span>Grand Total:</span>
+                  <span id="cart-lbl-total">$0.00</span>
+                </div>
+                <button id="btn-cart-checkout" class="btn-primary" style="margin-top: 0.5rem; padding: 12px; font-weight: bold; border-radius: 6px; text-align: center; font-size: 1rem; width: 100%;">Proceed to Secure Checkout</button>
+              </div>
+            </div>
+
+            <!-- FLOATING CART BUTTON TRIGGER -->
+            <button id="btn-floating-cart" style="position: fixed; bottom: 2rem; right: 2rem; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; font-size: 1.5rem; transition: transform 0.2s;">
+              <span>🛒</span>
+              <span id="cart-count-badge" style="position: absolute; top: 0; right: 0; background: var(--theme-color-danger, #e53e3e); color: white; font-size: 0.75rem; font-weight: bold; border-radius: 50%; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 2px;">0</span>
+            </button>
+          </section>
+        `;
+
+        return {
+          id: 'events',
+          title: "Events Page Override",
+          description: headerCopy,
+          compiledHtml,
+          compiledCss: ""
+        };
+      };
+
+    } else if (pageId === 'contact') {
+      title = "Contact Page Wizard Configurator";
+      const prefilledHeroCopy = "Let's Connect & Accelerate Your Growth";
+      const prefilledDepositRules = "Booking is verified instantly. Operating hours Buffer & slot requirements apply.";
+
+      let prefilledHoursText = "Monday - Friday: 09:00 - 17:00";
+      if (appts.operatingHours) {
+        const days = appts.operatingDays?.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ') || 'Monday, Tuesday, Wednesday, Thursday, Friday';
+        prefilledHoursText = `${days}: ${appts.operatingHours.start || '09:00'} - ${appts.operatingHours.end || '17:00'}`;
+      }
+
+      const prefilledConfirmation = "⚡ Average response time: < 24 business hours";
+
+      formHtml = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
+          <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure the high-impact text blocks of your Consultation & Contact page.</p>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Consultation Hero Copy Headline:</label>
+            <input type="text" id="wz-contact-hero" value="${prefilledHeroCopy}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Booking Deposit Rules:</label>
+            <input type="text" id="wz-contact-deposit" value="${prefilledDepositRules}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Operating Hours Details:</label>
+            <input type="text" id="wz-contact-hours" value="${prefilledHoursText}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Direct Message Confirmation Notice (Trust Indicator):</label>
+            <input type="text" id="wz-contact-confirm" value="${prefilledConfirmation}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+        </div>
+      `;
+
+      saveHandler = async () => {
+        const heroText = document.getElementById('wz-contact-hero').value;
+        const depositRules = document.getElementById('wz-contact-deposit').value;
+        const hoursText = document.getElementById('wz-contact-hours').value;
+        const confirmText = document.getElementById('wz-contact-confirm').value;
+
+        // Auto-populate Corporate Contact Details from Business Profile
+        const addressVal = [biz.address, biz.city, biz.state, biz.zip].filter(Boolean).join(', ') || "100 Innovation Way, San Francisco, CA";
+        const emailVal = biz.supportEmail || biz.email || "support@earlalex.com";
+        const phoneVal = biz.phone || "1-800-555-0199";
+
+        const compiledHtml = `
+          <section style="max-width: 1100px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
+            <div style="background: linear-gradient(135deg, #ebf8ff 0%, #f7fafc 100%); border-radius: 12px; border: 1px solid #bee3f8; padding: 2.5rem 2rem; text-align: center; margin-bottom: 3rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+              <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0); margin: 0 0 0.75rem 0; line-height: 1.2;">
+                ${heroText}
+              </h1>
+              <p style="font-size: 1.15rem; color: var(--theme-color-text-secondary, #4a5568); max-width: 800px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+                Book a 1-on-1 strategic video consultation synchronized with Google Calendar or send an instant inquiry to our leadership team.
+              </p>
+
+              <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; font-size: 0.95rem; font-weight: 600; color: #2f855a;">
+                <span style="font-size: 1.2rem;">⚡</span>
+                <span>${confirmText}</span>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+              <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; align-items: start;" class="contact-main-grid">
+
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+
+                  <div class="card" style="padding: 1.5rem; border-radius: 8px; border-top: 4px solid var(--theme-color-primary, #2b6cb0); background: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <h2 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 1.25rem;">
+                      Send Inquiry
+                    </h2>
+                    <form id="contact-message-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Your Name:</label>
+                        <input type="text" id="msg-name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                      </div>
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Your Email:</label>
+                        <input type="email" id="msg-email" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                      </div>
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Message Body:</label>
+                        <textarea id="msg-body" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 120px; box-sizing: border-box; resize: vertical;"></textarea>
+                      </div>
+                      <button type="submit" class="btn-primary" style="padding: 12px; font-weight: bold; border-radius: 4px; width: 100%;">
+                        Deliver Message
+                      </button>
+                    </form>
+                  </div>
+
+                  <div class="card" style="padding: 1.5rem; border-radius: 8px; background: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 4px solid var(--theme-color-primary, #2b6cb0);">
+                    <h3 style="margin-top: 0; font-size: 1.25rem; margin-bottom: 1.25rem; color: var(--theme-color-text-primary, #1a202c); font-weight: bold; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;">
+                      Contact Information
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem; font-size: 0.9rem; line-height: 1.5;">
+                      <div>
+                        <strong style="color: var(--theme-color-text-secondary, #4a5568); display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Office Headquarters:</strong>
+                        <span id="sidebar-biz-address" style="color: var(--theme-color-text-primary, #2d3748); font-weight: 500;">${addressVal}</span>
+                      </div>
+                      <div>
+                        <strong style="color: var(--theme-color-text-secondary, #4a5568); display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Corporate Email:</strong>
+                        <a id="sidebar-biz-email" href="mailto:${emailVal}" style="color: var(--theme-color-primary, #2b6cb0); font-weight: 600; text-decoration: none;">${emailVal}</a>
+                      </div>
+                      <div>
+                        <strong style="color: var(--theme-color-text-secondary, #4a5568); display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Phone Hotline:</strong>
+                        <span id="sidebar-biz-phone" style="color: var(--theme-color-text-primary, #2d3748); font-weight: 500;">${phoneVal}</span>
+                      </div>
+                      <div>
+                        <strong style="color: var(--theme-color-text-secondary, #4a5568); display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Operating Hours:</strong>
+                        <span id="sidebar-biz-hours" style="color: var(--theme-color-text-primary, #2d3748); font-weight: 500;">${hoursText}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div class="card" style="padding: 1.5rem; border-radius: 8px; border-top: 4px solid #319795; background: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 1.5rem;">
+                  <h2 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c);">
+                    Schedule Strategic Consultation
+                  </h2>
+                  <p style="font-size: 0.85rem; color: #a0aec0; margin: 0;">${depositRules}</p>
+
+                  <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                      <span style="font-weight: 700; font-size: 0.95rem; color: var(--theme-color-text-primary, #2d3748);">
+                        Select an Available Date:
+                      </span>
+                      <div style="display: flex; gap: 0.5rem;">
+                        <button id="btn-prev-month" type="button" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; background: #e2e8f0; color: #4a5568; font-weight: 600; border-radius: 4px; border: none; cursor: pointer;">
+                          &lt; Prev Month
+                        </button>
+                        <button id="btn-next-month" type="button" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; background: #e2e8f0; color: #4a5568; font-weight: 600; border-radius: 4px; border: none; cursor: pointer;">
+                          Next Month &gt;
+                        </button>
+                      </div>
+                    </div>
+                    <div id="calendar-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;"></div>
+                  </div>
+
+                  <form id="appointment-form" style="display: grid; grid-template-columns: 1fr; gap: 1rem; border-top: 1px solid var(--theme-color-border, #edf2f7); padding-top: 1.5rem;">
+                    <input type="hidden" id="appt-date" required />
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" class="appointment-details-row">
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
+                        <input type="text" id="appt-name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                      </div>
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
+                        <input type="email" id="appt-email" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                      </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Available Time Slot:</label>
+                        <select id="appt-timeslot" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                          <option value="">Select a date on the calendar above first...</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Consultation Objectives & Notes (Optional):</label>
+                        <textarea id="appt-notes" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; min-height: 60px; resize: vertical;"></textarea>
+                      </div>
+                      <div style="margin-top: 0.5rem;">
+                        <button type="submit" id="btn-book-appt" class="btn-primary" style="background: #38a169; width: 100%; padding: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;">
+                          Confirm Google Meet Appointment
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+
+            <style>
+              @media (max-width: 768px) {
+                .contact-main-grid { grid-template-columns: 1fr !important; }
+                .appointment-details-row { grid-template-columns: 1fr !important; }
+              }
+            </style>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 3rem 0;" />
+            <div style="margin-top: 2rem;">
+              <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 1.25rem; text-align: center;">Our Executive Leadership</h3>
+              <author-card layout="full"></author-card>
+            </div>
+          </section>
+        `;
+
+        return {
+          id: 'contact',
+          title: "Contact Page Override",
+          description: heroText,
+          compiledHtml,
+          compiledCss: ""
+        };
+      };
+    }
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 12px; width: 100%; max-width: 500px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; color: #1a202c;">
+        <h3 style="margin-top: 0; font-size: 1.4rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0); border-bottom: 2px solid #edf2f7; padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+          ${title}
+        </h3>
+
+        <form id="page-wizard-form" style="margin-bottom: 1.5rem;">
+          ${formHtml}
+        </form>
+
+        <div style="display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #edf2f7; padding-top: 1.25rem;">
+          <button id="wz-cancel" style="background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer;">
+            Cancel
+          </button>
+          <button id="wz-save" class="btn-primary" style="background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 6px; padding: 8px 20px; font-weight: bold; cursor: pointer;">
+            Save Override Configuration
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.querySelector('#wz-cancel').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    modal.querySelector('#wz-save').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const saveBtn = modal.querySelector('#wz-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving to Firestore...";
+
+      try {
+        const pageData = await saveHandler();
+        const success = await contentDB.saveCustomPage(pageData);
+        if (success) {
+          toast.success(`Persistent Page override for "${pageId}" saved successfully!`);
+          modal.remove();
+          if (onComplete) onComplete();
+        } else {
+          toast.error("Failed to persist custom page layout. Please check Firebase rules/connectivity.");
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save Override Configuration";
+        }
+      } catch (err) {
+        toast.error(`Error saving: ${err.message}`);
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Override Configuration";
+      }
+    });
+
+    document.body.appendChild(modal);
+  }
 }

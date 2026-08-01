@@ -2542,6 +2542,20 @@
   <!-- TAB: PAGE CREATOR & EDITOR -->
   <div id="tab-pages" class="admin-panel" style="display: none;">
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Default Pages Configurator Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Default Pages Configurator</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Configure and edit default system pages directly using guided onboarding wizards. Saved wizard overrides persist to Firestore.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <button id="btn-wizard-home" class="btn-primary" style="padding: 10px; font-weight: bold; background: #2b6cb0; border-radius: 6px;">Home Page Wizard</button>
+          <button id="btn-wizard-about" class="btn-primary" style="padding: 10px; font-weight: bold; background: #319795; border-radius: 6px;">About Page Wizard</button>
+          <button id="btn-wizard-events" class="btn-primary" style="padding: 10px; font-weight: bold; background: #805ad5; border-radius: 6px;">Events Page Wizard</button>
+          <button id="btn-wizard-contact" class="btn-primary" style="padding: 10px; font-weight: bold; background: #38a169; border-radius: 6px;">Contact Page Wizard</button>
+        </div>
+      </div>
+
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
         <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Visual Page Creator & GrapesJS Web Builder</h2>
         <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
