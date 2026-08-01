@@ -19,6 +19,7 @@ import './components/global/TestimonialSlider.js';
 
 // Automated Test Suites
 import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
+import { toast } from './utils/toast.js';
 
 // Page Controllers (Lazily Loaded in Route Splitting / pageLoaded events)
 import { initHomePage } from './pages/home/home.js';
@@ -125,6 +126,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. Initialize Top Global Navbar Header
   initNavbar();
 
+  // Initialize Global Website Footer Features
+  initGlobalFooter();
+
   // Active Simulation Mode Observer and Sticky Bottom-Right Badge
   store.subscribe((state) => {
     let badge = document.getElementById('simulation-active-badge');
@@ -132,34 +136,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!badge) {
         badge = document.createElement('div');
         badge.id = 'simulation-active-badge';
-        badge.style.position = 'fixed';
-        badge.style.bottom = '20px';
-        badge.style.right = '20px';
-        badge.style.background = '#e53e3e';
-        badge.style.color = '#ffffff';
-        badge.style.padding = '12px 20px';
-        badge.style.borderRadius = '8px';
-        badge.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.3)';
-        badge.style.zIndex = '999999';
-        badge.style.fontFamily = 'system-ui, sans-serif';
-        badge.style.fontSize = '0.9rem';
-        badge.style.fontWeight = 'bold';
-        badge.style.display = 'flex';
-        badge.style.alignItems = 'center';
-        badge.style.gap = '0.75rem';
         document.body.appendChild(badge);
       }
 
       const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
       badge.innerHTML = `
-        <span>⚠️ SIMULATION MODE ACTIVE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
-        <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
-          Return to Admin Command Center
-        </button>
+        <span class="badge-short-text">⚠️ Simulation Mode</span>
+        <span class="badge-full-text" style="display: none; align-items: center; gap: 0.75rem;">
+          <span>⚠️ SIMULATION MODE ACTIVE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
+          <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
+            Return to Admin Command Center
+          </button>
+        </span>
       `;
 
+      // Add dynamic mouseover events to safely toggle block displays inside the flex layout transitions
+      badge.addEventListener('mouseenter', () => {
+        const fullText = badge.querySelector('.badge-full-text');
+        if (fullText) fullText.style.display = 'flex';
+      });
+      badge.addEventListener('mouseleave', () => {
+        const fullText = badge.querySelector('.badge-full-text');
+        if (fullText) fullText.style.display = 'none';
+      });
+
       // Bind listener
-      document.getElementById('btn-return-admin-sim')?.addEventListener('click', () => {
+      document.getElementById('btn-return-admin-sim')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         store.dispatch('SET_SIMULATED_USER_TIER', null);
         window.router.navigateTo('/admin');
       });
@@ -185,6 +189,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(chatWidget);
   }
 });
+
+async function initGlobalFooter() {
+  // Load SVG Icons for Social and Layout sections from default-set or custom config
+  try {
+    const iconSetType = configManager.current.iconSet || 'default';
+    let iconData = null;
+
+    if (iconSetType === 'default') {
+      const response = await fetch('./assets/icons/default-set.json');
+      if (response.ok) {
+        iconData = await response.json();
+      }
+    } else if (iconSetType === 'custom' && configManager.current.customIconData) {
+      iconData = configManager.current.customIconData;
+    }
+
+    if (iconData) {
+      const iconKeys = ['twitter', 'linkedin', 'youtube', 'github', 'facebook', 'instagram'];
+      iconKeys.forEach(key => {
+        const el = document.getElementById(`footer-icon-${key}`);
+        if (el && iconData[key]) {
+          el.innerHTML = iconData[key];
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('[Footer Icons]: Bypassed full SVG injection, using fallback styling.', err);
+  }
+
+  // Bind newsletter consent checkbox and submit behaviors
+  const consentCb = document.getElementById('newsletter-consent-cb');
+  const submitBtn = document.getElementById('newsletter-submit');
+  const newsletterForm = document.getElementById('footer-newsletter-form');
+
+  if (consentCb && submitBtn) {
+    consentCb.addEventListener('change', (e) => {
+      submitBtn.disabled = !e.target.checked;
+    });
+  }
+
+  newsletterForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('newsletter-email')?.value;
+    if (!email) return;
+
+    if (!consentCb?.checked) {
+      toast.error('You must consent to receive communications before subscribing.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Subscribing...';
+
+    try {
+      // Create user or update status in ContentDB
+      const { contentDB } = await import('./core/db.js');
+      const { createGoogleContact } = await import('./core/google-services.js');
+
+      // Create contact and save user locally / Firestore
+      await contentDB.saveUser({
+        email,
+        role: 'subscriber',
+        name: email.split('@')[0],
+        newsletterSubscribed: true,
+        consentDate: new Date().toISOString()
+      });
+
+      // Synchronize with Google Contacts mock/live bridge
+      await createGoogleContact({
+        name: email.split('@')[0],
+        email,
+        role: 'Subscriber'
+      });
+
+      toast.success('Successfully subscribed to our newsletter! Check your inbox for updates.');
+      newsletterForm.reset();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Subscribe';
+    } catch (err) {
+      console.error('[Newsletter Subscription]: Error registering subscriber.', err);
+      toast.error('Failed to subscribe. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Subscribe';
+    }
+  });
+
+  // Attach SPA Router handling to footer link clicks
+  document.querySelectorAll('.spa-footer-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const href = link.getAttribute('href');
+      window.router?.navigateTo(href);
+    });
+  });
+}
 
 // Single Unified Page Lifecycle Listener
 window.addEventListener('pageLoaded', (e) => {

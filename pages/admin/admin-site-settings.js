@@ -256,6 +256,63 @@ export function initSiteSettingsTab() {
   });
 
   initThemeEngine();
+  initIconSetManager();
+}
+
+function initIconSetManager() {
+  const iconSetSelect = document.getElementById('icon-set-select');
+  const iconPackFile = document.getElementById('icon-pack-file');
+  const iconSetForm = document.getElementById('icon-set-form');
+
+  const currentCfg = configManager.current || {};
+  if (iconSetSelect) {
+    iconSetSelect.value = currentCfg.iconSet || 'default';
+  }
+
+  iconSetForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const selectedSet = iconSetSelect.value;
+    const file = iconPackFile?.files?.[0];
+
+    let customIconData = currentCfg.customIconData || null;
+
+    if (selectedSet === 'custom' && file) {
+      try {
+        const reader = new FileReader();
+        const fileContent = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file);
+        });
+
+        if (file.name.endsWith('.json')) {
+          customIconData = JSON.parse(fileContent);
+        } else if (file.name.endsWith('.svg')) {
+          customIconData = { sprite: fileContent };
+        }
+      } catch (err) {
+        toast.error('Failed to parse uploaded icon pack. Please ensure it is valid JSON or SVG.');
+        return;
+      }
+    }
+
+    try {
+      const updatedConfig = {
+        ...configManager.current,
+        iconSet: selectedSet,
+        customIconData
+      };
+      const success = await configManager.saveToFirebase(updatedConfig);
+      if (success) {
+        toast.success('Icon set configuration saved successfully!');
+      } else {
+        toast.error('Failed to save icon set configuration.');
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Icon Set Setup');
+      toast.error(`Error saving icon set configuration: ${err.message}`);
+    }
+  });
 }
 
 function initThemeEngine() {
