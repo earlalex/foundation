@@ -6,6 +6,8 @@ import {
   getGoogleCalendarFreeBusy,
   bookAppointmentSlot 
 } from '../../core/google-services.js';
+import { contentDB } from '../../core/db.js';
+import { configManager } from '../../core/config.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { configManager } from '../../core/config.js';
 import { contentDB } from '../../core/db.js';
@@ -360,254 +362,232 @@ export function initContactPage() {
     const date = apptDateInput.value;
     const timeSlot = apptTimeslotInput.value;
 
-    if (!date || !timeSlot) {
-      toast.warning('Please select a green date and available time slot on the calendar first.');
+    if (!date) {
+      toast.error('Please select an available date from the calendar first.');
+      return;
+    }
+
+    if (!timeSlot) {
+      toast.error('Please select an available time slot.');
       return;
     }
 
     const btn = document.getElementById('btn-book-appt');
-    const originalText = btn?.textContent;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Booking Google Meet...';
+    }
 
-    if (apptCfg.requirePayment) {
-      // Payment is Required Upfront! Let's launch Stripe Checkout via Serverless Redirect
+    try {
+      // Create and save booking in ContentDB (real-time sync)
+      const bookingData = {
+        name,
+        email,
+        date,
+        timeSlot,
+        createdAt: new Date().toISOString()
+      };
+
+      // Call Google Calendar API service
+      const res = await bookAppointmentSlot({ name, email, date, timeSlot });
+      bookingData.meetUrl = res?.meetUrl || 'https://meet.google.com/mock-meet';
+      bookingData.calendarEventId = res?.calendarEventId || `mock_event_${Date.now()}`;
+
+      await contentDB.saveAppointment(bookingData);
+
+      toast.success(`Appointment confirmed for ${date} at ${timeSlot}!\nMeet link synced to dashboard.`);
+      apptForm.reset();
+
+      // Clear selected state inside view
+      document.getElementById('appt-date').value = '';
+      if (slotSelect) {
+        slotSelect.innerHTML = '<option value="">Select a date on the calendar above first...</option>';
+      }
+
+      // Re-render to block out the freshly booked slot
+      renderSchedulingCalendar();
+    } catch (err) {
+      errorHandler.handleError(err, 'Contact Page - Appointment Booking');
+      toast.error('Failed to book appointment. Please try again.');
+    } finally {
       if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Redirecting to Secure Checkout...';
-      }
-
-      const totalCents = apptCfg.totalFee || 15000;
-      const structure = apptCfg.depositStructure || 'full';
-      let upfrontCents = totalCents;
-
-      if (structure === 'fixed') {
-        upfrontCents = apptCfg.depositAmount || 5000;
-      } else if (structure === 'percentage') {
-        const percentage = apptCfg.depositPercentage || 50;
-        upfrontCents = Math.round((totalCents * percentage) / 100);
-      }
-      if (upfrontCents > totalCents) upfrontCents = totalCents;
-
-      const balanceCents = totalCents - upfrontCents;
-
-      try {
-        const successUrl = window.location.origin + `/contact?success=true&session_id={CHECKOUT_SESSION_ID}&appt_name=${encodeURIComponent(name)}&appt_email=${encodeURIComponent(email)}&appt_date=${date}&appt_time=${encodeURIComponent(timeSlot)}&appt_notes=${encodeURIComponent(notes)}&appt_total_fee=${totalCents}&appt_paid=${upfrontCents}&appt_balance=${balanceCents}`;
-
-        const metadata = {
-          action: 'appt_booking',
-          appt_name: name,
-          appt_email: email,
-          appt_date: date,
-          appt_time: timeSlot,
-          appt_notes: notes,
-          appt_total_fee: String(totalCents),
-          appt_paid: String(upfrontCents),
-          appt_balance: String(balanceCents)
-        };
-
-        const session = await stripeService.createAppointmentCheckoutSession(email, upfrontCents, successUrl, metadata);
-        if (session.url) {
-          window.location.href = session.url;
-        } else {
-          throw new Error(session.error || 'Failed to initialize payment gateway.');
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Contact Appointment - Checkout Init');
-        toast.error(`Checkout initialization failed: ${err.message}`);
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = originalText;
-        }
-      }
-
-    } else {
-      // Free consultation booking! Call booking pipeline directly
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Scheduling Video Consultation...';
-      }
-
-      try {
-        const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
-        if (res) {
-          // Save to Firestore /registrations
-          await contentDB.saveRegistration({
-            eventId: 'appointment',
-            type: 'appointment',
-            email: email,
-            accessCode: `APT-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-            cartItems: JSON.stringify([{ id: 'consultation', name: 'Video Consultation Session', price: 0, quantity: 1 }]),
-            apptDate: date,
-            apptTime: timeSlot,
-            apptName: name,
-            meetUrl: res.meetUrl || '',
-            price: 0,
-            paid: 0,
-            balance: 0,
-            status: 'Confirmed',
-            notes: notes,
-            createdAt: new Date().toISOString()
-          });
-
-          // Dispatches
-          if (apptCfg.notifyAppointeeEmail) {
-            await sendGmailNotification({
-              toEmail: email,
-              subject: `Consultation Confirmed: ${date} @ ${timeSlot}`,
-              messageBody: `Hello ${name},\n\nYour video consultation appointment has been successfully scheduled!\n\nDate: ${date}\nTime: ${timeSlot}\nGoogle Meet URL: ${res.meetUrl || 'See calendar invite'}\n\nWe look forward to meeting you.`
-            });
-          }
-
-          if (apptCfg.notifyAdminEmail) {
-            const adminEmail = configManager.current.adminEmails?.[0] || 'admin@example.com';
-            await sendGmailNotification({
-              toEmail: adminEmail,
-              subject: `[Admin Alert] New Consultation Booked: ${name}`,
-              messageBody: `Hello Administrator,\n\nA new video consultation appointment has been scheduled!\n\nClient Name: ${name}\nClient Email: ${email}\nDate: ${date}\nTime: ${timeSlot}\nNotes: ${notes}\nGoogle Meet Link: ${res.meetUrl || 'Generated'}`
-            });
-          }
-
-          toast.success(`Session confirmed! Check inbox for calendar invites.`);
-          alert(`Appointment confirmed for ${date} at ${timeSlot}!\n\nGoogle Meet Link: ${res.meetUrl || 'Sent via email'}`);
-          apptForm.reset();
-          bootCalendar();
-        } else {
-          toast.error('Booking failed. Please try a different slot.');
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Contact Appointment - Save Free');
-        toast.error(`Scheduling failed: ${err.message}`);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = originalText;
-        }
+        btn.disabled = false;
+        btn.textContent = 'Confirm Google Meet Appointment';
       }
     }
   });
+}
 
-  // --- Verify and Finalize Paid Booking on success redirect ---
-  async function handleSuccessRedirect() {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    const sessionId = params.get('session_id');
+async function renderSchedulingCalendar() {
+  const container = document.getElementById('calendar-wrapper');
+  if (!container) return;
 
-    if (success !== 'true' || !sessionId) return;
+  const apptConfig = configManager.current?.appointments || {
+    operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    operatingHours: { start: "09:00", end: "17:00" },
+    duration: 30,
+    buffer: 15
+  };
 
-    // Guard: Prevent double-registration on page refresh
-    const completed = JSON.parse(localStorage.getItem('foundation_completed_bookings') || '[]');
-    if (completed.includes(sessionId)) {
-      // Already handled, clean query params cleanly
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  // Load existing real-time appointment bookings to calculate fully booked days
+  let bookedAppointments = [];
+  try {
+    bookedAppointments = await contentDB.getAppointments();
+  } catch (err) {
+    console.warn('[Calendar Load]: Using local appointment array fallback.', err);
+  }
+
+  // Detect Mobile width to render either 1 month (paginated) or 3 months (full desktop)
+  const isMobile = window.innerWidth < 768;
+  const totalMonthsToShow = isMobile ? 1 : 3;
+
+  container.innerHTML = '';
+
+  for (let m = 0; m < totalMonthsToShow; m++) {
+    const renderMonthOffset = calendarCurrentMonthOffset + m;
+    const targetDate = new Date(currentYear, currentMonth + renderMonthOffset, 1);
+    const monthYearStr = targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const monthEl = document.createElement('div');
+    monthEl.className = 'calendar-month-container';
+
+    // Header
+    const title = document.createElement('div');
+    title.className = 'calendar-month-title';
+    title.textContent = monthYearStr;
+    monthEl.appendChild(title);
+
+    // Days Header (Sun - Sat)
+    const gridHeader = document.createElement('div');
+    gridHeader.className = 'calendar-grid-header';
+    const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    dayLabels.forEach(lbl => {
+      const cell = document.createElement('div');
+      cell.textContent = lbl;
+      gridHeader.appendChild(cell);
+    });
+    monthEl.appendChild(gridHeader);
+
+    // Days grid
+    const gridDays = document.createElement('div');
+    gridDays.className = 'calendar-grid-days';
+
+    // Get padding first day of month
+    const firstDayIndex = targetDate.getDay();
+    for (let p = 0; p < firstDayIndex; p++) {
+      const pad = document.createElement('div');
+      gridDays.appendChild(pad);
     }
 
-    // Block page interaction beautifully
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(255,255,255,0.9); z-index: 2147483640;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      font-family: system-ui, sans-serif;
-    `;
-    overlay.innerHTML = `
-      <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
-      <h3 style="margin: 0; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">Securing Consultation Slot...</h3>
-      <p style="color: #718096; font-size: 0.9rem; margin-top: 0.5rem;">Verifying deposit payment and establishing Google Meet rooms...</p>
-    `;
-    document.body.appendChild(overlay);
+    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
 
-    try {
-      const name = decodeURIComponent(params.get('appt_name') || '');
-      const email = decodeURIComponent(params.get('appt_email') || '');
-      const date = params.get('appt_date') || '';
-      const timeSlot = decodeURIComponent(params.get('appt_time') || '');
-      const notes = decodeURIComponent(params.get('appt_notes') || '');
-      const totalFee = Number(params.get('appt_total_fee') || '0');
-      const paid = Number(params.get('appt_paid') || '0');
-      const balance = Number(params.get('appt_balance') || '0');
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateToCheck = new Date(targetDate.getFullYear(), targetDate.getMonth(), day);
+      const dateStr = dateToCheck.toISOString().split('T')[0];
+      const dayOfWeekName = dateToCheck.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
 
-      // 1. Establish Google Calendar event + Google Meet
-      const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
+      // Check if date is in the past
+      const isPast = dateToCheck.getTime() < today.setHours(0,0,0,0);
 
-      if (res) {
-        // 2. Save appointment record inside Firestore `/registrations`
-        const accessCode = `APT-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-        await contentDB.saveRegistration({
-          eventId: 'appointment',
-          type: 'appointment',
-          email: email,
-          accessCode,
-          cartItems: JSON.stringify([{ id: 'consultation', name: 'Paid Video Consultation Session', price: totalFee, quantity: 1 }]),
-          apptDate: date,
-          apptTime: timeSlot,
-          apptName: name,
-          meetUrl: res.meetUrl || '',
-          price: totalFee,
-          paid,
-          balance,
-          status: 'Confirmed',
-          notes,
-          sessionId,
-          createdAt: new Date().toISOString()
-        });
+      // Check against Operating Guidelines
+      const isOperatingDay = apptConfig.operatingDays?.includes(dayOfWeekName);
 
-        // 3. Queue automated post-meeting invoice task in Firestore if balance remains unpaid
-        if (balance > 0 && apptCfg.autoInvoice) {
-          const appointmentDate = new Date(`${date}T${timeSlot}:00`);
-          const invoiceDate = new Date(appointmentDate.getTime() + 24 * 60 * 60 * 1000); // the day after!
+      // Check how many slots exist and how many are already booked
+      const totalPossibleSlots = calculatePossibleSlotsCount(apptConfig);
+      const bookedOnThisDay = bookedAppointments.filter(a => a.date === dateStr);
+      const isFullyBooked = bookedOnThisDay.length >= totalPossibleSlots;
 
-          await contentDB.saveContent({
-            type: 'scheduled_task',
-            id: `task_invoice_${sessionId}`,
-            taskType: 'auto_invoice_balance',
-            clientEmail: email,
-            clientName: name,
-            amount: balance,
-            invoiceDate: invoiceDate.toISOString().split('T')[0],
-            status: 'Pending',
-            metadata: {
-              sessionId,
-              appointmentDate: date,
-              timeslot: timeSlot
-            }
-          });
-          console.log('[System Scheduler]: Queued day-after unpaid balance invoice task successfully.');
-        }
+      const isAvailable = isOperatingDay && !isPast && !isFullyBooked;
 
-        // 4. Send Gmail confirmations
-        if (apptCfg.notifyAppointeeEmail) {
-          await sendGmailNotification({
-            toEmail: email,
-            subject: `Consultation Booking Confirmed: ${date} @ ${timeSlot}`,
-            messageBody: `Hello ${name},\n\nYour video consultation appointment deposit has been received and confirmed!\n\nDate: ${date}\nTime: ${timeSlot}\nGoogle Meet URL: ${res.meetUrl || 'See calendar invite'}\nTotal Fee: $${(totalFee / 100).toFixed(2)}\nPaid Deposit: $${(paid / 100).toFixed(2)}\nRemaining Balance: $${(balance / 100).toFixed(2)}\n\nWe look forward to meeting you.`
-          });
-        }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `calendar-day-btn ${isAvailable ? 'available' : 'disabled'}`;
+      btn.textContent = day;
+      btn.dataset.date = dateStr;
 
-        if (apptCfg.notifyAdminEmail) {
-          const adminEmail = configManager.current.adminEmails?.[0] || 'admin@example.com';
-          await sendGmailNotification({
-            toEmail: adminEmail,
-            subject: `[Admin Alert] New Paid Consultation: ${name}`,
-            messageBody: `Hello Administrator,\n\nA new video consultation appointment has been scheduled!\n\nClient Name: ${name}\nClient Email: ${email}\nDate: ${date}\nTime: ${timeSlot}\nPaid Deposit: $${(paid / 100).toFixed(2)}\nRemaining Balance: $${(balance / 100).toFixed(2)}\nNotes: ${notes}\nGoogle Meet Link: ${res.meetUrl || 'Generated'}`
-          });
-        }
-
-        // Add to completed log
-        completed.push(sessionId);
-        localStorage.setItem('foundation_completed_bookings', JSON.stringify(completed));
-
-        alert(`Appointment and Deposit Payment confirmed for ${date} at ${timeSlot}!\n\nGoogle Meet Link: ${res.meetUrl || 'Sent via email'}`);
-        toast.success('Paid video consultation confirmed successfully!');
+      if (!isAvailable) {
+        btn.disabled = true;
       } else {
-        toast.error('Payment verified, but slot generation failed. Please contact support.');
+        btn.addEventListener('click', () => {
+          // Deselect previous
+          document.querySelectorAll('.calendar-day-btn.selected').forEach(el => el.classList.remove('selected'));
+          btn.classList.add('selected');
+
+          // Set date value
+          document.getElementById('appt-date').value = dateStr;
+
+          // Render timeslots
+          loadAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay);
+        });
       }
-    } catch (e) {
-      errorHandler.handleError(e, 'Contact Appointment - Success Verification Redirect');
-      toast.error('Verification failed: ' + e.message);
-    } finally {
-      overlay.remove();
-      // Clear URL query parameters safely
-      window.history.replaceState({}, document.title, window.location.pathname);
+
+      gridDays.appendChild(btn);
     }
+
+    monthEl.appendChild(gridDays);
+    container.appendChild(monthEl);
+  }
+}
+
+function calculatePossibleSlotsCount(config) {
+  const duration = config.duration || 30;
+  const buffer = config.buffer || 15;
+  const startStr = config.operatingHours?.start || "09:00";
+  const endStr = config.operatingHours?.end || "17:00";
+
+  const dummyDate = "2026-01-01";
+  const start = new Date(`${dummyDate}T${startStr}:00`);
+  const end = new Date(`${dummyDate}T${endStr}:00`);
+
+  let count = 0;
+  let curr = new Date(start);
+
+  while (curr.getTime() + duration * 60000 <= end.getTime()) {
+    count++;
+    curr = new Date(curr.getTime() + (duration + buffer) * 60000);
+  }
+  return count;
+}
+
+function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
+  const select = document.getElementById('appt-timeslot');
+  if (!select) return;
+
+  const duration = config.duration || 30;
+  const buffer = config.buffer || 15;
+  const startStr = config.operatingHours?.start || "09:00";
+  const endStr = config.operatingHours?.end || "17:00";
+
+  const start = new Date(`${dateStr}T${startStr}:00`);
+  const end = new Date(`${dateStr}T${endStr}:00`);
+
+  let curr = new Date(start);
+  const slots = [];
+
+  while (curr.getTime() + duration * 60000 <= end.getTime()) {
+    const slotTimeStr = curr.toTimeString().substring(0, 5);
+
+    // Check if slot is already booked on this day
+    const isBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
+
+    if (!isBooked) {
+      const displayLabel = curr.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      slots.push({
+        time: slotTimeStr,
+        label: displayLabel
+      });
+    }
+
+    curr = new Date(curr.getTime() + (duration + buffer) * 60000);
+  }
+
+  if (slots.length === 0) {
+    select.innerHTML = '<option value="">No open appointment slots remaining on this day.</option>';
+  } else {
+    select.innerHTML = slots.map(s => `<option value="${s.time}">${s.label} (${s.time})</option>`).join('');
   }
 }

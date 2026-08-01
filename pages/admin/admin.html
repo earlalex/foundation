@@ -334,6 +334,92 @@
         </form>
       </div>
 
+      <!-- Appointment & Consultation Scheduler Configurator Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Appointment & Consultation Scheduler Configurator</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Configure availability guidelines, buffers, and reminders for your consultation booking calendar.
+        </p>
+        <form id="appointment-config-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem;">Available Operating Days:</label>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="monday" /> Mon
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="tuesday" /> Tue
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="wednesday" /> Wed
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="thursday" /> Thu
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="friday" /> Fri
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="saturday" /> Sat
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" name="operating-days" value="sunday" /> Sun
+              </label>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Daily Operating Hours (Start):</label>
+              <input type="time" id="appt-start-time" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Daily Operating Hours (End):</label>
+              <input type="time" id="appt-end-time" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Appointment Duration:</label>
+              <select id="appt-duration-select" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Buffer Time Between Appointments:</label>
+              <select id="appt-buffer-select" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="0">0 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem;">Reminders & Notifications:</label>
+            <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="appt-notif-admin" /> Admin Email Notification
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="appt-notif-client" /> Appointee Email Confirmation
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="appt-notif-alert" /> Admin Dashboard Alert
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem; background: var(--theme-color-primary, #2b6cb0);">
+            Save Scheduler Guidelines
+          </button>
+        </form>
+      </div>
+
       <!-- Live Sales Breakdown & Roster Card -->
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
@@ -588,6 +674,32 @@
           </div>
           <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
             Save Identity Settings
+          </button>
+        </form>
+      </div>
+
+      <!-- Icon Set Upload & Selector Card -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem;">Icon Set Library & Upload</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Manage the system's SVG icon library. Choose between the default pack or upload a custom pack.
+        </p>
+        <form id="icon-set-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Active Icon Set:</label>
+              <select id="icon-set-select" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+                <option value="default">Default Foundation Set</option>
+                <option value="custom">Custom SVG Pack</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Upload Custom Icon Pack (.json / .svg sprite):</label>
+              <input type="file" id="icon-pack-file" accept=".json,.svg" style="width: 100%; padding: 6px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-size: 0.85rem; box-sizing: border-box;" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+            Apply Icon Set Configuration
           </button>
         </form>
       </div>

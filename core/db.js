@@ -14,6 +14,9 @@ import {
 
 // Global Firestore timeout wrapper to prevent headless chromium test runner hangs in offline sandbox environments
 function withTimeout(promise, ms = 2000) {
+  promise.catch((err) => {
+    console.warn('[DB Timeout Wrapper]: original promise rejected post-timeout/settlement:', err.message || err);
+  });
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), ms))
@@ -24,6 +27,17 @@ const getDoc = (docRef) => withTimeout(originalGetDoc(docRef));
 const getDocs = (queryRef) => withTimeout(originalGetDocs(queryRef));
 const setDoc = (docRef, data, options) => withTimeout(originalSetDoc(docRef, data, options));
 const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
+
+// Strict 3-second timeout query wrapper to avoid spamming uncaught promise rejections on latency or permission-denied
+function queryWith3SecTimeout(promise) {
+  promise.catch((err) => {
+    console.warn('[DB 3s Query Wrapper]: original query rejected post-timeout/settlement:', err.message || err);
+  });
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), 3000))
+  ]);
+}
 
 import { schemaRegistry } from '../schemas/registry.js';
 import { errorHandler } from './error-handler.js';
@@ -309,7 +323,7 @@ export class ContentDB {
         } else {
           q = query(contentRef, where('access.visibility', '==', 'public'));
         }
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
           try {
@@ -361,7 +375,7 @@ export class ContentDB {
             limit(maxItems)
           );
         }
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
           try {
@@ -397,7 +411,7 @@ export class ContentDB {
     const db = getFirestoreDB();
     if (db) {
       try {
-        const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
+        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(collection(db, USERS_COLLECTION)));
         querySnapshot.forEach((docSnap) => {
           users.push({ id: docSnap.id, ...docSnap.data() });
         });
@@ -948,7 +962,7 @@ export class ContentDB {
     const db = getFirestoreDB();
     if (db) {
       try {
-        const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
+        const querySnapshot = await queryWith3SecTimeout(originalGetDocs(collection(db, 'finances_payroll')));
         querySnapshot.forEach((docSnap) => {
           results.push(docSnap.data());
         });
@@ -996,7 +1010,7 @@ export class ContentDB {
     if (db) {
       try {
         const docRef = doc(db, 'finances_budgets', id);
-        const docSnap = await getDoc(docRef);
+        const docSnap = await queryWith3SecTimeout(originalGetDoc(docRef));
         if (docSnap.exists()) {
           return docSnap.data();
         }
@@ -1903,6 +1917,56 @@ export class ContentDB {
       console.warn('[DB]: Failed to fetch registrations, falling back', err);
     }
     return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+  }
+
+  // --- Appointments Helpers ---
+  async saveAppointment(apptData) {
+    const db = getFirestoreDB();
+    const id = apptData.id || `appt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = { ...apptData, id, updatedAt: new Date().toISOString() };
+
+    // LocalStorage sync/fallback
+    try {
+      const local = JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
+      const idx = local.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        local[idx] = payload;
+      } else {
+        local.push(payload);
+      }
+      localStorage.setItem('foundation_local_appointments', JSON.stringify(local));
+    } catch (e) {
+      console.warn('Failed to save appointment locally', e);
+    }
+
+    if (!db) return payload;
+
+    try {
+      const docRef = doc(db, 'appointments', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore appointment save error.', err.message);
+      return payload;
+    }
+  }
+
+  async getAppointments() {
+    const db = getFirestoreDB();
+    if (!db) {
+      return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
+    }
+    try {
+      const querySnapshot = await getDocs(collection(db, 'appointments'));
+      const results = [];
+      querySnapshot.forEach(docSnap => {
+        results.push(docSnap.data());
+      });
+      if (results.length > 0) return results;
+    } catch (err) {
+      console.warn('[DB]: Failed to fetch appointments from Firestore, falling back', err);
+    }
+    return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
   }
 }
 

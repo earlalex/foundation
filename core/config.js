@@ -133,21 +133,18 @@ export const defaultConfig = {
     welcomeEmailSubject: "Welcome to the Team!",
     isConfigured: false
   },
+  iconSet: "default",
+  customIconData: null,
   appointments: {
-    operatingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-    operatingHoursStart: "09:00",
-    operatingHoursEnd: "17:00",
-    slotDuration: "30", // "15", "30", "45", "60"
-    bufferTime: "15", // "0", "15", "30"
-    requirePayment: false,
-    totalFee: 15000, // $150.00 in cents
-    depositStructure: "full", // "full", "fixed", "percentage"
-    depositAmount: 5000, // $50.00 in cents
-    depositPercentage: 50, // 50%
-    autoInvoice: false,
-    notifyAdminEmail: false,
-    notifyAppointeeEmail: false,
-    dashboardAlerts: false
+    operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    operatingHours: { start: "09:00", end: "17:00" },
+    duration: 30,
+    buffer: 15,
+    notifications: {
+      adminEmail: true,
+      appointeeEmail: true,
+      adminAlert: true
+    }
   }
 };
 
