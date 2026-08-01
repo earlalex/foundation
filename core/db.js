@@ -1380,6 +1380,32 @@ export class ContentDB {
    */
   async saveVaultCredential(record) {
     const credential = record;
+
+    // Trigger Google Workspace Password Vault Integration & Secret Sync if OAuth is active
+    try {
+      const { getGoogleAccessToken } = await import('./google-services.js');
+      const token = await getGoogleAccessToken(false);
+      if (token) {
+        const { syncCredentialToGoogleVault } = await import('../utils/backend-google.js');
+        const syncRes = await syncCredentialToGoogleVault(token, credential);
+        if (syncRes && syncRes.success) {
+          // Securely map LastPass and Google Workspace Vault hashes under configManager.current.vault
+          const currentVaultConfig = configManager.current.vault || {};
+          currentVaultConfig[credential.id] = {
+            googleVaultHash: syncRes.googleVaultHash,
+            lastpassHash: syncRes.lastpassHash,
+            syncedAt: new Date().toISOString()
+          };
+          await configManager.saveToFirebase({
+            ...configManager.current,
+            vault: currentVaultConfig
+          });
+        }
+      }
+    } catch (syncErr) {
+      console.warn('[DB]: Google Password Vault sync deferred or offline.', syncErr.message);
+    }
+
     const db = getFirestoreDB();
     if (!db) {
       const local = this.#getLocalVaultCredentials();

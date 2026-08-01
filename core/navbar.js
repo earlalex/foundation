@@ -110,6 +110,21 @@ export function initNavbar() {
           <a href="/login" id="nav-auth-link" class="nav-link" data-path="/login" style="color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #edf2f7; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
             Sign In / Register
           </a>
+
+          <!-- Multi-Language Selector Dropdown -->
+          <select id="nav-lang-selector" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-secondary, #4a5568); font-size: 0.85rem; font-weight: 600; cursor: pointer; outline: none; transition: border-color 0.2s;">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文</option>
+          </select>
+
+          <!-- Accessible High-Contrast Toggle -->
+          <button id="nav-high-contrast-toggle" class="nav-link" style="background: transparent; border: none; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px;" aria-label="Toggle High Contrast Mode">
+            🌓 Contrast
+          </button>
         </div>
       </div>
     </nav>
@@ -279,6 +294,43 @@ export function initNavbar() {
         countBadge.classList.add('pulse-badge');
       }
     }
+  });
+
+  // Multi-Language Selector Dropdown listener & logic
+  const langSelector = document.getElementById('nav-lang-selector');
+  if (langSelector) {
+    langSelector.value = localStorage.getItem('foundation_language') || 'en';
+    langSelector.addEventListener('change', async (e) => {
+      const { i18n } = await import('./i18n.js');
+      i18n.setLanguage(e.target.value);
+    });
+  }
+
+  // Accessible High-Contrast Toggle listener & logic
+  const contrastBtn = document.getElementById('nav-high-contrast-toggle');
+  if (contrastBtn) {
+    contrastBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const current = localStorage.getItem('foundation_high_contrast') === 'true';
+      themeEngine.setHighContrastMode(!current);
+    });
+  }
+
+  // Auto-translate on navbar initialization or store sync
+  setTimeout(async () => {
+    try {
+      const { i18n } = await import('./i18n.js');
+      i18n.translatePage();
+    } catch (e) {}
+  }, 100);
+
+  window.addEventListener('languageChanged', () => {
+    setTimeout(async () => {
+      try {
+        const { i18n } = await import('./i18n.js');
+        i18n.translatePage();
+      } catch (e) {}
+    }, 50);
   });
 
   updateActiveLink(window.location.pathname);

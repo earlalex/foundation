@@ -16,6 +16,86 @@ export function initSecurityTab() {
   setupVaultForm();
   setupLastPassConfig();
   setupZapScannerPanel();
+  setupReportExporterPanel();
+}
+
+function setupReportExporterPanel() {
+  const container = document.getElementById('report-exporter-card-container');
+  if (!container) {
+    // Inject report exporter section to the DOM dynamically if not present in html
+    const securityPanel = document.getElementById('tab-security');
+    if (!securityPanel) return;
+
+    const div = document.createElement('div');
+    div.id = 'report-exporter-card-container';
+    div.style.marginTop = '1.5rem';
+    div.innerHTML = `
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Comprehensive Multi-Domain Report Exporter</h3>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Generate structured reports for audit and compliance. Supports exporting as CSV or printable format, with automatic backup to Google Drive.
+        </p>
+        <form id="report-exporter-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Report Domain:</label>
+              <select id="wz-report-domain" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;">
+                <option value="financials">Financials & Expenses (Profit/Loss, Payroll, Settlements)</option>
+                <option value="analytics">Site & Visitor Analytics (GA4, Conversions, Referrals)</option>
+                <option value="security">Cybersecurity & Threat Audit (OWASP ZAP, VT, IP Blocks)</option>
+                <option value="seo">SEO Audit (Authority, Crawl index, broken links)</option>
+                <option value="performance">Performance Audit (Core Web Vitals, Lighthouse)</option>
+                <option value="accessibility">Accessibility Audit (WCAG 2.1 Compliance, Contrast ratio)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Export File Format:</label>
+              <select id="wz-report-format" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;">
+                <option value="csv">Structured CSV File</option>
+                <option value="pdf">Structured Printable Layout (PDF)</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem; padding: 10px 20px; font-weight: bold; border-radius: 6px;">
+            Generate & Export Report
+          </button>
+        </form>
+      </div>
+    `;
+    securityPanel.appendChild(div);
+  }
+
+  const form = document.getElementById('report-exporter-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const domain = document.getElementById('wz-report-domain').value;
+      const format = document.getElementById('wz-report-format').value;
+
+      try {
+        const { ReportExporter } = await import('../../utils/reportExporter.js');
+        const res = await ReportExporter.generateReport(domain, format);
+
+        if (res.success) {
+          toast.success(`Successfully generated report: ${res.filename}`);
+          // Trigger local download
+          const blob = new Blob([res.content], { type: res.contentType });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = res.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          toast.error(`Report generation failed: ${res.error}`);
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Report Exporter Panel UI');
+        toast.error('Failed to export report');
+      }
+    });
+  }
 }
 
 function checkAdminRole() {

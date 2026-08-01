@@ -149,6 +149,7 @@ const stateSchemas = {
   theme: Type.string,
   activeBrandGuide: Type.optional(Type.object),
   devMode: Type.boolean,
+  highContrast: Type.optional(Type.boolean),
   contentFeed: Type.optional(Type.array()),
   history: Type.optional(Type.array()),
   chatLogs: Type.optional(Type.array((val) => {
@@ -160,12 +161,14 @@ const stateSchemas = {
 };
 
 const initialDevMode = localStorage.getItem('foundation_dev_mode') === 'true';
+const initialHighContrast = localStorage.getItem('foundation_high_contrast') === 'true';
 
 export const store = new Store({
   user: null,
   theme: 'dark',
   activeBrandGuide: null,
   devMode: initialDevMode,
+  highContrast: initialHighContrast,
   contentFeed: [],
   history: [],
   chatLogs: [],
@@ -174,6 +177,7 @@ export const store = new Store({
 }, stateSchemas);
 
 // --- REGISTER STORE ACTIONS ---
+store.registerAction('SET_HIGH_CONTRAST', (state, enabled) => ({ ...state, highContrast: !!enabled }));
 store.registerAction('SET_USER', (state, userPayload) => ({ ...state, user: userPayload }));
 store.registerAction('SET_CART', (state, cartPayload) => ({ ...state, cart: cartPayload || { eventId: null, items: [] } }));
 store.registerAction('LOGOUT', (state) => ({ ...state, user: null, simulatedUserTier: null }));

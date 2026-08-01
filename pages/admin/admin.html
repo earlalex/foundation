@@ -3308,18 +3308,48 @@
         <!-- Add Credential Form -->
         <form id="vault-credential-form" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 0.75rem; margin-bottom: 1.5rem;">
           <div>
+            <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+              Service Name:
+              <span class="tooltip-wrapper">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-text">Name of the credentials provider (e.g. AWS, Github).</span>
+              </span>
+            </label>
             <input type="text" id="cred-service-name" placeholder="Service Name" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
+            <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+              Login URL:
+              <span class="tooltip-wrapper">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-text">Full website or API login URL endpoint.</span>
+              </span>
+            </label>
             <input type="url" id="cred-login-url" placeholder="Login URL" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
+            <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+              Username:
+              <span class="tooltip-wrapper">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-text">Service username or email account.</span>
+              </span>
+            </label>
             <input type="text" id="cred-username" placeholder="Username" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
+            <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">
+              Password:
+              <span class="tooltip-wrapper">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-text">Service password or private API key tokens.</span>
+              </span>
+            </label>
             <input type="password" id="cred-password" placeholder="Password" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
           </div>
-          <button type="submit" class="btn-primary" style="padding: 8px 16px;">Add to Vault</button>
+          <div style="display: flex; align-items: flex-end;">
+            <button type="submit" class="btn-primary" style="padding: 8px 16px; height: 34px;">Add to Vault</button>
+          </div>
         </form>
 
         <!-- Credentials List -->
