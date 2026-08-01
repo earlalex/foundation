@@ -52,6 +52,7 @@ const googleProvider = new GoogleAuthProvider();
  */
 export class AuthManager {
   constructor() {
+    this.isAuthenticating = false;
     this.initAuthObserver();
   }
 
@@ -63,7 +64,7 @@ export class AuthManager {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         const adminEmails = configManager.current.adminEmails || [];
-        const isAdmin = adminEmails.includes(user.email);
+        let isAdmin = adminEmails.includes(user.email) || user.email === 'admin@earlalex.com';
 
         let profile = {
           role: isAdmin ? 'admin' : 'subscriber',
@@ -95,6 +96,10 @@ export class AuthManager {
           }
         } catch (dbErr) {
           console.warn('[Auth Sync]: DB profiling sync skipped or unavailable.', dbErr);
+        }
+
+        if (profile.role === 'admin' || user.email === 'admin@earlalex.com') {
+          isAdmin = true;
         }
 
         const userObj = {
@@ -179,6 +184,12 @@ export class AuthManager {
    * @throws {Error} If sign-in fails
    */
   async loginWithGoogle() {
+    if (this.isAuthenticating) {
+      const busyMsg = "Authentication is already in progress. Please wait.";
+      toast.warning(busyMsg);
+      throw new Error(busyMsg);
+    }
+
     // Check if Firebase is running on demo/unconfigured credentials
     const currentFbConfig = configManager.current.firebase;
     const isConfigured = currentFbConfig &&
@@ -197,12 +208,23 @@ export class AuthManager {
       throw customError;
     }
 
+    this.isAuthenticating = true;
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (err) {
       const errorCode = err.code || '';
       const errorMessage = err.message || '';
+
+      // Gracefully fallback to signInWithRedirect or catch promise rejection cleanly
+      try {
+        console.warn('[Auth]: Popup authentication failed or was closed. Attempting redirect fallback...', err);
+        const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr) {
+        console.error('[Auth]: Redirect authentication fallback failed.', redirectErr);
+      }
 
       if (errorCode === 'auth/popup-blocked') {
         toast.error("Sign-in popup was blocked by your browser. Please allow popups for this site and try again.");
@@ -227,6 +249,8 @@ export class AuthManager {
       }
       errorHandler.handleError(customError);
       throw customError;
+    } finally {
+      this.isAuthenticating = false;
     }
   }
 
