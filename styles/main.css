@@ -8,18 +8,21 @@
   --color-light-bg: #f8fafc;      /* Primary light background */
   --color-light-text: #f1f5f9;    /* Primary light text */
 
-  /* Primary brand blue & green accents */
-  --theme-color-primary: #1e40af;
-  --theme-color-primary-hover: #1e3a8a;
+  /* Primary brand blue & green accents - Default to Foundation Blue */
+  --theme-color-primary: #2b6cb0;
+  --theme-color-primary-hover: #2c5282;
   --theme-color-surface: #ffffff;
-  --theme-color-background: var(--color-light-bg);
-  --theme-color-text-primary: var(--color-dark-text);
+  --theme-color-background: #f7fafc;
+  --theme-color-text-primary: #1a202c;
   --theme-color-text-secondary: #475569; /* Muted slate for secondary labels */
   --theme-color-border: #cbd5e1;
-  --theme-color-accent: #0f766e;  /* Deep teal accent */
-  --theme-color-danger: #e11d48;
+  --theme-color-accent: #38a169;  /* Accent */
+  --theme-color-danger: #e53e3e;
 
-  --theme-font-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Typography category slots */
+  --theme-font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+  --theme-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --theme-font-accent: monospace;
   --theme-font-font-size-base: 16px;
   --theme-font-heading-weight: 800;
 
@@ -57,7 +60,7 @@ html {
 }
 
 body {
-  font-family: var(--theme-font-font-family);
+  font-family: var(--theme-font-body), system-ui, -apple-system, sans-serif;
   background-color: var(--theme-color-background);
   color: var(--theme-color-text-primary);
   line-height: 1.6; /* Balanced vertical rhythm */
@@ -87,9 +90,15 @@ body {
 /* --- TYPOGRAPHY & LEGIBILITY RULES --- */
 /* Smaller text gets larger line-height for readability */
 p {
+  font-family: var(--theme-font-body), system-ui, sans-serif;
   line-height: 1.625;
   margin-bottom: var(--spacing-16);
-  text-align: left; /* Restrained palette: left-aligned body text strictly enforced */
+  text-align: left !important; /* Restrained palette: left-aligned body text strictly enforced */
+}
+
+/* Overwrite centered body paragraphs to keep them strictly left-aligned */
+.text-center p, p.text-center {
+  text-align: left !important;
 }
 
 small, .text-sm {
@@ -109,11 +118,15 @@ table {
   border-collapse: collapse;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--theme-font-primary), system-ui, -apple-system, sans-serif;
+  color: var(--theme-color-text-primary);
+}
+
 h1 {
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
   font-weight: var(--theme-font-heading-weight);
   line-height: 1.2;
-  color: var(--color-dark-text);
   letter-spacing: -0.02em;
 }
 
@@ -121,7 +134,6 @@ h2 {
   font-size: clamp(1.4rem, 3vw, 1.85rem);
   font-weight: var(--theme-font-heading-weight);
   line-height: 1.25;
-  color: var(--color-dark-text);
   letter-spacing: -0.01em;
 }
 
@@ -129,7 +141,24 @@ h3 {
   font-size: clamp(1.15rem, 2.5vw, 1.4rem);
   font-weight: var(--theme-font-heading-weight);
   line-height: 1.3;
-  color: var(--color-dark-text);
+}
+
+h4 {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-weight: var(--theme-font-heading-weight);
+  line-height: 1.35;
+}
+
+h5 {
+  font-size: clamp(0.9rem, 1.75vw, 1.1rem);
+  font-weight: var(--theme-font-heading-weight);
+  line-height: 1.4;
+}
+
+h6 {
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  font-weight: var(--theme-font-heading-weight);
+  line-height: 1.45;
 }
 
 /* Responsive grid layout helper */
@@ -326,7 +355,7 @@ label {
   z-index: 2147483647 !important; /* Absolute top-most */
 }
 
-.modal, .modal-overlay, .cart-slideover, .slideover, [role="dialog"], .setup-wizard-modal {
+.modal, .modal-overlay, .cart-slideover, .slideover, [role="dialog"], .setup-wizard-modal, dialog {
   z-index: 999990 !important;
 }
 
@@ -411,7 +440,7 @@ label {
   padding: var(--spacing-48) var(--spacing-24);
   margin-top: auto;
   color: var(--theme-color-text-primary, #1a202c);
-  font-family: var(--theme-font-font-family, system-ui, sans-serif);
+  font-family: var(--theme-font-body, system-ui, sans-serif);
 }
 
 .footer-container {
@@ -573,7 +602,7 @@ label {
   padding: 8px 16px;
   box-shadow: var(--shadow-elevation-high);
   z-index: 999900 !important;
-  font-family: var(--theme-font-font-family, system-ui, sans-serif);
+  font-family: var(--theme-font-body, system-ui, sans-serif);
   font-size: 0.85rem;
   font-weight: bold;
   display: flex;
