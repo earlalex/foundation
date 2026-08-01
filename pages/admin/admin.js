@@ -1,22 +1,12 @@
-// pages/admin/admin.js - Main admin page controller
+// pages/admin/admin.js - Overhauled & Code-Split Admin Controller
 import { authManager } from '../../core/auth.js';
 import { store } from '../../core/store.js';
 import { contentDB } from '../../core/db.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
-import { 
-  createGoogleCalendarEvent, 
-  getSearchConsoleNotifications, 
-  requestSearchConsoleCrawl, 
-  getSearchConsoleSecurityIssues,
-  getAnalyticsOverview, 
-  fetchSeoMyRankAddr,
-  runLighthouseAudit,
-  sendGmailNotification
-} from '../../core/google-services.js';
+import { createGoogleCalendarEvent, sendGmailNotification } from '../../core/google-services.js';
 import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, validationRules } from '../../utils/validation.js';
-import { scanFileLocally } from '../../utils/securityScanner.js';
 import { errorHandler } from '../../core/error-handler.js';
 
 // Setup Wizard Components
@@ -26,20 +16,17 @@ import { AdminSetupWizards } from './components/AdminSetupWizards.js';
 // Import modular tab controllers
 import { initTabController } from './admin-tabs-controller.js';
 import { initAdminPreview } from './admin-preview.js';
-import { initSiteSettingsTab } from './admin-site-settings.js';
-import { initBusinessProfileTab } from './admin-business-profile.js';
-import { initPublicProfileTab } from './admin-public-profile.js';
-import { initIntegrationsTab } from './admin-integrations.js';
 import { initUserDirectoryTab } from './admin-user-directory.js';
-import { initProductsTab } from './admin-products.js';
-import { initFinancesTab } from './admin-finances.js';
-import { initMarketingTab } from './admin-marketing.js';
-import { initKanbanTab } from './admin-kanban.js';
-import { initSecurityTab } from './admin-security.js';
 import { initPagesTab } from './admin-pages.js';
 import { initVasTab } from './admin-vas.js';
 import { initPluginsTab } from './admin-plugins.js';
-import { initAdminEventsTab } from './admin-events.js';
+
+// Import newly split domain modules
+import { initAdminIdentity } from './modules/admin-identity.js';
+import { initAdminCommerce } from './modules/admin-commerce.js';
+import { initAdminEventsOps, initAppointmentConfig } from './modules/admin-events-ops.js';
+import { initAdminGrowth, loadChatbotAndVoiceTab } from './modules/admin-growth.js';
+import { initAdminOps, loadGscSecurityThreats, loadPerformanceTab, loadSeoAndAnalyticsTab } from './modules/admin-ops.js';
 
 export function initAdminPage() {
   // --- 0.0 APPOINTMENT SCHEDULER CONFIGURATOR SETUP ---
@@ -92,86 +79,6 @@ export function initAdminPage() {
     }
   }
 
-function initAppointmentConfig() {
-  const form = document.getElementById('appointment-config-form');
-  if (!form) return;
-
-  const currentCfg = configManager.current?.appointments || {
-    operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-    operatingHours: { start: "09:00", end: "17:00" },
-    duration: 30,
-    buffer: 15,
-    notifications: {
-      adminEmail: true,
-      appointeeEmail: true,
-      adminAlert: true
-    }
-  };
-
-  // Populate days checkboxes
-  const dayCheckboxes = form.querySelectorAll('input[name="operating-days"]');
-  dayCheckboxes.forEach(cb => {
-    cb.checked = currentCfg.operatingDays?.includes(cb.value);
-  });
-
-  // Populate time & select fields
-  const startTimeInput = document.getElementById('appt-start-time');
-  const endTimeInput = document.getElementById('appt-end-time');
-  const durationSelect = document.getElementById('appt-duration-select');
-  const bufferSelect = document.getElementById('appt-buffer-select');
-
-  if (startTimeInput) startTimeInput.value = currentCfg.operatingHours?.start || "09:00";
-  if (endTimeInput) endTimeInput.value = currentCfg.operatingHours?.end || "17:00";
-  if (durationSelect) durationSelect.value = String(currentCfg.duration || "30");
-  if (bufferSelect) bufferSelect.value = String(currentCfg.buffer || "15");
-
-  // Populate notifications
-  const notifAdmin = document.getElementById('appt-notif-admin');
-  const notifClient = document.getElementById('appt-notif-client');
-  const notifAlert = document.getElementById('appt-notif-alert');
-
-  if (notifAdmin) notifAdmin.checked = !!currentCfg.notifications?.adminEmail;
-  if (notifClient) notifClient.checked = !!currentCfg.notifications?.appointeeEmail;
-  if (notifAlert) notifAlert.checked = !!currentCfg.notifications?.adminAlert;
-
-  // Handle Form submit
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const selectedDays = Array.from(form.querySelectorAll('input[name="operating-days"]:checked')).map(cb => cb.value);
-    const updatedAppointments = {
-      operatingDays: selectedDays,
-      operatingHours: {
-        start: startTimeInput.value,
-        end: endTimeInput.value
-      },
-      duration: Number(durationSelect.value),
-      buffer: Number(bufferSelect.value),
-      notifications: {
-        adminEmail: notifAdmin.checked,
-        appointeeEmail: notifClient.checked,
-        adminAlert: notifAlert.checked
-      }
-    };
-
-    try {
-      const success = await configManager.saveToFirebase({
-        ...configManager.current,
-        appointments: updatedAppointments
-      });
-
-      if (success) {
-        toast.success('Appointment & Consultation scheduler settings saved!');
-      } else {
-        toast.error('Failed to save scheduler guidelines.');
-      }
-    } catch (err) {
-      errorHandler.handleError(err, 'Admin Appointment Config');
-      toast.error(`Error saving guidelines: ${err.message}`);
-    }
-  });
-}
-
   // --- 0. LOG OUT BUTTON ---
   const logoutBtn = document.getElementById('btn-admin-logout');
   if (logoutBtn) {
@@ -188,19 +95,18 @@ function initAppointmentConfig() {
   initAdminPreview();
 
   // Action-Triggered Defer / Lazy Loading for heavy components & tabs:
-  // Preload next modules or connect on hover / active triggers.
   import('../../utils/prefetch.js').then(({ PrefetchManager }) => {
     PrefetchManager.preconnectDomain('https://firestore.googleapis.com');
     PrefetchManager.preconnectDomain('https://lh3.googleusercontent.com');
     PrefetchManager.preconnectDomain('https://drive.google.com');
   });
 
-  // Always invoke initSiteSettingsTab on init to attach event listener triggers & Factory Reset strictly for admin role
-  initSiteSettingsTab();
+  // Always invoke brand settings tab initializers
+  initAdminIdentity();
 
-  // Re-run checking for active tab when user state changes (e.g. bypass / simulatedUserTier changes)
+  // Re-run checking for active tab when user state changes
   store.subscribe(() => {
-    initSiteSettingsTab();
+    initAdminIdentity();
   });
 
   // --- 2. CONFIGURATION READY GUARDS & RE-RUN SETUP BUTTONS ---
@@ -212,7 +118,7 @@ function initAppointmentConfig() {
       wizardKey: 'section1',
       isConfigured: () => configManager.isSection1Configured(),
       getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
-      initFn: initSiteSettingsTab
+      initFn: initAdminIdentity
     },
     {
       tabId: 'tab-config',
@@ -220,7 +126,7 @@ function initAppointmentConfig() {
       wizardKey: 'section1',
       isConfigured: () => configManager.isSection1Configured(),
       getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
-      initFn: initIntegrationsTab
+      initFn: initAdminIdentity
     },
     {
       tabId: 'tab-profile',
@@ -228,7 +134,7 @@ function initAppointmentConfig() {
       wizardKey: 'section1',
       isConfigured: () => configManager.isSection1Configured(),
       getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
-      initFn: initPublicProfileTab
+      initFn: initAdminIdentity
     },
 
     // Section 2 Tabs
@@ -238,7 +144,7 @@ function initAppointmentConfig() {
       wizardKey: 'section2',
       isConfigured: () => configManager.isSection2Configured(),
       getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
-      initFn: initAdminEventsTab
+      initFn: initAdminEventsOps
     },
     {
       tabId: 'tab-business',
@@ -246,7 +152,7 @@ function initAppointmentConfig() {
       wizardKey: 'section2',
       isConfigured: () => configManager.isSection2Configured(),
       getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
-      initFn: initBusinessProfileTab
+      initFn: initAdminIdentity
     },
     {
       tabId: 'tab-products',
@@ -254,7 +160,7 @@ function initAppointmentConfig() {
       wizardKey: 'section2',
       isConfigured: () => configManager.isSection2Configured(),
       getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
-      initFn: initProductsTab
+      initFn: initAdminCommerce
     },
     {
       tabId: 'tab-finances',
@@ -262,7 +168,7 @@ function initAppointmentConfig() {
       wizardKey: 'section2',
       isConfigured: () => configManager.isSection2Configured(),
       getMissing: () => ["Business entity details", "Stripe payment integration with ACH Fee parameters", "LastPass API connection"],
-      initFn: initFinancesTab
+      initFn: initAdminCommerce
     },
 
     // Section 3 Tabs
@@ -272,7 +178,7 @@ function initAppointmentConfig() {
       wizardKey: 'section3',
       isConfigured: () => configManager.isSection3Configured(),
       getMissing: () => ["Gmail/SMTP sender credentials", "Test sample email verification", "Marketing Journey state storage"],
-      initFn: initMarketingTab
+      initFn: initAdminGrowth
     },
     {
       tabId: 'tab-chatbot',
@@ -291,7 +197,7 @@ function initAppointmentConfig() {
       isConfigured: () => configManager.isSection4Configured(),
       getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
       initFn: () => {
-        initSecurityTab();
+        initAdminOps();
         loadGscSecurityThreats();
       }
     },
@@ -317,7 +223,7 @@ function initAppointmentConfig() {
       wizardKey: 'section4',
       isConfigured: () => configManager.isSection4Configured(),
       getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
-      initFn: initKanbanTab
+      initFn: initAdminGrowth
     },
     {
       tabId: 'tab-pages',
@@ -333,9 +239,7 @@ function initAppointmentConfig() {
       wizardKey: 'section4',
       isConfigured: () => configManager.isSection4Configured(),
       getMissing: () => ["OWASP ZAP REST API connection", "VirusTotal API keys", "OnlineJobs.ph integration"],
-      initFn: () => {
-        // Init content publisher tab elements
-      }
+      initFn: () => {}
     },
     {
       tabId: 'tab-seo',
@@ -357,7 +261,7 @@ function initAppointmentConfig() {
 
   function checkAndInitTab(tabId) {
     const g = sectionGuards.find(x => x.tabId === `tab-${tabId}`);
-    if (!g) return true; // not guarded (like users, etc.)
+    if (!g) return true;
 
     const panel = document.getElementById(g.tabId);
     if (!panel) return true;
@@ -370,13 +274,11 @@ function initAppointmentConfig() {
     }
 
     if (tabId === 'site') {
-      initSiteSettingsTab();
+      initAdminIdentity();
     }
 
-    // Ensure parent panel has position relative for absolute positioning of top-right toolbar button
     panel.style.position = 'relative';
 
-    // Ensure re-run button exists
     let rBtn = panel.querySelector('.btn-reconfigure-settings') || panel.querySelector('.btn-rerun-setup');
     if (!rBtn) {
       rBtn = document.createElement('button');
@@ -426,7 +328,7 @@ function initAppointmentConfig() {
     } else {
       g.initFn();
       if (tabId === 'site') {
-        initSiteSettingsTab();
+        initAdminIdentity();
       }
       return true;
     }
@@ -448,16 +350,16 @@ function initAppointmentConfig() {
     const targetTab = e.detail.tab;
     
     const isOk = checkAndInitTab(targetTab);
-    if (!isOk) return; // Stop further on-demand initialization if unconfigured
+    if (!isOk) return;
 
     if (targetTab === 'events') {
-      initAdminEventsTab();
+      initAdminEventsOps();
     } else if (targetTab === 'users') {
       initUserDirectoryTab();
     } else if (targetTab === 'pages') {
       initPagesTab();
     } else if (targetTab === 'products') {
-      initProductsTab();
+      initAdminCommerce();
     } else if (targetTab === 'seo') {
       loadSeoAndAnalyticsTab();
     } else if (targetTab === 'performance') {
@@ -465,18 +367,16 @@ function initAppointmentConfig() {
     } else if (targetTab === 'chatbot') {
       loadChatbotAndVoiceTab();
     } else if (targetTab === 'kanban') {
-      initKanbanTab();
+      initAdminGrowth();
     } else if (targetTab === 'plugins') {
       initPluginsTab();
     }
   });
 
-  // Run initial check and load for active tab on page load
   const activeTabBtn = document.querySelector('.admin-tab.active');
   const activeTab = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'site';
   checkAndInitTab(activeTab);
 
-  // Subscribe to store updates to dynamically adjust tab initialization (e.g. if isAdmin/devMode changes)
   store.subscribe(() => {
     const activeBtn = document.querySelector('.admin-tab.active');
     if (activeBtn) {
@@ -484,8 +384,7 @@ function initAppointmentConfig() {
     }
   });
 
-  // Strictly execute Factory Reset setup button on SiteSettings init
-  initSiteSettingsTab();
+  initAdminIdentity();
 
   // --- 6. CMS PUBLISHER CONTROLLER ---
   const contentTypeSelect = document.getElementById('content-type');
@@ -510,7 +409,6 @@ function initAppointmentConfig() {
     });
   }
 
-  // Dynamic live-preview render helper
   function updateLivePreview() {
     if (!livePreviewBox) return;
 
@@ -519,7 +417,6 @@ function initAppointmentConfig() {
     const description = document.getElementById('content-description')?.value || 'Type in fields to populate the card teaser description here...';
     const dateVal = new Date().toISOString().split('T')[0];
 
-    // Card Web Component mockup rendering for instantaneous visual check
     livePreviewBox.innerHTML = `
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; overflow: hidden; width: 100%; max-width: 380px; box-shadow: var(--theme-layout-box-shadow, 0 1px 3px rgba(0,0,0,0.08));">
         <div style="padding: 1.25rem;">
@@ -532,7 +429,6 @@ function initAppointmentConfig() {
     `;
   }
 
-  // Bind live updates to key inputs
   const liveFields = ['content-type', 'content-title', 'content-description'];
   liveFields.forEach(fId => {
     document.getElementById(fId)?.addEventListener('input', updateLivePreview);
@@ -548,7 +444,6 @@ function initAppointmentConfig() {
       if (cmsGjsWrapper) cmsGjsWrapper.style.display = 'block';
       if (contentBodyTextarea) contentBodyTextarea.style.display = 'none';
 
-      // Defer Loading third party bundles (GrapesJS) until action-triggered "Edit Page in GrapesJS" is initiated
       if (!window.grapesjs) {
         const link1 = document.createElement('link');
         link1.rel = 'stylesheet';
@@ -568,7 +463,6 @@ function initAppointmentConfig() {
         await new Promise(r => script2.onload = r);
       }
 
-      // Initialize GrapesJS for CMS body optionally
       if (!cmsEditorInstance && window.grapesjs) {
         cmsEditorInstance = window.grapesjs.init({
           container: '#grapesjs-cms-canvas',
@@ -591,7 +485,6 @@ function initAppointmentConfig() {
   cmsForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Validate form before submission
     if (cmsValidator && !cmsEditorTypeToggle?.checked && !cmsValidator.validateAll()) {
       toast.error('Please fix the validation errors before publishing content.');
       return;
@@ -637,7 +530,6 @@ function initAppointmentConfig() {
         }
       };
 
-      // Set GrapesJS visual builder payload inside Content record if toggle is active
       if (cmsEditorTypeToggle?.checked && cmsEditorInstance) {
         payload.editorType = 'grapesjs';
         payload.projectData = cmsEditorInstance.getProjectData();
@@ -696,601 +588,6 @@ function initAppointmentConfig() {
       toast.error(`Failed to publish content: ${err.message}`);
     }
   });
-
-  // --- 8. TAB 7: SEO & ANALYTICS CONTROLLER ---
-  async function loadSeoAndAnalyticsTab() {
-    // Show/Hide SEO setup banner dynamically based on configuration completeness
-    const seoBanner = document.getElementById('seo-setup-warning-banner');
-    if (seoBanner) {
-      const hasGA4 = !!configManager.current.thirdParty?.ga4PropertyId;
-      const hasLooker = !!configManager.current.thirdParty?.lookerStudioEmbedUrl;
-      seoBanner.style.display = (hasGA4 && hasLooker) ? 'none' : 'block';
-    }
-
-    // Load initial values for SEO-My-Rank-ADDR and total spent tracker
-    const rankApiKeyInput = document.getElementById('seo-rank-api-key');
-    const rankCostInput = document.getElementById('seo-rank-cost');
-    const totalRequestsEl = document.getElementById('seo-total-requests');
-    const totalSpendEl = document.getElementById('seo-total-spend');
-
-    const activeSeoCfg = configManager.current.seoMyRankAddr || {
-      apiKey: "E4462175E8369240D133B6C4F3CD288C",
-      costPerRequest: 0.01,
-      totalSpent: 0,
-      requestCount: 0
-    };
-
-    if (rankApiKeyInput) rankApiKeyInput.value = activeSeoCfg.apiKey || '';
-    if (rankCostInput) rankCostInput.value = activeSeoCfg.costPerRequest !== undefined ? activeSeoCfg.costPerRequest : 0.01;
-    if (totalRequestsEl) totalRequestsEl.textContent = activeSeoCfg.requestCount || 0;
-    if (totalSpendEl) totalSpendEl.textContent = `$${(activeSeoCfg.totalSpent || 0).toFixed(2)}`;
-
-    document.getElementById('seo-rank-config-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        const updatedSeoMyRankAddr = {
-          ...configManager.current.seoMyRankAddr,
-          apiKey: rankApiKeyInput.value,
-          costPerRequest: Number(rankCostInput.value)
-        };
-
-        const success = await configManager.saveToFirebase({
-          ...configManager.current,
-          seoMyRankAddr: updatedSeoMyRankAddr
-        });
-
-        if (success) {
-          toast.success('SEO-My-Rank-ADDR settings saved successfully!');
-        } else {
-          toast.error('Failed to save SEO settings. Please try again.');
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - SEO Config Form');
-        toast.error(`Failed to save SEO settings: ${err.message}`);
-      }
-    });
-
-    const rankBtn = document.getElementById('btn-fetch-seo-rank');
-    if (rankBtn) {
-      rankBtn.onclick = async () => {
-        try {
-          rankBtn.textContent = 'Querying My-Addr...';
-          const telemetry = await fetchSeoMyRankAddr(window.location.hostname);
-          document.getElementById('rank-google').textContent = telemetry.googleRank;
-          document.getElementById('rank-moz-da').textContent = `${telemetry.mozDomainAuthority} / 100`;
-          document.getElementById('rank-moz-pa').textContent = `${telemetry.mozPageAuthority} / 100`;
-          document.getElementById('rank-alexa').textContent = `#${telemetry.globalAlexaRank}`;
-          document.getElementById('rank-backlinks').textContent = Number(telemetry.backlinksCount).toLocaleString();
-          rankBtn.textContent = 'Refresh Rank Telemetry';
-
-          // Refresh total counter UI values instantly
-          const updatedCfg = configManager.current.seoMyRankAddr || {};
-          if (totalRequestsEl) totalRequestsEl.textContent = updatedCfg.requestCount || 0;
-          if (totalSpendEl) totalSpendEl.textContent = `$${(updatedCfg.totalSpent || 0).toFixed(2)}`;
-        } catch (err) {
-          errorHandler.handleError(err, 'Admin - Fetch SEO Rank');
-          toast.error('Failed to fetch SEO rank data');
-          rankBtn.textContent = 'Refresh Rank Telemetry';
-        }
-      };
-    }
-
-    const crawlForm = document.getElementById('gsc-crawl-form');
-    crawlForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const crawlUrl = document.getElementById('gsc-crawl-url').value;
-      const feedback = document.getElementById('gsc-crawl-feedback');
-      
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.textContent = `Submitting "${crawlUrl}" to Search Console crawler...`;
-      }
-      try {
-        const res = await requestSearchConsoleCrawl(crawlUrl);
-        if (feedback) {
-          if (res.success) {
-            feedback.style.background = '#f0fdf4';
-            feedback.style.color = '#166534';
-            feedback.textContent = `Success: ${crawlUrl} was submitted to Google index queue.`;
-          } else {
-            feedback.style.background = '#fff5f5';
-            feedback.style.color = '#c53030';
-            feedback.textContent = `Crawl Request Error: ${res.error || 'Check OAuth permissions'}`;
-          }
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - GSC Crawl Request');
-        if (feedback) {
-          feedback.style.background = '#fff5f5';
-          feedback.style.color = '#c53030';
-          feedback.textContent = 'Crawl Request Error: Failed to submit to Search Console';
-        }
-      }
-    });
-
-    const notifsContainer = document.getElementById('gsc-notifs-container');
-    const refreshNotifsBtn = document.getElementById('btn-refresh-gsc-notifs');
-
-    async function renderGscNotifs() {
-      if (!notifsContainer) return;
-      notifsContainer.innerHTML = '<p style="color:#a0aec0; font-size:0.8rem;">Fetching messages...</p>';
-      try {
-        const alerts = await getSearchConsoleNotifications();
-        
-        if (!alerts || alerts.length === 0) {
-          notifsContainer.innerHTML = '<p style="color:#718096; font-size:0.8rem;">No unread Search Console alerts.</p>';
-          return;
-        }
-        notifsContainer.innerHTML = alerts.map(item => `
-          <div style="padding: 8px 10px; border-left: 3px solid ${item.type === 'warning' ? '#dd6b20' : '#38a169'}; background: #f7fafc; border-radius: 4px;">
-            <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.8rem;">
-              <span>${item.title}</span>
-              <span style="color: #a0aec0; font-weight: normal;">${item.date}</span>
-            </div>
-            <p style="margin: 2px 0 0 0; color: #4a5568; font-size: 0.75rem;">${item.message}</p>
-          </div>
-        `).join('');
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - GSC Notifications');
-        notifsContainer.innerHTML = '<p style="color:#e53e3e; font-size:0.8rem;">Failed to load Search Console notifications.</p>';
-      }
-    }
-
-    if (refreshNotifsBtn) refreshNotifsBtn.onclick = renderGscNotifs;
-    renderGscNotifs();
-
-    const ga4Btn = document.getElementById('btn-refresh-ga4');
-    const rangeSelect = document.getElementById('select-ga4-range');
-
-    async function renderGa4Data() {
-      try {
-        const range = rangeSelect?.value || '30daysAgo';
-        const stats = await getAnalyticsOverview(null, range);
-        if (stats) {
-          document.getElementById('ga4-users').textContent = stats.activeUsers;
-          document.getElementById('ga4-views').textContent = stats.screenPageViews;
-          document.getElementById('ga4-duration').textContent = stats.avgSessionDuration;
-          document.getElementById('ga4-bounce').textContent = stats.bounceRate;
-
-          const topPagesBox = document.getElementById('ga4-top-pages');
-          if (topPagesBox && Array.isArray(stats.topPages)) {
-            topPagesBox.innerHTML = stats.topPages.map(p => `
-              <div style="display:flex; justify-content:space-between; padding: 4px 8px; background:#f7fafc; border-radius: 4px;">
-                <code style="color:#2b6cb0;">${p.path}</code>
-                <strong>${p.views} views</strong>
-              </div>
-            `).join('');
-          }
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - GA4 Analytics');
-        console.error('Failed to load GA4 data:', err);
-      }
-    }
-
-    if (ga4Btn) ga4Btn.onclick = renderGa4Data;
-    renderGa4Data();
-
-    const embedIframe = document.getElementById('looker-studio-embed');
-    const placeholder = document.getElementById('analytics-placeholder');
-    const reloadLookerBtn = document.getElementById('btn-reload-looker');
-    const embedUrl = configManager.current.thirdParty?.lookerStudioEmbedUrl;
-
-    function renderLookerStudio() {
-      if (embedIframe && embedUrl && embedUrl.startsWith('http')) {
-        embedIframe.src = embedUrl;
-        embedIframe.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
-      } else {
-        if (embedIframe) embedIframe.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'block';
-      }
-    }
-
-    if (reloadLookerBtn) reloadLookerBtn.onclick = renderLookerStudio;
-    renderLookerStudio();
-  }
-
-  // --- 9. TAB 8: PERFORMANCE (LIGHTHOUSE AUDIT HUB) ---
-  async function loadPerformanceTab() {
-    const runBtn = document.getElementById('btn-run-lighthouse');
-    const strategySelect = document.getElementById('lh-strategy-select');
-
-    async function executeAudit() {
-      try {
-        if (runBtn) runBtn.textContent = 'Running PageSpeed Audit...';
-        const strategy = strategySelect?.value || 'mobile';
-        const audit = await runLighthouseAudit(window.location.href, strategy);
-
-        if (audit) {
-          document.getElementById('lh-score-perf').textContent = audit.scores.performance;
-          document.getElementById('lh-score-access').textContent = audit.scores.accessibility;
-          document.getElementById('lh-score-bp').textContent = audit.scores.bestPractices;
-          document.getElementById('lh-score-seo').textContent = audit.scores.seo;
-
-          document.getElementById('lh-fcp').textContent = audit.metrics.fcp;
-          document.getElementById('lh-lcp').textContent = audit.metrics.lcp;
-          document.getElementById('lh-cls').textContent = audit.metrics.cls;
-          document.getElementById('lh-tbt').textContent = audit.metrics.tbt;
-
-          const diagBox = document.getElementById('lh-diagnostics-container');
-          if (diagBox && Array.isArray(audit.diagnostics)) {
-            diagBox.innerHTML = audit.diagnostics.map(item => `
-              <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f7fafc; border-radius: 4px; border-left: 3px solid #38a169;">
-                <div>
-                  <strong>${item.title}</strong>
-                  <p style="margin: 2px 0 0 0; color: #718096; font-size: 0.75rem;">${item.details}</p>
-                </div>
-                <span style="font-weight: bold; color: #15803d;">${item.score}</span>
-              </div>
-            `).join('');
-          }
-        }
-        if (runBtn) runBtn.textContent = 'Run Lighthouse Audit';
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - Lighthouse Audit');
-        toast.error('Failed to run Lighthouse audit');
-        if (runBtn) runBtn.textContent = 'Run Lighthouse Audit';
-      }
-    }
-
-    if (runBtn) runBtn.onclick = executeAudit;
-    executeAudit();
-  }
-
-  // --- 10. TAB 9: SECURITY, GSC THREAT MONITORS, & DEV OPS ---
-  async function loadGscSecurityThreats() {
-    // Show/Hide Security setup warning banner
-    const secBanner = document.getElementById('security-setup-warning-banner');
-    if (secBanner) {
-      const hasVT = !!configManager.current.virustotal?.apiKey;
-      secBanner.style.display = hasVT ? 'none' : 'block';
-    }
-
-    const scanBtn = document.getElementById('btn-scan-gsc-security');
-    const reconsiderBtn = document.getElementById('btn-request-reconsideration');
-
-    async function renderThreatReport() {
-      try {
-        if (scanBtn) scanBtn.textContent = 'Querying Search Console Security...';
-        const secData = await getSearchConsoleSecurityIssues();
-
-        if (secData) {
-          const banner = document.getElementById('gsc-security-banner');
-          const icon = document.getElementById('gsc-status-icon');
-          const title = document.getElementById('gsc-status-title');
-          const sub = document.getElementById('gsc-status-sub');
-          const lastScanned = document.getElementById('gsc-last-scanned');
-
-          if (lastScanned) lastScanned.textContent = `Last Scanned: ${secData.lastScanned}`;
-
-          if (secData.hasThreats) {
-            if (banner) {
-              banner.style.background = '#fff5f5';
-              banner.style.borderColor = '#fed7d7';
-            }
-            if (icon) icon.textContent = '⚠️';
-            if (title) {
-              title.textContent = 'Security Threats / Negative Action Flagged';
-              title.style.color = '#c53030';
-            }
-            if (sub) {
-              sub.textContent = 'Google Search Console has flagged security issues or manual action penalties against this site.';
-              sub.style.color = '#9b2c2c';
-            }
-          } else {
-            if (banner) {
-              banner.style.background = '#f0fdf4';
-              banner.style.borderColor = '#bbf7d0';
-            }
-            if (icon) icon.textContent = '🛡️';
-            if (title) {
-              title.textContent = 'No Negative Security Issues Detected';
-              title.style.color = '#166534';
-            }
-            if (sub) {
-              sub.textContent = 'Domain is clean of phishing, defacement, malware, and unnatural links in Google Search Console.';
-              sub.style.color = '#15803d';
-            }
-          }
-
-          const p = secData.categories.phishingSocialEngineering;
-          document.getElementById('gsc-flag-phishing').textContent = p.flagged ? 'FLAGGED THREAT' : 'CLEAN';
-          document.getElementById('gsc-flag-phishing').style.color = p.flagged ? '#e53e3e' : '#38a169';
-          document.getElementById('gsc-desc-phishing').textContent = p.status;
-
-          const h = secData.categories.hackedContentDefacement;
-          document.getElementById('gsc-flag-hacked').textContent = h.flagged ? 'FLAGGED THREAT' : 'CLEAN';
-          document.getElementById('gsc-flag-hacked').style.color = h.flagged ? '#e53e3e' : '#38a169';
-          document.getElementById('gsc-desc-hacked').textContent = h.status;
-
-          const l = secData.categories.unnaturalLinksSpam;
-          document.getElementById('gsc-flag-links').textContent = l.flagged ? 'PENALTY ACTIVE' : 'CLEAN';
-          document.getElementById('gsc-flag-links').style.color = l.flagged ? '#e53e3e' : '#38a169';
-          document.getElementById('gsc-desc-links').textContent = l.status;
-
-          const m = secData.categories.malwareHarmfulDownloads;
-          document.getElementById('gsc-flag-malware').textContent = m.flagged ? 'MALWARE FOUND' : 'CLEAN';
-          document.getElementById('gsc-flag-malware').style.color = m.flagged ? '#e53e3e' : '#38a169';
-          document.getElementById('gsc-desc-malware').textContent = m.status;
-        }
-        if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - GSC Security Threats');
-        toast.error('Failed to load security threat report');
-        if (scanBtn) scanBtn.textContent = 'Refresh GSC Security Scan';
-      }
-    }
-
-    if (scanBtn) scanBtn.onclick = renderThreatReport;
-    if (reconsiderBtn) {
-      reconsiderBtn.onclick = () => {
-        toast.info('Reconsideration / Clean Review Request submitted to Google Search Quality Team. Review usually completes within 3-7 business days.');
-      };
-    }
-    renderThreatReport();
-
-    // --- Toggle, Live Audit, and Email Audit setups ---
-    const monthlyScanToggle = document.getElementById('security-monthly-scan-toggle');
-    if (monthlyScanToggle) {
-      monthlyScanToggle.checked = !!configManager.current.security?.monthlyScanEnabled;
-      monthlyScanToggle.onchange = async (e) => {
-        try {
-          const updatedConfig = {
-            ...configManager.current,
-            security: {
-              ...configManager.current.security,
-              monthlyScanEnabled: e.target.checked
-            }
-          };
-          const success = await configManager.saveToFirebase(updatedConfig);
-          if (success) {
-            toast.success(`Automated monthly background scans ${e.target.checked ? 'enabled' : 'disabled'}.`);
-          } else {
-            toast.error('Failed to save scheduling preference.');
-          }
-        } catch (err) {
-          errorHandler.handleError(err, 'Admin - Security Scan Toggle');
-          toast.error('Failed to save scheduling preference.');
-        }
-      };
-    }
-
-    const btnRunSiteAudit = document.getElementById('btn-run-site-audit');
-    const btnEmailSiteAudit = document.getElementById('btn-email-site-audit');
-    const reportTbody = document.getElementById('site-audit-report-tbody');
-    const overviewBanner = document.getElementById('site-audit-overview-banner');
-    let compiledReportData = null;
-
-    if (btnRunSiteAudit && reportTbody) {
-      btnRunSiteAudit.onclick = async () => {
-        btnRunSiteAudit.textContent = 'Auditing Site...';
-        reportTbody.innerHTML = `
-          <tr>
-            <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--theme-color-text-secondary, #718096);">
-              Running edge-compiled security analysis for framework files & database public media assets...
-            </td>
-          </tr>
-        `;
-        if (overviewBanner) overviewBanner.style.display = 'none';
-
-        try {
-          const vtEndpoint = configManager.current.cloudflare?.vtUrl || '/api/virustotal-scan';
-          const response = await fetch(vtEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: "site-audit" })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Edge returned status ${response.status}`);
-          }
-
-          const coreResult = await response.json();
-          const coreReport = coreResult.report || [];
-
-          // Query database public media files
-          const dbMedia = [];
-          try {
-            const entries = await contentDB.getAllContent();
-            for (const entry of entries) {
-              if (entry.preview?.featuredImage?.src) {
-                dbMedia.push({
-                  path: entry.preview.featuredImage.src,
-                  name: `DB Media: ${entry.title || entry.id}`
-                });
-              }
-              if (entry.audioUrl) {
-                dbMedia.push({
-                  path: entry.audioUrl,
-                  name: `DB Audio: ${entry.title || entry.id}`
-                });
-              }
-            }
-          } catch (dbErr) {
-            console.warn('DB media fetch warning:', dbErr);
-          }
-
-          // Scan DB media files
-          const mediaReport = [];
-          for (const media of dbMedia) {
-            let mockHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-            let statusText = "0/70 Clean";
-            let clamavStatus = "Clean";
-            let rating = "Clean";
-
-            try {
-              if (media.path.startsWith('http') || media.path.startsWith('/')) {
-                const res = await fetch(media.path, { mode: 'cors' }).catch(() => null);
-                if (res && res.ok) {
-                  const buffer = await res.arrayBuffer();
-                  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-                  const hashArray = Array.from(new Uint8Array(hashBuffer));
-                  mockHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                }
-              }
-
-              // Query VirusTotal for the database media asset hash!
-              const vtResponse = await fetch(vtEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hash: mockHash })
-              });
-
-              if (vtResponse.ok) {
-                const vtData = await vtResponse.json();
-                if (vtData.success) {
-                  const stats = vtData.stats || {};
-                  const results = vtData.results || {};
-                  const total = Object.keys(results).length || 70;
-                  const malicious = stats.malicious || 0;
-                  statusText = `${malicious}/${total} Flagged`;
-
-                  const clamav = vtData.clamav;
-                  if (clamav) {
-                    clamavStatus = clamav.category === 'malicious' ? `Flagged (${clamav.result || 'threat'})` : "Clean";
-                  } else {
-                    clamavStatus = "Clean";
-                  }
-
-                  if (malicious > 0) {
-                    rating = "High Risk";
-                  }
-                } else if (vtData.notFound) {
-                  statusText = "0/70 Clean";
-                  clamavStatus = "Clean";
-                }
-              }
-            } catch (e) {
-              console.warn('Media query warning:', e);
-            }
-
-            mediaReport.push({
-              path: media.name,
-              hash: mockHash,
-              status: statusText,
-              clamav: clamavStatus,
-              rating: rating
-            });
-          }
-
-          const fullReport = [...coreReport, ...mediaReport];
-          compiledReportData = {
-            timestamp: new Date().toISOString(),
-            report: fullReport,
-            maliciousCount: fullReport.filter(r => r.rating === 'High Risk').length,
-            cleanCount: fullReport.filter(r => r.rating === 'Clean').length
-          };
-
-          if (overviewBanner) {
-            overviewBanner.style.display = 'block';
-            if (compiledReportData.maliciousCount > 0) {
-              overviewBanner.style.background = '#fff5f5';
-              overviewBanner.style.borderColor = '#fed7d7';
-              overviewBanner.style.color = '#c53030';
-              overviewBanner.innerHTML = `
-                <strong>⚠️ Warning: Security Audit Flagged Issues</strong>
-                <p style="margin: 4px 0 0 0; font-size: 0.8rem;">Local analysis found ${compiledReportData.maliciousCount} asset(s) flagged or inaccessible. Please review the audit table below.</p>
-              `;
-            } else {
-              overviewBanner.style.background = '#f0fdf4';
-              overviewBanner.style.borderColor = '#bbf7d0';
-              overviewBanner.style.color = '#15803d';
-              overviewBanner.innerHTML = `
-                <strong>✓ Site Security Fully Audited & Clean</strong>
-                <p style="margin: 4px 0 0 0; font-size: 0.8rem;">All ${fullReport.length} pre-cached framework files and database media assets are clean of known global threats.</p>
-              `;
-            }
-          }
-
-          reportTbody.innerHTML = fullReport.map(item => {
-            const isMalicious = item.rating === 'High Risk';
-            const ratingColor = isMalicious ? '#e53e3e' : '#38a169';
-            const statusBg = isMalicious ? '#fff5f5' : '#f0fdf4';
-            const clamavColor = item.clamav.includes('Flagged') ? '#e53e3e' : '#38a169';
-
-            return `
-              <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7); background: ${isMalicious ? '#fffaf0' : 'transparent'};">
-                <td style="padding: 10px; font-weight: bold; color: var(--theme-color-text-primary, #2d3748); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  ${item.path}
-                </td>
-                <td style="padding: 10px; font-family: monospace; font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096);">
-                  <code>${item.hash.substring(0, 20)}...</code>
-                </td>
-                <td style="padding: 10px; text-align: center; font-weight: bold; color: ${clamavColor};">
-                  ${item.clamav}
-                </td>
-                <td style="padding: 10px; text-align: center; color: var(--theme-color-text-secondary, #4a5568);">
-                  ${item.status}
-                </td>
-                <td style="padding: 10px; text-align: right; font-weight: bold; color: ${ratingColor}; text-transform: uppercase;">
-                  ${item.rating}
-                </td>
-              </tr>
-            `;
-          }).join('');
-
-          toast.success(`Site threat audit complete! ${compiledReportData.cleanCount} assets safe.`);
-
-        } catch (err) {
-          errorHandler.handleError(err, 'Admin - Site Audit');
-          console.error('[Site Audit Error]:', err);
-          toast.error(`Site audit failed: ${err.message}`);
-          reportTbody.innerHTML = `
-            <tr>
-              <td colspan="5" style="padding: 1.5rem; text-align: center; color: var(--theme-color-danger, #e53e3e); font-weight: bold;">
-                Failed to run live site security audit. Ensure Cloudflare serverless endpoint is running.
-              </td>
-            </tr>
-          `;
-        } finally {
-          btnRunSiteAudit.textContent = 'Run Live Site Audit';
-        }
-      };
-    }
-
-    if (btnEmailSiteAudit) {
-      btnEmailSiteAudit.onclick = async () => {
-        if (!compiledReportData) {
-          toast.warning('Please run a live site audit first before emailing the report.');
-          return;
-        }
-
-        btnEmailSiteAudit.textContent = 'Sending...';
-        try {
-          const adminEmail = configManager.current.adminEmails?.[0] || store.state.user?.email || "admin@example.com";
-          const subject = `Site Threat Audit Report Summary - ${new Date(compiledReportData.timestamp).toLocaleDateString()}`;
-          const messageBody = `Foundation SPA - Live Security Audit Report\r\n` +
-            `Timestamp: ${compiledReportData.timestamp}\r\n` +
-            `Overall Site Security Rating: ${compiledReportData.maliciousCount > 0 ? "WARNING - HIGH RISK" : "SECURE"}\r\n` +
-            `Total Assets Audited: ${compiledReportData.report.length}\r\n` +
-            `Clean Assets: ${compiledReportData.cleanCount}\r\n` +
-            `Flagged/Malicious Assets: ${compiledReportData.maliciousCount}\r\n\r\n` +
-            `Audit Details:\r\n` +
-            compiledReportData.report.map(r => `- ${r.path} | Hash: ${r.hash.substring(0, 12)}... | Status: ${r.status} | ClamAV: ${r.clamav} | Rating: ${r.rating}`).join('\r\n') +
-            `\r\n\r\nGenerated manually on-demand from the Admin Command Center.`;
-
-          const success = await sendGmailNotification({
-            toEmail: adminEmail,
-            subject,
-            messageBody
-          });
-
-          if (success) {
-            toast.success(`Security audit report emailed successfully to ${adminEmail}!`);
-          } else {
-            toast.warning('Gmail OAuth token offline. Saved report log silently to database. Log in to Gmail to enable email dispatch.');
-          }
-        } catch (e) {
-          errorHandler.handleError(e, 'Admin - Email Site Audit');
-          console.error('[Email Dispatch Error]:', e);
-          toast.error('Failed to email security report.');
-        } finally {
-          btnEmailSiteAudit.innerHTML = '<span>📧</span> Email Report';
-        }
-      };
-    }
-  }
 
   // --- 11. DEV MODE SWITCHER ---
   const radioOn = document.getElementById('radio-dev-on');
@@ -1403,7 +700,6 @@ function initAppointmentConfig() {
         throw new Error(resData.error);
       }
 
-      // Handle File Result
       if (isHash) {
         const stats = resData.stats || {};
         const clamav = resData.clamav;
@@ -1416,7 +712,6 @@ function initAppointmentConfig() {
         edgeResultsBox.style.border = isMalicious ? '1px solid #fed7d7' : '1px solid #bbf7d0';
         edgeResultsBox.style.color = isMalicious ? '#c53030' : '#15803d';
 
-        // Format ClamAV result
         let clamavHtml = '';
         if (clamav) {
           const isClamavMalicious = clamav.category === 'malicious';
@@ -1437,7 +732,6 @@ function initAppointmentConfig() {
           `;
         }
 
-        // List other malicious engines
         let maliciousEnginesList = '';
         if (isMalicious) {
           const maliciousDetails = [];
@@ -1478,7 +772,6 @@ function initAppointmentConfig() {
         toast.success(`[VirusTotal Edge Scan Complete]: ${stats.malicious || 0} malicious detections found.`);
 
       } else {
-        // Handle Domain Result
         const results = resData.results?.data?.attributes || {};
         const stats = results.last_analysis_stats || {};
         const totalEngines = Object.keys(results.last_analysis_results || {}).length;
@@ -1508,8 +801,6 @@ function initAppointmentConfig() {
 
     } catch (err) {
       errorHandler.handleError(err, 'Admin - VirusTotal Edge Scan');
-      console.warn('VirusTotal edge scan failed:', err);
-      // Friendly simulation/fallback note if key is missing or offline
       edgeResultsBox.style.background = 'var(--theme-color-background, #f7fafc)';
       edgeResultsBox.style.border = '1px solid var(--theme-color-border, #cbd5e0)';
       edgeResultsBox.style.color = 'var(--theme-color-text-primary, #1a202c)';
@@ -1541,128 +832,6 @@ function initAppointmentConfig() {
     }
   });
 
-  // --- 11. TAB 10: AI CHATBOT & VOICE SERVICE ENDPOINT CONTROLLER ---
-  async function loadChatbotAndVoiceTab() {
-    const chatEnabledSel = document.getElementById('chat-enabled');
-    const chatNameInput = document.getElementById('chat-name');
-    const chatWelcomeInput = document.getElementById('chat-welcome');
-    const chatSystemPromptInput = document.getElementById('chat-system-prompt');
-    const chatVoiceWelcomeInput = document.getElementById('chat-voice-welcome');
-
-    const chatOpenaiKeyInput = document.getElementById('chat-openai-key');
-    const chatTelnyxKeyInput = document.getElementById('chat-telnyx-key');
-    const chatTwilioSidInput = document.getElementById('chat-twilio-sid');
-    const chatTwilioTokenInput = document.getElementById('chat-twilio-token');
-    const chatTelnyxNumInput = document.getElementById('chat-telnyx-num');
-    const chatTwilioNumInput = document.getElementById('chat-twilio-num');
-
-    const chatbotCfg = configManager.current.chatbot || {};
-
-    if (chatEnabledSel) chatEnabledSel.value = chatbotCfg.enabled !== false ? "true" : "false";
-    if (chatNameInput) chatNameInput.value = chatbotCfg.name || "Foundation Assistant";
-    if (chatWelcomeInput) chatWelcomeInput.value = chatbotCfg.welcomeMessage || "Hello! How can I help you today?";
-    if (chatSystemPromptInput) chatSystemPromptInput.value = chatbotCfg.systemPrompt || "You are a helpful customer support agent.";
-    if (chatVoiceWelcomeInput) chatVoiceWelcomeInput.value = chatbotCfg.voiceWelcomeMessage || "Thank you for calling Foundation support. How can I help you today?";
-
-    if (chatOpenaiKeyInput) chatOpenaiKeyInput.value = chatbotCfg.openaiApiKey || "";
-    if (chatTelnyxKeyInput) chatTelnyxKeyInput.value = chatbotCfg.telnyxApiKey || "";
-    if (chatTwilioSidInput) chatTwilioSidInput.value = chatbotCfg.twilioAccountSid || "";
-    if (chatTwilioTokenInput) chatTwilioTokenInput.value = chatbotCfg.twilioAuthToken || "";
-    if (chatTelnyxNumInput) chatTelnyxNumInput.value = chatbotCfg.telnyxPhoneNumber || "";
-    if (chatTwilioNumInput) chatTwilioNumInput.value = chatbotCfg.twilioPhoneNumber || "";
-
-    // Initialize chatbot form validator
-    const chatbotForm = document.getElementById('chatbot-settings-form');
-    let chatbotValidator = null;
-    if (chatbotForm) {
-      chatbotValidator = new FormValidator(chatbotForm, {
-        'chat-name': [validationRules.required],
-        'chat-welcome': [validationRules.required]
-      });
-    }
-
-    document.getElementById('chatbot-settings-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      // Validate form before submission
-      if (chatbotValidator && !chatbotValidator.validateAll()) {
-        toast.error('Please fix the validation errors before saving.');
-        return;
-      }
-      
-      try {
-        const updatedChatbotConfig = {
-          ...configManager.current,
-          chatbot: {
-            enabled: chatEnabledSel.value === "true",
-            name: chatNameInput.value,
-            welcomeMessage: chatWelcomeInput.value,
-            systemPrompt: chatSystemPromptInput.value,
-            voiceWelcomeMessage: chatVoiceWelcomeInput.value,
-            openaiApiKey: chatOpenaiKeyInput.value,
-            telnyxApiKey: chatTelnyxKeyInput.value,
-            twilioAccountSid: chatTwilioSidInput.value,
-            twilioAuthToken: chatTwilioTokenInput.value,
-            telnyxPhoneNumber: chatTelnyxNumInput.value,
-            twilioPhoneNumber: chatTwilioNumInput.value
-          }
-        };
-
-        const success = await configManager.saveToFirebase(updatedChatbotConfig);
-        if (success) {
-          toast.success('AI Chatbot & Voice settings saved to Firestore!');
-        } else {
-          toast.error('Failed to save chatbot settings. Please try again.');
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - Chatbot Settings Form');
-        toast.error(`Failed to save chatbot settings: ${err.message}`);
-      }
-    });
-
-    // Logging Monitor Render Helper
-    const tbody = document.getElementById('chat-logs-tbody');
-    const refreshBtn = document.getElementById('btn-refresh-chat-logs');
-
-    async function renderChatLogs() {
-      if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">Fetching interaction logs...</td></tr>';
-
-      try {
-        const logs = await contentDB.getChatLogs(50);
-        if (logs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #a0aec0; padding: 1rem;">No chatbot interactions logged yet.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = logs.map(log => {
-          const localTime = new Date(log.timestamp).toLocaleString();
-          const typeBadgeColor = log.type === 'sms' ? '#2b6cb0' : log.type === 'voice' ? '#dd6b20' : '#319795';
-          const typeBgColor = log.type === 'sms' ? '#ebf8ff' : log.type === 'voice' ? '#fffaf0' : '#e6fffa';
-
-          return `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-              <td style="padding: 8px; font-size: 0.8rem; color: #718096; white-space: nowrap;">${localTime}</td>
-              <td style="padding: 8px;"><strong>${log.sender}</strong></td>
-              <td style="padding: 8px;">
-                <span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; background: ${typeBgColor}; color: ${typeBadgeColor}; text-transform: uppercase;">
-                  ${log.type}
-                </span>
-              </td>
-              <td style="padding: 8px; color: #2d3748; max-width: 300px; word-break: break-all;">${log.message}</td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin - Chat Logs');
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #e53e3e; padding: 1rem;">Failed to load chat logs.</td></tr>';
-      }
-    }
-
-    if (refreshBtn) refreshBtn.onclick = renderChatLogs;
-    renderChatLogs();
-  }
-
   const runTestsBtn = document.getElementById('btn-run-tests');
   runTestsBtn?.addEventListener('click', async () => {
     try {
@@ -1675,7 +844,6 @@ function initAppointmentConfig() {
       }
     } catch (err) {
       errorHandler.handleError(err, 'Admin - Run Tests');
-      console.error('Failed to execute test runner module:', err);
       toast.error('Failed to run tests');
     }
   });

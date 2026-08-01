@@ -18,6 +18,11 @@ import './components/global/PricingTable.js';
 import './components/global/TestimonialSlider.js';
 import './components/global/CtaBlock.js';
 import './components/global/AppointmentPicker.js';
+import './components/global/AppNavbar.js';
+import './components/global/AppFooter.js';
+import './components/global/TooltipElement.js';
+import './components/global/BentoGrid.js';
+import './components/global/PriceCard.js';
 
 // Automated Test Suites
 import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
@@ -228,161 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initGlobalFooter() {
   const footerContainer = document.getElementById('global-footer');
   if (!footerContainer) return;
-
-  const footerCfg = configManager.current.footer || {
-    brand: { show: true, title: "Foundation", tagline: "A custom zero-build web framework for modern serverless architectures." },
-    legal: { show: true, heading: "Legal & Policies", links: [{ label: "Terms of Use", url: "/terms" }, { label: "Privacy Policy", url: "/privacy" }, { label: "Cookie Settings", url: "/cookies" }] },
-    newsletter: { show: true, heading: "Newsletter", text: "Subscribe to our newsletter for exclusive updates.", consentCopy: "I agree to receive email communications and accept the privacy policy." },
-    social: { show: true, heading: "Follow Us", links: [{ name: "twitter", url: "https://x.com" }, { name: "linkedin", url: "https://linkedin.com" }, { name: "youtube", url: "https://youtube.com" }, { name: "github", url: "https://github.com" }, { name: "facebook", url: "https://facebook.com" }, { name: "instagram", url: "https://instagram.com" }] }
-  };
-
-  let colsHtml = '';
-
-  if (footerCfg.brand?.show !== false) {
-    colsHtml += `
-      <div class="footer-column brand-column">
-        <h3 class="footer-title">${footerCfg.brand.title || 'Foundation'}</h3>
-        <p class="footer-tagline">${footerCfg.brand.tagline || ''}</p>
-        <span class="footer-copyright">&copy; 2026 ${footerCfg.brand.title || 'Foundation'} Framework. All rights reserved.</span>
-      </div>
-    `;
-  }
-
-  if (footerCfg.legal?.show !== false) {
-    colsHtml += `
-      <div class="footer-column links-column">
-        <h4 class="footer-heading">${footerCfg.legal.heading || 'Legal & Policies'}</h4>
-        <ul class="footer-links">
-          ${(footerCfg.legal.links || []).map(link => `<li><a href="${link.url}" class="spa-footer-link">${link.label}</a></li>`).join('')}
-        </ul>
-      </div>
-    `;
-  }
-
-  if (footerCfg.newsletter?.show !== false) {
-    colsHtml += `
-      <div class="footer-column newsletter-column">
-        <h4 class="footer-heading">${footerCfg.newsletter.heading || 'Newsletter'}</h4>
-        <p class="newsletter-text">${footerCfg.newsletter.text || ''}</p>
-        <form id="footer-newsletter-form" class="newsletter-form">
-          <input type="email" id="newsletter-email" placeholder="Your Email Address" required class="newsletter-input" />
-          <button type="submit" id="newsletter-submit" class="btn-primary newsletter-btn" disabled>Subscribe</button>
-          <label class="newsletter-consent">
-            <input type="checkbox" id="newsletter-consent-cb" required />
-            <span>${footerCfg.newsletter.consentCopy || ''}</span>
-          </label>
-        </form>
-      </div>
-    `;
-  }
-
-  if (footerCfg.social?.show !== false) {
-    colsHtml += `
-      <div class="footer-column social-column">
-        <h4 class="footer-heading">${footerCfg.social.heading || 'Follow Us'}</h4>
-        <div class="footer-social-icons">
-          ${(footerCfg.social.links || []).map(link => `
-            <a href="${link.url}" target="_blank" aria-label="${link.name}" class="social-icon-link" id="footer-icon-${link.name}"></a>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  footerContainer.innerHTML = `<div class="footer-container">${colsHtml}</div>`;
-
-  // Load SVG Icons for Social and Layout sections from default-set or custom config
-  try {
-    const iconSetType = configManager.current.iconSet || 'default';
-    let iconData = null;
-
-    if (iconSetType === 'default') {
-      const response = await fetch('./assets/icons/default-set.json');
-      if (response.ok) {
-        iconData = await response.json();
-      }
-    } else if (iconSetType === 'custom' && configManager.current.customIconData) {
-      iconData = configManager.current.customIconData;
-    }
-
-    if (iconData) {
-      const iconKeys = ['twitter', 'linkedin', 'youtube', 'github', 'facebook', 'instagram'];
-      iconKeys.forEach(key => {
-        const el = document.getElementById(`footer-icon-${key}`);
-        if (el && iconData[key]) {
-          el.innerHTML = iconData[key];
-        }
-      });
-    }
-  } catch (err) {
-    console.warn('[Footer Icons]: Bypassed full SVG injection, using fallback styling.', err);
-  }
-
-  // Bind newsletter consent checkbox and submit behaviors
-  const consentCb = document.getElementById('newsletter-consent-cb');
-  const submitBtn = document.getElementById('newsletter-submit');
-  const newsletterForm = document.getElementById('footer-newsletter-form');
-
-  if (consentCb && submitBtn) {
-    consentCb.addEventListener('change', (e) => {
-      submitBtn.disabled = !e.target.checked;
-    });
-  }
-
-  newsletterForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('newsletter-email')?.value;
-    if (!email) return;
-
-    if (!consentCb?.checked) {
-      toast.error('You must consent to receive communications before subscribing.');
-      return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Subscribing...';
-
-    try {
-      // Create user or update status in ContentDB
-      const { contentDB } = await import('./core/db.js');
-      const { createGoogleContact } = await import('./core/google-services.js');
-
-      // Create contact and save user locally / Firestore
-      await contentDB.saveUser({
-        email,
-        role: 'subscriber',
-        name: email.split('@')[0],
-        newsletterSubscribed: true,
-        consentDate: new Date().toISOString()
-      });
-
-      // Synchronize with Google Contacts mock/live bridge
-      await createGoogleContact({
-        name: email.split('@')[0],
-        email,
-        role: 'Subscriber'
-      });
-
-      toast.success('Successfully subscribed to our newsletter! Check your inbox for updates.');
-      newsletterForm.reset();
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Subscribe';
-    } catch (err) {
-      console.error('[Newsletter Subscription]: Error registering subscriber.', err);
-      toast.error('Failed to subscribe. Please try again.');
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Subscribe';
-    }
-  });
-
-  // Attach SPA Router handling to footer link clicks
-  document.querySelectorAll('.spa-footer-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const href = link.getAttribute('href');
-      window.router?.navigateTo(href);
-    });
-  });
+  footerContainer.innerHTML = '<app-footer></app-footer>';
 }
 
 // Single Unified Page Lifecycle Listener
