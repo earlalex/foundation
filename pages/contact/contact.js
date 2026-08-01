@@ -72,6 +72,38 @@ export function initContactPage() {
       return;
     }
 
+    const apptConfig = configManager.current?.appointments || {
+      operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      operatingHours: { start: "09:00", end: "17:00" },
+      duration: 30,
+      buffer: 15,
+      consultationFee: 150,
+      depositRule: "percentage",
+      depositAmount: 50,
+      depositPercentage: 20
+    };
+
+    const fee = apptConfig.consultationFee || 150;
+    const rule = apptConfig.depositRule || 'none';
+    let depositRequired = 0;
+
+    if (rule === 'full') {
+      depositRequired = fee;
+    } else if (rule === 'fixed') {
+      depositRequired = Math.min(fee, apptConfig.depositAmount || 50);
+    } else if (rule === 'percentage') {
+      depositRequired = Math.round(fee * ((apptConfig.depositPercentage || 20) / 100));
+    }
+
+    if (depositRequired > 0) {
+      const paid = await showDepositPaymentModal(depositRequired);
+      if (!paid) {
+        toast.warning('Upfront payment was cancelled. Appointment not booked.');
+        return;
+      }
+      toast.success(`Secure payment of $${depositRequired.toFixed(2)} completed successfully!`);
+    }
+
     const btn = document.getElementById('btn-book-appt');
     if (btn) {
       btn.disabled = true;
@@ -95,6 +127,25 @@ export function initContactPage() {
 
       await contentDB.saveAppointment(bookingData);
 
+      // Remaining balance invoicing task
+      const remainingBalance = fee - depositRequired;
+      if (remainingBalance > 0) {
+        // Queue draft invoice in ContentDB for post-meeting invoicing
+        const draftInvoice = {
+          id: 'inv_' + Date.now(),
+          customerName: name,
+          customerEmail: email,
+          amount: Math.round(remainingBalance * 100), // cents
+          currency: 'USD',
+          description: `Post-meeting remaining balance for Consultation session on ${date} ${timeSlot}`,
+          status: 'draft',
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days due
+          createdAt: new Date().toISOString()
+        };
+        await contentDB.saveInvoice(draftInvoice);
+        toast.success(`Confirmed remaining balance task queued: $${remainingBalance.toFixed(2)}`);
+      }
+
       toast.success(`Appointment confirmed for ${date} at ${timeSlot}!\nMeet link synced to dashboard.`);
       apptForm.reset();
 
@@ -115,6 +166,74 @@ export function initContactPage() {
         btn.textContent = 'Confirm Google Meet Appointment';
       }
     }
+  });
+}
+
+async function showDepositPaymentModal(amountRequired) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000002;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: left;">
+        <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: var(--theme-color-primary, #2b6cb0);">Secure Consultation Checkout</h3>
+        <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 0.9rem; margin-bottom: 1.5rem;">
+          To complete your booking, an upfront consultation deposit is required.
+        </p>
+
+        <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: bold; font-size: 0.95rem;">Required Deposit:</span>
+          <strong style="font-size: 1.25rem; color: var(--theme-color-accent, #38a169);">$${amountRequired.toFixed(2)}</strong>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; color: #4a5568;">Card Number</label>
+            <input type="text" value="4242 4242 4242 4242" disabled style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; color: #4a5568;">Expiry Date</label>
+              <input type="text" value="12/28" disabled style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; color: #4a5568;">CVC</label>
+              <input type="text" value="123" disabled style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button id="btn-pay-cancel" style="padding: 8px 16px; background: transparent; border: 1px solid #cbd5e0; border-radius: 4px; font-weight: 600; cursor: pointer; color: #4a5568;">Cancel</button>
+          <button id="btn-pay-confirm" class="btn-primary" style="padding: 8px 20px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer;">Pay & Confirm</button>
+        </div>
+      </div>
+    `;
+
+    modal.querySelector('#btn-pay-cancel').onclick = () => {
+      modal.remove();
+      resolve(false);
+    };
+
+    modal.querySelector('#btn-pay-confirm').onclick = () => {
+      modal.remove();
+      resolve(true);
+    };
+
+    document.body.appendChild(modal);
   });
 }
 
@@ -253,14 +372,44 @@ function calculatePossibleSlotsCount(config) {
   return count;
 }
 
-function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
+async function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
   const select = document.getElementById('appt-timeslot');
   if (!select) return;
+
+  select.innerHTML = '<option value="">Loading available slots...</option>';
 
   const duration = config.duration || 30;
   const buffer = config.buffer || 15;
   const startStr = config.operatingHours?.start || "09:00";
   const endStr = config.operatingHours?.end || "17:00";
+
+  // Query Google freeBusy API in real time to filter slots
+  let busyIntervals = [];
+  try {
+    const { getGoogleAccessToken } = await import('../../core/google-services.js');
+    const token = await getGoogleAccessToken(false);
+    if (token) {
+      const dayStartIso = new Date(`${dateStr}T${startStr}:00`).toISOString();
+      const dayEndIso = new Date(`${dateStr}T${endStr}:00`).toISOString();
+
+      const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          timeMin: dayStartIso,
+          timeMax: dayEndIso,
+          items: [{ id: 'primary' }]
+        })
+      });
+      const data = await response.json();
+      busyIntervals = data.calendars?.primary?.busy || [];
+    }
+  } catch (err) {
+    console.warn('[Calendar freeBusy Query]:', err);
+  }
 
   const start = new Date(`${dateStr}T${startStr}:00`);
   const end = new Date(`${dateStr}T${endStr}:00`);
@@ -270,11 +419,20 @@ function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
 
   while (curr.getTime() + duration * 60000 <= end.getTime()) {
     const slotTimeStr = curr.toTimeString().substring(0, 5);
+    const slotStart = new Date(curr);
+    const slotEnd = new Date(curr.getTime() + duration * 60000);
 
-    // Check if slot is already booked on this day
-    const isBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
+    // Check if slot is already booked in our DB
+    const isBookedInDb = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
 
-    if (!isBooked) {
+    // Check if slot is busy on Google Calendar
+    const isBusyOnGoogle = busyIntervals.some(busy => {
+      const busyStart = new Date(busy.start).getTime();
+      const busyEnd = new Date(busy.end).getTime();
+      return (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart);
+    });
+
+    if (!isBookedInDb && !isBusyOnGoogle) {
       const displayLabel = curr.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       slots.push({
         time: slotTimeStr,

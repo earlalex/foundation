@@ -79,10 +79,14 @@ export function initNavbar() {
 
         <!-- Navigation Links -->
         <div id="nav-menu" class="nav-menu">
-          <a href="/home" class="nav-link" data-path="/home" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">Home</a>
-          <a href="/about" class="nav-link" data-path="/about" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">About</a>
-          <a href="/events" class="nav-link" data-path="/events" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">Events</a>
-          <a href="/contact" class="nav-link" data-path="/contact" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">Contact</a>
+          ${(configManager.current.navigation || [
+            { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
+            { label: "About", url: "/about", target: "_self", requiredRole: "public" },
+            { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
+            { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
+          ]).map(item => `
+            <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" data-role="${item.requiredRole || 'public'}" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${item.label}</a>
+          `).join('')}
           <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #ebf8ff; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
             Command Center
           </a>
@@ -170,9 +174,11 @@ export function initNavbar() {
   }
 
   function syncNavbarVisibility(state) {
+    const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
+    const isBypass = state.user?.isAdmin || window.__FOUNDATION_DEV_BYPASS__;
+
     const adminLink = document.getElementById('nav-admin-link');
     if (adminLink) {
-      const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
       const hasAdminAccess = currentRole === 'admin' || currentRole === 'editor' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
       adminLink.style.display = hasAdminAccess ? 'inline-block' : 'none';
     }
@@ -189,6 +195,21 @@ export function initNavbar() {
         authLinkElement.setAttribute('data-path', '/login');
       }
     }
+
+    document.querySelectorAll('.dynamic-nav-link').forEach(link => {
+      const requiredRole = link.getAttribute('data-role');
+      if (!requiredRole || requiredRole === 'public') {
+        link.style.display = 'inline-block';
+      } else if (requiredRole === 'subscriber') {
+        link.style.display = state.user ? 'inline-block' : 'none';
+      } else if (requiredRole === 'member') {
+        const hasAccess = ['member', 'affiliate', 'admin'].includes(currentRole) || isBypass;
+        link.style.display = hasAccess ? 'inline-block' : 'none';
+      } else if (requiredRole === 'admin') {
+        const hasAccess = currentRole === 'admin' || isBypass;
+        link.style.display = hasAccess ? 'inline-block' : 'none';
+      }
+    });
   }
 
   window.addEventListener('pageLoaded', (e) => {
