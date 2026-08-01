@@ -31,6 +31,179 @@ export function initAdminCms() {
   // 2. Render Categories & Items List
   renderContentManager(managerCard);
 
+  // 3. Create or ensure the hero configurator card is present
+  let heroCard = document.getElementById('cms-hero-configurator-card');
+  if (!heroCard) {
+    heroCard = document.createElement('div');
+    heroCard.id = 'cms-hero-configurator-card';
+    heroCard.style.cssText = `
+      background: var(--theme-color-surface, #ffffff);
+      border: 1px solid var(--theme-color-border, #e2e8f0);
+      padding: 1.5rem;
+      border-radius: var(--theme-layout-border-radius, 8px);
+      margin-top: 1.5rem;
+    `;
+    cmsTab.appendChild(heroCard);
+  }
+
+  // Render Hero Section Configurator HTML
+  heroCard.innerHTML = `
+    <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 1rem;">
+      Hero Section Configurator
+    </h3>
+    <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+      Configure and design beautiful, responsive Hero banners for any system page route.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Select Page Route:</label>
+        <select id="hero-page-route" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);">
+          <option value="home">/home (Home Page)</option>
+          <option value="about">/about (About Me)</option>
+          <option value="events">/events (Events & Live Meets)</option>
+          <option value="contact">/contact (Contact & Appointments)</option>
+          <option value="education">/education (Educational Courses)</option>
+          <option value="podcast">/podcast (Podcast Episodes)</option>
+        </select>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--theme-color-background, #f7fafc); padding: 10px; border-radius: 6px; border: 1px solid var(--theme-color-border, #edf2f7);">
+        <input type="checkbox" id="hero-enabled" checked style="cursor: pointer;" />
+        <label for="hero-enabled" style="font-weight: bold; font-size: 0.85rem; margin: 0; cursor: pointer; color: var(--theme-color-text-primary);">Enable Hero Banner on this Page</label>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div>
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Title:</label>
+          <input type="text" id="hero-title" placeholder="Welcome to Foundation" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+        </div>
+        <div>
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Background Gradient / Solid CSS Color:</label>
+          <input type="text" id="hero-bg-gradient" placeholder="linear-gradient(135deg, #1a202c 0%, #2b6cb0 100%)" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Subtitle:</label>
+        <textarea id="hero-subtitle" placeholder="A zero-build, modular web platform running natively in the browser." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 50px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);"></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div>
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Primary CTA Button Text:</label>
+          <input type="text" id="hero-primary-cta-text" placeholder="Explore Courses" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+        </div>
+        <div>
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Primary CTA Destination Link:</label>
+          <input type="text" id="hero-primary-cta-url" placeholder="/education" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div>
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Secondary CTA Button Text:</label>
+          <input type="text" id="hero-secondary-cta-text" placeholder="Upcoming Events" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+        </div>
+        <div>
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Secondary CTA Destination Link:</label>
+          <input type="text" id="hero-secondary-cta-url" placeholder="/events" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+        </div>
+      </div>
+
+      <div>
+        <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Image/Media URL (Optional):</label>
+        <input type="url" id="hero-image-url" placeholder="https://example.com/hero-banner.jpg" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-primary);" />
+      </div>
+
+      <button id="btn-save-hero-config" class="btn-primary" style="align-self: flex-start; padding: 10px 20px; font-weight: bold; margin-top: 0.5rem;">
+        Save Hero Configuration
+      </button>
+    </div>
+  `;
+
+  const routeSelect = heroCard.querySelector('#hero-page-route');
+  const enabledInput = heroCard.querySelector('#hero-enabled');
+  const titleInput = heroCard.querySelector('#hero-title');
+  const bgInput = heroCard.querySelector('#hero-bg-gradient');
+  const subtitleInput = heroCard.querySelector('#hero-subtitle');
+  const primaryText = heroCard.querySelector('#hero-primary-cta-text');
+  const primaryUrl = heroCard.querySelector('#hero-primary-cta-url');
+  const secondaryText = heroCard.querySelector('#hero-secondary-cta-text');
+  const secondaryUrl = heroCard.querySelector('#hero-secondary-cta-url');
+  const imgUrl = heroCard.querySelector('#hero-image-url');
+  const saveBtn = heroCard.querySelector('#btn-save-hero-config');
+
+  // Load hero config
+  async function loadHeroConfigForRoute(route) {
+    try {
+      const config = await contentDB.getHeroConfig(route);
+      if (config) {
+        enabledInput.checked = config.enabled !== false;
+        titleInput.value = config.title || '';
+        subtitleInput.value = config.subtitle || '';
+        primaryText.value = config.primaryCtaText || '';
+        primaryUrl.value = config.primaryCtaUrl || '';
+        secondaryText.value = config.secondaryCtaText || '';
+        secondaryUrl.value = config.secondaryCtaUrl || '';
+        bgInput.value = config.backgroundGradient || '';
+        imgUrl.value = config.heroImageUrl || '';
+      } else {
+        // Defaults
+        enabledInput.checked = true;
+        titleInput.value = 'Welcome to ' + route.charAt(0).toUpperCase() + route.slice(1);
+        subtitleInput.value = 'A customized page running natively in the browser.';
+        primaryText.value = 'Get Started';
+        primaryUrl.value = '/home';
+        secondaryText.value = 'Contact Us';
+        secondaryUrl.value = '/contact';
+        bgInput.value = 'linear-gradient(135deg, #1a202c 0%, #2b6cb0 100%)';
+        imgUrl.value = '';
+      }
+    } catch (err) {
+      console.error('[CMS Hero Config]: Load failed:', err);
+    }
+  }
+
+  // Trigger load on route change
+  routeSelect.addEventListener('change', (e) => {
+    loadHeroConfigForRoute(e.target.value);
+  });
+
+  // Initial load
+  loadHeroConfigForRoute(routeSelect.value);
+
+  // Handle Save
+  saveBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    const route = routeSelect.value;
+    const heroData = {
+      enabled: enabledInput.checked,
+      title: titleInput.value.trim(),
+      subtitle: subtitleInput.value.trim(),
+      primaryCtaText: primaryText.value.trim(),
+      primaryCtaUrl: primaryUrl.value.trim(),
+      secondaryCtaText: secondaryText.value.trim(),
+      secondaryCtaUrl: secondaryUrl.value.trim(),
+      backgroundGradient: bgInput.value.trim(),
+      heroImageUrl: imgUrl.value.trim()
+    };
+
+    try {
+      await contentDB.saveHeroConfig(route, heroData);
+      toast.success(`Successfully saved Hero configuration for /${route}!`);
+    } catch (err) {
+      console.error('[CMS Hero Config]: Save failed:', err);
+      toast.error('Failed to save Hero configuration.');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Hero Configuration';
+    }
+  });
+
   // Hook into form submit of #cms-form to reset editing state and refresh lists
   const cmsForm = document.getElementById('cms-form');
   if (cmsForm) {
