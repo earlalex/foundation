@@ -7,6 +7,51 @@ import { errorHandler } from '../../core/error-handler.js';
 
 let currentActiveEvent = null;
 
+export function convertGoogleDriveLink(url) {
+  if (!url) return '';
+  if (url.includes('drive.google.com')) {
+    let id = '';
+    const matchD = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchD && matchD[1]) {
+      id = matchD[1];
+    } else {
+      const matchId = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (matchId && matchId[1]) {
+        id = matchId[1];
+      }
+    }
+    if (id) {
+      return `https://drive.google.com/uc?export=view&id=${id}`;
+    }
+  }
+  return url;
+}
+
+function renderVideoPlayer(url) {
+  if (!url) return '';
+  const convertedUrl = convertGoogleDriveLink(url);
+
+  // If YouTube
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    let ytId = '';
+    const matchV = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+    if (matchV && matchV[1]) {
+      ytId = matchV[1];
+    } else {
+      const parts = url.split('/');
+      ytId = parts[parts.length - 1];
+    }
+    return `
+      <iframe src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border-radius: 8px;"></iframe>
+    `;
+  }
+
+  // Direct MP4 or direct stream from Google Drive
+  return `
+    <video src="${convertedUrl}" controls style="width: 100%; aspect-ratio: 16/9; border-radius: 8px; background: #000;"></video>
+  `;
+}
+
 // Mock / seed data if no events exist in database
 const SEED_EVENT = {
   id: 'sample-summit',
@@ -100,6 +145,13 @@ export async function initEventsPage() {
   renderEventsGrid();
   setupEventListeners();
   renderCart();
+
+  if (window.sessionStorage.getItem('open_cart_on_load') === 'true') {
+    window.sessionStorage.removeItem('open_cart_on_load');
+    setTimeout(() => {
+      openCartSidebar();
+    }, 150);
+  }
 }
 
 async function renderEventsGrid() {
@@ -127,6 +179,11 @@ async function renderEventsGrid() {
       return `
         <article class="card" style="display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1.5rem; background: var(--theme-color-surface, #ffffff); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
           <div>
+            ${evt.flyerUrl ? `
+              <div style="margin: -1.5rem -1.5rem 1.25rem -1.5rem; border-radius: 8px 8px 0 0; overflow: hidden; aspect-ratio: 4/5; background: #e2e8f0;">
+                <img src="${convertGoogleDriveLink(evt.flyerUrl)}" alt="${evt.title} Flyer" style="width: 100%; height: 100%; object-fit: cover;" />
+              </div>
+            ` : ''}
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--theme-color-primary, #2b6cb0); font-weight: 700; margin-bottom: 0.75rem;">
               <span>📅 ${evt.date || 'TBD'}</span>
               <span>⏰ ${evt.startTime || 'TBD'}</span>
@@ -170,6 +227,29 @@ function openBookingModal(evt) {
 
   document.getElementById('modal-event-title').textContent = evt.title;
   document.getElementById('modal-event-date').textContent = `📅 ${evt.date}`;
+
+  // Dynamically render Hero Banner Image
+  const bannerContainer = document.getElementById('modal-banner-container');
+  if (bannerContainer) {
+    if (evt.bannerUrl) {
+      bannerContainer.style.backgroundImage = `url('${convertGoogleDriveLink(evt.bannerUrl)}')`;
+      bannerContainer.style.display = 'block';
+    } else {
+      bannerContainer.style.display = 'none';
+    }
+  }
+
+  // Dynamically render Promo Video
+  const videoContainer = document.getElementById('modal-video-container');
+  if (videoContainer) {
+    if (evt.promoVideoUrl) {
+      videoContainer.innerHTML = renderVideoPlayer(evt.promoVideoUrl);
+      videoContainer.style.display = 'block';
+    } else {
+      videoContainer.innerHTML = '';
+      videoContainer.style.display = 'none';
+    }
+  }
 
   renderTicketTiers(evt);
   renderVendorPackages(evt);

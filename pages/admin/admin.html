@@ -251,6 +251,22 @@
             </div>
           </div>
 
+          <!-- Event Media Fields (Required Flyer, Optional Banner & Promo Video) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Flyer Image URL (Required 4:5 or 1:1):</label>
+              <input type="url" id="admin-event-flyer" placeholder="https://unsplash.com/... (Required)" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Banner Image URL (Optional Wide):</label>
+              <input type="url" id="admin-event-banner" placeholder="https://unsplash.com/... (Optional)" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Promo Video URL (Optional MP4/YT):</label>
+              <input type="url" id="admin-event-promo" placeholder="https://drive.google.com/... (Optional)" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
             <div>
               <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Location Type:</label>
