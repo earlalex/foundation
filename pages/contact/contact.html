@@ -31,31 +31,56 @@
     </div>
 
     <!-- Smart Appointment Booking Widget -->
-    <div class="card" style="border-top: 4px solid var(--theme-color-primary, #2b6cb0);">
+    <div class="card" style="border-top: 4px solid var(--theme-color-primary, #2b6cb0); grid-column: span 2;">
       <h2 style="margin-top: 0; font-size: 1.25rem;">Schedule Video Appointment</h2>
-      <form id="appointment-form" style="display: flex; flex-direction: column; gap: 1rem;">
-        <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
-          <input type="text" id="appt-name" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+
+      <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1rem;" class="appointment-container">
+        <!-- Interactive Multi-Month Calendar Grid -->
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-weight: bold; font-size: 1rem;">Select an Available Consultation Date:</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="btn-prev-month" type="button" class="btn-primary" style="padding: 4px 10px; font-size: 0.8rem; background: #e2e8f0; color: #4a5568;">&lt; Previous Month</button>
+              <button id="btn-next-month" type="button" class="btn-primary" style="padding: 4px 10px; font-size: 0.8rem; background: #e2e8f0; color: #4a5568;">Next Month &gt;</button>
+            </div>
+          </div>
+
+          <!-- Calendar Display Grid -->
+          <div id="calendar-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
+            <!-- Rendered dynamically (3 consecutive months on desktop, 1 on mobile) -->
+          </div>
         </div>
-        <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
-          <input type="email" id="appt-email" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-        </div>
-        <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Select Booking Date:</label>
-          <input type="date" id="appt-date" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-        </div>
-        <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Available Time Slot (Google Calendar Synced):</label>
-          <select id="appt-timeslot" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
-            <option value="">Select a date above to check availability...</option>
-          </select>
-        </div>
-        <button type="submit" id="btn-book-appt" class="btn-primary" style="background: #38a169;">
-          Confirm Google Meet Appointment
-        </button>
-      </form>
+
+        <!-- Appointment Form Info -->
+        <form id="appointment-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-top: 1px solid var(--theme-color-border, #edf2f7); padding-top: 1.5rem;">
+          <input type="hidden" id="appt-date" required />
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
+              <input type="text" id="appt-name" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
+              <input type="email" id="appt-email" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Available Time Slot:</label>
+              <select id="appt-timeslot" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                <option value="">Select a date on the calendar above first...</option>
+              </select>
+            </div>
+            <div style="display: flex; align-items: flex-end; height: 100%;">
+              <button type="submit" id="btn-book-appt" class="btn-primary" style="background: #38a169; width: 100%; padding: 10px 18px; font-weight: bold;">
+                Confirm Google Meet Appointment
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </section>

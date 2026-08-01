@@ -59,6 +59,45 @@
 
   <header id="global-header"></header>
   <main id="app" tabindex="-1" aria-live="polite"></main>
-  <footer id="global-footer"></footer>
+  <footer id="global-footer">
+    <div class="footer-container">
+      <div class="footer-column brand-column">
+        <h3 class="footer-title">Foundation</h3>
+        <p class="footer-tagline">A custom zero-build web framework for modern serverless architectures.</p>
+        <span class="footer-copyright">&copy; 2026 Foundation Framework. All rights reserved.</span>
+      </div>
+      <div class="footer-column links-column">
+        <h4 class="footer-heading">Legal & Policies</h4>
+        <ul class="footer-links">
+          <li><a href="/terms" class="spa-footer-link">Terms of Use</a></li>
+          <li><a href="/privacy" class="spa-footer-link">Privacy Policy</a></li>
+          <li><a href="/cookies" class="spa-footer-link">Cookie Settings</a></li>
+        </ul>
+      </div>
+      <div class="footer-column newsletter-column">
+        <h4 class="footer-heading">Newsletter</h4>
+        <p class="newsletter-text">Subscribe to our newsletter for exclusive updates.</p>
+        <form id="footer-newsletter-form" class="newsletter-form">
+          <input type="email" id="newsletter-email" placeholder="Your Email Address" required class="newsletter-input" />
+          <button type="submit" id="newsletter-submit" class="btn-primary newsletter-btn" disabled>Subscribe</button>
+          <label class="newsletter-consent">
+            <input type="checkbox" id="newsletter-consent-cb" required />
+            <span>I agree to receive email communications and accept the privacy policy.</span>
+          </label>
+        </form>
+      </div>
+      <div class="footer-column social-column">
+        <h4 class="footer-heading">Follow Us</h4>
+        <div class="footer-social-icons">
+          <a href="https://x.com" target="_blank" aria-label="Twitter / X" class="social-icon-link" id="footer-icon-twitter"></a>
+          <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn" class="social-icon-link" id="footer-icon-linkedin"></a>
+          <a href="https://youtube.com" target="_blank" aria-label="YouTube" class="social-icon-link" id="footer-icon-youtube"></a>
+          <a href="https://github.com" target="_blank" aria-label="GitHub" class="social-icon-link" id="footer-icon-github"></a>
+          <a href="https://facebook.com" target="_blank" aria-label="Facebook" class="social-icon-link" id="footer-icon-facebook"></a>
+          <a href="https://instagram.com" target="_blank" aria-label="Instagram" class="social-icon-link" id="footer-icon-instagram"></a>
+        </div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

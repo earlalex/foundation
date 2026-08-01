@@ -1918,6 +1918,56 @@ export class ContentDB {
     }
     return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
   }
+
+  // --- Appointments Helpers ---
+  async saveAppointment(apptData) {
+    const db = getFirestoreDB();
+    const id = apptData.id || `appt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = { ...apptData, id, updatedAt: new Date().toISOString() };
+
+    // LocalStorage sync/fallback
+    try {
+      const local = JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
+      const idx = local.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        local[idx] = payload;
+      } else {
+        local.push(payload);
+      }
+      localStorage.setItem('foundation_local_appointments', JSON.stringify(local));
+    } catch (e) {
+      console.warn('Failed to save appointment locally', e);
+    }
+
+    if (!db) return payload;
+
+    try {
+      const docRef = doc(db, 'appointments', id);
+      await setDoc(docRef, payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.warn('[DB]: Firestore appointment save error.', err.message);
+      return payload;
+    }
+  }
+
+  async getAppointments() {
+    const db = getFirestoreDB();
+    if (!db) {
+      return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
+    }
+    try {
+      const querySnapshot = await getDocs(collection(db, 'appointments'));
+      const results = [];
+      querySnapshot.forEach(docSnap => {
+        results.push(docSnap.data());
+      });
+      if (results.length > 0) return results;
+    } catch (err) {
+      console.warn('[DB]: Failed to fetch appointments from Firestore, falling back', err);
+    }
+    return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
+  }
 }
 
 /**

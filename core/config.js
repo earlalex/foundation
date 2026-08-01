@@ -132,6 +132,19 @@ export const defaultConfig = {
     onboardingTemplate: "Welcome to our team! Please complete your onboarding...",
     welcomeEmailSubject: "Welcome to the Team!",
     isConfigured: false
+  },
+  iconSet: "default",
+  customIconData: null,
+  appointments: {
+    operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    operatingHours: { start: "09:00", end: "17:00" },
+    duration: 30,
+    buffer: 15,
+    notifications: {
+      adminEmail: true,
+      appointeeEmail: true,
+      adminAlert: true
+    }
   }
 };
 
