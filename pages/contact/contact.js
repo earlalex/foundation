@@ -475,6 +475,25 @@ export function initContactPage() {
 
       await contentDB.saveAppointment(bookingData);
 
+      // Remaining balance invoicing task
+      const remainingBalance = fee - depositRequired;
+      if (remainingBalance > 0) {
+        // Queue draft invoice in ContentDB for post-meeting invoicing
+        const draftInvoice = {
+          id: 'inv_' + Date.now(),
+          customerName: name,
+          customerEmail: email,
+          amount: Math.round(remainingBalance * 100), // cents
+          currency: 'USD',
+          description: `Post-meeting remaining balance for Consultation session on ${date} ${timeSlot}`,
+          status: 'draft',
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days due
+          createdAt: new Date().toISOString()
+        };
+        await contentDB.saveInvoice(draftInvoice);
+        toast.success(`Confirmed remaining balance task queued: $${remainingBalance.toFixed(2)}`);
+      }
+
       toast.success(`Appointment confirmed for ${date} at ${timeSlot}!\nMeet link synced to dashboard.`);
       apptForm.reset();
 
@@ -701,6 +720,34 @@ function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIn
   const startStr = config.operatingHours?.start || "09:00";
   const endStr = config.operatingHours?.end || "17:00";
 
+  // Query Google freeBusy API in real time to filter slots
+  let busyIntervals = [];
+  try {
+    const { getGoogleAccessToken } = await import('../../core/google-services.js');
+    const token = await getGoogleAccessToken(false);
+    if (token) {
+      const dayStartIso = new Date(`${dateStr}T${startStr}:00`).toISOString();
+      const dayEndIso = new Date(`${dateStr}T${endStr}:00`).toISOString();
+
+      const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          timeMin: dayStartIso,
+          timeMax: dayEndIso,
+          items: [{ id: 'primary' }]
+        })
+      });
+      const data = await response.json();
+      busyIntervals = data.calendars?.primary?.busy || [];
+    }
+  } catch (err) {
+    console.warn('[Calendar freeBusy Query]:', err);
+  }
+
   const start = new Date(`${dateStr}T${startStr}:00`);
   const end = new Date(`${dateStr}T${endStr}:00`);
 
@@ -711,6 +758,8 @@ function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIn
     const slotStart = new Date(curr);
     const slotEnd = new Date(slotStart.getTime() + duration * 60000);
     const slotTimeStr = curr.toTimeString().substring(0, 5);
+    const slotStart = new Date(curr);
+    const slotEnd = new Date(curr.getTime() + duration * 60000);
 
     // Check if slot is already booked locally on this day
     const isLocalBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);

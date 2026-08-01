@@ -205,7 +205,10 @@ export class AdminSetupWizards {
                   </div>
                 </div>
                 <div>
-                  <label style="font-size: 0.8rem; font-weight: 600;">Auth Domain:</label>
+                  <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                    Auth Domain:
+                    <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Found in Firebase Console > Project Settings as 'authDomain'.</span></div>
+                  </label>
                   <input type="text" id="wz-fb-auth-domain" value="demo-proj-id.firebaseapp.com" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>
 
@@ -233,18 +236,27 @@ export class AdminSetupWizards {
                   </div>
                 </div>
                 <div>
-                  <label style="font-size: 0.8rem; font-weight: 600;">Workspace Owner Email:</label>
+                  <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                    Workspace Owner Email:
+                    <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Your primary admin Gmail or Google Workspace email address.</span></div>
+                  </label>
                   <input type="email" id="wz-google-owner" value="admin@ascensionavenue.com" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>
 
                 <div style="border-left: 3px solid #805ad5; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #805ad5;">AI Integrations:</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                   <div>
-                    <label style="font-size: 0.8rem; font-weight: 600;">Google Gemini Key:</label>
+                    <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                      Google Gemini Key:
+                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Generated in Google AI Studio > Get API Key.</span></div>
+                    </label>
                     <input type="password" id="wz-gemini-key" value="gemini_api_key_101" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
-                    <label style="font-size: 0.8rem; font-weight: 600;">OpenAI API Key:</label>
+                    <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                      OpenAI API Key:
+                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Acquired in OpenAI Developer Platform > API Keys.</span></div>
+                    </label>
                     <input type="password" id="wz-openai-key" value="openai_api_key_mock" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                 </div>
@@ -252,7 +264,10 @@ export class AdminSetupWizards {
                 <div style="border-left: 3px solid #38a169; padding-left: 6px; margin-top: 0.5rem; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.85rem; color: #38a169;">Stripe Monetization:</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                   <div>
-                    <label style="font-size: 0.8rem; font-weight: 600;">Stripe Publishable Key:</label>
+                    <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                      Stripe Publishable Key:
+                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Obtained in Stripe Dashboard > Developers > API keys as 'pk_test_...'.</span></div>
+                    </label>
                     <input type="text" id="wz-stripe-pub" value="pk_test_456" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
@@ -301,7 +316,10 @@ export class AdminSetupWizards {
                   </div>
                 </div>
                 <div>
-                  <label style="font-size: 0.8rem; font-weight: 600;">LastPass Provisioning Key:</label>
+                  <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                    LastPass Provisioning Key:
+                    <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Acquired in LastPass Admin Console > User Provisioning > API Tokens.</span></div>
+                  </label>
                   <input type="password" id="wz-lp-hash" value="lp_provision_mock_hash_11" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>
 
@@ -318,7 +336,10 @@ export class AdminSetupWizards {
                     <input type="text" id="wz-cf-zone" value="zone_123_abc" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
-                    <label style="font-size: 0.8rem; font-weight: 600;">Pages Deployment URL:</label>
+                    <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                      Pages Deployment URL:
+                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Your live site origin or Cloudflare Pages project domain.</span></div>
+                    </label>
                     <input type="url" id="wz-cf-pages" value="${window.location.origin}" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                 </div>

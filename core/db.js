@@ -185,6 +185,165 @@ export class ContentDB {
     return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
   }
 
+  #generateDefaultSeededContent() {
+    return {
+      "welcome-to-foundation": {
+        type: "blog",
+        id: "welcome-to-foundation",
+        title: "Welcome to Foundation Framework",
+        description: "Learn how zero-build Vanilla JS architecture can boost your serverless SPA apps.",
+        longFormText: [
+          "Foundation is designed to build web applications without bundling complexity.",
+          "By using native browser ES Modules, we achieve near-instantaneous load times and clear separation of concerns."
+        ],
+        author: "Jane Doe",
+        date: "2026-07-24",
+        access: { visibility: "public" }
+      },
+      "zero-build-architecture-handbook": {
+        type: "book",
+        id: "zero-build-architecture-handbook",
+        title: "Zero-Build Architecture Handbook",
+        description: "The complete guide to developing fast, secure, and zero-dependency SPAs on Cloudflare Workers.",
+        isbn: "978-3-16-148410-0",
+        formats: ["PDF", "Epub", "Mobi"],
+        access: { visibility: "public" },
+        links: [
+          { label: "Amazon Buy Link", url: "https://amazon.com" }
+        ]
+      },
+      "vanilla-js-professional-course": {
+        type: "education",
+        id: "vanilla-js-professional-course",
+        title: "Vanilla JS Professional Course",
+        description: "Master modern Vanilla JavaScript, DOM Manipulation, and ES Modules with absolutely zero build steps.",
+        access: { visibility: "public" },
+        longFormText: [
+          "In this course you will learn modern JavaScript architectures.",
+          "We will explore Web Components, native routing, State management, and offline-first programming."
+        ],
+        worksheets: [
+          { title: "Syllabus Overview", pdfUrl: "/assets/docs/syllabus.pdf" }
+        ],
+        quizQuestions: [
+          { id: "q1", prompt: "Which standard allows native modules in browsers?", type: "multiple-choice", options: ["ES Modules"] }
+        ],
+        modules: [
+          {
+            id: "module-1",
+            title: "Section 1: ES Modules & Web Components",
+            lessons: [
+              {
+                id: "lesson-es-modules",
+                title: "Lesson 1: Introduction to ES Modules",
+                contentType: "rich-text",
+                body: "ES Modules are the official standard for modular JavaScript...",
+                requiredRole: "subscriber"
+              }
+            ]
+          }
+        ]
+      },
+      "ascension-avenue-summit-2026": {
+        type: "event",
+        id: "ascension-avenue-summit-2026",
+        title: "Ascension Avenue Summit 2026",
+        slug: "ascension-avenue-summit-2026",
+        date: "2026-10-15",
+        location: "Virtual Summit (Google Meet)",
+        description: "The premium zero-build web architecture gathering of the year. Featuring top architects and builders.",
+        eventType: "google-meet",
+        startTime: "09:00",
+        endTime: "17:00",
+        meetUrl: "https://meet.google.com/mock-summit",
+        ticketTypes: [
+          { id: "general", name: "General Admission", price: 99, capacity: 200, sold: 1 }
+        ],
+        vendorPackages: [
+          { id: "booth", name: "Virtual Exhibitor Booth", price: 299, capacity: 10, sold: 0 }
+        ],
+        sponsorshipPackages: [
+          { id: "bronze", name: "Bronze Level Sponsor", price: 499, capacity: 5, sold: 0 }
+        ]
+      },
+      "how-to-deploy-serverless-workers": {
+        type: "howto",
+        id: "how-to-deploy-serverless-workers",
+        title: "How to Deploy Serverless Workers",
+        description: "Deploy fast, lightweight, and secure Cloudflare Workers globally in under 2 minutes with no Webpack or bundlers.",
+        longFormText: [
+          "Step 1: Install Wrangler CLI locally using npm.",
+          "Step 2: Authenticate with your Cloudflare account using 'wrangler login'.",
+          "Step 3: Run 'wrangler publish' to push your zero-build serverless script globally."
+        ],
+        difficulty: "Beginner",
+        access: { visibility: "public" }
+      },
+      "episode-1-the-no-build-philosophy": {
+        type: "podcast",
+        id: "episode-1-the-no-build-philosophy",
+        title: "Episode 1: The No-Build Philosophy",
+        description: "In our first episode, we explore the origins of zero-build architecture and why bundling became popular (and bloated).",
+        date: "2026-07-24",
+        episodeNumber: 1,
+        audio: { type: "audio", src: "https://example.com/podcast-ep1.mp3" },
+        access: { visibility: "public" }
+      },
+      "e-commerce-redesign": {
+        type: "portfolio",
+        id: "e-commerce-redesign",
+        title: "E-Commerce Redesign",
+        description: "A complete responsive overhaul of an enterprise e-commerce platform using clean Vanilla CSS and zero bundling.",
+        client: "Ascension Boutique",
+        techStack: ["HTML5", "Vanilla JS", "CSS Grid", "Service Workers"],
+        access: { visibility: "public" }
+      },
+      "cloud-hosting-promo": {
+        type: "sponsor",
+        id: "cloud-hosting-promo",
+        title: "Cloud Hosting Promo",
+        description: "Our premium partner Cloud Hosting is offering $100 in free credits for all new Foundation Framework users.",
+        longFormText: [
+          "Redeem this exclusive promo offer on Cloud Hosting to deploy your database and edge servers instantly."
+        ],
+        promoCode: "FOUNDATION100",
+        expirationDate: "2026-12-31",
+        access: { visibility: "public" }
+      },
+      "1-on-1-architecture-consultation": {
+        type: "product",
+        id: "1-on-1-architecture-consultation",
+        title: "1-on-1 Architecture Consultation",
+        description: "Book an exclusive, personalized 1-on-1 architecture design review session to audit your SPA.",
+        longFormText: [
+          "Review your database models, API routing, Cloudflare Workers configuration, and native frontend caching pipeline."
+        ],
+        pricing: {
+          basePrice: 25000,
+          currency: "USD",
+          paymentType: "full_upfront"
+        },
+        category: "Consultation Services",
+        access: { visibility: "public" }
+      },
+      "our-story": {
+        type: "page",
+        id: "our-story",
+        slug: "our-story",
+        title: "Our Story",
+        editorType: "grapesjs",
+        compiledHtml: `
+          <section style="padding: 40px 0; font-family: system-ui, sans-serif;">
+            <h1 style="color: #2b6cb0; font-weight: 800; font-size: 2rem; margin-bottom: 16px;">Our Story</h1>
+            <p style="color: #4a5568; line-height: 1.6; font-size: 1.05rem;">We started Foundation with a simple mission: to build fast, beautiful, and maintainable web platforms without the bloat of modern bundling tooling.</p>
+          </section>
+        `,
+        compiledCss: "",
+        access: { visibility: "public" }
+      }
+    };
+  }
+
   /**
    * Get content from localStorage fallback
    * @private
@@ -192,10 +351,15 @@ export class ContentDB {
    */
   #getLocalContent() {
     try {
-      return JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
-    } catch (e) {
-      return {};
-    }
+      const stored = localStorage.getItem('foundation_local_content');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {}
+
+    const seeded = this.#generateDefaultSeededContent();
+    this.#saveLocalContent(seeded);
+    return seeded;
   }
 
   /**
@@ -1286,10 +1450,32 @@ export class ContentDB {
 
   #getLocalPages() {
     try {
-      return JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
-    } catch (e) {
-      return {};
-    }
+      const stored = localStorage.getItem('foundation_local_pages');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {}
+
+    const seeded = {
+      "our-story": {
+        type: "page",
+        id: "our-story",
+        slug: "our-story",
+        title: "Our Story",
+        editorType: "grapesjs",
+        compiledHtml: `
+          <section style="padding: 40px 0; font-family: system-ui, sans-serif;">
+            <h1 style="color: #2b6cb0; font-weight: 800; font-size: 2rem; margin-bottom: 16px;">Our Story</h1>
+            <p style="color: #4a5568; line-height: 1.6; font-size: 1.05rem;">We started Foundation with a simple mission: to build fast, beautiful, and maintainable web platforms without the bloat of modern bundling tooling.</p>
+          </section>
+        `,
+        compiledCss: "",
+        access: { visibility: "public" },
+        updatedAt: new Date().toISOString()
+      }
+    };
+    this.#saveLocalPages(seeded);
+    return seeded;
   }
 
   #saveLocalPages(data) {

@@ -144,6 +144,50 @@ export const defaultConfig = {
       adminEmail: true,
       appointeeEmail: true,
       adminAlert: true
+    },
+    consultationFee: 150,
+    depositRule: "percentage",
+    depositAmount: 50,
+    depositPercentage: 20
+  },
+  navigation: [
+    { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
+    { label: "About", url: "/about", target: "_self", requiredRole: "public" },
+    { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
+    { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
+  ],
+  footer: {
+    brand: {
+      show: true,
+      title: "Foundation",
+      tagline: "A custom zero-build web framework for modern serverless architectures."
+    },
+    legal: {
+      show: true,
+      heading: "Legal & Policies",
+      links: [
+        { label: "Terms of Use", url: "/terms" },
+        { label: "Privacy Policy", url: "/privacy" },
+        { label: "Cookie Settings", url: "/cookies" }
+      ]
+    },
+    newsletter: {
+      show: true,
+      heading: "Newsletter",
+      text: "Subscribe to our newsletter for exclusive updates.",
+      consentCopy: "I agree to receive email communications and accept the privacy policy."
+    },
+    social: {
+      show: true,
+      heading: "Follow Us",
+      links: [
+        { name: "twitter", url: "https://x.com" },
+        { name: "linkedin", url: "https://linkedin.com" },
+        { name: "youtube", url: "https://youtube.com" },
+        { name: "github", url: "https://github.com" },
+        { name: "facebook", url: "https://facebook.com" },
+        { name: "instagram", url: "https://instagram.com" }
+      ]
     }
   }
 };
