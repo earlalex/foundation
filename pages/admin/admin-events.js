@@ -3,6 +3,7 @@ import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { store } from '../../core/store.js';
+import { stripeService } from '../../core/stripe.js';
 
 let activeEventId = 'sample-summit'; // default active event workspace
 
@@ -77,19 +78,41 @@ function addTicketRow(data = {}) {
   if (!container) return;
 
   const id = data.id || 't_' + Math.random().toString(36).substring(2, 7);
+  const stripeProductId = data.stripeProductId || '';
+  const stripePriceId = data.stripePriceId || '';
+
+  const stripeBadge = stripePriceId
+    ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: flex; align-items: center; gap: 4px;">
+         <span>ID: <code>${stripePriceId}</code></span>
+         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy ]</button>
+         <a href="https://dashboard.stripe.com/test/products/${stripeProductId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
+       </div>`
+    : '<span style="font-size: 0.75rem; color: #a0aec0;">Unsynced</span>';
+
   const row = document.createElement('div');
   row.className = 'admin-ticket-row';
-  row.style.cssText = 'display: grid; grid-template-columns: 1.5fr 1fr 1fr 2fr auto; gap: 0.5rem; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;';
+  row.style.cssText = 'display: grid; grid-template-columns: 1.5fr 1fr 1fr 2fr 1.5fr auto; gap: 0.5rem; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;';
   row.innerHTML = `
     <input type="hidden" class="ticket-id" value="${id}" />
+    <input type="hidden" class="ticket-stripe-product-id" value="${stripeProductId}" />
+    <input type="hidden" class="ticket-stripe-price-id" value="${stripePriceId}" />
     <input type="text" class="ticket-name" placeholder="Tier Name (e.g. Early Bird)" value="${data.name || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" step="0.01" class="ticket-price" placeholder="Price ($)" value="${data.price || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" class="ticket-capacity" placeholder="Capacity" value="${data.capacity || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="text" class="ticket-desc" placeholder="Brief perks description..." value="${data.description || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+    <div class="stripe-info-container" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">${stripeBadge}</div>
     <button type="button" class="btn-remove-row" style="background: transparent; border: none; color: #e53e3e; font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
   `;
 
   row.querySelector('.btn-remove-row').onclick = () => row.remove();
+  const copyBtn = row.querySelector('.btn-copy-stripe-id');
+  if (copyBtn) {
+    copyBtn.onclick = (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(copyBtn.dataset.copy);
+      toast.success(`Copied Stripe Price ID: ${copyBtn.dataset.copy}`);
+    };
+  }
   container.appendChild(row);
 }
 
@@ -98,22 +121,44 @@ function addVendorRow(data = {}) {
   if (!container) return;
 
   const id = data.id || 'v_' + Math.random().toString(36).substring(2, 7);
+  const stripeProductId = data.stripeProductId || '';
+  const stripePriceId = data.stripePriceId || '';
+
+  const stripeBadge = stripePriceId
+    ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: flex; align-items: center; gap: 4px;">
+         <span>ID: <code>${stripePriceId}</code></span>
+         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy ]</button>
+         <a href="https://dashboard.stripe.com/test/products/${stripeProductId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
+       </div>`
+    : '<span style="font-size: 0.75rem; color: #a0aec0;">Unsynced</span>';
+
   const row = document.createElement('div');
   row.className = 'admin-vendor-row';
-  row.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr 3fr auto; gap: 0.5rem; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;';
+  row.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr 3fr 1.5fr auto; gap: 0.5rem; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;';
 
   const perksJoined = Array.isArray(data.perks) ? data.perks.join(', ') : '';
 
   row.innerHTML = `
     <input type="hidden" class="vendor-id" value="${id}" />
+    <input type="hidden" class="vendor-stripe-product-id" value="${stripeProductId}" />
+    <input type="hidden" class="vendor-stripe-price-id" value="${stripePriceId}" />
     <input type="text" class="vendor-name" placeholder="Package Name" value="${data.name || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" step="0.01" class="vendor-price" placeholder="Price ($)" value="${data.price || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" class="vendor-capacity" placeholder="Capacity" value="${data.capacity || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="text" class="vendor-perks" placeholder="Perks (comma-separated list)" value="${perksJoined}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+    <div class="stripe-info-container" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">${stripeBadge}</div>
     <button type="button" class="btn-remove-row" style="background: transparent; border: none; color: #e53e3e; font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
   `;
 
   row.querySelector('.btn-remove-row').onclick = () => row.remove();
+  const copyBtn = row.querySelector('.btn-copy-stripe-id');
+  if (copyBtn) {
+    copyBtn.onclick = (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(copyBtn.dataset.copy);
+      toast.success(`Copied Stripe Price ID: ${copyBtn.dataset.copy}`);
+    };
+  }
   container.appendChild(row);
 }
 
@@ -122,20 +167,42 @@ function addSponsorRow(data = {}) {
   if (!container) return;
 
   const id = data.id || 's_' + Math.random().toString(36).substring(2, 7);
+  const stripeProductId = data.stripeProductId || '';
+  const stripePriceId = data.stripePriceId || '';
+
+  const stripeBadge = stripePriceId
+    ? `<div style="font-size: 0.75rem; color: var(--theme-color-text-secondary, #718096); display: flex; align-items: center; gap: 4px;">
+         <span>ID: <code>${stripePriceId}</code></span>
+         <button type="button" class="btn-copy-stripe-id" data-copy="${stripePriceId}" style="padding: 1px 4px; font-size: 0.7rem; border: 1px solid #cbd5e0; border-radius: 3px; background: white; cursor: pointer;">[ Copy ]</button>
+         <a href="https://dashboard.stripe.com/test/products/${stripeProductId}" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline;">View</a>
+       </div>`
+    : '<span style="font-size: 0.75rem; color: #a0aec0;">Unsynced</span>';
+
   const row = document.createElement('div');
   row.className = 'admin-sponsor-row';
-  row.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 2fr 1fr 1fr auto; gap: 0.5rem; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;';
+  row.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 2fr 1fr 1fr 1.5fr auto; gap: 0.5rem; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem;';
   row.innerHTML = `
     <input type="hidden" class="sponsor-id" value="${id}" />
+    <input type="hidden" class="sponsor-stripe-product-id" value="${stripeProductId}" />
+    <input type="hidden" class="sponsor-stripe-price-id" value="${stripePriceId}" />
     <input type="text" class="sponsor-tier" placeholder="Sponsorship Tier" value="${data.tier || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" step="0.01" class="sponsor-price" placeholder="Price ($)" value="${data.price || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="text" class="sponsor-placement" placeholder="Logo Placement" value="${data.logoPlacement || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" class="sponsor-passes" placeholder="Complimentary passes" value="${data.complimentaryTickets || ''}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
     <input type="number" class="sponsor-capacity" placeholder="Capacity" value="${data.capacity || '1'}" required style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+    <div class="stripe-info-container" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">${stripeBadge}</div>
     <button type="button" class="btn-remove-row" style="background: transparent; border: none; color: #e53e3e; font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
   `;
 
   row.querySelector('.btn-remove-row').onclick = () => row.remove();
+  const copyBtn = row.querySelector('.btn-copy-stripe-id');
+  if (copyBtn) {
+    copyBtn.onclick = (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(copyBtn.dataset.copy);
+      toast.success(`Copied Stripe Price ID: ${copyBtn.dataset.copy}`);
+    };
+  }
   container.appendChild(row);
 }
 
@@ -207,47 +274,108 @@ async function handleEventSave() {
       meetingUrl: locType === 'virtual' ? document.getElementById('admin-event-meeturl').value : ''
     };
 
-    // Gather ticket rows
+    // Gather ticket rows with automatic Stripe registration
+    toast.info('Synchronizing ticketing and packages with Stripe...');
     const ticketTypes = [];
-    document.querySelectorAll('.admin-ticket-row').forEach(row => {
+    for (const row of document.querySelectorAll('.admin-ticket-row')) {
+      let tStripeProductId = row.querySelector('.ticket-stripe-product-id').value;
+      let tStripePriceId = row.querySelector('.ticket-stripe-price-id').value;
+      const tName = row.querySelector('.ticket-name').value;
+      const tPrice = Number(row.querySelector('.ticket-price').value);
+      const tDesc = row.querySelector('.ticket-desc').value;
+
+      if (!tStripeProductId || !tStripePriceId) {
+        const stripeRes = await stripeService.registerStripeProduct(
+          `${title} - ${tName}`,
+          tDesc || `Ticket for ${title}`,
+          Math.round(tPrice * 100),
+          'usd',
+          false
+        );
+        tStripeProductId = stripeRes.productId;
+        tStripePriceId = stripeRes.priceId;
+      }
+
       ticketTypes.push({
         id: row.querySelector('.ticket-id').value,
-        name: row.querySelector('.ticket-name').value,
-        price: Number(row.querySelector('.ticket-price').value),
+        stripeProductId: tStripeProductId,
+        stripePriceId: tStripePriceId,
+        name: tName,
+        price: tPrice,
         capacity: Number(row.querySelector('.ticket-capacity').value),
         sold: 0,
-        description: row.querySelector('.ticket-desc').value
+        description: tDesc
       });
-    });
+    }
 
-    // Gather vendor packages
+    // Gather vendor packages with automatic Stripe registration
     const vendorPackages = [];
-    document.querySelectorAll('.admin-vendor-row').forEach(row => {
+    for (const row of document.querySelectorAll('.admin-vendor-row')) {
+      let vStripeProductId = row.querySelector('.vendor-stripe-product-id').value;
+      let vStripePriceId = row.querySelector('.vendor-stripe-price-id').value;
+      const vName = row.querySelector('.vendor-name').value;
+      const vPrice = Number(row.querySelector('.vendor-price').value);
       const perksRaw = row.querySelector('.vendor-perks').value || '';
       const perks = perksRaw.split(',').map(p => p.trim()).filter(p => p.length > 0);
+
+      if (!vStripeProductId || !vStripePriceId) {
+        const stripeRes = await stripeService.registerStripeProduct(
+          `${title} - Vendor: ${vName}`,
+          `Exhibitor package for ${title}. Perks: ${perks.join(', ')}`,
+          Math.round(vPrice * 100),
+          'usd',
+          false
+        );
+        vStripeProductId = stripeRes.productId;
+        vStripePriceId = stripeRes.priceId;
+      }
+
       vendorPackages.push({
         id: row.querySelector('.vendor-id').value,
-        name: row.querySelector('.vendor-name').value,
-        price: Number(row.querySelector('.vendor-price').value),
+        stripeProductId: vStripeProductId,
+        stripePriceId: vStripePriceId,
+        name: vName,
+        price: vPrice,
         capacity: Number(row.querySelector('.vendor-capacity').value),
         sold: 0,
         perks
       });
-    });
+    }
 
-    // Gather sponsors packages
+    // Gather sponsors packages with automatic Stripe registration
     const sponsorshipPackages = [];
-    document.querySelectorAll('.admin-sponsor-row').forEach(row => {
+    for (const row of document.querySelectorAll('.admin-sponsor-row')) {
+      let sStripeProductId = row.querySelector('.sponsor-stripe-product-id').value;
+      let sStripePriceId = row.querySelector('.sponsor-stripe-price-id').value;
+      const sTier = row.querySelector('.sponsor-tier').value;
+      const sPrice = Number(row.querySelector('.sponsor-price').value);
+      const sPlacement = row.querySelector('.sponsor-placement').value;
+      const sPasses = Number(row.querySelector('.sponsor-passes').value);
+
+      if (!sStripeProductId || !sStripePriceId) {
+        const stripeRes = await stripeService.registerStripeProduct(
+          `${title} - Sponsor: ${sTier}`,
+          `Sponsorship package for ${title}. Placement: ${sPlacement}. Includes ${sPasses} passes.`,
+          Math.round(sPrice * 100),
+          'usd',
+          false
+        );
+        sStripeProductId = stripeRes.productId;
+        sStripePriceId = stripeRes.priceId;
+      }
+
       sponsorshipPackages.push({
         id: row.querySelector('.sponsor-id').value,
-        tier: row.querySelector('.sponsor-tier').value,
-        price: Number(row.querySelector('.sponsor-price').value),
-        logoPlacement: row.querySelector('.sponsor-placement').value,
-        complimentaryTickets: Number(row.querySelector('.sponsor-passes').value),
+        stripeProductId: sStripeProductId,
+        stripePriceId: sStripePriceId,
+        tier: sTier,
+        price: sPrice,
+        logoPlacement: sPlacement,
+        complimentaryTickets: sPasses,
         capacity: Number(row.querySelector('.sponsor-capacity').value),
         sold: 0
       });
-    });
+    }
 
     const eventPayload = {
       type: 'event',

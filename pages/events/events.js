@@ -250,7 +250,7 @@ function renderTicketTiers(evt) {
             <input class="qty-input" type="number" value="1" min="1" max="${remaining || 10}" readonly style="width: 45px; text-align: center; border: none; font-weight: bold; outline: none;" />
             <button class="qty-btn" onclick="this.previousElementSibling.stepUp()" style="background: #edf2f7; border: none; padding: 6px 12px; cursor: pointer; font-weight: bold;">+</button>
           </div>
-          <button class="btn-primary btn-add-ticket-cart" data-id="${t.id}" data-price="${t.price}" data-name="${t.name}" ${isSoldOut ? 'disabled style="background: #cbd5e0; cursor: not-allowed;"' : ''} style="padding: 8px 16px; font-size: 0.85rem; font-weight: bold; border-radius: 4px;">
+          <button class="btn-primary btn-add-ticket-cart" data-id="${t.id}" data-price="${t.price}" data-name="${t.name}" data-price-id="${t.stripePriceId || ''}" ${isSoldOut ? 'disabled style="background: #cbd5e0; cursor: not-allowed;"' : ''} style="padding: 8px 16px; font-size: 0.85rem; font-weight: bold; border-radius: 4px;">
             ${isSoldOut ? 'Sold Out' : 'Add to Cart'}
           </button>
         </div>
@@ -264,10 +264,11 @@ function renderTicketTiers(evt) {
       const tId = e.target.getAttribute('data-id');
       const price = Number(e.target.getAttribute('data-price'));
       const name = e.target.getAttribute('data-name');
+      const priceId = e.target.getAttribute('data-price-id') || null;
       const qtyInput = e.target.parentElement.querySelector('.qty-input');
       const qty = qtyInput ? Number(qtyInput.value) : 1;
 
-      eventCart.addItem(evt.id, 'ticket', tId, qty, price, name);
+      eventCart.addItem(evt.id, 'ticket', tId, qty, price, name, priceId);
       toast.success(`Added ${qty}x ${name} to your registration cart!`);
       renderCart();
       openCartSidebar();
@@ -303,7 +304,7 @@ function renderVendorPackages(evt) {
         </td>
         <td style="padding: 12px 10px; font-weight: bold; color: var(--theme-color-text-primary, #1a202c);">$${Number(pkg.price).toFixed(2)}</td>
         <td style="padding: 12px 10px; text-align: right;">
-          <button class="btn-primary btn-add-vendor-cart" data-id="${pkg.id}" data-price="${pkg.price}" data-name="${pkg.name}" ${isSoldOut ? 'disabled style="background: #cbd5e0; cursor: not-allowed;"' : ''} style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;">
+          <button class="btn-primary btn-add-vendor-cart" data-id="${pkg.id}" data-price="${pkg.price}" data-name="${pkg.name}" data-price-id="${pkg.stripePriceId || ''}" ${isSoldOut ? 'disabled style="background: #cbd5e0; cursor: not-allowed;"' : ''} style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;">
             ${isSoldOut ? 'Sold Out' : 'Reserve Space'}
           </button>
         </td>
@@ -317,8 +318,9 @@ function renderVendorPackages(evt) {
       const pkgId = e.target.getAttribute('data-id');
       const price = Number(e.target.getAttribute('data-price'));
       const name = e.target.getAttribute('data-name');
+      const priceId = e.target.getAttribute('data-price-id') || null;
 
-      eventCart.addItem(evt.id, 'vendor_booth', pkgId, 1, price, name);
+      eventCart.addItem(evt.id, 'vendor_booth', pkgId, 1, price, name, priceId);
       toast.success(`Reserved 1x ${name}!`);
       renderCart();
       openCartSidebar();
@@ -352,7 +354,7 @@ function renderSponsorshipPackages(evt) {
         <td style="padding: 12px 10px; text-align: center; font-weight: bold; color: var(--theme-color-text-secondary, #4a5568);">${sp.complimentaryTickets} passes</td>
         <td style="padding: 12px 10px; font-weight: bold; color: var(--theme-color-text-primary, #1a202c);">$${Number(sp.price).toFixed(2)}</td>
         <td style="padding: 12px 10px; text-align: right;">
-          <button class="btn-primary btn-add-sponsor-cart" data-id="${sp.id}" data-price="${sp.price}" data-name="${sp.tier} Sponsor" ${isSoldOut ? 'disabled style="background: #cbd5e0; cursor: not-allowed;"' : ''} style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;">
+          <button class="btn-primary btn-add-sponsor-cart" data-id="${sp.id}" data-price="${sp.price}" data-name="${sp.tier} Sponsor" data-price-id="${sp.stripePriceId || ''}" ${isSoldOut ? 'disabled style="background: #cbd5e0; cursor: not-allowed;"' : ''} style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;">
             ${isSoldOut ? 'Sold Out' : 'Reserve Sponsor'}
           </button>
         </td>
@@ -366,8 +368,9 @@ function renderSponsorshipPackages(evt) {
       const spId = e.target.getAttribute('data-id');
       const price = Number(e.target.getAttribute('data-price'));
       const name = e.target.getAttribute('data-name');
+      const priceId = e.target.getAttribute('data-price-id') || null;
 
-      eventCart.addItem(evt.id, 'sponsorship', spId, 1, price, name);
+      eventCart.addItem(evt.id, 'sponsorship', spId, 1, price, name, priceId);
       toast.success(`Reserved 1x ${name} Package!`);
       renderCart();
       openCartSidebar();
@@ -525,6 +528,40 @@ function setupEventListeners() {
         cartItems: JSON.stringify(summary.items)
       };
 
+      const lineItems = summary.items.map(item => {
+        if (item.stripePriceId) {
+          return {
+            priceId: item.stripePriceId,
+            quantity: item.quantity
+          };
+        } else {
+          return {
+            amount: Math.round(item.price * 100), // in cents
+            name: item.name,
+            quantity: item.quantity,
+            currency: 'USD'
+          };
+        }
+      });
+
+      if (summary.tax > 0) {
+        lineItems.push({
+          amount: Math.round(summary.tax * 100),
+          name: 'Event Tax (8.25%)',
+          quantity: 1,
+          currency: 'USD'
+        });
+      }
+
+      if (summary.serviceFee > 0) {
+        lineItems.push({
+          amount: Math.round(summary.serviceFee * 100),
+          name: 'Processing Fee',
+          quantity: 1,
+          currency: 'USD'
+        });
+      }
+
       const response = await fetch('/api/stripe-checkout', {
         method: 'POST',
         headers: {
@@ -534,7 +571,7 @@ function setupEventListeners() {
           email: user?.email || 'guest@example.com',
           role: store.state.simulatedUserTier || user?.role || 'subscriber',
           productId: currentActiveEvent?.title || 'Event Registration',
-          amount: Math.round(summary.total * 100), // Cents charge matches total exactly!
+          lineItems,
           currency: 'USD',
           affiliateId: refId,
           mode: 'payment',

@@ -34,7 +34,7 @@ class EventCart {
     }
   }
 
-  addItem(eventId, itemType, itemId, quantity = 1, price = 0, name = '') {
+  addItem(eventId, itemType, itemId, quantity = 1, price = 0, name = '', stripePriceId = null) {
     // Check if mixing items from different events, clear previous cart if different eventId
     if (this.cart.eventId && this.cart.eventId !== eventId) {
       this.clearCart();
@@ -45,13 +45,17 @@ class EventCart {
     const existing = this.cart.items.find(i => i.id === itemId && i.type === itemType);
     if (existing) {
       existing.quantity += quantity;
+      if (stripePriceId) {
+        existing.stripePriceId = stripePriceId;
+      }
     } else {
       this.cart.items.push({
         id: itemId,
         type: itemType,
         name,
         price: Number(price),
-        quantity: Number(quantity)
+        quantity: Number(quantity),
+        stripePriceId: stripePriceId || null
       });
     }
 
