@@ -1,27 +1,48 @@
 // components/global/AppNavbar.js
 import { store } from '../../core/store.js';
 import { configManager } from '../../core/config.js';
+import { themeEngine } from '../../core/theme.js';
 
 export class AppNavbar extends HTMLElement {
   connectedCallback() {
     this.render();
     this.unsubscribe = store.subscribe(() => {
-      this.render();
+      this.syncState();
     });
+
+    // Handle SPA page transition highlights
+    this.pageLoadedHandler = (e) => {
+      this.updateActiveLink(e.detail?.path || window.location.pathname);
+      const navMenu = this.querySelector('#nav-menu');
+      if (navMenu) {
+        navMenu.classList.remove('mobile-open');
+      }
+    };
+    window.addEventListener('pageLoaded', this.pageLoadedHandler);
+
+    this.langChangedHandler = () => {
+      this.translateNavbar();
+    };
+    window.addEventListener('languageChanged', this.langChangedHandler);
   }
 
   disconnectedCallback() {
     if (this.unsubscribe) {
       this.unsubscribe();
     }
+    window.removeEventListener('pageLoaded', this.pageLoadedHandler);
+    window.removeEventListener('languageChanged', this.langChangedHandler);
   }
 
   render() {
     const siteTitle = configManager.current.siteTitle || 'Foundation';
-    const navigation = configManager.current.navigation || [];
-    const state = store.state;
-    const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
-    const isBypass = state.user?.isAdmin || window.__FOUNDATION_DEV_BYPASS__;
+    const siteLogo = configManager.current.siteLogo?.src || '';
+    const navigation = configManager.current.navigation || [
+      { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
+      { label: "About", url: "/about", target: "_self", requiredRole: "public" },
+      { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
+      { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
+    ];
 
     this.innerHTML = `
       <style>
@@ -49,7 +70,17 @@ export class AppNavbar extends HTMLElement {
           justify-content: center;
         }
 
-        @media (max-width: 768px) {
+        /* Animated count badge scaling pulse */
+        @keyframes pulse-badge {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.3); }
+          100% { transform: scale(1); }
+        }
+        .pulse-badge {
+          animation: pulse-badge 0.3s ease-out;
+        }
+
+        @media (max-width: 1024px) {
           .hamburger-btn {
             display: flex !important;
           }
@@ -73,13 +104,22 @@ export class AppNavbar extends HTMLElement {
             border-radius: 6px;
             background: var(--theme-color-background, #f7fafc);
           }
+          #nav-cart-btn {
+            width: 100%;
+            justify-content: flex-start;
+            padding: 8px 12px !important;
+            background: var(--theme-color-background, #f7fafc);
+          }
+          #nav-lang-selector {
+            width: 100%;
+          }
         }
       </style>
       <nav style="background: var(--theme-color-surface, #ffffff); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 0.75rem 1.5rem; font-family: system-ui, sans-serif; position: relative; z-index: 9999;">
         <div class="nav-container">
           <!-- Brand / Identity -->
           <a href="/home" style="text-decoration: none; font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); display: flex; align-items: center; gap: 0.5rem;">
-            ${configManager.current.siteLogo?.src ? `<img src="${configManager.current.siteLogo.src}" alt="${siteTitle}" width="28" height="28" loading="lazy" style="height: 28px; width: auto;" />` : ''}
+            ${siteLogo ? `<img src="${siteLogo}" alt="${siteTitle}" style="height: 28px; width: auto;" />` : ''}
             <span>${siteTitle}</span>
           </a>
 
@@ -94,39 +134,44 @@ export class AppNavbar extends HTMLElement {
 
           <!-- Navigation Links -->
           <div id="nav-menu" class="nav-menu">
-            ${navigation.map(item => {
-              let displayLink = false;
-              const reqRole = item.requiredRole || 'public';
-              if (reqRole === 'public') {
-                displayLink = true;
-              } else if (reqRole === 'subscriber') {
-                displayLink = !!state.user;
-              } else if (reqRole === 'member') {
-                displayLink = ['member', 'affiliate', 'admin'].includes(currentRole) || isBypass;
-              } else if (reqRole === 'admin') {
-                displayLink = currentRole === 'admin' || isBypass;
-              }
+            ${navigation.map(item => `
+              <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" data-role="${item.requiredRole || 'public'}" style="color: var(--theme-color-text-secondary, #334155); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${item.label}</a>
+            `).join('')}
 
-              if (!displayLink) return '';
+            <!-- Integrated Top Navigation Cart Button Toggle -->
+            <button id="nav-cart-btn" class="nav-link" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--theme-color-text-secondary, #334155); font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; position: relative; outline: none;">
+              <span>🛒</span> <span class="nav-cart-text">Cart</span>
+              <span id="cart-count-badge" style="background: var(--theme-color-danger, #e53e3e); color: white; font-size: 0.75rem; font-weight: bold; border-radius: 50%; min-width: 20px; height: 20px; display: none; align-items: center; justify-content: center; padding: 2px; position: absolute; top: -6px; right: -6px; transition: transform 0.15s ease-in-out;">0</span>
+            </button>
 
-              return `
-                <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${item.label}</a>
-              `;
-            }).join('')}
-
-            <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: ${currentRole === 'admin' || currentRole === 'editor' || isBypass ? 'inline-block' : 'none'}; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #ebf8ff; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
+            <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #ebf8ff; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
               Command Center
             </a>
 
-            <a href="${state.user ? '/account' : '/login'}" id="nav-auth-link" class="nav-link" data-path="${state.user ? '/account' : '/login'}" style="color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #edf2f7; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
-              ${state.user ? 'My Dashboard' : 'Sign In / Register'}
+            <a href="/login" id="nav-auth-link" class="nav-link" data-path="/login" style="color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #edf2f7; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
+              Sign In / Register
             </a>
+
+            <!-- Multi-Language Selector Dropdown -->
+            <select id="nav-lang-selector" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-secondary, #334155); font-size: 0.85rem; font-weight: 600; cursor: pointer; outline: none; transition: border-color 0.2s;">
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="ja">日本語</option>
+              <option value="zh">中文</option>
+            </select>
+
+            <!-- Accessible High-Contrast Toggle -->
+            <button id="nav-high-contrast-toggle" class="nav-link" style="background: transparent; border: none; cursor: pointer; color: var(--theme-color-text-secondary, #334155); font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px;" aria-label="Toggle High Contrast Mode">
+              🌓 Contrast
+            </button>
           </div>
         </div>
       </nav>
     `;
 
-    // Re-bind listeners
+    // Hook listeners
     const hamburgerBtn = this.querySelector('#nav-hamburger-btn');
     const navMenu = this.querySelector('#nav-menu');
     if (hamburgerBtn && navMenu) {
@@ -135,27 +180,125 @@ export class AppNavbar extends HTMLElement {
       });
     }
 
-    const authLink = this.querySelector('#nav-auth-link');
-    if (authLink && !state.user) {
-      authLink.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          const { authManager } = await import('../../core/auth.js');
-          await authManager.loginWithGoogle();
-        } catch (err) {
-          console.error('[AppNavbar Auth]: Google login failed:', err);
+    const cartBtn = this.querySelector('#nav-cart-btn');
+    if (cartBtn) {
+      cartBtn.addEventListener('click', () => {
+        const sidebar = document.getElementById('cart-sidebar');
+        if (sidebar) {
+          if (sidebar.style.right === '0px') {
+            sidebar.style.right = '-420px';
+          } else {
+            sidebar.style.right = '0px';
+          }
+        } else {
+          window.sessionStorage.setItem('open_cart_on_load', 'true');
+          window.router?.navigateTo('/events');
         }
       });
     }
 
-    // Active path styling
-    this.updateActiveLink();
+    const authLink = this.querySelector('#nav-auth-link');
+    if (authLink) {
+      authLink.addEventListener('click', async (e) => {
+        const state = store.state;
+        if (!state.user) {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            const { authManager } = await import('../../core/auth.js');
+            await authManager.loginWithGoogle();
+          } catch (err) {
+            console.error('[Navbar Auth]: Google login failed:', err);
+          }
+        }
+      });
+    }
+
+    const langSelector = this.querySelector('#nav-lang-selector');
+    if (langSelector) {
+      langSelector.value = localStorage.getItem('foundation_language') || 'en';
+      langSelector.addEventListener('change', async (e) => {
+        const { i18n } = await import('../../core/i18n.js');
+        i18n.setLanguage(e.target.value);
+      });
+    }
+
+    const contrastBtn = this.querySelector('#nav-high-contrast-toggle');
+    if (contrastBtn) {
+      contrastBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const current = localStorage.getItem('foundation_high_contrast') === 'true';
+        themeEngine.setHighContrastMode(!current);
+      });
+    }
+
+    this.syncState();
+    this.updateActiveLink(window.location.pathname);
+    this.translateNavbar();
   }
 
-  updateActiveLink() {
+  syncState() {
+    const state = store.state;
+    const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
+    const isBypass = state.user?.isAdmin || window.__FOUNDATION_DEV_BYPASS__;
+
+    const adminLink = this.querySelector('#nav-admin-link');
+    if (adminLink) {
+      const hasAdminAccess = currentRole === 'admin' || currentRole === 'editor' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
+      adminLink.style.display = hasAdminAccess ? 'inline-block' : 'none';
+    }
+
+    const authLinkElement = this.querySelector('#nav-auth-link');
+    if (authLinkElement) {
+      if (state.user) {
+        authLinkElement.textContent = 'My Dashboard';
+        authLinkElement.setAttribute('href', '/account');
+        authLinkElement.setAttribute('data-path', '/account');
+      } else {
+        authLinkElement.textContent = 'Sign In / Register';
+        authLinkElement.setAttribute('href', '/login');
+        authLinkElement.setAttribute('data-path', '/login');
+      }
+    }
+
+    this.querySelectorAll('.dynamic-nav-link').forEach(link => {
+      const requiredRole = link.getAttribute('data-role');
+      if (!requiredRole || requiredRole === 'public') {
+        link.style.display = 'inline-block';
+      } else if (requiredRole === 'subscriber') {
+        link.style.display = state.user ? 'inline-block' : 'none';
+      } else if (requiredRole === 'member') {
+        const hasAccess = ['member', 'affiliate', 'admin'].includes(currentRole) || isBypass;
+        link.style.display = hasAccess ? 'inline-block' : 'none';
+      } else if (requiredRole === 'admin') {
+        const hasAccess = currentRole === 'admin' || isBypass;
+        link.style.display = hasAccess ? 'inline-block' : 'none';
+      }
+    });
+
+    // Sync Cart Badge Count
+    const countBadge = this.querySelector('#cart-count-badge');
+    if (countBadge) {
+      const items = state.cart?.items || [];
+      const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+      const currentVal = parseInt(countBadge.textContent || '0', 10);
+      countBadge.textContent = totalCount;
+      countBadge.style.display = totalCount > 0 ? 'flex' : 'none';
+
+      // Trigger scale pulse animation on change
+      if (totalCount !== currentVal && totalCount > 0) {
+        countBadge.classList.remove('pulse-badge');
+        void countBadge.offsetWidth; // trigger reflow
+        countBadge.classList.add('pulse-badge');
+      }
+    }
+  }
+
+  updateActiveLink(currentPath) {
     const navLinks = this.querySelectorAll('.nav-link');
-    let activeRoute = window.location.pathname;
+    let activeRoute = currentPath || window.location.pathname;
+
     const basePath = window.router?.basePath || '/';
     if (basePath !== '/' && activeRoute.startsWith(basePath.slice(0, -1))) {
       activeRoute = activeRoute.slice(basePath.length - 1);
@@ -174,6 +317,8 @@ export class AppNavbar extends HTMLElement {
     }
 
     navLinks.forEach((link) => {
+      if (link.id === 'nav-cart-btn') return;
+
       const linkPath = link.getAttribute('data-path') || link.getAttribute('href');
       const isMatch = activeRoute === linkPath;
 
@@ -183,12 +328,19 @@ export class AppNavbar extends HTMLElement {
         link.style.fontWeight = 'bold';
         link.style.opacity = '1';
       } else {
-        link.style.color = 'var(--theme-color-text-secondary, #4a5568)';
+        link.style.color = 'var(--theme-color-text-secondary, #334155)';
         link.style.borderBottom = '2px solid transparent';
         link.style.fontWeight = '600';
         link.style.opacity = '0.85';
       }
     });
+  }
+
+  async translateNavbar() {
+    try {
+      const { i18n } = await import('../../core/i18n.js');
+      i18n.translatePage();
+    } catch (e) {}
   }
 }
 

@@ -13,5 +13,6 @@ export const PageSchema = {
   access: {
     visibility: Type.string // "public", "subscriber", "member", "paid"
   },
+  hero: Type.optional((val) => typeof val === 'object' && val !== null),
   updatedAt: Type.optional(Type.string)
 };
