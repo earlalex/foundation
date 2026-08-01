@@ -35,5 +35,10 @@ export const FRAMEWORK_AFFILIATES = Object.freeze({
     name: "Wise Business",
     url: "YOUR_WISE_AFFILIATE_LINK_HERE",
     description: "Send international contractor payroll at true mid-market exchange rates."
+  },
+  onlineJobs: {
+    name: "OnlineJobs.ph",
+    url: "YOUR_ONLINEJOBS_AFFILIATE_LINK_HERE",
+    description: "Source top-tier technical and VA talent directly from the Philippines."
   }
 });

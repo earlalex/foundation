@@ -252,6 +252,42 @@ export async function runFinancesTests() {
     }
   });
 
+  await assertTest('OnlineJobs.ph Inbound Parser: Correctly normalizes profile formats', async () => {
+    const { parseOnlineJobsProfile } = await import('../utils/onlinejobsParser.js');
+    const rawPayload = {
+      candidateId: "olj_profile_123",
+      fullName: "Maria Clara",
+      emailAddress: "maria@example.com",
+      phone: "09171234567",
+      location: "Quezon City, PH",
+      skills: "Node.js, Python, Virtual Assistance",
+      expectedSalary: 750.00,
+      bankCode: "UNIONBANK"
+    };
+
+    const parsed = parseOnlineJobsProfile(rawPayload);
+    if (parsed.name !== "Maria Clara") throw new Error("Parsed name mismatch");
+    if (parsed.email !== "maria@example.com") throw new Error("Parsed email mismatch");
+    if (parsed.skills.length !== 3 || !parsed.skills.includes("Node.js")) throw new Error("Skills parsing mismatch");
+    if (parsed.bankDetails.bankName !== "UNIONBANK") throw new Error("Bank details mapping mismatch");
+  });
+
+  await assertTest('Google Workspace Auto-Provisioning: Simulates directory structure and vault sync', async () => {
+    const { createWorkspaceUser, createVaDirectoryStructure } = await import('../utils/backend-google.js');
+
+    // Mock user creation
+    const userRes = await createWorkspaceUser(null, "Maria", "Clara", "earlalex.com", "SecurePass123!");
+    if (!userRes.success || userRes.email !== "maria.va@earlalex.com") {
+      throw new Error("Workspace user simulation failed");
+    }
+
+    // Mock drive directories creation
+    const driveRes = await createVaDirectoryStructure(null, "Maria Clara");
+    if (!driveRes.success) {
+      throw new Error("Google Drive directories simulation failed");
+    }
+  });
+
   await assertTest('ACH Payment: Validates checkout payload with Stripe application_fee_amount', async () => {
     // Generate checkout payload for testing
     const buildCheckoutPayload = (enableAch, amount) => {

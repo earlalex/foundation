@@ -375,6 +375,8 @@ export function initAdminPage() {
       initAdminGrowth();
     } else if (targetTab === 'plugins') {
       initPluginsTab();
+    } else if (targetTab === 'vas') {
+      initVasTab();
     } else if (targetTab === 'cms') {
       initAdminCms();
     }
