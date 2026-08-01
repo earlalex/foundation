@@ -143,26 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
       badge.innerHTML = `
-        <span class="badge-short-text">⚠️ Simulation Mode</span>
-        <span class="badge-full-text" style="display: none; align-items: center; gap: 0.75rem;">
-          <span>⚠️ SIMULATION MODE ACTIVE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
+        <span class="badge-short-text">[ ⚠️ Simulation Mode ]</span>
+        <span class="badge-full-text">
+          <span>⚠️ SIMULATION MODE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
           <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
             Return to Admin Command Center
           </button>
         </span>
       `;
 
-      // Add dynamic mouseover events to safely toggle block displays inside the flex layout transitions
-      badge.addEventListener('mouseenter', () => {
-        const fullText = badge.querySelector('.badge-full-text');
-        if (fullText) fullText.style.display = 'flex';
-      });
-      badge.addEventListener('mouseleave', () => {
-        const fullText = badge.querySelector('.badge-full-text');
-        if (fullText) fullText.style.display = 'none';
-      });
-
-      // Bind listener
+      // Bind listener reactively when DOM updates
       const btn = badge.querySelector('#btn-return-admin-sim');
       if (btn) {
         btn.addEventListener('click', (e) => {

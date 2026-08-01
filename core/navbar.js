@@ -34,6 +34,16 @@ export function initNavbar() {
         justify-content: center;
       }
 
+      /* Animated count badge scaling pulse */
+      @keyframes pulse-badge {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.3); }
+        100% { transform: scale(1); }
+      }
+      .pulse-badge {
+        animation: pulse-badge 0.3s ease-out;
+      }
+
       @media (max-width: 768px) {
         .hamburger-btn {
           display: flex !important;
@@ -87,6 +97,13 @@ export function initNavbar() {
           ]).map(item => `
             <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" data-role="${item.requiredRole || 'public'}" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${item.label}</a>
           `).join('')}
+
+          <!-- Integrated Top Navigation Cart Button Toggle -->
+          <button id="nav-cart-btn" class="nav-link" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; position: relative; outline: none;">
+            <span>🛒</span> <span class="nav-cart-text">Cart</span>
+            <span id="cart-count-badge" style="background: var(--theme-color-danger, #e53e3e); color: white; font-size: 0.75rem; font-weight: bold; border-radius: 50%; min-width: 20px; height: 20px; display: none; align-items: center; justify-content: center; padding: 2px; position: absolute; top: -6px; right: -6px; transition: transform 0.15s ease-in-out;">0</span>
+          </button>
+
           <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; font-size: 0.9rem; background: #ebf8ff; padding: 4px 10px; border-radius: 4px; white-space: nowrap;">
             Command Center
           </a>
@@ -104,6 +121,25 @@ export function initNavbar() {
   if (hamburgerBtn && navMenu) {
     hamburgerBtn.addEventListener('click', () => {
       navMenu.classList.toggle('mobile-open');
+    });
+  }
+
+  // Hook Cart Toggle click to toggle cart sidebar globally
+  const cartBtn = document.getElementById('nav-cart-btn');
+  if (cartBtn) {
+    cartBtn.addEventListener('click', () => {
+      const sidebar = document.getElementById('cart-sidebar');
+      if (sidebar) {
+        if (sidebar.style.right === '0px') {
+          sidebar.style.right = '-420px';
+        } else {
+          sidebar.style.right = '0px';
+        }
+      } else {
+        // If we are not on /events, navigate to /events and open cart on load
+        window.sessionStorage.setItem('open_cart_on_load', 'true');
+        window.router?.navigateTo('/events');
+      }
     });
   }
 
@@ -155,6 +191,8 @@ export function initNavbar() {
     }
 
     navLinks.forEach((link) => {
+      if (link.id === 'nav-cart-btn') return; // skip cart button from highlighting
+
       const linkPath = link.getAttribute('data-path') || link.getAttribute('href');
       // Exact match for the path
       const isMatch = activeRoute === linkPath;
@@ -223,6 +261,24 @@ export function initNavbar() {
 
   store.subscribe((state) => {
     syncNavbarVisibility(state);
+
+    // Reactive Cart Badge update
+    const countBadge = document.getElementById('cart-count-badge');
+    if (countBadge) {
+      const items = state.cart?.items || [];
+      const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+      const currentVal = parseInt(countBadge.textContent || '0', 10);
+      countBadge.textContent = totalCount;
+      countBadge.style.display = totalCount > 0 ? 'flex' : 'none';
+
+      // Trigger scale pulse animation on change
+      if (totalCount !== currentVal && totalCount > 0) {
+        countBadge.classList.remove('pulse-badge');
+        void countBadge.offsetWidth; // trigger reflow
+        countBadge.classList.add('pulse-badge');
+      }
+    }
   });
 
   updateActiveLink(window.location.pathname);
