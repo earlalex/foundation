@@ -90,6 +90,30 @@ export async function createGoogleCalendarEvent(eventData) {
   }
 }
 
+export async function getFreeBusyIntervalsForRange(startIso, endIso) {
+  const token = await getGoogleAccessToken(false);
+  if (!token) return [];
+  try {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        timeMin: startIso,
+        timeMax: endIso,
+        items: [{ id: 'primary' }]
+      })
+    });
+    const data = await response.json();
+    return data.calendars?.primary?.busy || [];
+  } catch (err) {
+    console.warn('[Google Calendar Free/Busy Range Error]:', err);
+    return [];
+  }
+}
+
 export async function getAvailableAppointmentSlots(targetDateStr) {
   const token = await getAccessToken(false);
   const bizProfile = configManager.current?.businessProfile || {};
@@ -152,6 +176,34 @@ export async function getAvailableAppointmentSlots(targetDateStr) {
   }
 
   return slots;
+}
+
+export async function getGoogleCalendarFreeBusy(timeMinStr, timeMaxStr) {
+  const token = await getAccessToken(false);
+  if (!token) {
+    console.warn('[Google Calendar Free/Busy]: No access token. Returning empty busy list.');
+    return [];
+  }
+
+  try {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        timeMin: timeMinStr,
+        timeMax: timeMaxStr,
+        items: [{ id: 'primary' }]
+      })
+    });
+    const data = await response.json();
+    return data.calendars?.primary?.busy || [];
+  } catch (err) {
+    console.warn('[Google Calendar Free/Busy]: Error querying range.', err);
+    return [];
+  }
 }
 
 export async function bookAppointmentSlot({ name, email, date, timeSlot, notes }) {

@@ -1,38 +1,78 @@
 // pages/contact/contact.js
 import { 
   createGoogleContact, 
-  sendGmailNotification, 
+  sendGmailNotification,
+  getFreeBusyIntervalsForRange,
+  getAvailableAppointmentSlots, 
+  getGoogleCalendarFreeBusy,
   bookAppointmentSlot 
 } from '../../core/google-services.js';
 import { contentDB } from '../../core/db.js';
 import { configManager } from '../../core/config.js';
+import { stripeService } from '../../core/stripe.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { configManager } from '../../core/config.js';
+import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
-
-let calendarCurrentMonthOffset = 0; // offset of start month shown (e.g. 0 = current month)
+import { stripeService } from '../../core/stripe.js';
 
 export function initContactPage() {
   const msgForm = document.getElementById('contact-message-form');
   const apptForm = document.getElementById('appointment-form');
-  const dateInput = document.getElementById('appt-date');
-  const slotSelect = document.getElementById('appt-timeslot');
 
-  // Multi-Month view renderer
-  renderSchedulingCalendar();
+  // 3-Month Multi-Calendar Elements
+  const prevBtn = document.getElementById('btn-prev-months');
+  const nextBtn = document.getElementById('btn-next-months');
+  const calendarWrapper = document.getElementById('multi-calendar-wrapper');
+  const slotsContainer = document.getElementById('time-slots-container');
+  const selectedBanner = document.getElementById('selected-datetime-banner');
+  const bannerText = document.getElementById('banner-text');
 
-  // Handle Month Pagination
-  document.getElementById('btn-prev-month')?.addEventListener('click', () => {
-    if (calendarCurrentMonthOffset > 0) {
-      calendarCurrentMonthOffset--;
-      renderSchedulingCalendar();
-    }
-  });
+  const apptDateInput = document.getElementById('appt-date');
+  const apptTimeslotInput = document.getElementById('appt-timeslot');
 
-  document.getElementById('btn-next-month')?.addEventListener('click', () => {
-    calendarCurrentMonthOffset++;
-    renderSchedulingCalendar();
-  });
+  const feeBreakdown = document.getElementById('appt-fee-breakdown');
+  const lblTotalFee = document.getElementById('lbl-total-fee');
+  const lblUpfrontDeposit = document.getElementById('lbl-upfront-deposit');
+  const lblRemainingBalance = document.getElementById('lbl-remaining-balance');
 
+  let currentOffset = 0; // Starts from current month
+  let busyIntervalsGlobal = [];
+  const apptCfg = configManager.current.appointments || {
+    operatingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    operatingHoursStart: "09:00",
+    operatingHoursEnd: "17:00",
+    slotDuration: "30",
+    bufferTime: "15",
+    requirePayment: false,
+    totalFee: 15000,
+    depositStructure: "full",
+    depositAmount: 5000,
+    depositPercentage: 50,
+    autoInvoice: false,
+    notifyAdminEmail: false,
+    notifyAppointeeEmail: false,
+    dashboardAlerts: false
+  };
+
+  // --- Payment Redirect Verification ---
+  handleSuccessRedirect();
+
+  // --- Initialize Event Listeners & Boot Calendar ---
+  if (calendarWrapper) {
+    bootCalendar();
+
+    prevBtn?.addEventListener('click', () => {
+      currentOffset--;
+      bootCalendar();
+    });
+    nextBtn?.addEventListener('click', () => {
+      currentOffset++;
+      bootCalendar();
+    });
+  }
+
+  // --- Standard Inquiry Form ---
   msgForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('msg-name').value;
@@ -55,12 +95,274 @@ export function initContactPage() {
     }
   });
 
+  // --- Calendar Boot & Render logic ---
+  async function bootCalendar() {
+    calendarWrapper.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #a0aec0;">Syncing real-time Google Calendar availability...</div>';
+
+    // Compute 3 consecutive months range
+    const startRange = new Date();
+    startRange.setMonth(startRange.getMonth() + currentOffset);
+    startRange.setDate(1);
+    startRange.setHours(0, 0, 0, 0);
+
+    const endRange = new Date(startRange);
+    endRange.setMonth(endRange.getMonth() + 3);
+    endRange.setDate(0);
+    endRange.setHours(23, 59, 59, 999);
+
+    try {
+      // Query freeBusy range at once!
+      busyIntervalsGlobal = await getGoogleCalendarFreeBusy(startRange.toISOString(), endRange.toISOString());
+    } catch (err) {
+      console.warn('Google Calendar freeBusy query offline. Falling back to default operating times.', err);
+      busyIntervalsGlobal = [];
+    }
+
+    render3Months(startRange);
+  }
+
+  function render3Months(baseDate) {
+    calendarWrapper.innerHTML = '';
+
+    for (let i = 0; i < 3; i++) {
+      const monthDate = new Date(baseDate);
+      monthDate.setMonth(monthDate.getMonth() + i);
+
+      const monthCard = renderMonthCard(monthDate);
+      calendarWrapper.appendChild(monthCard);
+    }
+
+    // On mobile, let's optionally hide index 1 & 2 to show only 1 month
+    const isMobile = window.innerWidth <= 640;
+    if (isMobile) {
+      const cards = calendarWrapper.querySelectorAll('.month-card');
+      cards.forEach((card, idx) => {
+        if (idx > 0) card.style.display = 'none';
+      });
+    }
+  }
+
+  function renderMonthCard(dateObj) {
+    const card = document.createElement('div');
+    card.className = 'month-card card';
+    card.style.cssText = 'padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;';
+
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+    const monthName = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'text-align: center; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; margin-bottom: 0.5rem; color: var(--theme-color-primary, #2b6cb0);';
+    header.textContent = monthName;
+    card.appendChild(header);
+
+    // Weekdays
+    const weekdaysGrid = document.createElement('div');
+    weekdaysGrid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.75rem; font-weight: bold; color: #a0aec0; margin-bottom: 0.25rem;';
+    const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    weekdaysGrid.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('');
+    card.appendChild(weekdaysGrid);
+
+    // Days Grid
+    const daysGrid = document.createElement('div');
+    daysGrid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;';
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Padding cells before 1st of month
+    for (let p = 0; p < firstDayIndex; p++) {
+      const pad = document.createElement('div');
+      daysGrid.appendChild(pad);
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Render days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cell = document.createElement('div');
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+      const dayOfWeek = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
+      const isOperatingDay = apptCfg.operatingDays?.includes(dayOfWeek);
+      const isPast = dateStr < todayStr;
+
+      let isAvailable = isOperatingDay && !isPast;
+
+      // Calculate available slots to confirm if day has at least 1 open slot
+      let slots = [];
+      if (isAvailable) {
+        slots = calculateSlotsForDate(dateStr);
+        isAvailable = slots.length > 0;
+      }
+
+      cell.textContent = day;
+      cell.style.cssText = `
+        font-size: 0.85rem;
+        padding: 6px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background 0.2s, color 0.2s;
+      `;
+
+      if (isAvailable) {
+        cell.className = 'calendar-day-available';
+        cell.style.backgroundColor = '#f0fdf4';
+        cell.style.color = '#166534';
+        cell.style.border = '1px solid #bbf7d0';
+
+        cell.addEventListener('mouseover', () => {
+          cell.style.backgroundColor = '#bbf7d0';
+        });
+        cell.addEventListener('mouseout', () => {
+          cell.style.backgroundColor = '#f0fdf4';
+        });
+        cell.addEventListener('click', () => {
+          selectDate(dateStr, slots);
+          // Highlight active cell visually
+          const allCells = calendarWrapper.querySelectorAll('.calendar-day-available');
+          allCells.forEach(c => {
+            c.style.outline = 'none';
+          });
+          cell.style.outline = '2px solid var(--theme-color-primary, #2b6cb0)';
+        });
+      } else {
+        cell.style.color = '#cbd5e0';
+        cell.style.textDecoration = 'line-through';
+        cell.style.cursor = 'not-allowed';
+      }
+
+      daysGrid.appendChild(cell);
+    }
+
+    card.appendChild(daysGrid);
+    return card;
+  }
+
+  function calculateSlotsForDate(dateStr) {
+    const startHourStr = apptCfg.operatingHoursStart || '09:00';
+    const endHourStr = apptCfg.operatingHoursEnd || '17:00';
+    const duration = parseInt(apptCfg.slotDuration || '30', 10);
+    const buffer = parseInt(apptCfg.bufferTime || '15', 10);
+
+    const slots = [];
+    let currentTime = new Date(`${dateStr}T${startHourStr}:00`);
+    const endTime = new Date(`${dateStr}T${endHourStr}:00`);
+
+    while (currentTime.getTime() + duration * 60000 <= endTime.getTime()) {
+      const slotStart = new Date(currentTime);
+      const slotEnd = new Date(slotStart.getTime() + duration * 60000);
+
+      // Check busy overlap
+      const isBusy = busyIntervalsGlobal.some(busy => {
+        const busyStart = new Date(busy.start).getTime();
+        const busyEnd = new Date(busy.end).getTime();
+        return (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart);
+      });
+
+      if (!isBusy) {
+        const timeLabel = slotStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        slots.push({
+          time: slotStart.toTimeString().substring(0, 5),
+          label: timeLabel
+        });
+      }
+
+      // Add duration + buffer
+      currentTime = new Date(currentTime.getTime() + (duration + buffer) * 60000);
+    }
+
+    return slots;
+  }
+
+  function selectDate(dateStr, slots) {
+    apptDateInput.value = dateStr;
+    apptTimeslotInput.value = ''; // Reset selected slot
+
+    if (selectedBanner) selectedBanner.style.display = 'none';
+
+    if (slots.length === 0) {
+      slotsContainer.innerHTML = '<p style="color: #e53e3e; font-size: 0.85rem; width: 100%;">No open slots on this date.</p>';
+      return;
+    }
+
+    slotsContainer.innerHTML = slots.map(s => `
+      <button type="button" class="btn-slot" data-time="${s.time}" style="
+        padding: 6px 12px;
+        border: 1px solid var(--theme-color-primary, #2b6cb0);
+        background: transparent;
+        color: var(--theme-color-primary, #2b6cb0);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+      ">${s.label}</button>
+    `).join('');
+
+    // Bind slot clicks
+    slotsContainer.querySelectorAll('.btn-slot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Highlight active slot
+        slotsContainer.querySelectorAll('.btn-slot').forEach(b => {
+          b.style.background = 'transparent';
+          b.style.color = 'var(--theme-color-primary, #2b6cb0)';
+        });
+        btn.style.background = 'var(--theme-color-primary, #2b6cb0)';
+        btn.style.color = '#ffffff';
+
+        apptTimeslotInput.value = btn.dataset.time;
+
+        // Show selection banner
+        if (selectedBanner && bannerText) {
+          bannerText.textContent = `${dateStr} @ ${btn.textContent}`;
+          selectedBanner.style.display = 'block';
+        }
+
+        // Calculate and render monetization if payment is required
+        if (apptCfg.requirePayment) {
+          calculateMonetizationBreakdown();
+        }
+      });
+    });
+  }
+
+  function calculateMonetizationBreakdown() {
+    if (!feeBreakdown) return;
+
+    feeBreakdown.style.display = 'flex';
+
+    const totalCents = apptCfg.totalFee || 15000;
+    const structure = apptCfg.depositStructure || 'full';
+    let upfrontCents = totalCents;
+
+    if (structure === 'fixed') {
+      upfrontCents = apptCfg.depositAmount || 5000;
+    } else if (structure === 'percentage') {
+      const percentage = apptCfg.depositPercentage || 50;
+      upfrontCents = Math.round((totalCents * percentage) / 100);
+    }
+
+    // Handle edge: upfront can't be more than total
+    if (upfrontCents > totalCents) upfrontCents = totalCents;
+
+    const remainingCents = totalCents - upfrontCents;
+
+    lblTotalFee.textContent = `$${(totalCents / 100).toFixed(2)}`;
+    lblUpfrontDeposit.textContent = `$${(upfrontCents / 100).toFixed(2)}`;
+    lblRemainingBalance.textContent = `$${(remainingCents / 100).toFixed(2)}`;
+  }
+
+  // --- Handle Booking Submission ---
   apptForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('appt-name').value;
     const email = document.getElementById('appt-email').value;
-    const date = document.getElementById('appt-date').value;
-    const timeSlot = document.getElementById('appt-timeslot').value;
+    const notes = document.getElementById('appt-notes').value || '';
+    const date = apptDateInput.value;
+    const timeSlot = apptTimeslotInput.value;
 
     if (!date) {
       toast.error('Please select an available date from the calendar first.');
@@ -77,33 +379,79 @@ export function initContactPage() {
       operatingHours: { start: "09:00", end: "17:00" },
       duration: 30,
       buffer: 15,
-      consultationFee: 150,
-      depositRule: "percentage",
-      depositAmount: 50,
-      depositPercentage: 20
+      depositRule: 'none',
+      appointmentPrice: 100.00,
+      depositValue: 0
     };
 
-    const fee = apptConfig.consultationFee || 150;
-    const rule = apptConfig.depositRule || 'none';
-    let depositRequired = 0;
+    const depositRule = apptConfig.depositRule || 'none';
+    const price = Number(apptConfig.appointmentPrice || 100.00);
+    const depositValue = Number(apptConfig.depositValue || 0);
 
-    if (rule === 'full') {
-      depositRequired = fee;
-    } else if (rule === 'fixed') {
-      depositRequired = Math.min(fee, apptConfig.depositAmount || 50);
-    } else if (rule === 'percentage') {
-      depositRequired = Math.round(fee * ((apptConfig.depositPercentage || 20) / 100));
+    let amountToPay = 0;
+    if (depositRule === 'full') {
+      amountToPay = price;
+    } else if (depositRule === 'fixed') {
+      amountToPay = depositValue;
+    } else if (depositRule === 'percentage') {
+      amountToPay = (price * depositValue) / 100;
     }
 
-    if (depositRequired > 0) {
-      const paid = await showDepositPaymentModal(depositRequired);
-      if (!paid) {
-        toast.warning('Upfront payment was cancelled. Appointment not booked.');
-        return;
+    if (amountToPay > 0) {
+      // Redirect to Stripe Checkout Session for required deposit
+      const btn = document.getElementById('btn-book-appt');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Redirecting to payment gateway...';
       }
-      toast.success(`Secure payment of $${depositRequired.toFixed(2)} completed successfully!`);
+      try {
+        const remainingBalance = price - amountToPay;
+        const response = await fetch('/api/stripe-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            productId: `Consultation Deposit: ${name}`,
+            amount: Math.round(amountToPay * 100), // in cents
+            currency: 'USD',
+            mode: 'payment',
+            metadata: {
+              type: 'appointment_booking',
+              name,
+              email,
+              date,
+              timeSlot,
+              notes,
+              depositRule,
+              amountPaid: String(amountToPay),
+              remainingBalance: String(remainingBalance)
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Failed to initialize payment session');
+        }
+
+        const resData = await response.json();
+        if (resData.url) {
+          window.location.href = resData.url;
+        } else {
+          throw new Error('No checkout URL returned from payment endpoint');
+        }
+      } catch (err) {
+        errorHandler.handleError(err, 'Contact Page - Checkout Redirect');
+        toast.error(`Checkout failed: ${err.message}`);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Confirm Google Meet Appointment';
+        }
+      }
+      return;
     }
 
+    // Direct booking flow (if no deposit is required)
     const btn = document.getElementById('btn-book-appt');
     if (btn) {
       btn.disabled = true;
@@ -111,19 +459,19 @@ export function initContactPage() {
     }
 
     try {
-      // Create and save booking in ContentDB (real-time sync)
       const bookingData = {
         name,
         email,
         date,
         timeSlot,
+        notes,
         createdAt: new Date().toISOString()
       };
 
-      // Call Google Calendar API service
-      const res = await bookAppointmentSlot({ name, email, date, timeSlot });
+      // Call Google Calendar API service with conferenceData enabled to generate a Google Meet link
+      const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
       bookingData.meetUrl = res?.meetUrl || 'https://meet.google.com/mock-meet';
-      bookingData.calendarEventId = res?.calendarEventId || `mock_event_${Date.now()}`;
+      bookingData.calendarEventId = res?.calendarEventId || `event_${Date.now()}`;
 
       await contentDB.saveAppointment(bookingData);
 
@@ -155,7 +503,6 @@ export function initContactPage() {
         slotSelect.innerHTML = '<option value="">Select a date on the calendar above first...</option>';
       }
 
-      // Re-render to block out the freshly booked slot
       renderSchedulingCalendar();
     } catch (err) {
       errorHandler.handleError(err, 'Contact Page - Appointment Booking');
@@ -169,72 +516,56 @@ export function initContactPage() {
   });
 }
 
-async function showDepositPaymentModal(amountRequired) {
-  return new Promise((resolve) => {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(4px);
-      z-index: 1000002;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: system-ui, sans-serif;
-    `;
+async function finalizeAppointmentBookingAfterPayment(sessionId) {
+  try {
+    toast.info('Verifying deposit payment and finalizing booking...');
+    const headers = await stripeService.getAuthHeaders();
+    const response = await fetch('/api/stripe-proxy', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        action: 'generic_relay',
+        endpoint: `checkout/sessions/${sessionId}`,
+        method: 'GET'
+      })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to retrieve checkout session details.');
+    }
+    const session = await response.json();
+    const metadata = session.metadata || {};
 
-    modal.innerHTML = `
-      <div style="background: white; border-radius: 8px; padding: 2rem; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: left;">
-        <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: var(--theme-color-primary, #2b6cb0);">Secure Consultation Checkout</h3>
-        <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 0.9rem; margin-bottom: 1.5rem;">
-          To complete your booking, an upfront consultation deposit is required.
-        </p>
+    if (metadata.type === 'appointment_booking') {
+      const { name, email, date, timeSlot, notes } = metadata;
 
-        <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: bold; font-size: 0.95rem;">Required Deposit:</span>
-          <strong style="font-size: 1.25rem; color: var(--theme-color-accent, #38a169);">$${amountRequired.toFixed(2)}</strong>
-        </div>
+      const bookingData = {
+        name,
+        email,
+        date,
+        timeSlot,
+        notes,
+        createdAt: new Date().toISOString()
+      };
 
-        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
-          <div>
-            <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; color: #4a5568;">Card Number</label>
-            <input type="text" value="4242 4242 4242 4242" disabled style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-            <div>
-              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; color: #4a5568;">Expiry Date</label>
-              <input type="text" value="12/28" disabled style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; color: #4a5568;">CVC</label>
-              <input type="text" value="123" disabled style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
-        </div>
+      // Call Google Calendar API service with conferenceData enabled to generate a Google Meet link
+      const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
+      bookingData.meetUrl = res?.meetUrl || 'https://meet.google.com/mock-meet';
+      bookingData.calendarEventId = res?.calendarEventId || `event_${Date.now()}`;
 
-        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-          <button id="btn-pay-cancel" style="padding: 8px 16px; background: transparent; border: 1px solid #cbd5e0; border-radius: 4px; font-weight: 600; cursor: pointer; color: #4a5568;">Cancel</button>
-          <button id="btn-pay-confirm" class="btn-primary" style="padding: 8px 20px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer;">Pay & Confirm</button>
-        </div>
-      </div>
-    `;
+      await contentDB.saveAppointment(bookingData);
 
-    modal.querySelector('#btn-pay-cancel').onclick = () => {
-      modal.remove();
-      resolve(false);
-    };
+      toast.success(`Appointment confirmed for ${date} at ${timeSlot}! Google Meet link generated and calendar invitations sent.`);
 
-    modal.querySelector('#btn-pay-confirm').onclick = () => {
-      modal.remove();
-      resolve(true);
-    };
+      // Clean query params from the URL bar cleanly
+      window.history.replaceState({}, document.title, window.location.pathname);
 
-    document.body.appendChild(modal);
-  });
+      // Reload calendar to block the newly booked slot
+      renderSchedulingCalendar();
+    }
+  } catch (err) {
+    errorHandler.handleError(err, 'Contact Page - Finalize Booking');
+    toast.error('Failed to finalize booking details.');
+  }
 }
 
 async function renderSchedulingCalendar() {
@@ -252,17 +583,28 @@ async function renderSchedulingCalendar() {
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
 
-  // Load existing real-time appointment bookings to calculate fully booked days
+  // Detect Mobile width to render either 1 month (paginated) or 3 months (full desktop)
+  const isMobile = window.innerWidth < 768;
+  const totalMonthsToShow = isMobile ? 1 : 3;
+
+  const rangeStartDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset, 1);
+  const rangeEndDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset + totalMonthsToShow, 0);
+
+  // Fetch real-time Google Calendar freeBusy intervals across the 3-month range
+  let busyIntervals = [];
+  try {
+    busyIntervals = await getFreeBusyIntervalsForRange(rangeStartDate.toISOString(), rangeEndDate.toISOString());
+  } catch (err) {
+    console.warn('[Calendar real-time freeBusy]: Query failed, using local database/offline fallbacks.', err);
+  }
+
+  // Load existing local/synchronized appointment bookings
   let bookedAppointments = [];
   try {
     bookedAppointments = await contentDB.getAppointments();
   } catch (err) {
     console.warn('[Calendar Load]: Using local appointment array fallback.', err);
   }
-
-  // Detect Mobile width to render either 1 month (paginated) or 3 months (full desktop)
-  const isMobile = window.innerWidth < 768;
-  const totalMonthsToShow = isMobile ? 1 : 3;
 
   container.innerHTML = '';
 
@@ -315,10 +657,10 @@ async function renderSchedulingCalendar() {
       // Check against Operating Guidelines
       const isOperatingDay = apptConfig.operatingDays?.includes(dayOfWeekName);
 
-      // Check how many slots exist and how many are already booked
-      const totalPossibleSlots = calculatePossibleSlotsCount(apptConfig);
+      // Check how many slots exist and how many are available
       const bookedOnThisDay = bookedAppointments.filter(a => a.date === dateStr);
-      const isFullyBooked = bookedOnThisDay.length >= totalPossibleSlots;
+      const slotsForDay = calculateAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay, busyIntervals);
+      const isFullyBooked = slotsForDay.length === 0;
 
       const isAvailable = isOperatingDay && !isPast && !isFullyBooked;
 
@@ -339,8 +681,8 @@ async function renderSchedulingCalendar() {
           // Set date value
           document.getElementById('appt-date').value = dateStr;
 
-          // Render timeslots
-          loadAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay);
+          // Render timeslots using real-time calculated slots
+          loadAvailableSlotsForDate(slotsForDay);
         });
       }
 
@@ -372,12 +714,7 @@ function calculatePossibleSlotsCount(config) {
   return count;
 }
 
-async function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
-  const select = document.getElementById('appt-timeslot');
-  if (!select) return;
-
-  select.innerHTML = '<option value="">Loading available slots...</option>';
-
+function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIntervals) {
   const duration = config.duration || 30;
   const buffer = config.buffer || 15;
   const startStr = config.operatingHours?.start || "09:00";
@@ -418,21 +755,23 @@ async function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
   const slots = [];
 
   while (curr.getTime() + duration * 60000 <= end.getTime()) {
+    const slotStart = new Date(curr);
+    const slotEnd = new Date(slotStart.getTime() + duration * 60000);
     const slotTimeStr = curr.toTimeString().substring(0, 5);
     const slotStart = new Date(curr);
     const slotEnd = new Date(curr.getTime() + duration * 60000);
 
-    // Check if slot is already booked in our DB
-    const isBookedInDb = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
+    // Check if slot is already booked locally on this day
+    const isLocalBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
 
-    // Check if slot is busy on Google Calendar
-    const isBusyOnGoogle = busyIntervals.some(busy => {
+    // Check if slot overlaps with busy intervals from Google Calendar
+    const isGoogleBusy = (busyIntervals || []).some(busy => {
       const busyStart = new Date(busy.start).getTime();
       const busyEnd = new Date(busy.end).getTime();
       return (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart);
     });
 
-    if (!isBookedInDb && !isBusyOnGoogle) {
+    if (!isLocalBooked && !isGoogleBusy) {
       const displayLabel = curr.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       slots.push({
         time: slotTimeStr,
@@ -442,6 +781,12 @@ async function loadAvailableSlotsForDate(dateStr, config, bookedOnThisDay) {
 
     curr = new Date(curr.getTime() + (duration + buffer) * 60000);
   }
+  return slots;
+}
+
+function loadAvailableSlotsForDate(slots) {
+  const select = document.getElementById('appt-timeslot');
+  if (!select) return;
 
   if (slots.length === 0) {
     select.innerHTML = '<option value="">No open appointment slots remaining on this day.</option>';

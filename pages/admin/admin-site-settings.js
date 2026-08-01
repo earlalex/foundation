@@ -500,57 +500,82 @@ function initFooterLayoutEditor() {
 }
 
 function initIconSetManager() {
-  const iconSetSelect = document.getElementById('icon-set-select');
-  const iconPackFile = document.getElementById('icon-pack-file');
-  const iconSetForm = document.getElementById('icon-set-form');
+  const select = document.getElementById('icon-set-select');
+  const uploadContainer = document.getElementById('custom-icon-upload-container');
+  const fileInput = document.getElementById('custom-icon-file');
+  const form = document.getElementById('icon-set-form');
+
+  if (!select || !form) return;
 
   const currentCfg = configManager.current || {};
-  if (iconSetSelect) {
-    iconSetSelect.value = currentCfg.iconSet || 'default';
+  const iconSetCfg = currentCfg.iconSet || { active: "default", customIcons: null };
+
+  // Set initial selected value
+  select.value = iconSetCfg.active || "default";
+  if (uploadContainer) {
+    uploadContainer.style.display = select.value === 'custom' ? 'block' : 'none';
   }
 
-  iconSetForm?.addEventListener('submit', async (e) => {
+  select.addEventListener('change', (e) => {
+    if (uploadContainer) {
+      uploadContainer.style.display = e.target.value === 'custom' ? 'block' : 'none';
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const selectedSet = iconSetSelect.value;
-    const file = iconPackFile?.files?.[0];
+    const active = select.value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.textContent;
 
-    let customIconData = currentCfg.customIconData || null;
-
-    if (selectedSet === 'custom' && file) {
-      try {
-        const reader = new FileReader();
-        const fileContent = await new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsText(file);
-        });
-
-        if (file.name.endsWith('.json')) {
-          customIconData = JSON.parse(fileContent);
-        } else if (file.name.endsWith('.svg')) {
-          customIconData = { sprite: fileContent };
-        }
-      } catch (err) {
-        toast.error('Failed to parse uploaded icon pack. Please ensure it is valid JSON or SVG.');
-        return;
-      }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
     }
 
     try {
-      const updatedConfig = {
-        ...configManager.current,
-        iconSet: selectedSet,
-        customIconData
+      let customIcons = iconSetCfg.customIcons;
+
+      if (active === 'custom' && fileInput && fileInput.files.length > 0) {
+        // Read file using FileReader
+        const file = fileInput.files[0];
+        const fileContent = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('File reading error.'));
+          reader.readAsText(file);
+        });
+
+        try {
+          customIcons = JSON.parse(fileContent);
+        } catch (parseErr) {
+          throw new Error('Failed to parse uploaded icon pack. Ensure file is a valid JSON map of SVGs.');
+        }
+      }
+
+      const updatedIconSet = {
+        active,
+        customIcons
       };
-      const success = await configManager.saveToFirebase(updatedConfig);
+
+      const success = await configManager.saveToFirebase({
+        ...configManager.current,
+        iconSet: updatedIconSet
+      });
+
       if (success) {
-        toast.success('Icon set configuration saved successfully!');
+        toast.success(`Active Icon Set saved successfully as "${active === 'default' ? 'Default Set' : 'Custom Pack'}"!`);
       } else {
-        toast.error('Failed to save icon set configuration.');
+        toast.error('Failed to save Icon Set. Please try again.');
       }
     } catch (err) {
-      errorHandler.handleError(err, 'Admin Icon Set Setup');
-      toast.error(`Error saving icon set configuration: ${err.message}`);
+      errorHandler.handleError(err, 'Admin Site Settings - Icon Set Manager');
+      toast.error(err.message);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     }
   });
 }

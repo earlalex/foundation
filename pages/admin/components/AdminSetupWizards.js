@@ -186,14 +186,20 @@ export class AdminSetupWizards {
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       Firebase Web API Key:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Found in Firebase Console > Project Settings > Web App config block as 'apiKey'.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Navigate to your Firebase Console > Project Settings > General > Web API Key.</span>
+                      </span>
                     </label>
                     <input type="password" id="wz-fb-key" value="AIzaSy_fb_mock_key_992" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       Firebase Project ID:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Found in Firebase Console > Project Settings > General as 'projectId'.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Found in your Firebase Console under Project Settings > General > Project ID.</span>
+                      </span>
                     </label>
                     <input type="text" id="wz-fb-project" value="demo-proj-id" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
@@ -211,14 +217,20 @@ export class AdminSetupWizards {
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       Google Client ID:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Created in Google Cloud Console > APIs & Services > Credentials.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Visit Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs.</span>
+                      </span>
                     </label>
                     <input type="text" id="wz-google-id" value="g_client_id_01" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       Google Client Secret:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Obtained in Google Cloud Console > Credentials of your OAuth 2.0 client.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Obtained alongside your Google Client ID under OAuth 2.0 Credentials client configuration.</span>
+                      </span>
                     </label>
                     <input type="password" id="wz-google-secret" value="g_secret_99" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
@@ -261,7 +273,10 @@ export class AdminSetupWizards {
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       Stripe Secret Key:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Obtained in Stripe Dashboard > Developers > API keys as 'sk_test_...'.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Find this key under your Stripe Dashboard > Developers > API Keys > Secret key.</span>
+                      </span>
                     </label>
                     <input type="password" id="wz-stripe-sec" value="sk_test_123" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
@@ -269,7 +284,10 @@ export class AdminSetupWizards {
                 <div>
                   <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                     Monthly Membership Price ID:
-                    <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Price token (e.g. price_1234...) created under Stripe Products for subscription.</span></div>
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Acquired from a Price point configured under a Subscription Product on your Stripe Dashboard > Products.</span>
+                    </span>
                   </label>
                   <input type="text" id="wz-stripe-price" value="price_abc" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>
@@ -279,14 +297,20 @@ export class AdminSetupWizards {
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       GA4 Property ID:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Found in Google Analytics Admin > Property Settings (9-digit number).</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Get this 9-digit numeric ID inside Google Analytics Admin Console > Property Settings.</span>
+                      </span>
                     </label>
                     <input type="text" id="wz-ga4-property" value="987654321" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       VirusTotal API Key:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Generated in VirusTotal Community profile dropdown > API Key.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Available in your VirusTotal profile menu dropdown under API Key section.</span>
+                      </span>
                     </label>
                     <input type="password" id="wz-vt-key" value="vt_api_mock_token" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
@@ -304,7 +328,10 @@ export class AdminSetupWizards {
                   <div>
                     <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                       Cloudflare Zone ID:
-                      <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Found in Cloudflare Dashboard > Overview (sidebar) > Zone ID.</span></div>
+                      <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">Retrieve from Cloudflare Dashboard domain overview sidebar.</span>
+                      </span>
                     </label>
                     <input type="text" id="wz-cf-zone" value="zone_123_abc" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                   </div>
@@ -319,7 +346,10 @@ export class AdminSetupWizards {
                 <div>
                   <label style="font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                     Cloudflare Worker API Key:
-                    <div class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">Created in Cloudflare Dashboard > My Profile > API Tokens > Edit Cloudflare Workers.</span></div>
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Generate a custom Cloudflare Worker API token in My Profile > API Tokens.</span>
+                    </span>
                   </label>
                   <input type="password" id="wz-cf-key" value="cf_worker_mock_secret" required style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
                 </div>

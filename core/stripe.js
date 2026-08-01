@@ -130,6 +130,36 @@ export class StripeService {
   }
 
   /**
+   * Helper to create a Stripe Checkout Session for appointment booking
+   */
+  async createAppointmentCheckoutSession(email, amount, successUrl, metadata) {
+    try {
+      const response = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          action: 'payment',
+          productId: 'Consultation Deposit',
+          amount,
+          currency: 'usd',
+          mode: 'payment',
+          successUrl,
+          metadata
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Appointment Checkout Session');
+      throw err;
+    }
+  }
+
+  /**
    * Register a product and price in Stripe securely via serverless endpoint
    */
   async registerStripeProduct(name, description, amountInCents, currency = 'usd', recurring = false) {

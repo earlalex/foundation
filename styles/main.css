@@ -1,43 +1,53 @@
-/* styles/main.css - Enterprise Baseline Stylesheet */
+/* styles/main.css - Overhauled Design System */
+
+/* --- 4px Divisible Spacing & Typographic Tokens --- */
+:root {
+  /* Restrained, elegant brand color palette */
+  --color-dark-bg: #0f172a;       /* Primary dark background */
+  --color-dark-text: #1e293b;     /* Primary dark text */
+  --color-light-bg: #f8fafc;      /* Primary light background */
+  --color-light-text: #f1f5f9;    /* Primary light text */
+
+  /* Primary brand blue & green accents */
+  --theme-color-primary: #1e40af;
+  --theme-color-primary-hover: #1e3a8a;
+  --theme-color-surface: #ffffff;
+  --theme-color-background: var(--color-light-bg);
+  --theme-color-text-primary: var(--color-dark-text);
+  --theme-color-text-secondary: #475569; /* Muted slate for secondary labels */
+  --theme-color-border: #cbd5e1;
+  --theme-color-accent: #0f766e;  /* Deep teal accent */
+  --theme-color-danger: #e11d48;
+
+  --theme-font-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --theme-font-font-size-base: 16px;
+  --theme-font-heading-weight: 800;
+
+  --theme-layout-border-radius: 6px;
+  --theme-layout-container-max-width: 1200px;
+
+  /* Purposeful depth with soft elevation shadows instead of hard borders */
+  --theme-layout-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-elevation-high: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+  /* 4px divisible grid spacing tokens */
+  --spacing-4: 0.25rem;
+  --spacing-8: 0.5rem;
+  --spacing-12: 0.75rem;
+  --spacing-16: 1rem;
+  --spacing-20: 1.25rem;
+  --spacing-24: 1.5rem;
+  --spacing-32: 2rem;
+  --spacing-40: 2.5rem;
+  --spacing-48: 3rem;
+  --spacing-64: 4rem;
+}
 
 /* --- CSS RESET & BOX-SIZING --- */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-}
-
-:root {
-  /* Dynamic Theme Fallback Variable Definitions */
-  --theme-color-primary: #2b6cb0;
-  --theme-color-primary-hover: #2c5282;
-  --theme-color-surface: #ffffff;
-  --theme-color-background: #f7fafc;
-  --theme-color-text-primary: #1a202c;
-  --theme-color-text-secondary: #718096; /* De-emphasize secondary text with muted gray */
-  --theme-color-border: #f1f5f9; /* Soft light border */
-  --theme-color-accent: #38a169;
-  --theme-color-danger: #e53e3e;
-
-  --theme-font-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --theme-font-font-size-base: 16px;
-  --theme-font-heading-weight: 800;
-
-  --theme-layout-border-radius: 8px;
-  --theme-layout-container-max-width: 1200px;
-  --theme-layout-box-shadow: 0 4px 12px 1px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.01); /* Soft subtle depth shadow */
-
-  /* 4px Divisible Spacing Grid */
-  --theme-spacing-4: 0.25rem;  /* 4px */
-  --theme-spacing-8: 0.5rem;   /* 8px */
-  --theme-spacing-12: 0.75rem; /* 12px */
-  --theme-spacing-16: 1rem;    /* 16px */
-  --theme-spacing-20: 1.25rem; /* 20px */
-  --theme-spacing-24: 1.5rem;  /* 24px */
-  --theme-spacing-32: 2rem;    /* 32px */
-  --theme-spacing-40: 2.5rem;  /* 40px */
-  --theme-spacing-48: 3rem;    /* 48px */
-  --theme-spacing-64: 4rem;    /* 64px */
 }
 
 html {
@@ -50,13 +60,11 @@ body {
   font-family: var(--theme-font-font-family);
   background-color: var(--theme-color-background);
   color: var(--theme-color-text-primary);
-  line-height: 1.5;
+  line-height: 1.6; /* Balanced vertical rhythm */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: left; /* Left-aligned for supreme typographic legibility */
 }
 
 #app {
@@ -64,19 +72,32 @@ body {
   width: 100%;
   max-width: var(--theme-layout-container-max-width);
   margin: 0 auto;
-  padding: 0 var(--theme-spacing-16);
+  padding: 0 var(--spacing-16);
 }
 
-/* Fluid Container helper */
+/* Fluid Container Helper */
 .container {
   width: 100%;
   margin-right: auto;
   margin-left: auto;
-  padding-right: var(--theme-spacing-16);
-  padding-left: var(--theme-spacing-16);
+  padding-right: var(--spacing-16);
+  padding-left: var(--spacing-16);
 }
 
-/* --- MOBILE-FIRST UTILITIES --- */
+/* --- TYPOGRAPHY & LEGIBILITY RULES --- */
+/* Smaller text gets larger line-height for readability */
+p {
+  line-height: 1.625;
+  margin-bottom: var(--spacing-16);
+  text-align: left; /* Restrained palette: left-aligned body text strictly enforced */
+}
+
+small, .text-sm {
+  font-size: 0.875rem;
+  line-height: 1.7; /* Generous proportional line-height for small sizes */
+  color: var(--theme-color-text-secondary);
+}
+
 img {
   max-width: 100%;
   height: auto;
@@ -88,40 +109,34 @@ table {
   border-collapse: collapse;
 }
 
-/* Fluid Headings with Inverse Line Height (Smaller font gets larger line height) */
 h1 {
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
   font-weight: var(--theme-font-heading-weight);
-  line-height: 1.15; /* large text gets smaller line height */
-  color: var(--theme-color-text-primary);
-  text-align: left;
+  line-height: 1.2;
+  color: var(--color-dark-text);
+  letter-spacing: -0.02em;
 }
+
 h2 {
   font-size: clamp(1.4rem, 3vw, 1.85rem);
   font-weight: var(--theme-font-heading-weight);
-  line-height: 1.2;
-  color: var(--theme-color-text-primary);
-  text-align: left;
+  line-height: 1.25;
+  color: var(--color-dark-text);
+  letter-spacing: -0.01em;
 }
+
 h3 {
   font-size: clamp(1.15rem, 2.5vw, 1.4rem);
   font-weight: var(--theme-font-heading-weight);
-  line-height: 1.25;
-  color: var(--theme-color-text-primary);
-  text-align: left;
-}
-p {
-  font-size: 1rem;
-  line-height: 1.6; /* small text gets larger line height */
-  color: var(--theme-color-text-secondary);
-  text-align: left;
+  line-height: 1.3;
+  color: var(--color-dark-text);
 }
 
 /* Responsive grid layout helper */
 .responsive-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: var(--spacing-16);
 }
 
 @media (min-width: 640px) {
@@ -136,12 +151,12 @@ p {
   }
 }
 
-/* --- UI COMPONENTS & UTILITIES --- */
+/* --- INTERACTIVE ACTION BUTTON CONTRAST --- */
 .btn-primary {
   background-color: var(--theme-color-primary);
   color: #ffffff;
   border: none;
-  padding: 10px 18px;
+  padding: 10px 20px;
   border-radius: var(--theme-layout-border-radius);
   font-weight: 600;
   font-size: 0.9rem;
@@ -149,9 +164,10 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--spacing-8);
   text-decoration: none;
-  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+  transition: background-color 0.15s ease-in-out, transform 0.1s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary:hover {
@@ -162,25 +178,35 @@ p {
   transform: scale(0.98);
 }
 
-.card {
-  background-color: var(--theme-color-surface);
+/* Clear secondary button representation for visual hierarchy */
+.btn-secondary {
+  background-color: transparent;
+  color: var(--theme-color-text-secondary);
   border: 1px solid var(--theme-color-border);
+  padding: 10px 20px;
   border-radius: var(--theme-layout-border-radius);
-  box-shadow: var(--theme-layout-box-shadow);
-  padding: var(--theme-spacing-24); /* 4px divisible padding */
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  text-decoration: none;
+  transition: background-color 0.15s ease-in-out, color 0.15s;
 }
 
-/* Accessibility Focus Ring */
-:focus-visible {
-  outline: 2px solid var(--theme-color-primary);
-  outline-offset: 2px;
+.btn-secondary:hover {
+  background-color: #f1f5f9;
+  color: var(--theme-color-text-primary);
 }
 
-/* Tooltip styling system */
+/* --- LIGHTWEIGHT ACCESSIBLE TOOLTIP SYSTEM --- */
 .tooltip-wrapper {
   position: relative;
-  display: inline-block;
-  margin-left: var(--theme-spacing-4);
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--spacing-4);
   cursor: pointer;
 }
 
@@ -190,35 +216,42 @@ p {
   justify-content: center;
   width: 16px;
   height: 16px;
-  background: var(--theme-color-border, #edf2f7);
-  color: var(--theme-color-text-secondary, #718096);
   border-radius: 50%;
-  font-size: 0.75rem;
+  background: var(--theme-color-border);
+  color: var(--theme-color-text-secondary);
+  font-size: 0.7rem;
   font-weight: bold;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.tooltip-wrapper:hover .tooltip-icon {
+  background: var(--theme-color-primary);
+  color: white;
 }
 
 .tooltip-text {
-  visibility: hidden;
-  width: 250px;
-  background-color: #2d3748;
-  color: #fff;
-  text-align: left;
-  border-radius: 6px;
-  padding: var(--theme-spacing-8) var(--theme-spacing-12);
   position: absolute;
-  z-index: 1000000;
-  bottom: 125%; /* Position the tooltip above the text */
+  bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 0.8rem;
-  font-weight: normal;
+  width: 260px;
+  background-color: var(--color-dark-text);
+  color: white;
+  text-align: left;
+  border-radius: 6px;
+  padding: var(--spacing-8) var(--spacing-12);
+  font-size: 0.75rem;
   line-height: 1.4;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease;
   pointer-events: none;
+  box-shadow: var(--theme-layout-box-shadow);
 }
 
+/* Tooltip caret */
 .tooltip-text::after {
   content: "";
   position: absolute;
@@ -227,24 +260,59 @@ p {
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
-  border-color: #2d3748 transparent transparent transparent;
+  border-color: var(--color-dark-text) transparent transparent transparent;
 }
 
 .tooltip-wrapper:hover .tooltip-text {
-  visibility: visible;
   opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-2px);
 }
 
-/* --- ADMIN PAGE LAYOUT OVERRIDES --- */
+/* --- PURPOSEFUL DEPTH INTERACTIVE CARDS --- */
+.card {
+  background-color: var(--theme-color-surface);
+  border: 1px solid rgba(0, 0, 0, 0.05); /* Softer borders */
+  border-radius: var(--theme-layout-border-radius);
+  box-shadow: var(--theme-layout-box-shadow); /* Elevation depth over borders */
+  padding: var(--spacing-24);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+}
+
+/* --- DE-EMPHASIZE SECONDARY TEXT & LABELS --- */
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--theme-color-text-secondary); /* De-emphasized secondary hierarchy */
+  margin-bottom: var(--spacing-4);
+}
+
+.text-muted {
+  color: var(--theme-color-text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Focus Indicator Ring */
+:focus-visible {
+  outline: 2px solid var(--theme-color-primary);
+  outline-offset: 2px;
+}
+
+/* --- ADMIN LAYOUTS & TABLES OVERRIDES --- */
 #app:has(.admin-layout) {
   max-width: 100% !important;
-  padding: 1.5rem 2rem !important;
+  padding: var(--spacing-24) var(--spacing-32) !important;
 }
 
-/* Ensure settings panels, forms, and cards stretch properly */
 .admin-panel {
   width: 100% !important;
 }
+
 .admin-panel form,
 .admin-panel table,
 .admin-panel textarea,
@@ -253,29 +321,33 @@ p {
   max-width: 100% !important;
 }
 
-/* Layering & Z-Index Hierarchy Configuration */
+/* Z-Index Layer Matrix */
 #toast-container {
-  z-index: 2147483647 !important; /* Highest possible */
+  z-index: 2147483647 !important; /* Absolute top-most */
 }
 
-/* Common slide-over cart, modal, dialog, and overlay layering */
-.modal, .modal-overlay, .cart-slideover, .slideover, [role="dialog"] {
+.modal, .modal-overlay, .cart-slideover, .slideover, [role="dialog"], .setup-wizard-modal {
   z-index: 999990 !important;
+}
+
+#simulation-active-badge {
+  z-index: 999900 !important;
 }
 
 /* Appointment Visual Calendar Grid Styling */
 .calendar-month-container {
   background: var(--theme-color-surface, #ffffff);
-  border: 1px solid var(--theme-color-border, #edf2f7);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: var(--theme-layout-border-radius, 8px);
-  padding: 1rem;
+  padding: var(--spacing-16);
+  box-shadow: var(--theme-layout-box-shadow);
 }
 
 .calendar-month-title {
   font-size: 1rem;
   font-weight: bold;
   text-align: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--spacing-12);
   color: var(--theme-color-text-primary, #1a202c);
   text-transform: capitalize;
 }
@@ -287,7 +359,7 @@ p {
   font-size: 0.75rem;
   font-weight: bold;
   color: var(--theme-color-text-secondary, #718096);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-8);
 }
 
 .calendar-grid-days {
@@ -336,7 +408,7 @@ p {
 #global-footer {
   background-color: var(--theme-color-surface, #ffffff);
   border-top: 1px solid var(--theme-color-border, #e2e8f0);
-  padding: 3rem 1.5rem;
+  padding: var(--spacing-48) var(--spacing-24);
   margin-top: auto;
   color: var(--theme-color-text-primary, #1a202c);
   font-family: var(--theme-font-font-family, system-ui, sans-serif);
@@ -347,7 +419,7 @@ p {
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: var(--spacing-32);
 }
 
 @media (min-width: 768px) {
@@ -358,14 +430,14 @@ p {
 
 @media (min-width: 1024px) {
   .footer-container {
-    grid-template-columns: 2fr 1fr 2fr 1.5fr;
+    grid-template-columns: 2fr 1.2fr 2fr 1.5fr;
   }
 }
 
 .footer-column {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--spacing-12);
 }
 
 .footer-title {
@@ -383,7 +455,7 @@ p {
 .footer-copyright {
   font-size: 0.8rem;
   color: var(--theme-color-text-secondary, #718096);
-  margin-top: 0.5rem;
+  margin-top: var(--spacing-8);
 }
 
 .footer-heading {
@@ -392,7 +464,7 @@ p {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--theme-color-text-primary, #1a202c);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--spacing-4);
 }
 
 .footer-links {
@@ -401,7 +473,7 @@ p {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-8);
 }
 
 .footer-links a {
@@ -423,7 +495,7 @@ p {
 .newsletter-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-8);
 }
 
 .newsletter-input {
@@ -449,11 +521,11 @@ p {
 .newsletter-consent {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--spacing-8);
   font-size: 0.75rem;
   color: var(--theme-color-text-secondary, #718096);
   cursor: pointer;
-  margin-top: 0.25rem;
+  margin-top: var(--spacing-4);
   line-height: 1.3;
 }
 
@@ -463,7 +535,7 @@ p {
 
 .footer-social-icons {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--spacing-12);
   flex-wrap: wrap;
 }
 
@@ -499,14 +571,14 @@ p {
   color: #ffffff;
   border-radius: 24px;
   padding: 8px 16px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-elevation-high);
   z-index: 999900 !important;
   font-family: var(--theme-font-font-family, system-ui, sans-serif);
   font-size: 0.85rem;
   font-weight: bold;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--spacing-12);
   cursor: pointer;
   max-width: 175px; /* Subtle pill badge size */
   white-space: nowrap;
@@ -537,6 +609,6 @@ p {
 #simulation-active-badge:hover .badge-full-text {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--spacing-12);
   opacity: 1;
 }
