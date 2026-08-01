@@ -177,7 +177,7 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 4/4: API Keys & Cloud Configuration",
+            title: "Step 4/5: API Keys & Cloud Configuration",
             html: `
               <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px; box-sizing: border-box;">
                 <p style="font-size: 0.8rem; color: #718096; margin-bottom: 0.25rem;">Provide third-party service credentials securely to wire up platform features.</p>
@@ -420,6 +420,51 @@ export class AdminSetupWizards {
               data.isInstalled = true;
               data.adminEmails = [document.getElementById('wz-google-owner')?.value || "admin@example.com"];
             }
+          },
+          {
+            title: "Step 5/5: Analytics & SEO Engine",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-weight: 800; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0);">Google Analytics & Search Console Setup</span>
+                  <a href="${FRAMEWORK_AFFILIATES.googleAnalytics.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; background: #e6fffa; color: #319795; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-decoration: none; border: 1px solid #b2f5ea; display: inline-flex; align-items: center; gap: 4px;">
+                    Powered by Google Analytics
+                  </a>
+                </div>
+
+                <div style="border-left: 3px solid #2b6cb0; padding-left: 6px; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.85rem; color: #2b6cb0;">Step 1: Google Search Console (GSC) Domain Setup</div>
+                <div style="background: #f7fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 10px; font-size: 0.8rem; color: #4a5568; line-height: 1.5; margin-bottom: 0.75rem;">
+                  <strong>Domain Ownership Verification & Page Indexing Guide:</strong>
+                  <ol style="margin: 4px 0 0 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 4px;">
+                    <li>Add your base domain as a property inside your <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" style="color: #2b6cb0; text-decoration: underline; font-weight: bold;">Google Search Console Dashboard</a>.</li>
+                    <li>Copy the TXT verification record and insert it into your DNS records (Cloudflare Pages settings or domain registrar). Click <strong>Verify</strong>.</li>
+                    <li>Submit your sitemap at: <code>https://yourdomain.com/sitemap.xml</code>. This allows Google and AI crawlers to fully index your GrapesJS and CMS custom routes.</li>
+                  </ol>
+                </div>
+
+                <div style="border-left: 3px solid #38a169; padding-left: 6px; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.85rem; color: #38a169;">Step 2: Google Analytics 4 (GA4) Measurement ID</div>
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    GA4 Measurement ID (G-XXXXXXXXXX):
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Create a GA4 Property, navigate to Admin -> Data Streams -> Web, and copy the Measurement ID matching 'G-XXXXXXXXXX'.</span>
+                    </span>
+                  </label>
+                  <input type="text" id="wz-ga4-measurement-id" value="${configManager.current.analytics?.googleAnalyticsId || ''}" placeholder="G-XXXXXXXXXX" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Used to dynamically inject GA4 gtag tracking scripts for virtual pageviews & ecommerce metrics.</span>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const id = document.getElementById('wz-ga4-measurement-id')?.value;
+              if (!id) throw new Error("GA4 Measurement ID is required to wire up routing event logs.");
+            },
+            save: (data) => {
+              data.analytics = {
+                googleAnalyticsId: document.getElementById('wz-ga4-measurement-id').value
+              };
+            }
           }
         ]
       },
@@ -429,7 +474,7 @@ export class AdminSetupWizards {
         title: "Section 2: Business Operations Wizard",
         steps: [
           {
-            title: "Step 1/3: Ticketing & Product Pricing Defaults",
+            title: "Step 1/4: Ticketing & Product Pricing Defaults",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096;">Configure baseline parameters for ticketing and digital product listings.</p>
@@ -469,7 +514,7 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 2/3: Finances & Payroll Options",
+            title: "Step 2/4: Finances & Payroll Options",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure flat fees and default contractor pay options. The ACH payment path enforces a flat $5.00 application fee parameter by default.</p>
@@ -521,7 +566,81 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 3/3: OnlineJobs.ph & VA Hub credentials",
+            title: "Step 3/4: Outbound Payroll & Payouts",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="font-weight: 800; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0);">Wise Business International Payroll Engine</span>
+                  <a href="${FRAMEWORK_AFFILIATES.wise.url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; background: #e6fffa; color: #319795; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-decoration: none; border: 1px solid #b2f5ea; display: inline-flex; align-items: center; gap: 4px;">
+                    Powered by Wise
+                  </a>
+                </div>
+                <p style="font-size: 0.825rem; color: #718096; margin: 0 0 0.5rem 0; line-height: 1.4;">Zero-fee cross-border contractor payouts processed directly from your Wise USD balance at true mid-market exchange rates.</p>
+
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    Wise API Token:
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Generate an API token inside your Wise Business Dashboard under Settings -> API Tokens. Select 'Full Access' or 'Payout Access'.</span>
+                    </span>
+                  </label>
+                  <input type="password" id="wz-wise-key" value="${configManager.current.wise?.apiKey || ''}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Used to authenticate zero-fee cross-border payouts directly from your Wise USD balance.</span>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    Profile ID:
+                    <span class="tooltip-wrapper">
+                      <span class="tooltip-icon">?</span>
+                      <span class="tooltip-text">Found under your Wise Account Details or automatically fetched when your API token is verified.</span>
+                    </span>
+                  </label>
+                  <input type="text" id="wz-wise-profile" value="${configManager.current.wise?.profileId || ''}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Your Wise Business Account ID.</span>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
+                    Environment Mode:
+                  </label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="wz-wise-sandbox" ${configManager.current.wise?.sandbox !== false ? 'checked' : ''} style="cursor: pointer;" />
+                    <span style="font-size: 0.85rem; font-weight: 500;">Sandbox / Test Mode (Uncheck for Live Mode)</span>
+                  </div>
+                  <span style="font-size: 0.75rem; color: #a0aec0; display: block; margin-top: 2px;">Switch between Wise Live Production API and Sandbox testing.</span>
+                </div>
+
+                <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                  <button type="button" id="btn-wz-verify-wise" style="
+                    padding: 6px 12px;
+                    background: var(--theme-color-accent, #38a169);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    font-size: 0.85rem;
+                  ">Verify API Token & Fetch Profile ID</button>
+                  <span id="wise-verify-feedback" style="display: none; font-size: 0.8rem; font-weight: bold;"></span>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const k = document.getElementById('wz-wise-key')?.value;
+              if (!k) throw new Error("Wise API Token is required.");
+            },
+            save: (data) => {
+              data.wise = {
+                apiKey: document.getElementById('wz-wise-key').value,
+                profileId: document.getElementById('wz-wise-profile').value,
+                sandbox: document.getElementById('wz-wise-sandbox').checked
+              };
+            }
+          },
+          {
+            title: "Step 4/4: OnlineJobs.ph & VA Hub credentials",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure the active Virtual Assistant job pipeline credentials.</p>
@@ -837,6 +956,63 @@ export class AdminSetupWizards {
             toast.error('Dispatch failed: ' + e.message);
           } finally {
             testEmailBtn.textContent = 'Verify Email Dispatch';
+          }
+        };
+      }
+
+      // Bind Wise Profile ID verification click event
+      const verifyWiseBtn = modal.querySelector('#btn-wz-verify-wise');
+      if (verifyWiseBtn) {
+        verifyWiseBtn.onclick = async () => {
+          const keyInput = modal.querySelector('#wz-wise-key');
+          const profileInput = modal.querySelector('#wz-wise-profile');
+          const sandboxCheckbox = modal.querySelector('#wz-wise-sandbox');
+          const fb = modal.querySelector('#wise-verify-feedback');
+
+          if (!keyInput || !keyInput.value) {
+            toast.warning('Please input a Wise API Token.');
+            return;
+          }
+
+          verifyWiseBtn.textContent = 'Verifying...';
+          if (fb) {
+            fb.style.display = 'inline';
+            fb.style.color = '#2b6cb0';
+            fb.textContent = 'Verifying token...';
+          }
+
+          // Dynamically set temp wise config for the API call to work
+          const originalWise = configManager.current.wise || {};
+          configManager.current.wise = {
+            apiKey: keyInput.value,
+            sandbox: sandboxCheckbox ? sandboxCheckbox.checked : true
+          };
+
+          try {
+            const { getWiseProfile } = await import('../../../utils/backend-wise.js');
+            const profile = await getWiseProfile();
+            if (profile && profile.id) {
+              if (profileInput) {
+                profileInput.value = profile.id;
+              }
+              if (fb) {
+                fb.style.color = '#38a169';
+                fb.textContent = `Verified! Profile ID: ${profile.id}`;
+              }
+              toast.success(`Wise API Connection verified successfully! Auto-populated Profile ID: ${profile.id}`);
+            } else {
+              throw new Error('No profile data returned');
+            }
+          } catch (e) {
+            if (fb) {
+              fb.style.color = '#e53e3e';
+              fb.textContent = 'Verification failed';
+            }
+            toast.error('Wise verification failed: ' + e.message);
+          } finally {
+            verifyWiseBtn.textContent = 'Verify API Token & Fetch Profile ID';
+            // Restore config just in case
+            configManager.current.wise = originalWise;
           }
         };
       }

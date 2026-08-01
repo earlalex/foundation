@@ -34,6 +34,9 @@ export const defaultConfig = {
     lookerStudioEmbedUrl: "",
     ga4PropertyId: ""
   },
+  analytics: {
+    googleAnalyticsId: ""
+  },
   cloudflare: {
     zoneId: "",
     pagesUrl: "",
@@ -119,6 +122,11 @@ export const defaultConfig = {
   },
   virustotal: {
     apiKey: ""
+  },
+  wise: {
+    apiKey: "",
+    profileId: "",
+    sandbox: true
   },
   marketing: {
     gmailSender: "",

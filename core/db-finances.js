@@ -172,10 +172,29 @@ export async function getExpenses(filter = {}) {
   return results;
 }
 
+export async function updateBudgetTargetsOnPayout(amountUSD, feeUSD) {
+  try {
+    const targets = await getBudgets();
+    targets.payrollBudget = (targets.payrollBudget || 10000) + Number(amountUSD);
+    targets.totalExpensesBudget = (targets.totalExpensesBudget || 5000) + Number(feeUSD);
+    await saveBudgetTargets(targets);
+    console.log('[Finances DB]: Budget targets dynamically updated for Wise payout.');
+  } catch (err) {
+    console.warn('[Finances DB]: Failed to dynamically update budget targets:', err.message);
+  }
+}
+
 export async function savePayrollRecord(data) {
   const db = getFirestoreDB();
   const id = data.id || `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const payload = { ...data, id, createdAt: data.createdAt || new Date().toISOString() };
+
+  // Automate monthly budget target tracking on Wise payouts
+  if (data.transferFeeUSD || data.wiseTransferId) {
+    const amountUSD = Number(data.amountUSD) || 0;
+    const feeUSD = Number(data.transferFeeUSD) || 0;
+    await updateBudgetTargetsOnPayout(amountUSD, feeUSD);
+  }
 
   if (!db) {
     const local = getLocalPayroll();

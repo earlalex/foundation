@@ -437,6 +437,28 @@ export class Router {
       window.dispatchEvent(new CustomEvent('pageLoaded', { 
         detail: { path: cleanPath, fullPath: fullPath, query: urlObj.search } 
       }));
+
+      // Google Analytics 4 virtual page view tracking (Directive 2)
+      try {
+        const { trackPageView } = await import('../utils/analytics.js');
+        trackPageView(cleanPath, document.title);
+      } catch (err) {
+        console.warn('[GA4 Router]: Failed to track pageview:', err.message);
+      }
+
+      // ARIA Route Change Announcement and Focus Shifting (Directive 1)
+      try {
+        const announcer = document.getElementById('a11y-announcer');
+        if (announcer) {
+          announcer.textContent = `Navigated to ${document.title || 'Page'}`;
+        }
+        const appContainer = document.getElementById('app');
+        if (appContainer) {
+          appContainer.focus();
+        }
+      } catch (e) {
+        console.warn('[A11y Announcer]: Failed to announce route transition:', e.message);
+      }
     } catch (err) {
       this.appContainer.innerHTML = '<section style="padding: 2rem; text-align: center;"><h1>404 - Page Not Found</h1></section>';
       this.updateMetadata('/404');

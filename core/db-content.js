@@ -655,32 +655,3 @@ export async function assignLastpassVaultAccess(vaultId, editorId) {
   return saveVaultCredential(cred);
 }
 
-export async function saveHeroConfig(pageId, heroData) {
-  let page = await getCustomPageBySlug(pageId);
-  if (!page) {
-    page = await getContentById(pageId);
-  }
-
-  const pagePayload = {
-    type: 'page',
-    id: pageId,
-    slug: pageId,
-    title: page?.title || (pageId.charAt(0).toUpperCase() + pageId.slice(1)),
-    access: { visibility: 'public' },
-    ...page,
-    hero: heroData,
-    updatedAt: new Date().toISOString()
-  };
-
-  await saveCustomPage(pagePayload);
-  await saveContent(pagePayload);
-  return true;
-}
-
-export async function getHeroConfig(pageId) {
-  let page = await getCustomPageBySlug(pageId);
-  if (!page) {
-    page = await getContentById(pageId);
-  }
-  return page?.hero || null;
-}

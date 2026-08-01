@@ -1,7 +1,267 @@
-<!-- pages/home.html -->
-<section style="max-width: 100%; margin: 0 auto; padding: 0; font-family: system-ui, sans-serif;">
-  <!-- Multi-Section Container -->
-  <div id="home-sections-container" style="display: flex; flex-direction: column; gap: 0;">
-    <p style="color: var(--theme-color-text-secondary); text-align: center; padding: 3rem 0;">Loading publication sections...</p>
-  </div>
-</section>
+<!-- pages/home/home.html -->
+<div class="homepage-showcase-layout" style="font-family: var(--theme-font-font-family, system-ui, sans-serif); line-height: 1.6; color: var(--theme-color-text-primary, #1a202c);">
+
+  <!-- 1. Hero Banner Section (Above the Fold) -->
+  <section id="homepage-hero-section" aria-labelledby="hero-title" class="reveal-on-scroll" style="padding: 6rem 1.5rem; text-align: center; color: white; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <div style="max-width: 800px; margin: 0 auto; position: relative; z-index: 10;">
+      <h1 id="hero-title" style="font-size: clamp(2.2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.15; margin-bottom: 1.25rem; color: #ffffff; letter-spacing: -0.03em;">
+        The Zero-Build Web Platform & Business OS
+      </h1>
+      <p id="hero-subtitle" style="font-size: clamp(1.1rem, 2.5vw, 1.35rem); color: #cbd5e1; max-width: 680px; margin: 0 auto 2.5rem; line-height: 1.6; font-weight: 500;">
+        Launch modern web applications, e-commerce, digital products, and automated team workflows natively in the browser.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/education" id="hero-primary-cta" class="btn-primary" style="padding: 14px 28px; background: var(--theme-color-accent, #38a169); color: white; font-weight: bold; border-radius: var(--theme-layout-border-radius, 6px); text-decoration: none; font-size: 1rem; display: inline-block; transition: all 0.2s ease-in-out; box-shadow: 0 4px 12px rgba(56, 161, 105, 0.35);">
+          🚀 Explore Courses & Apps
+        </a>
+        <a href="/about" id="hero-secondary-cta" class="btn-secondary" style="padding: 14px 28px; background: transparent; color: white; font-weight: bold; border-radius: var(--theme-layout-border-radius, 6px); text-decoration: none; font-size: 1rem; display: inline-block; border: 2px solid rgba(255,255,255,0.4); transition: all 0.2s ease-in-out;">
+          🛠️ Platform Documentation
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Feature & Capability Bar (Brand Strip) -->
+  <section id="homepage-brand-strip" aria-label="Core Capabilities" class="brand-strip reveal-on-scroll" style="background: var(--theme-color-surface-alt, #f8fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.25rem 1rem;">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; display: flex; justify-content: space-around; align-items: center; gap: 1.5rem; flex-wrap: wrap; font-size: 0.9rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">
+      <span style="display: flex; align-items: center; gap: 6px;">⚡ Zero-Build Architecture</span>
+      <span style="color: #cbd5e0;">|</span>
+      <span style="display: flex; align-items: center; gap: 6px;">💳 Unified Stripe & Wise Financials</span>
+      <span style="color: #cbd5e0;">|</span>
+      <span style="display: flex; align-items: center; gap: 6px;">🔐 Workspace Vault Security</span>
+    </div>
+  </section>
+
+  <!-- 3. Core Platform Modules (2x2 Bento Grid Layout) -->
+  <section id="homepage-bento-section" aria-labelledby="bento-title" class="reveal-on-scroll" style="padding: 5rem 1.5rem; background: var(--theme-color-surface, #ffffff);">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 3.5rem;">
+        <h2 id="bento-title" style="font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 0.5rem 0;">
+          Four Functional Pillars
+        </h2>
+        <p style="color: var(--theme-color-text-secondary, #475569); max-width: 600px; margin: 0 auto; font-size: 1.05rem;">
+          Pragmatic, zero-dependency tools working natively in the browser to build your enterprise pipeline.
+        </p>
+      </div>
+
+      <!-- CSS 2x2 Bento Grid Layout -->
+      <div class="bento-grid-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        <!-- Pillar 1 -->
+        <div class="bento-card" style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #edf2f7); padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 1rem;">
+          <div style="font-size: 2rem; color: var(--theme-color-primary, #2b6cb0);">✍️</div>
+          <h3 style="font-size: 1.25rem; font-weight: bold; margin: 0; color: var(--theme-color-text-primary, #1a202c);">Content & Media Engine</h3>
+          <p style="margin: 0; font-size: 0.95rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.6;">
+            Dynamic blogs, interactive podcasts, and digital publishing powered directly by client-side markdown and local caches. No compilation or bundling required.
+          </p>
+          <a href="/cms" style="font-size: 0.85rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; margin-top: auto; display: flex; align-items: center; gap: 4px;">Learn More &rarr;</a>
+        </div>
+        <!-- Pillar 2 -->
+        <div class="bento-card" style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #edf2f7); padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 1rem;">
+          <div style="font-size: 2rem; color: var(--theme-color-primary, #2b6cb0);">🎓</div>
+          <h3 style="font-size: 1.25rem; font-weight: bold; margin: 0; color: var(--theme-color-text-primary, #1a202c);">E-Learning & Worksheets</h3>
+          <p style="margin: 0; font-size: 0.95rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.6;">
+            Interactive educational syllabus, streaming multimedia lessons, downloadable worksheet packages, and comprehensive student learning progress tracking.
+          </p>
+          <a href="/education" style="font-size: 0.85rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; margin-top: auto; display: flex; align-items: center; gap: 4px;">Launch Courses &rarr;</a>
+        </div>
+        <!-- Pillar 3 -->
+        <div class="bento-card" style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #edf2f7); padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 1rem;">
+          <div style="font-size: 2rem; color: var(--theme-color-primary, #2b6cb0);">💳</div>
+          <h3 style="font-size: 1.25rem; font-weight: bold; margin: 0; color: var(--theme-color-text-primary, #1a202c);">Commerce & Direct Billing</h3>
+          <p style="margin: 0; font-size: 0.95rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.6;">
+            Seamless Stripe invoices, recurring premium subscription portals, and instant checkout paths for products, events, and ticket distributions.
+          </p>
+          <a href="/account" style="font-size: 0.85rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; margin-top: auto; display: flex; align-items: center; gap: 4px;">Manage Finances &rarr;</a>
+        </div>
+        <!-- Pillar 4 -->
+        <div class="bento-card" style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #edf2f7); padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 1rem;">
+          <div style="font-size: 2rem; color: var(--theme-color-primary, #2b6cb0);">⚙️</div>
+          <h3 style="font-size: 1.25rem; font-weight: bold; margin: 0; color: var(--theme-color-text-primary, #1a202c);">Automated Operations</h3>
+          <p style="margin: 0; font-size: 0.95rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.6;">
+            1-click Virtual Assistant onboarding, Google Workspace account auto-provisioning, password vault synchronizations, and Wise international contractor payroll.
+          </p>
+          <a href="/admin" style="font-size: 0.85rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; margin-top: auto; display: flex; align-items: center; gap: 4px;">Open Backoffice &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Featured Lead Magnet / Free Resource Banner (High-Contrast Section) -->
+  <section id="homepage-lead-magnet" aria-labelledby="lead-magnet-title" class="reveal-on-scroll" style="background: var(--theme-color-primary, #2b6cb0); color: white; padding: 4.5rem 1.5rem; text-align: center;">
+    <div style="max-width: 750px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; align-items: center;">
+      <h2 id="lead-magnet-title" style="font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; color: #ffffff; margin: 0; line-height: 1.25;">
+        Download the Zero-Build Architecture Handbook & Starter Kit
+      </h2>
+      <p style="color: rgba(255,255,255,0.9); font-size: 1.05rem; margin: 0; max-width: 600px; line-height: 1.5;">
+        Get exclusive backoffice guidebooks on scaling international contractor staffing and configuring Stripe/Wise webhook automation.
+      </p>
+
+      <!-- Inline Email Capture Form -->
+      <form id="lead-magnet-form" style="display: flex; gap: 0.5rem; width: 100%; max-width: 500px; flex-wrap: wrap; margin-top: 0.5rem;">
+        <input type="email" id="lead-magnet-email" placeholder="Your primary work email" required
+               style="flex: 1; min-width: 260px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: var(--theme-layout-border-radius, 4px); font-size: 0.95rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06); outline: none; color: #1a202c;" />
+        <button type="submit" id="btn-lead-magnet-submit" class="btn-primary"
+                style="padding: 12px 24px; background: var(--theme-color-accent, #38a169); color: white; font-weight: bold; border-radius: var(--theme-layout-border-radius, 4px); border: none; cursor: pointer; font-size: 0.95rem; white-space: nowrap; transition: all 0.2s;">
+          Get Free Resource
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 5. Split Media & Content Feature Section (Alternating Left/Right Layout) -->
+  <section id="homepage-media-split" aria-label="Media Showcases" style="background: var(--theme-color-surface-alt, #f8fafc);">
+
+    <!-- Block A: Podcast & Audio Showcase (Left Media / Right Text) -->
+    <div aria-labelledby="podcast-block-title" class="reveal-on-scroll" style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; padding: 5rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 3rem; align-items: center;">
+      <div style="background: #ffffff; border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 1.5rem; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.02));">
+        <strong style="color: var(--theme-color-primary, #2b6cb0); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Latest Broadcast</strong>
+        <h4 style="margin: 0.5rem 0; font-size: 1.25rem; font-weight: bold;">Episode #12: Scaling Serverless Backoffices</h4>
+        <!-- Audio Mock Player Controls -->
+        <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; margin: 1rem 0; display: flex; align-items: center; gap: 1rem;">
+          <button style="width: 44px; height: 44px; border-radius: 50%; background: var(--theme-color-primary, #2b6cb0); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.25rem;" aria-label="Play Broadcast">▶</button>
+          <div style="flex: 1;">
+            <div style="height: 6px; background: #cbd5e0; border-radius: 3px; position: relative; width: 100%;">
+              <div style="height: 100%; background: var(--theme-color-primary, #2b6cb0); width: 35%; border-radius: 3px;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #718096; margin-top: 4px;">
+              <span>04:12</span>
+              <span>12:45</span>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 0.85rem; color: var(--theme-color-text-secondary, #475569);">Listen to our core architects explain the lightweight, zero-build philosophies powering modern edge web engines.</p>
+      </div>
+      <div>
+        <h3 id="podcast-block-title" style="font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 1rem 0; line-height: 1.25;">
+          Podcast & Audio Showcase
+        </h3>
+        <p style="color: var(--theme-color-text-secondary, #475569); line-height: 1.6; font-size: 1.05rem; margin: 0 0 1.5rem 0;">
+          Streaming directly to the client browser without heavy media libraries. Access all our strategic operational workshops, team briefs, and masterclass audio guides cleanly.
+        </p>
+        <a href="/podcast" class="btn-primary" style="padding: 10px 20px; text-decoration: none; border-radius: var(--theme-layout-border-radius, 4px); font-size: 0.9rem; font-weight: bold; display: inline-block;">Browse Episodes</a>
+      </div>
+    </div>
+
+    <!-- Block B: Modular Toolset & Integrations (Right Media / Left Text) -->
+    <div aria-labelledby="integrations-block-title" class="reveal-on-scroll" style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; padding: 0 1.5rem 5rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 3rem; align-items: center;">
+      <div style="order: 2;">
+        <!-- Visual Logo / Integration grid representation -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div style="background: white; border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.5rem; border-radius: 8px; text-align: center; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.01));">
+            <div style="font-size: 2rem; margin-bottom: 0.25rem;">☁️</div>
+            <strong style="font-size: 0.9rem; display: block;">Cloudflare</strong>
+            <span style="font-size: 0.75rem; color: #a0aec0;">Pages & Workers</span>
+          </div>
+          <div style="background: white; border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.5rem; border-radius: 8px; text-align: center; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.01));">
+            <div style="font-size: 2rem; margin-bottom: 0.25rem;">💼</div>
+            <strong style="font-size: 0.9rem; display: block;">Google Workspace</strong>
+            <span style="font-size: 0.75rem; color: #a0aec0;">Auto-Provisioning</span>
+          </div>
+          <div style="background: white; border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.5rem; border-radius: 8px; text-align: center; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.01));">
+            <div style="font-size: 2rem; margin-bottom: 0.25rem;">💳</div>
+            <strong style="font-size: 0.9rem; display: block;">Stripe Billing</strong>
+            <span style="font-size: 0.75rem; color: #a0aec0;">Direct Checkout</span>
+          </div>
+          <div style="background: white; border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.5rem; border-radius: 8px; text-align: center; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.01));">
+            <div style="font-size: 2rem; margin-bottom: 0.25rem;">🦉</div>
+            <strong style="font-size: 0.9rem; display: block;">Wise Business</strong>
+            <span style="font-size: 0.75rem; color: #a0aec0;">Outbound Payroll</span>
+          </div>
+        </div>
+      </div>
+      <div style="order: 1;">
+        <h3 id="integrations-block-title" style="font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 1rem 0; line-height: 1.25;">
+          Modular Toolset & Integrations
+        </h3>
+        <p style="color: var(--theme-color-text-secondary, #475569); line-height: 1.6; font-size: 1.05rem; margin: 0 0 1.5rem 0;">
+          Unlock zero-dependency configurations. Automatically create contractor documents inside Google Drive, auto-generate official Workspace emails, and fund GCash payouts on Wise completion hook triggers.
+        </p>
+        <a href="/about" class="btn-primary" style="padding: 10px 20px; text-decoration: none; border-radius: var(--theme-layout-border-radius, 4px); font-size: 0.9rem; font-weight: bold; display: inline-block;">Platform Overview</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Social Proof & Portfolio Case Studies -->
+  <section id="homepage-social-proof" aria-labelledby="social-proof-title" class="reveal-on-scroll" style="padding: 5rem 1.5rem; background: var(--theme-color-surface, #ffffff);">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 3.5rem;">
+        <h2 id="social-proof-title" style="font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 0.5rem 0;">
+          High-Conversion Client Success
+        </h2>
+        <p style="color: var(--theme-color-text-secondary, #475569); max-width: 600px; margin: 0 auto; font-size: 1.05rem;">
+          Hear from modern engineering leaders scaling backoffice architectures on the zero-build Foundation framework.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+        <!-- Card 1 -->
+        <div class="case-study-card" style="border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.75rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.02)); display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border-radius: 50%; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">M</div>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">MicroEdge Solutions</strong>
+              <span style="font-size: 0.75rem; color: #a0aec0;">Edge Systems Consulting</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 0.9rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.5;">
+            "We ported our entire backoffice toolset to Foundation. Auto-provisioning contractor emails and syncing Google Drive daily work logs saves us 15+ manual hours weekly."
+          </p>
+        </div>
+        <!-- Card 2 -->
+        <div class="case-study-card" style="border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.75rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.02)); display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border-radius: 50%; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">S</div>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">StackStream Academy</strong>
+              <span style="font-size: 0.75rem; color: #a0aec0;">E-Learning Platform</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 0.9rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.5;">
+            "Ditching Webpack for modern ES Modules and GrapesJS allowed our curriculum experts to draft responsive lessons directly. Wise and Stripe billing integrations are flawless."
+          </p>
+        </div>
+        <!-- Card 3 -->
+        <div class="case-study-card" style="border: 1px solid var(--theme-color-border, #edf2f7); padding: 1.75rem; border-radius: var(--theme-layout-border-radius, 8px); box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.02)); display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border-radius: 50%; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">A</div>
+            <div>
+              <strong style="display: block; font-size: 0.95rem;">Avenue Media</strong>
+              <span style="font-size: 0.75rem; color: #a0aec0;">Digital Publisher</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 0.9rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.5;">
+            "Our SEO indexing targets soared after adopting Foundation's dynamic structured JSON-LD schemas. Automated edge sitemap indexing works beautifully!"
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Final High-Impact Call-to-Action (Bottom Banner) -->
+  <section id="homepage-bottom-cta" aria-labelledby="final-cta-title" class="reveal-on-scroll" style="background: var(--theme-color-surface-alt, #f8fafc); border-top: 1px solid var(--theme-color-border, #e2e8f0); padding: 5rem 1.5rem; text-align: center;">
+    <div style="max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; align-items: center;">
+      <h2 id="final-cta-title" style="font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0; line-height: 1.2;">
+        Ready to Streamline Your Web Operations?
+      </h2>
+      <p style="color: var(--theme-color-text-secondary, #475569); font-size: 1.1rem; margin: 0; max-width: 550px; line-height: 1.5;">
+        Configure your backoffice tools, provision Workspace, and start cross-border payroll runs immediately.
+      </p>
+      <a href="/login" class="btn-primary" style="padding: 14px 32px; background: var(--theme-color-primary, #2b6cb0); color: white; font-weight: bold; border-radius: var(--theme-layout-border-radius, 6px); text-decoration: none; font-size: 1.05rem; display: inline-block; transition: all 0.2s ease-in-out; box-shadow: 0 4px 12px rgba(43,108,176,0.3);">
+        Get Started Today
+      </a>
+    </div>
+  </section>
+
+  <!-- Multi-Section Dynamic Posts Previews -->
+  <section id="homepage-dynamic-posts" aria-labelledby="dynamic-posts-title" class="reveal-on-scroll" style="padding: 5rem 1.5rem; border-top: 1px solid var(--theme-color-border, #edf2f7); background: var(--theme-color-surface, #ffffff);">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto;">
+      <h2 id="dynamic-posts-title" style="font-size: 1.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 2rem;">
+        Latest Community & Framework Updates
+      </h2>
+      <div id="home-sections-container" style="display: flex; flex-direction: column; gap: 3rem;">
+        <p style="color: #a0aec0;">Loading platform publications...</p>
+      </div>
+    </div>
+  </section>
+
+</div>
