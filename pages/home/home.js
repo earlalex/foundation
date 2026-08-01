@@ -3,11 +3,25 @@ import { contentDB } from '../../core/db.js';
 import { errorHandler } from '../../core/error-handler.js';
 
 export async function initHomePage() {
+  // 1. Persistent Page Overrides Check
+  try {
+    const override = await contentDB.getCustomPageBySlug('home');
+    if (override && override.compiledHtml) {
+      const appContainer = document.getElementById('app');
+      if (appContainer) {
+        appContainer.innerHTML = override.compiledHtml + (override.compiledCss ? `<style>${override.compiledCss}</style>` : '');
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('[Page Override]: Custom page override check failed for "home"', err);
+  }
+
   const container = document.getElementById('home-sections-container');
   if (!container) return;
 
   try {
-    // 1. Fetch all published items across schemas
+    // Fetch all published items across schemas
     const allItems = await contentDB.getContentByType('all', 50);
     if (!allItems || allItems.length === 0) {
       container.innerHTML = `
@@ -18,7 +32,7 @@ export async function initHomePage() {
       return;
     }
 
-    // 2. Group content by schema type
+    // Group content by schema type
     const sectionConfigs = [
       { type: 'blog', title: 'Latest Blog Posts' },
       { type: 'event', title: 'Upcoming Events & Live Meets' },
@@ -37,7 +51,7 @@ export async function initHomePage() {
       grouped[t].push(item);
     });
 
-    // 3. Render distinct sections for types that have content
+    // Render distinct sections for types that have content
     let htmlOutput = '';
     let renderedCount = 0;
 
@@ -86,9 +100,6 @@ export async function initHomePage() {
   }
 }
 
-/**
- * Helper to render individual content cards using custom <content-card> element
- */
 function renderContentCard(item) {
   const isEvent = item.type === 'event';
   const id = escapeHTML(item.id || '');

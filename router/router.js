@@ -84,6 +84,26 @@ export class Router {
     }
   }
 
+  async loadRouteModule(cleanPath) {
+    try {
+      if (cleanPath === '/admin') {
+        await import('../pages/admin/admin.js');
+      } else if (cleanPath === '/about') {
+        await import('../pages/about/about.js');
+      } else if (cleanPath === '/events') {
+        await import('../pages/events/events.js');
+      } else if (cleanPath === '/contact') {
+        await import('../pages/contact/contact.js');
+      } else if (cleanPath === '/detail') {
+        await import('../pages/detail/detail.js');
+      } else if (cleanPath === '/account') {
+        await import('../pages/account.js');
+      }
+    } catch (importErr) {
+      console.error(`[Router loadRouteModule]: Graceful defensive catch. Failed to dynamically import page controller module for route "${cleanPath}". Diagnostic details: ${importErr.stack || importErr.message || importErr}`);
+    }
+  }
+
   bindClickEvents() {
     document.body.addEventListener('click', (e) => {
       const anchor = e.target.closest('a');
@@ -207,20 +227,7 @@ export class Router {
       }
       let cleanPath = (relPath === '/' || relPath === '/home' || relPath === '') ? '/home' : relPath;
 
-      // Handle Route-based splitting dynamic imports
-      if (cleanPath === '/admin') {
-        await import('../pages/admin/admin.js');
-      } else if (cleanPath === '/about') {
-        await import('../pages/about/about.js');
-      } else if (cleanPath === '/events') {
-        await import('../pages/events/events.js');
-      } else if (cleanPath === '/contact') {
-        await import('../pages/contact/contact.js');
-      } else if (cleanPath === '/detail') {
-        await import('../pages/detail/detail.js');
-      } else if (cleanPath === '/account') {
-        await import('../pages/account.js');
-      }
+      await this.loadRouteModule(cleanPath);
     } catch (importErr) {
       console.warn('[Router Splitting]: Dynamic route module load failed.', importErr);
     }

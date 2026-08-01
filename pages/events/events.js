@@ -97,6 +97,20 @@ const SEED_EVENT = {
 };
 
 export async function initEventsPage() {
+  // 1. Persistent Page Overrides Check
+  try {
+    const override = await contentDB.getCustomPageBySlug('events');
+    if (override && override.compiledHtml) {
+      const appContainer = document.getElementById('app');
+      if (appContainer) {
+        appContainer.innerHTML = override.compiledHtml + (override.compiledCss ? `<style>${override.compiledCss}</style>` : '');
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('[Page Override]: Custom page override check failed for "events"', err);
+  }
+
   await ensureEventsSeeded();
   renderEventsGrid();
   setupEventListeners();

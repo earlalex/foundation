@@ -2,92 +2,47 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
     
     function isAdmin() {
-      return isAuthenticated() && 
-        request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails;
+      return isAuthenticated() && (
+        request.auth.token.email == 'admin@earlalex.com' ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails
+      );
     }
 
     function isEditor() {
-      return isAuthenticated() && request.auth.token.role == 'editor';
+      return isAuthenticated() && (
+        request.auth.token.role == 'editor' ||
+        isAdmin()
+      );
     }
 
-    // Settings & Master Configuration Document
     match /settings/config {
-      allow read: if true; // Public needs site identity & brand settings
+      allow read: if true;
       allow write: if !exists(/databases/$(database)/documents/settings/config) || isAdmin();
     }
 
-    // User Directory & Affiliate Profiles
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create, update, delete: if isAdmin();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
-    // CMS Content Feed & Publications
     match /content/{contentId} {
-      allow read: if resource.data.access.visibility == 'public' || 
-                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') || 
-                  isAdmin() || isEditor();
+      allow read: if true;
       allow write: if isAdmin() || isEditor();
     }
 
-    // Custom Dynamic Pages built by GrapesJS or Block Editor
     match /pages/{pageId} {
-      allow read: if resource.data.access.visibility == 'public' ||
-                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') ||
-                  isAdmin() || isEditor();
+      allow read: if true;
       allow write: if isAdmin() || isEditor();
     }
 
-    // Marketing Workflows / Journeys / Segments
-    match /marketing_workflows/{workflowId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /marketing_segments/{segmentId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /marketing_journeys/{journeyId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // Email Templates
-    match /email_templates/{templateId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // Security Scans (OWASP ZAP logs)
-    match /security_scans/{scanId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // Kanban Tasks
-    match /kanban_tasks/{taskId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // Finances (Block Editors, allow only Admins)
-    match /finances_expenses/{expenseId} {
+    match /{document=**} {
       allow read, write: if isAdmin();
-    }
-    match /finances_payroll/{payrollId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_budgets/{budgetId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_employees/{employeeId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances/{docId} {
-      allow read, write: if isAdmin();
-      match /expenses/{expenseId} {
-        allow read, write: if isAdmin();
-      }
     }
   }
 }

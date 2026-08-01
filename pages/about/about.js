@@ -1,7 +1,22 @@
 // pages/about/about.js
 import { configManager } from '../../core/config.js';
+import { contentDB } from '../../core/db.js';
 
-export function initAboutPage() {
+export async function initAboutPage() {
+  // 1. Persistent Page Overrides Check
+  try {
+    const override = await contentDB.getCustomPageBySlug('about');
+    if (override && override.compiledHtml) {
+      const appContainer = document.getElementById('app');
+      if (appContainer) {
+        appContainer.innerHTML = override.compiledHtml + (override.compiledCss ? `<style>${override.compiledCss}</style>` : '');
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('[Page Override]: Custom page override check failed for "about"', err);
+  }
+
   const bioContainer = document.getElementById('extended-bio-container');
   if (!bioContainer) return;
 
