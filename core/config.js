@@ -120,6 +120,11 @@ export const defaultConfig = {
   virustotal: {
     apiKey: ""
   },
+  wise: {
+    apiKey: "",
+    profileId: "",
+    sandbox: true
+  },
   marketing: {
     gmailSender: "",
     defaultSenderAlias: "Notification System",
