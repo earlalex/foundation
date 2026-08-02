@@ -352,6 +352,52 @@ export async function deleteEmployee(id) {
 }
 
 // Helpers
+export async function saveStateCompliance(data) {
+  const db = getFirestoreDB();
+  const payload = {
+    annualReportDueDate: data.annualReportDueDate || '2026-06-01',
+    franchiseTaxDueDate: data.franchiseTaxDueDate || '2026-05-15',
+    stateFilingStatus: data.stateFilingStatus || 'Good Standing',
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!db) {
+    localStorage.setItem('foundation_local_state_compliance', JSON.stringify(payload));
+    return payload;
+  }
+
+  try {
+    const docRef = doc(db, 'settings', 'compliance');
+    await setDoc(docRef, payload, { merge: true });
+    return payload;
+  } catch (err) {
+    console.warn('[DB]: Firestore compliance save error. Falling back to LocalStorage.', err.message);
+    localStorage.setItem('foundation_local_state_compliance', JSON.stringify(payload));
+    return payload;
+  }
+}
+
+export async function getStateCompliance() {
+  const db = getFirestoreDB();
+  if (!db) {
+    const local = localStorage.getItem('foundation_local_state_compliance');
+    return local ? JSON.parse(local) : { annualReportDueDate: '2026-06-01', franchiseTaxDueDate: '2026-05-15', stateFilingStatus: 'Good Standing' };
+  }
+
+  try {
+    const docRef = doc(db, 'settings', 'compliance');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+  } catch (err) {
+    console.warn('[DB]: Firestore compliance read error. Falling back to LocalStorage.', err.message);
+  }
+
+  const local = localStorage.getItem('foundation_local_state_compliance');
+  return local ? JSON.parse(local) : { annualReportDueDate: '2026-06-01', franchiseTaxDueDate: '2026-05-15', stateFilingStatus: 'Good Standing' };
+}
+
 function getLocalInvoices() {
   try {
     return JSON.parse(localStorage.getItem('foundation_local_invoices') || '{}');

@@ -784,83 +784,65 @@ export class AdminSetupWizards {
           {
             title: "Step 3/3: Onboard Employee #1 (Gemini Spark)",
             html: `
-              <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px; box-sizing: border-box;">
-                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #edf2f7; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                  <span style="font-weight: 800; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0);">Gemini Spark Onboarding</span>
-                  <a href="${FRAMEWORK_AFFILIATES.geminiSpark?.url || 'https://ai.google.dev/'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; background: #e6fffa; color: #319795; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-decoration: none; border: 1px solid #b2f5ea; display: inline-flex; align-items: center; gap: 4px;">
-                    Powered by Gemini Spark
-                  </a>
-                </div>
-                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">
-                  Configure permissions and capabilities for Gemini Spark, your Admin's Right-Hand Chief Operating Agent.
-                </p>
-
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px;">
+                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Onboard the Gemini Spark autonomous Chief Operating Agent with custom autonomy modes and permissions.</p>
                 <div>
-                  <label style="font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0.25rem;">
-                    Gemini API Key:
-                    <span class="tooltip-wrapper">
-                      <span class="tooltip-icon">?</span>
-                      <span class="tooltip-text">Gemini Spark acts as your 24/7 Chief Operating Officer. It monitors background metrics, drafts financial transactions, and alerts you when critical approvals are needed.</span>
-                    </span>
-                  </label>
-                  <input type="password" id="wz-spark-key" value="${configManager.current.geminiSpark?.apiKey || 'gemini_spark_mock_api_key_882'}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Gemini API Key (Masked):</label>
+                  <input type="password" id="wz-spark-key" value="••••••••••••••••" placeholder="AIzaSy..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
                 </div>
-
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Work Shift Frequency:</label>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Shift Frequency:</label>
                   <select id="wz-spark-frequency" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
-                    <option value="Continuous 24/7" ${configManager.current.geminiSpark?.frequency === 'Continuous 24/7' ? 'selected' : ''}>Continuous 24/7</option>
-                    <option value="Hourly" ${configManager.current.geminiSpark?.frequency === 'Hourly' ? 'selected' : ''}>Hourly</option>
-                    <option value="Daily Audit" ${configManager.current.geminiSpark?.frequency === 'Daily Audit' || !configManager.current.geminiSpark?.frequency ? 'selected' : ''}>Daily Audit</option>
+                    <option value="continuous">Continuous Background Audits</option>
+                    <option value="daily">Once Daily Pulse Check</option>
+                    <option value="weekly">Once Weekly Comprehensive Audit</option>
                   </select>
                 </div>
-
                 <div>
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Agent Autonomy Mode:</label>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Autonomy Mode:</label>
                   <select id="wz-spark-autonomy" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
-                    <option value="Strict Approval Mode" ${configManager.current.geminiSpark?.autonomyMode === 'Strict Approval Mode' || !configManager.current.geminiSpark?.autonomyMode ? 'selected' : ''}>Strict Approval Mode</option>
-                    <option value="Semi-Autonomous" ${configManager.current.geminiSpark?.autonomyMode === 'Semi-Autonomous' ? 'selected' : ''}>Semi-Autonomous</option>
+                    <option value="Level 1: Read & Audit">Level 1: Read & Audit Only</option>
+                    <option value="Level 2: Draft & Prepare">Level 2: Draft & Prepare Proposals</option>
+                    <option value="Level 3: Execute & Disburse" selected>Level 3: Full Execute & Disburse (SaaS/SOP Master)</option>
                   </select>
                 </div>
-
-                <div style="margin-top: 0.5rem;">
-                  <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.5rem;">Interactive Permissions Toggle Grid:</label>
-                  <div style="display: flex; flex-direction: column; gap: 0.5rem; background: #f7fafc; padding: 10px; border-radius: 6px; border: 1px solid #edf2f7;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                      <input type="checkbox" id="wz-spark-p-wise" ${configManager.current.geminiSpark?.permissions?.draftWisePayrolls !== false ? 'checked' : ''} />
-                      Allow Spark to draft Wise VA Payrolls
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Granular Agent Permissions:</label>
+                  <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 6px;">
+                      <input type="checkbox" id="wz-spark-perm-audit" checked /> Audit Ledger & Flag Discrepancies
                     </label>
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                      <input type="checkbox" id="wz-spark-p-inventory" ${configManager.current.geminiSpark?.permissions?.monitorInventory !== false ? 'checked' : ''} />
-                      Allow Spark to monitor physical product inventory
+                    <label style="display: inline-flex; align-items: center; gap: 6px;">
+                      <input type="checkbox" id="wz-spark-perm-disburse" checked /> Disburse Wise Payouts (Level 3 Required)
                     </label>
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                      <input type="checkbox" id="wz-spark-p-hipaa" ${configManager.current.geminiSpark?.permissions?.reviewHipaaLogs !== false ? 'checked' : ''} />
-                      Allow Spark to review HIPAA logs daily
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                      <input type="checkbox" id="wz-spark-p-autoapprove" ${configManager.current.geminiSpark?.permissions?.autoApproveNonFinancial === true ? 'checked' : ''} />
-                      Allow Spark to auto-approve non-financial actions
+                    <label style="display: inline-flex; align-items: center; gap: 6px;">
+                      <input type="checkbox" id="wz-spark-perm-hipaa" checked /> Encrypt/Decrypt ePHI Records (HIPAA Compliance)
                     </label>
                   </div>
+                </div>
+                <div style="margin-top: 0.5rem; text-align: center; border-top: 1px solid #edf2f7; padding-top: 0.5rem;">
+                  <span style="font-size: 0.75rem; color: #718096; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    Powered by Wise Business <a href="${FRAMEWORK_AFFILIATES.wise.url}" target="_blank" rel="noopener" style="color: #2b6cb0; font-weight: bold; text-decoration: underline;">Affiliate Link</a>
+                  </span>
                 </div>
               </div>
             `,
             validate: () => {
               const k = document.getElementById('wz-spark-key')?.value;
-              if (!k) throw new Error("Gemini API Key is required for Gemini Spark onboarding.");
+              if (!k) throw new Error("Gemini Spark key or placeholder is required.");
             },
             save: (data) => {
-              data.geminiSpark = {
-                apiKey: document.getElementById('wz-spark-key').value,
-                frequency: document.getElementById('wz-spark-frequency').value,
+              const kValue = document.getElementById('wz-spark-key').value;
+              data.sparkAgent = {
+                apiKey: kValue === '••••••••••••••••' ? (configManager.current.sparkAgent?.apiKey || 'AIzaSy_mock_spark_key') : kValue,
+                shiftFrequency: document.getElementById('wz-spark-frequency').value,
                 autonomyMode: document.getElementById('wz-spark-autonomy').value,
                 permissions: {
-                  draftWisePayrolls: document.getElementById('wz-spark-p-wise').checked,
-                  monitorInventory: document.getElementById('wz-spark-p-inventory').checked,
-                  reviewHipaaLogs: document.getElementById('wz-spark-p-hipaa').checked,
-                  autoApproveNonFinancial: document.getElementById('wz-spark-p-autoapprove').checked
-                }
+                  audit: document.getElementById('wz-spark-perm-audit').checked,
+                  disburse: document.getElementById('wz-spark-perm-disburse').checked,
+                  hipaa: document.getElementById('wz-spark-perm-hipaa').checked
+                },
+                isOnboarded: true
               };
             }
           }

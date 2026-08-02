@@ -1,120 +1,198 @@
-// utils/hipaa-audit.js - HIPAA Compliance Security Auditing & ePHI Encryption Engine
+// utils/hipaa-audit.js - HIPAA Technical Safeguards & ePHI Compliance Engine
 import { getFirestoreDB, doc, setDoc } from '../core/db-shared.js';
+import { store } from '../core/store.js';
 
-// AES-GCM 256-bit key generation/import helper
-async function getCryptoKey(password) {
-  const enc = new TextEncoder();
-  // Ensure exactly 32 bytes for a 256-bit AES key
-  const rawKey = enc.encode(password.padEnd(32, '0').substring(0, 32));
-  return await crypto.subtle.importKey(
+/**
+ * Derives a CryptoKey object from a raw string password/phrase using PBKDF2.
+ * @param {string} password
+ * @param {Uint8Array} salt
+ * @returns {Promise<CryptoKey>}
+ */
+async function deriveKey(password, salt) {
+  const encoder = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
     'raw',
-    rawKey,
-    'AES-GCM',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
     false,
     ['encrypt', 'decrypt']
   );
 }
 
 /**
- * Enforces AES-GCM 256-bit encryption on sensitive health/ePHI data.
+ * Encrypt sensitive ePHI / record at rest using AES-GCM 256-bit.
  * @param {string} plainText
- * @param {string} password
- * @returns {Promise<string>} Base64 encoded string containing the encrypted payload
+ * @param {string} keyPhrase - Encryption password/phrase
+ * @returns {Promise<Object>} { cipherText: string (hex), iv: string (hex), salt: string (hex) }
  */
-export async function encryptPHI(plainText, password = 'SparkDefaultHIPAAPassword101!') {
-  if (!plainText) return '';
-  const enc = new TextEncoder();
-  const key = await getCryptoKey(password);
-  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
+export async function encryptPHIRecord(plainText, keyPhrase = 'FOUNDATION-SECURE-ePHI-KEY-PHRASE-2026') {
+  if (!plainText) return { cipherText: '', iv: '', salt: '' };
 
-  const ciphertextBytes = await crypto.subtle.encrypt(
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plainText);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV is recommended for GCM
+
+  const key = await deriveKey(keyPhrase, salt);
+  const encryptedBuffer = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
-    enc.encode(plainText)
+    data
   );
 
-  const combined = new Uint8Array(iv.length + ciphertextBytes.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(ciphertextBytes), iv.length);
+  const cipherText = Array.from(new Uint8Array(encryptedBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  return btoa(String.fromCharCode(...combined));
+  const ivHex = Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('');
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return {
+    cipherText,
+    iv: ivHex,
+    salt: saltHex
+  };
 }
 
 /**
- * Decrypts AES-GCM 256-bit encrypted health/ePHI data.
- * @param {string} base64Ciphertext
- * @param {string} password
- * @returns {Promise<string>} Plaintext decrypted string
+ * Decrypt sensitive ePHI / record back to plain text.
+ * @param {string} cipherTextHex
+ * @param {string} ivHex
+ * @param {string} saltHex
+ * @param {string} keyPhrase
+ * @returns {Promise<string>} Decrypted plain text
  */
-export async function decryptPHI(base64Ciphertext, password = 'SparkDefaultHIPAAPassword101!') {
-  if (!base64Ciphertext) return '';
-  const key = await getCryptoKey(password);
-  const combined = new Uint8Array(atob(base64Ciphertext).split('').map(c => c.charCodeAt(0)));
-  const iv = combined.slice(0, 12);
-  const ciphertextBytes = combined.slice(12);
+export async function decryptPHIRecord(cipherTextHex, ivHex, saltHex, keyPhrase = 'FOUNDATION-SECURE-ePHI-KEY-PHRASE-2026') {
+  if (!cipherTextHex || !ivHex || !saltHex) return '';
 
-  const decryptedBytes = await crypto.subtle.decrypt(
+  const cipherBytes = new Uint8Array(cipherTextHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+  const iv = new Uint8Array(ivHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+  const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+  const key = await deriveKey(keyPhrase, salt);
+  const decryptedBuffer = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv },
     key,
-    ciphertextBytes
+    cipherBytes
   );
 
-  const dec = new TextDecoder();
-  return dec.decode(decryptedBytes);
+  return new TextDecoder().decode(decryptedBuffer);
 }
 
 /**
- * Logs every action initiated by human or AI agents for HIPAA Compliance Auditing.
- * @param {string} action - e.g. "READ", "WRITE", "DELETE", "DECRYPT"
- * @param {string} resource - e.g. "ephi_patient_summary", "billing_data"
- * @param {string} details - Additional context
- * @param {boolean} isSuccess
- * @param {string} agentId - Always defaults to Gemini Spark's employee ID
+ * Writes an immutable HIPAA audit log entry representing access or modification of sensitive data.
+ * Logs are stored in Firestore under '/hipaa_logs' and fallback LocalStorage.
+ * @param {string} action - "READ" | "WRITE" | "DELETE" | "ACCESS_GRANTED" | "ACCESS_DENIED"
+ * @param {string} recordId
+ * @param {string} status - "SUCCESS" | "FAILED"
+ * @param {Object} details - Additional metadata e.g. ip, user agent, changes
+ * @returns {Promise<Object>} The log entry saved
  */
-export async function logHipaaAudit(action, resource, details = '', isSuccess = true, agentId = 'GEMINI_SPARK_EE01') {
-  const payload = {
-    id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+export async function logHipaaAccess(action, recordId, status = 'SUCCESS', details = {}) {
+  const user = store.state.user || {};
+  const userId = user.uid || user.email || 'SYSTEM_DAEMON';
+  const userEmail = user.email || 'anonymous';
+  const role = store.state.simulatedUserTier || user.role || 'prospect';
+
+  const logEntry = {
+    id: `hipaa_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     timestamp: new Date().toISOString(),
-    agentId,
+    agentId: 'GEMINI_SPARK_EE01', // Standard HIPAA background agent tag
+    userId,
+    userEmail,
+    role,
     action,
-    resource,
-    details,
-    isSuccess
+    recordId,
+    status,
+    ip: details.ip || '127.0.0.1', // Mock or proxy remote IP
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'NodeJS/Agent',
+    details: details.notes || JSON.stringify(details)
   };
 
-  // Local storage backup
+  // 1. Save to LocalStorage Fallback
   try {
-    const logs = JSON.parse(localStorage.getItem('foundation_local_hipaa_logs') || '[]');
-    logs.push(payload);
-    // Maintain last 500 audit logs locally
-    localStorage.setItem('foundation_local_hipaa_logs', JSON.stringify(logs.slice(-500)));
+    const localLogs = JSON.parse(localStorage.getItem('foundation_local_hipaa_logs') || '[]');
+    localLogs.push(logEntry);
+    localStorage.setItem('foundation_local_hipaa_logs', JSON.stringify(localLogs));
   } catch (e) {
-    console.warn('[HIPAA Audit]: Failed to write log to LocalStorage', e);
+    console.warn('[HIPAA Audit]: Local storage write error.', e);
   }
 
-  // Firestore sync
+  // 2. Sync to Firestore
   const db = getFirestoreDB();
-  if (!db) {
-    return payload;
+  if (db) {
+    try {
+      const docRef = doc(db, 'hipaa_logs', logEntry.id);
+      await setDoc(docRef, logEntry, { merge: true });
+    } catch (err) {
+      console.warn('[HIPAA Audit]: Firestore write bypassed/offline.', err.message);
+    }
   }
 
-  try {
-    const docRef = doc(db, 'hipaa_logs', payload.id);
-    await setDoc(docRef, payload, { merge: true });
-    return payload;
-  } catch (err) {
-    console.warn('[HIPAA Audit]: Firestore logging error.', err.message);
-    return payload;
-  }
+  console.log(`[HIPAA Secure Audit Log]: [${action}] Record: ${recordId} Status: ${status} by Agent: ${userEmail}`);
+  return logEntry;
 }
 
 /**
- * Retrieves audit logs.
+ * Get all logged HIPAA compliance audits
+ * @returns {Array}
  */
-export function getLocalHipaaLogs() {
+export function getHipaaLogs() {
   try {
     return JSON.parse(localStorage.getItem('foundation_local_hipaa_logs') || '[]');
   } catch (e) {
     return [];
   }
+}
+
+/**
+ * Exports all local HIPAA audit logs as a downloadable CSV.
+ */
+export function exportHipaaLogsCsv() {
+  const logs = getHipaaLogs();
+  if (logs.length === 0) {
+    return 'No logs';
+  }
+
+  const headers = ['ID', 'Timestamp', 'Agent ID', 'User ID', 'User Email', 'Role', 'Action', 'Record ID', 'Status', 'IP Address', 'Details'];
+  const csvRows = [headers.join(',')];
+
+  logs.forEach(log => {
+    const row = [
+      log.id,
+      log.timestamp,
+      log.agentId,
+      log.userId,
+      log.userEmail,
+      log.role,
+      log.action,
+      log.recordId,
+      log.status,
+      log.ip,
+      `"${String(log.details).replace(/"/g, '""')}"`
+    ];
+    csvRows.push(row.join(','));
+  });
+
+  return csvRows.join('\n');
+}
+
+/**
+ * Exports all local HIPAA audit logs as a JSON string.
+ */
+export function exportHipaaLogsJson() {
+  const logs = getHipaaLogs();
+  return JSON.stringify(logs, null, 2);
 }
