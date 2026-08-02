@@ -104,7 +104,7 @@ export function initAdminPage() {
     PrefetchManager.preconnectDomain('https://firestore.googleapis.com');
     PrefetchManager.preconnectDomain('https://lh3.googleusercontent.com');
     PrefetchManager.preconnectDomain('https://drive.google.com');
-  });
+  }).catch(() => { /* silent catch */ });
 
   // Always invoke brand settings tab initializers
   initAdminIdentity();
