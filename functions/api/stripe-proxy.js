@@ -3,6 +3,7 @@
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  // Unified Environment Variable Law: strictly read STRIPE_SECRET_KEY
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
   try {
@@ -38,6 +39,7 @@ export async function onRequestPost(context) {
       }
 
       // Query Firestore for verification
+      // Unified Environment Variable Law: strictly read FIREBASE_PROJECT_ID and FIREBASE_API_KEY
       const firebaseProjectId = env.FIREBASE_PROJECT_ID;
       const firestoreApiKey = env.FIREBASE_API_KEY;
 

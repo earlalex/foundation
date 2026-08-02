@@ -21,6 +21,7 @@ export async function onRequestPost(context) {
     }
 
     // 2. Resolve Credentials & Preference
+    // Unified Environment Variable Law: strictly read GEMINI_API_KEY and OPENAI_API_KEY
     const geminiKey = context.env.GEMINI_API_KEY;
     const openAiKey = context.env.OPENAI_API_KEY;
     const preferredProvider = context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
@@ -149,6 +150,7 @@ export async function onRequestPost(context) {
     }
 
     // 3. Perform Google Workspace Integrations dynamically using context helper credentials
+    // Unified Environment Variable Law: strictly read GOOGLE_SERVICE_ACCOUNT_TOKEN
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
     if (serviceToken && callText) {
       try {

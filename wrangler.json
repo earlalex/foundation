@@ -1,5 +1,36 @@
 {
   "name": "foundation",
   "pages_build_output_dir": "./",
-  "compatibility_date": "2026-01-01"
+  "compatibility_date": "2026-01-01",
+  "vars": {
+    "SEO_RANK_MY_ADDR_API_KEY": "",
+    "SEO_RANK_MY_ADDR_ENDPOINT": "",
+    "GA4_MEASUREMENT_ID": "",
+    "LOOKER_STUDIO_EMBED_URL": "",
+    "GEMINI_API_KEY": "",
+    "OPENAI_API_KEY": "",
+    "FIREBASE_API_KEY": "",
+    "FIREBASE_PROJECT_ID": "",
+    "CLOUDFLARE_ACCOUNT_ID": "",
+    "CLOUDFLARE_API_TOKEN": "",
+    "STRIPE_SECRET_KEY": "",
+    "STRIPE_PUBLISHABLE_KEY": "",
+    "STRIPE_WEBHOOK_SECRET": "",
+    "STRIPE_MEMBERSHIP_PRICE_ID": "",
+    "WISE_API_KEY": "",
+    "WISE_PROFILE_ID": "",
+    "WISE_REFERRAL_LINK": "",
+    "ONLINE_JOBS_AFFILIATE_LINK": "",
+    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_CLIENT_SECRET": "",
+    "GOOGLE_SERVICE_ACCOUNT_TOKEN": "",
+    "TELNYX_API_KEY": "",
+    "TELNYX_PHONE_NUMBER": "",
+    "TWILIO_ACCOUNT_SID": "",
+    "TWILIO_AUTH_TOKEN": "",
+    "TWILIO_PHONE_NUMBER": "",
+    "VIRUSTOTAL_API_KEY": "",
+    "LASTPASS_CID": "",
+    "LASTPASS_HASH": ""
+  }
 }
