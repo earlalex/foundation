@@ -2,14 +2,16 @@
 import {
   getFirestore,
   collection,
-  doc,
+  doc as originalDoc,
   getDoc as originalGetDoc,
   getDocs as originalGetDocs,
   setDoc as originalSetDoc,
   deleteDoc as originalDeleteDoc,
   query,
   where,
-  limit
+  limit,
+  writeBatch,
+  onSnapshotsInSync
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 import { schemaRegistry } from '../schemas/registry.js';
@@ -37,7 +39,37 @@ export function withTimeout(promise, ms = 2000) {
 
 export const getDoc = (docRef) => withTimeout(originalGetDoc(docRef));
 export const getDocs = (queryRef) => withTimeout(originalGetDocs(queryRef));
-export const setDoc = (docRef, data, options) => withTimeout(originalSetDoc(docRef, data, options));
+export async function setDoc(docRef, data, options) {
+  if (!docRef) {
+    console.warn('[DB Shared setDoc]: Called with null/undefined docRef. Bypassing write.');
+    return;
+  }
+  try {
+    await withTimeout(originalSetDoc(docRef, data, options));
+  } catch (err) {
+    console.warn('[DB Shared setDoc]: Write failed or offline. Queueing to outbox:', err.message);
+    try {
+      const pathParts = docRef && docRef.path ? docRef.path.split('/') : [];
+      const collectionName = pathParts[0] || 'unknown';
+      const docId = pathParts[1] || (docRef && docRef.id) || 'unknown';
+
+      const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+      const filtered = outbox.filter(item => !(item.collection === collectionName && item.docId === docId));
+      filtered.push({
+        id: `${collectionName}_${docId}_${Date.now()}`,
+        collection: collectionName,
+        docId: docId,
+        data: data,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+      console.log(`[DB Shared setDoc]: Queued ${collectionName}/${docId} to /foundation_outbox.`);
+    } catch (queueErr) {
+      console.error('[DB Shared setDoc]: Failed to queue write to outbox:', queueErr);
+    }
+    throw err;
+  }
+}
 export const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
 
 export function queryWith3SecTimeout(promise) {
@@ -397,13 +429,27 @@ export function saveLocalPages(data) {
   localStorage.setItem('foundation_local_pages', JSON.stringify(data));
 }
 
+export function doc(db, ...paths) {
+  if (!db) {
+    return null;
+  }
+  try {
+    return originalDoc(db, ...paths);
+  } catch (err) {
+    console.warn('[DB Shared doc]: Failed to create document reference.', err.message);
+    return null;
+  }
+}
+
 export {
   collection,
-  doc,
   query,
   where,
   limit,
+  originalGetDoc,
   originalGetDocs,
+  writeBatch,
+  onSnapshotsInSync,
   schemaRegistry,
   configManager,
   store

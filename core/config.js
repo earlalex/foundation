@@ -361,7 +361,22 @@ class ConfigEngine {
       localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
       return true;
     } catch (err) {
-      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.');
+      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.', err.message);
+      try {
+        const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+        const filtered = outbox.filter(item => !(item.collection === 'settings' && item.docId === 'config'));
+        filtered.push({
+          id: `settings_config_${Date.now()}`,
+          collection: 'settings',
+          docId: 'config',
+          data: this.#activeConfig,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+        console.log('[ConfigEngine]: Queued settings/config write to /foundation_outbox.');
+      } catch (outboxErr) {
+        console.error('[ConfigEngine]: Failed to write settings/config to outbox queue:', outboxErr);
+      }
       return true;
     }
   }
