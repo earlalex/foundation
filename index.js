@@ -49,8 +49,51 @@ window.foundationDevBypass = function() {
   });
   store.dispatch('SET_DEV_MODE', true);
   console.log('%c[Security Bypass Granted]: Emergency Console Dev Bypass Active.', 'color: #38a169; font-weight: bold;');
-  window.router?.loadRoute('/admin');
+  window.router?.navigateTo('/admin');
 };
+
+/**
+ * Helper to update simulation badge visibility based on route and admin state
+ */
+function updateSimulationBadgeVisibility(state) {
+  let badge = document.getElementById('simulation-active-badge');
+  const currentPath = window.location.pathname;
+  const isAdmin = state.user?.isAdmin || window.__FOUNDATION_DEV_BYPASS__;
+  const isAdminRoute = currentPath.endsWith('/admin') || currentPath.includes('/admin');
+
+  // Strict check: Only show if simulation is active AND user is admin AND on the /admin route
+  if (state.simulatedUserTier && isAdmin && isAdminRoute) {
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'simulation-active-badge';
+      document.body.appendChild(badge);
+    }
+    const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
+    badge.innerHTML = `
+      <span class="badge-short-text">[ Simulation Mode ]</span>
+      <span class="badge-full-text">
+        <span>SIMULATION MODE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
+        <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
+          Return to Admin Command Center
+        </button>
+      </span>
+    `;
+
+    const btn = badge.querySelector('#btn-return-admin-sim');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        store.dispatch('SET_SIMULATED_USER_TIER', null);
+        window.router.navigateTo('/admin');
+      });
+    }
+  } else {
+    if (badge) {
+      badge.remove();
+    }
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Active Plugins & Hooks
@@ -144,42 +187,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Global Website Footer Features
   initGlobalFooter();
 
-  // Active Simulation Mode Observer and Sticky Bottom-Right Badge
+  // Active Simulation Mode Observer - Restricted to Admin Route & Admin Users Only
   store.subscribe((state) => {
-    let badge = document.getElementById('simulation-active-badge');
-    if (state.simulatedUserTier) {
-      if (!badge) {
-        badge = document.createElement('div');
-        badge.id = 'simulation-active-badge';
-        document.body.appendChild(badge);
-      }
-
-      const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
-      badge.innerHTML = `
-        <span class="badge-short-text">[ ⚠️ Simulation Mode ]</span>
-        <span class="badge-full-text">
-          <span>⚠️ SIMULATION MODE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
-          <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
-            Return to Admin Command Center
-          </button>
-        </span>
-      `;
-
-      // Bind listener reactively when DOM updates
-      const btn = badge.querySelector('#btn-return-admin-sim');
-      if (btn) {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          store.dispatch('SET_SIMULATED_USER_TIER', null);
-          window.router.navigateTo('/admin');
-        });
-      }
-    } else {
-      if (badge) {
-        badge.remove();
-      }
-    }
+    updateSimulationBadgeVisibility(state);
   });
 
   // 5. Hard Guard: If uninstalled, render Setup Wizard. Otherwise, initialize route cleanly.
@@ -248,6 +258,9 @@ async function initGlobalFooter() {
 window.addEventListener('pageLoaded', (e) => {
   logger.log(`Page lifecycle transition -> ${e.detail.path}`);
 
+  // Re-evaluate simulation badge visibility on path transition
+  updateSimulationBadgeVisibility(store.state);
+
   // Re-translate page items dynamically on transition
   setTimeout(async () => {
     try {
@@ -255,7 +268,7 @@ window.addEventListener('pageLoaded', (e) => {
       i18n.translatePage();
     } catch (err) {}
   }, 100);
-  
+
   // Guard: Skip page controllers if platform is unconfigured / running setup wizard
   const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
   if (!isConfigured && !window.__FOUNDATION_DEV_BYPASS__) return;
