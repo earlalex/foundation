@@ -212,6 +212,79 @@ export const defaultConfig = {
   }
 };
 
+const legacyMap = {
+  'SEO_RANK_MY_ADDR_API_KEY': ['seoMyRankAddr', 'apiKey'],
+  'SEO_RANK_MY_ADDR_ENDPOINT': ['seoMyRankAddr', 'apiEndpoint'],
+  'GA4_MEASUREMENT_ID': ['analytics', 'googleAnalyticsId'],
+  'LOOKER_STUDIO_EMBED_URL': ['thirdParty', 'lookerStudioEmbedUrl'],
+  'GEMINI_API_KEY': ['aiConfig', 'geminiApiKey'],
+  'OPENAI_API_KEY': ['aiConfig', 'openaiApiKey'],
+  'FIREBASE_API_KEY': ['firebase', 'apiKey'],
+  'FIREBASE_PROJECT_ID': ['firebase', 'projectId'],
+  'CLOUDFLARE_ACCOUNT_ID': ['cloudflare', 'zoneId'],
+  'CLOUDFLARE_API_TOKEN': ['cloudflare', 'workerApiKey'],
+  'STRIPE_SECRET_KEY': ['stripe', 'secretKey'],
+  'STRIPE_PUBLISHABLE_KEY': ['stripe', 'publishableKey'],
+  'STRIPE_WEBHOOK_SECRET': ['stripe', 'webhookSecret'],
+  'STRIPE_MEMBERSHIP_PRICE_ID': ['stripe', 'priceId'],
+  'WISE_API_KEY': ['wise', 'apiKey'],
+  'WISE_PROFILE_ID': ['wise', 'profileId'],
+  'WISE_REFERRAL_LINK': ['wise', 'referralLink'],
+  'ONLINE_JOBS_AFFILIATE_LINK': ['onlineJobs', 'affiliateLink'],
+  'GOOGLE_CLIENT_ID': ['google', 'clientId'],
+  'GOOGLE_CLIENT_SECRET': ['google', 'clientSecret'],
+  'GOOGLE_SERVICE_ACCOUNT_TOKEN': ['google', 'serviceAccountToken'],
+  'TELNYX_API_KEY': ['chatbot', 'telnyxApiKey'],
+  'TELNYX_PHONE_NUMBER': ['chatbot', 'telnyxPhoneNumber'],
+  'TWILIO_ACCOUNT_SID': ['chatbot', 'twilioAccountSid'],
+  'TWILIO_AUTH_TOKEN': ['chatbot', 'twilioAuthToken'],
+  'TWILIO_PHONE_NUMBER': ['chatbot', 'twilioPhoneNumber'],
+  'VIRUSTOTAL_API_KEY': ['virustotal', 'apiKey'],
+  'LASTPASS_CID': ['lastpass', 'companyId'],
+  'LASTPASS_HASH': ['lastpass', 'provisioningHash']
+};
+
+function getNestedValue(obj, path) {
+  if (!obj) return undefined;
+  let current = obj;
+  for (const key of path) {
+    if (current === null || current === undefined) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+function getStandardizedValue(obj, key) {
+  if (obj && obj[key] !== undefined) {
+    return obj[key];
+  }
+  const path = legacyMap[key];
+  if (path) {
+    return getNestedValue(obj, path);
+  }
+  return undefined;
+}
+
+export function getEnvVariable(key) {
+  // Check window context, configManager, LocalStorage, or process env
+  const directVal = (typeof window !== 'undefined' && window.env?.[key]) ||
+                    (typeof configManager !== 'undefined' && configManager.current?.[key]) ||
+                    (typeof localStorage !== 'undefined' && localStorage.getItem(`env_${key}`)) ||
+                    (typeof process !== 'undefined' && process.env?.[key]) ||
+                    '';
+  if (directVal !== '') return directVal;
+
+  // Check legacy mappings
+  const path = legacyMap[key];
+  if (path) {
+    const legacyVal = getNestedValue(typeof configManager !== 'undefined' ? configManager.current : null, path);
+    if (legacyVal !== undefined && legacyVal !== null) {
+      return String(legacyVal);
+    }
+  }
+  return '';
+}
+
 /**
  * ConfigEngine manages application configuration state
  * Handles loading from localStorage, syncing with Firestore, and providing centralized config access
@@ -304,7 +377,34 @@ class ConfigEngine {
    * @returns {Object} Current active configuration
    */
   get current() {
-    return this.#activeConfig || defaultConfig;
+    const rawConfig = this.#activeConfig || defaultConfig;
+    return new Proxy(rawConfig, {
+      get(target, prop) {
+        if (typeof prop === 'string') {
+          if (legacyMap[prop]) {
+            const val = getStandardizedValue(target, prop);
+            if (val !== undefined) return val;
+          }
+        }
+        return Reflect.get(target, prop);
+      },
+      set(target, prop, value) {
+        if (typeof prop === 'string' && legacyMap[prop]) {
+          const path = legacyMap[prop];
+          if (path && path.length > 0) {
+            let curr = target;
+            for (let i = 0; i < path.length - 1; i++) {
+              if (!curr[path[i]]) {
+                curr[path[i]] = {};
+              }
+              curr = curr[path[i]];
+            }
+            curr[path[path.length - 1]] = value;
+          }
+        }
+        return Reflect.set(target, prop, value);
+      }
+    });
   }
 
   /**
@@ -361,7 +461,22 @@ class ConfigEngine {
       localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
       return true;
     } catch (err) {
-      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.');
+      console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.', err.message);
+      try {
+        const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+        const filtered = outbox.filter(item => !(item.collection === 'settings' && item.docId === 'config'));
+        filtered.push({
+          id: `settings_config_${Date.now()}`,
+          collection: 'settings',
+          docId: 'config',
+          data: this.#activeConfig,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+        console.log('[ConfigEngine]: Queued settings/config write to /foundation_outbox.');
+      } catch (outboxErr) {
+        console.error('[ConfigEngine]: Failed to write settings/config to outbox queue:', outboxErr);
+      }
       return true;
     }
   }

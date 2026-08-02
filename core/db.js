@@ -1,6 +1,30 @@
 // core/db.js - Re-export and Delegation Hub
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { getFirestoreDB, schemaRegistry, store, configManager } from './db-shared.js';
+import {
+  PAGES_COLLECTION,
+  CONTENT_COLLECTION,
+  USERS_COLLECTION,
+  CHAT_LOGS_COLLECTION,
+  INVOICES_COLLECTION,
+  MARKETING_WORKFLOWS_COLLECTION,
+  KANBAN_TASKS_COLLECTION,
+  VAULT_CREDENTIALS_COLLECTION,
+  getFirestoreDB,
+  getDoc,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  limit,
+  originalGetDoc,
+  originalGetDocs,
+  queryWith3SecTimeout,
+  schemaRegistry,
+  store,
+  configManager
+} from './db-shared.js';
 import { FRAMEWORK_AFFILIATES } from './affiliates.js';
 
 import {
@@ -1513,6 +1537,110 @@ export class ContentDB {
     }
     return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
   }
+}
+
+export function flushSensitiveLocalData() {
+  console.log('[Outbox Sync]: Flushing sensitive records from LocalStorage and sessionStorage.');
+
+  const keysToFlush = [
+    'foundation_local_vault_credentials',
+    'foundation_local_payroll',
+    'foundation_local_expenses',
+    'foundation_local_invoices',
+    'foundation_local_budgets',
+    'foundation_local_employees',
+    'foundation_local_kanban_tasks',
+    'foundation_local_chat_logs',
+    'foundation_local_state_compliance',
+    'foundation_local_security_scans',
+    'foundation_local_registrations',
+    'foundation_local_appointments',
+    'foundation_local_marketing_workflows',
+    'foundation_local_marketing_segments',
+    'foundation_local_email_templates',
+    'foundation_local_course_progress',
+    'foundation_outbox'
+  ];
+
+  keysToFlush.forEach(key => {
+    localStorage.removeItem(key);
+  });
+
+  try {
+    sessionStorage.clear();
+  } catch (e) {
+    console.warn('[Outbox Sync]: Failed to clear sessionStorage:', e);
+  }
+
+  console.log('[Outbox Sync]: Secure flush complete. Sensitive data purged.');
+}
+
+export async function syncOutboxToFirestore() {
+  const db = getFirestoreDB();
+  if (!db) {
+    console.log('[Outbox Sync]: Firestore database not configured/available yet.');
+    return;
+  }
+
+  let outbox = [];
+  try {
+    outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+  } catch (e) {
+    console.error('[Outbox Sync]: Failed to parse outbox from localStorage', e);
+    return;
+  }
+
+  if (outbox.length === 0) {
+    console.log('[Outbox Sync]: No pending payloads in outbox.');
+    return;
+  }
+
+  console.log(`[Outbox Sync]: Connection recovered/established. Batch-writing ${outbox.length} pending payloads...`);
+
+  try {
+    const { writeBatch } = await import('./db-shared.js');
+    const batch = writeBatch(db);
+
+    for (const item of outbox) {
+      const docRef = doc(db, item.collection, item.docId);
+      if (docRef) {
+        batch.set(docRef, item.data, { merge: true });
+      }
+    }
+
+    await batch.commit();
+    console.log('[Outbox Sync]: Successfully committed batch-write of pending payloads.');
+
+    localStorage.removeItem('foundation_outbox');
+    flushSensitiveLocalData();
+  } catch (err) {
+    console.error('[Outbox Sync]: Failed to commit batch-write to Firestore:', err.message);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    console.log('[Outbox Sync]: Browser online event detected.');
+    syncOutboxToFirestore();
+  });
+
+  // Listen to Firestore-specific reconnection state transitions using onSnapshotsInSync
+  try {
+    const db = getFirestoreDB();
+    if (db) {
+      const { onSnapshotsInSync } = await import('./db-shared.js');
+      onSnapshotsInSync(db, () => {
+        console.log('[Outbox Sync]: Firebase network reconnection event detected.');
+        syncOutboxToFirestore();
+      });
+    }
+  } catch (err) {
+    console.warn('[Outbox Sync]: Firebase reconnection listener registration deferred.', err.message);
+  }
+
+  setTimeout(() => {
+    syncOutboxToFirestore();
+  }, 2000);
 }
 
 /**

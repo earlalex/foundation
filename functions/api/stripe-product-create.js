@@ -3,6 +3,7 @@
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  // Unified Environment Variable Law: strictly read STRIPE_SECRET_KEY
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
   try {

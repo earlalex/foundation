@@ -70,7 +70,7 @@ export async function runDbTests() {
     }
     
     const allContent = await contentDB.getAllContent();
-    const blogs = allContent.filter(doc => doc.type === 'blog');
+    const blogs = allContent.filter(doc => doc.type === 'blog' && doc.id.startsWith('query-test-'));
     
     if (blogs.length !== 2) {
       throw new Error(`Expected 2 blog documents, got ${blogs.length}`);
