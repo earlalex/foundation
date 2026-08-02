@@ -9,6 +9,14 @@ export async function saveInvoice(invoice) {
 
   // Trigger buyer customer sync to Google Contacts (Directive 5)
   try {
+    let token = null;
+    try {
+      const { getGoogleAccessToken } = await import('./google-services.js');
+      token = await getGoogleAccessToken(false);
+    } catch (tokenErr) {
+      console.warn('[saveInvoice]: Google access token retrieval deferred.', tokenErr);
+    }
+
     const { syncBuyerToGoogleContacts } = await import('../utils/backend-google.js');
     await syncBuyerToGoogleContacts({
       givenName: invoice.customerName || invoice.customerEmail?.split('@')[0] || 'Customer',
@@ -20,7 +28,7 @@ export async function saveInvoice(invoice) {
       orderId: invoice.id,
       paymentMethod: invoice.paymentMethod || 'Stripe',
       date: invoice.date || new Date().toISOString().split('T')[0]
-    });
+    }, token);
   } catch (err) {
     console.warn('[saveInvoice]: Google Contacts buyer sync deferred.', err.message);
   }

@@ -209,6 +209,33 @@ export async function checkLowStockAlerts() {
 }
 
 /**
+ * Simple in-memory or localStorage stock counter for Spark COO monitoring
+ */
+let memoryInventoryCounts = {
+  "Handmade Wooden Coaster": 10,
+  "Physical Product Unit": 25
+};
+
+export function getInventoryCounts() {
+  try {
+    const stored = localStorage.getItem('foundation_spark_inventory');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {}
+  return { ...memoryInventoryCounts };
+}
+
+export function updateInventoryCount(itemName, count) {
+  const current = getInventoryCounts();
+  current[itemName] = count;
+  try {
+    localStorage.setItem('foundation_spark_inventory', JSON.stringify(current));
+  } catch (e) {}
+  memoryInventoryCounts[itemName] = count;
+}
+
+/**
  * Get cached low-stock alerts
  * @returns {Array}
  */

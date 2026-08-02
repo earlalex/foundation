@@ -100,6 +100,18 @@ export async function decryptPHIRecord(cipherTextHex, ivHex, saltHex, keyPhrase 
  * @param {Object} details - Additional metadata e.g. ip, user agent, changes
  * @returns {Promise<Object>} The log entry saved
  */
+/**
+ * Compatibility wrapper/alias for logHipaaAudit used in system tasks.
+ */
+export async function logHipaaAudit(action, recordId, details = {}, success = true, agentId = 'GEMINI_SPARK_EE01') {
+  const statusStr = success === true || success === 'SUCCESS' ? 'SUCCESS' : 'FAILED';
+  const detailsObj = typeof details === 'string' ? { notes: details } : details;
+  return await logHipaaAccess(action, recordId, statusStr, {
+    ...detailsObj,
+    agentId
+  });
+}
+
 export async function logHipaaAccess(action, recordId, status = 'SUCCESS', details = {}) {
   const user = store.state.user || {};
   const userId = user.uid || user.email || 'SYSTEM_DAEMON';
@@ -195,4 +207,21 @@ export function exportHipaaLogsCsv() {
 export function exportHipaaLogsJson() {
   const logs = getHipaaLogs();
   return JSON.stringify(logs, null, 2);
+}
+
+/**
+ * Backwards compatibility aliases for Spark and other older test suites/modules
+ */
+export async function encryptPHI(plainText, keyPhrase) {
+  return await encryptPHIRecord(plainText, keyPhrase);
+}
+
+export async function decryptPHI(encryptedObj, keyPhrase) {
+  if (!encryptedObj) return '';
+  const { cipherText, iv, salt } = encryptedObj;
+  return await decryptPHIRecord(cipherText, iv, salt, keyPhrase);
+}
+
+export function getLocalHipaaLogs() {
+  return getHipaaLogs();
 }
