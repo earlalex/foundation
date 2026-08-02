@@ -46,6 +46,29 @@ self.addEventListener('fetch', (event) => {
 
   const isNavigation = event.request.mode === 'navigate';
 
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // If the network request fails with a non-ok status or a redirect loop (308, 404, etc), return cached index.html immediately
+          if (!response || !response.ok || response.status === 308 || response.status === 404) {
+            return caches.match('./index.html') || response;
+          }
+          return response;
+        })
+        .catch(async () => {
+          const fallback = await caches.match('./index.html');
+          if (fallback) return fallback;
+          return new Response('Network error: SPA fallback unavailable offline.', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({ 'Content-Type': 'text/html' })
+          });
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -58,10 +81,6 @@ self.addEventListener('fetch', (event) => {
       .catch(async () => {
         const cachedResponse = await caches.match(event.request);
         if (cachedResponse) return cachedResponse;
-
-        if (isNavigation) {
-          return caches.match('./index.html');
-        }
 
         return new Response('Network error: Resource unavailable offline.', {
           status: 503,

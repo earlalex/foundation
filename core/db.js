@@ -66,15 +66,15 @@ export class ContentDB {
       createdAt: new Date().toISOString()
     };
 
-    const db = getFirestoreDB();
-    if (!db) {
-      const local = this.#getLocalChatLogs();
-      local.push(payload);
-      this.#saveLocalChatLogs(local.slice(-100));
-      return true;
-    }
-
     try {
+      const db = getFirestoreDB();
+      if (!db) {
+        const local = this.#getLocalChatLogs();
+        local.push(payload);
+        this.#saveLocalChatLogs(local.slice(-100));
+        return true;
+      }
+
       const { doc, setDoc } = await import('./db-shared.js');
       const docRef = doc(db, 'chat_logs', payload.id);
       await setDoc(docRef, payload, { merge: true });
@@ -89,9 +89,9 @@ export class ContentDB {
   }
 
   async getChatLogs(limitCount = 50) {
-    const db = getFirestoreDB();
-    if (db) {
-      try {
+    try {
+      const db = getFirestoreDB();
+      if (db) {
         const { collection, getDocs } = await import('./db-shared.js');
         const querySnapshot = await getDocs(collection(db, 'chat_logs'));
         const results = [];
@@ -100,9 +100,9 @@ export class ContentDB {
         });
         results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         if (results.length > 0) return results.slice(0, limitCount);
-      } catch (err) {
-        console.warn('[DB]: Could not fetch chat logs from Firestore.', err.message);
       }
+    } catch (err) {
+      console.warn('[DB]: Could not fetch chat logs from Firestore.', err.message);
     }
 
     const local = this.#getLocalChatLogs();
@@ -380,18 +380,18 @@ export class ContentDB {
   }
 
   async saveExpense(data) {
-    const db = getFirestoreDB();
     const id = data.id || `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const payload = { ...data, id, updatedAt: new Date().toISOString() };
 
-    if (!db) {
-      const local = this.#getLocalExpenses();
-      local[id] = payload;
-      this.#saveLocalExpenses(local);
-      return payload;
-    }
-
     try {
+      const db = getFirestoreDB();
+      if (!db) {
+        const local = this.#getLocalExpenses();
+        local[id] = payload;
+        this.#saveLocalExpenses(local);
+        return payload;
+      }
+
       const docRef = doc(db, 'finances_expenses', id);
       await setDoc(docRef, payload, { merge: true });
       return payload;
@@ -406,16 +406,16 @@ export class ContentDB {
 
   async getExpenses(filter = {}) {
     let results = [];
-    const db = getFirestoreDB();
-    if (db) {
-      try {
+    try {
+      const db = getFirestoreDB();
+      if (db) {
         const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
         querySnapshot.forEach((docSnap) => {
           results.push(docSnap.data());
         });
-      } catch (err) {
-        console.warn('[DB]: Could not fetch expenses from Firestore.', err.message);
       }
+    } catch (err) {
+      console.warn('[DB]: Could not fetch expenses from Firestore.', err.message);
     }
 
     if (results.length === 0) {

@@ -8,16 +8,13 @@ import { logger } from './core/logger.js';
 import { configManager } from './core/config.js';
 import { initNavbar } from './core/navbar.js';
 
-// Web Components
+// Critical Web Components
 import './components/global/ContentCard.js';
 import './components/global/AuthorCard.js';
-import './components/global/ChatWidget.js';
 import './components/global/HeroBanner.js';
 import './components/global/FeatureGrid.js';
 import './components/global/PricingTable.js';
-import './components/global/TestimonialSlider.js';
 import './components/global/CtaBlock.js';
-import './components/global/AppointmentPicker.js';
 import './components/global/AppNavbar.js';
 import './components/global/AppFooter.js';
 import './components/global/TooltipElement.js';
@@ -150,6 +147,15 @@ function updateSimulationBadgeVisibility(state) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Lazy-load Non-critical Web Components (Directive 5)
+  try {
+    import('./components/global/AppointmentPicker.js');
+    import('./components/global/TestimonialSlider.js');
+    import('./components/global/ChatWidget.js');
+  } catch (err) {
+    console.warn('[Lazy Load Components]: Failed to defer non-critical components.', err);
+  }
+
   // Initialize Active Plugins & Hooks
   try {
     const { pluginManager } = await import('./core/plugins.js');

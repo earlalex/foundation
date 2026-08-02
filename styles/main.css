@@ -1,4 +1,11 @@
 /* styles/main.css - Overhauled Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* --- Explicit aspect-ratio & reserved layout spaces (Directive 1) --- */
+img, video, iframe, hero-banner, content-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 300px 200px;
+}
 
 /* --- 4px Divisible Spacing & Typographic Tokens --- */
 :root {
