@@ -1,44 +1,17 @@
 // core/db-content.js - Content & Custom Pages Repository
-import { getFirestoreDB, doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, limit, queryWith3SecTimeout, originalGetDocs, originalGetDoc } from './db-shared.js';
-import { schemaRegistry } from '../schemas/registry.js';
+import {
+  getFirestoreDB, doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, limit,
+  queryWith3SecTimeout, originalGetDocs, CONTENT_COLLECTION, PAGES_COLLECTION,
+  VAULT_CREDENTIALS_COLLECTION, schemaRegistry, store,
+  getLocalContent, saveLocalContent, getLocalPages, saveLocalPages
+} from './db-shared.js';
 import { configManager } from './config.js';
 
-const CONTENT_COLLECTION = 'content';
-const PAGES_COLLECTION = 'pages';
 const ZAP_SCANS_COLLECTION = 'security_scans';
 const MARKETING_SEGMENTS_COLLECTION = 'marketing_segments';
 const MARKETING_WORKFLOWS_COLLECTION = 'marketing_workflows';
 const EMAIL_TEMPLATES_COLLECTION = 'email_templates';
-const VAULT_CREDENTIALS_COLLECTION = 'vault_credentials';
 const KANBAN_TASKS_COLLECTION = 'kanban_tasks';
-
-/**
- * Get content from localStorage fallback
- * @private
- * @returns {Object} Content object from localStorage
- */
-function getLocalContent() {
-  try {
-    const stored = localStorage.getItem('foundation_local_content');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {}
-  return {};
-}
-
-/**
- * Save content to localStorage fallback
- * @private
- * @param {Object} data - Content object to save
- */
-function saveLocalContent(data) {
-  try {
-    localStorage.setItem('foundation_local_content', JSON.stringify(data));
-  } catch (e) {
-    console.error('[DB]: Failed to save content to localStorage', e);
-  }
-}
 
 /**
  * Save content to Firestore or localStorage fallback
@@ -96,7 +69,7 @@ export async function getContentById(id) {
 
   try {
     const docRef = doc(db, CONTENT_COLLECTION, id);
-    const docSnap = await originalGetDoc(docRef);
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
       schemaRegistry.validate(data);
@@ -126,8 +99,16 @@ export async function getAllContent() {
 
   if (db) {
     try {
+      const user = store.state.user;
+      const isAdmin = user?.isAdmin;
+      let q;
       const contentRef = collection(db, CONTENT_COLLECTION);
-      const querySnapshot = await queryWith3SecTimeout(originalGetDocs(contentRef));
+      if (isAdmin) {
+        q = contentRef;
+      } else {
+        q = query(contentRef, where('access.visibility', '==', 'public'));
+      }
+      const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         try {
@@ -166,8 +147,24 @@ export async function getContentByType(type, maxItems = 12) {
 
   if (db) {
     try {
+      const user = store.state.user;
+      const isAdmin = user?.isAdmin;
+      let q;
       const contentRef = collection(db, CONTENT_COLLECTION);
-      const q = query(contentRef, where('type', '==', type), limit(maxItems));
+      if (isAdmin) {
+        q = query(
+          contentRef,
+          where('type', '==', type),
+          limit(maxItems)
+        );
+      } else {
+        q = query(
+          contentRef,
+          where('type', '==', type),
+          where('access.visibility', '==', 'public'),
+          limit(maxItems)
+        );
+      }
       const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
@@ -233,25 +230,6 @@ export async function deleteContent(id) {
   }
 }
 
-// Dynamic Custom Pages Helpers
-function getLocalPages() {
-  try {
-    const stored = localStorage.getItem('foundation_local_pages');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {}
-  return {};
-}
-
-function saveLocalPages(data) {
-  try {
-    localStorage.setItem('foundation_local_pages', JSON.stringify(data));
-  } catch (e) {
-    console.error('[DB]: Failed to save pages to localStorage', e);
-  }
-}
-
 export async function saveCustomPage(pageData) {
   const payload = { ...pageData, type: 'page', updatedAt: new Date().toISOString() };
   schemaRegistry.validate(payload);
@@ -289,7 +267,7 @@ export async function getCustomPageBySlug(slug) {
 
   try {
     const docRef = doc(db, PAGES_COLLECTION, slug);
-    const docSnap = await originalGetDoc(docRef);
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
       schemaRegistry.validate(data);
@@ -315,8 +293,17 @@ export async function getAllCustomPages() {
 
   if (db) {
     try {
+      const user = store.state.user;
+      const isAdmin = user?.isAdmin;
+      const isEditor = user?.role === 'editor';
+      let q;
       const colRef = collection(db, PAGES_COLLECTION);
-      const querySnapshot = await originalGetDocs(colRef);
+      if (isAdmin || isEditor) {
+        q = colRef;
+      } else {
+        q = query(colRef, where('access.visibility', '==', 'public'));
+      }
+      const querySnapshot = await getDocs(q);
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         try {
@@ -331,11 +318,16 @@ export async function getAllCustomPages() {
   }
 
   const local = getLocalPages();
+  const user = store.state.user;
+  const isAdmin = user?.isAdmin;
+  const isEditor = user?.role === 'editor';
   Object.values(local).forEach(item => {
-    try {
-      schemaRegistry.validate(item);
-    } catch (e) {}
-    results.push(item);
+    if (isAdmin || isEditor || item.access?.visibility === 'public') {
+      try {
+        schemaRegistry.validate(item);
+      } catch (e) {}
+      results.push(item);
+    }
   });
   return results;
 }
