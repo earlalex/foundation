@@ -151,7 +151,7 @@ export class AuthManager {
               if (hasAdminAccess) {
                 window.router.loadRoute('/admin');
               } else {
-                window.router.loadRoute('/home');
+                window.router.loadRoute('/account');
               }
             } else {
               window.router.loadRoute(intendedDest);

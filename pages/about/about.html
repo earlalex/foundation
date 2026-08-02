@@ -1,20 +1,61 @@
 <!-- pages/about/about.html -->
-<section style="max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif;">
-  <div style="text-align: center; margin-bottom: 3rem;">
-    <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 0.5rem;">
-      About the Author
-    </h1>
-    <p style="color: var(--theme-color-text-secondary, #4a5568); font-size: 1.1rem;">
-      Meet the architect behind the zero-build Foundation framework.
-    </p>
-  </div>
+<div class="about-page-wrapper" style="font-family: system-ui, sans-serif; color: var(--theme-color-text-primary, #1a202c);">
+  <!-- Hero Section -->
+  <section id="about-hero" style="background: var(--theme-color-surface-alt, #f7fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 5rem 1.5rem; text-align: center;">
+    <div style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+      <div id="about-avatar-container" style="position: relative; width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 4px solid var(--theme-color-primary, #2b6cb0); box-shadow: var(--theme-layout-box-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.1)); background: #edf2f7; display: flex; align-items: center; justify-content: center;">
+        <img id="about-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%232b6cb0'/><text x='50%' y='60%' font-size='40' text-anchor='middle' fill='%23ffffff'>👤</text></svg>" alt="Author Headshot" style="width: 100%; height: 100%; object-fit: cover;" />
+      </div>
+      <h1 id="about-name" style="font-size: 2.5rem; font-weight: 800; margin: 0; color: var(--theme-color-text-primary, #1a202c);">Jane Doe</h1>
+      <p id="about-title" style="font-size: 1.25rem; font-weight: 600; color: var(--theme-color-primary, #2b6cb0); margin: 0;">Lead Systems Architect</p>
+      <p id="about-bio-summary" style="font-size: 1.1rem; color: var(--theme-color-text-secondary, #4a5568); max-width: 700px; line-height: 1.6; margin: 0;">Pioneering zero-build serverless solutions with native browser execution.</p>
 
-  <!-- Reusable Web Component Shell -->
-  <div style="margin-bottom: 3rem;">
-    <author-card layout="full"></author-card>
-  </div>
+      <!-- Verified Social Proof Badges -->
+      <div id="about-social-badges" style="display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap; justify-content: center;">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+  </section>
 
-  <div id="extended-bio-container" class="card" style="line-height: 1.8; font-size: 1rem; color: var(--theme-color-text-primary, #2d3748);">
-    <p style="color: #a0aec0; text-align: center;">Loading extended biography...</p>
-  </div>
-</section>
+  <!-- Mission & Core Values Bento Grid -->
+  <section style="max-width: 1100px; margin: 4rem auto; padding: 0 1.5rem;">
+    <h2 style="text-align: center; font-size: 2rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 2.5rem;">Our Mission & Core Values</h2>
+    <div class="bento-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+      <!-- Bento Card 1: Zero-Build Engineering -->
+      <div class="bento-card" style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.05)); transition: transform 0.2s;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚡</div>
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0 0 0.75rem 0; color: var(--theme-color-text-primary, #1a202c);">Zero-Build Engineering</h3>
+        <p id="val-zero-build" style="font-size: 0.95rem; color: var(--theme-color-text-secondary, #4a5568); line-height: 1.6; margin: 0;">Running natively in the browser with ES Modules. No complex bundlers, transpilers, or build steps required. Clean, standard code.</p>
+      </div>
+
+      <!-- Bento Card 2: Data Sovereignty -->
+      <div class="bento-card" style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.05)); transition: transform 0.2s;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0 0 0.75rem 0; color: var(--theme-color-text-primary, #1a202c);">Data Sovereignty</h3>
+        <p id="val-data-sovereignty" style="font-size: 0.95rem; color: var(--theme-color-text-secondary, #4a5568); line-height: 1.6; margin: 0;">Ensuring complete control and encryption over user identity, files, and corporate credentials, utilizing localized encrypted datastores.</p>
+      </div>
+
+      <!-- Bento Card 3: AI Automation -->
+      <div class="bento-card" style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.05)); transition: transform 0.2s;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🤖</div>
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0 0 0.75rem 0; color: var(--theme-color-text-primary, #1a202c);">AI Automation</h3>
+        <p id="val-ai-automation" style="font-size: 0.95rem; color: var(--theme-color-text-secondary, #4a5568); line-height: 1.6; margin: 0;">Empowering administrative teams with continuous background audits, automated workflows, and AI assistants.</p>
+      </div>
+
+      <!-- Bento Card 4: Modular Architecture -->
+      <div class="bento-card" style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 8px); padding: 2rem; box-shadow: var(--theme-layout-box-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.05)); transition: transform 0.2s;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🧩</div>
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin: 0 0 0.75rem 0; color: var(--theme-color-text-primary, #1a202c);">Modular Architecture</h3>
+        <p id="val-modular-architecture" style="font-size: 0.95rem; color: var(--theme-color-text-secondary, #4a5568); line-height: 1.6; margin: 0;">Developing extensible, zero-dependency visual page builders, customizable global navigation elements, and reusable components.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Milestone Timeline Section -->
+  <section style="max-width: 900px; margin: 4rem auto 6rem auto; padding: 0 1.5rem;">
+    <h2 style="text-align: center; font-size: 2rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 3rem;">Milestone Timeline</h2>
+    <div id="timeline-container" style="position: relative; border-left: 2px solid var(--theme-color-border, #e2e8f0); padding-left: 2rem; margin-left: 1rem; display: flex; flex-direction: column; gap: 2.5rem;">
+      <!-- Timeline items populated dynamically -->
+    </div>
+  </section>
+</div>

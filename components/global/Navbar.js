@@ -239,7 +239,7 @@ export function initNavbar() {
 
       const adminLink = document.getElementById('nav-admin-link');
       if (adminLink) {
-        const hasAdminAccess = currentRole === 'admin' || currentRole === 'editor' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
+        const hasAdminAccess = currentRole === 'admin' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
         adminLink.style.display = hasAdminAccess ? 'inline-block' : 'none';
       }
 

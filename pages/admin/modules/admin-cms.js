@@ -447,6 +447,63 @@ export async function renderHeroConfigurator(container) {
             <textarea id="product-meta-json" placeholder='{ "price": 4500, "currency": "USD", "isLowStock": true }' style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px); font-family:monospace; font-size:0.8rem; min-height:60px;"></textarea>
           </div>
         </div>
+
+        <!-- About specific sub-attributes (Directive 3 CMS) -->
+        <div id="about-only-cms-attributes" style="display:none; flex-direction:column; gap:1rem;">
+          <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 0.9rem; font-weight: bold; color: var(--theme-color-primary);">About Page Executive Hero Details</h4>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Author Full Name:</label>
+              <input type="text" id="about-hero-name" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Official Title:</label>
+              <input type="text" id="about-hero-role" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+            </div>
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Bio Summary Description:</label>
+            <textarea id="about-hero-bio" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 50px;"></textarea>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Profile Headshot Avatar URL:</label>
+              <input type="url" id="about-hero-avatar" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Social Proof Links (GitHub, LinkedIn, Twitter/X - Comma separated):</label>
+              <input type="text" id="about-hero-socials" placeholder="https://github.com, https://linkedin.com, https://x.com" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+            </div>
+          </div>
+
+          <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 0.9rem; font-weight: bold; color: var(--theme-color-primary);">About Page Mission & Bento Core Values Descriptions</h4>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Zero-Build Engineering description:</label>
+              <textarea id="about-val-zero-build" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 40px;"></textarea>
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Data Sovereignty description:</label>
+              <textarea id="about-val-data-sovereignty" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 40px;"></textarea>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">AI Automation description:</label>
+              <textarea id="about-val-ai-automation" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 40px;"></textarea>
+            </div>
+            <div>
+              <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Modular Architecture description:</label>
+              <textarea id="about-val-modular-architecture" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 40px;"></textarea>
+            </div>
+          </div>
+
+          <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 0.9rem; font-weight: bold; color: var(--theme-color-primary);">About Page Interactive Milestone Timeline (JSON Array)</h4>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Timeline Milestones (JSON Array of Objects: date, title, description):</label>
+            <textarea id="about-timeline-json" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-family: monospace; font-size: 0.8rem; min-height: 80px;"></textarea>
+          </div>
+        </div>
       </div>
 
       <button type="submit" id="btn-save-hero-config" class="btn-primary" style="padding: 10px 18px; font-weight: bold; align-self: flex-start; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: var(--theme-layout-border-radius, 4px); cursor: pointer; transition: background 0.2s;">
@@ -464,8 +521,10 @@ export async function renderHeroConfigurator(container) {
     // Show/hide sub-attribute elements based on route value
     const eventAttrs = document.getElementById('event-only-cms-attributes');
     const shopAttrs = document.getElementById('shop-only-cms-attributes');
+    const aboutAttrs = document.getElementById('about-only-cms-attributes');
     if (eventAttrs) eventAttrs.style.display = route === '/events' ? 'flex' : 'none';
     if (shopAttrs) shopAttrs.style.display = route === '/shop' ? 'flex' : 'none';
+    if (aboutAttrs) aboutAttrs.style.display = route === '/about' ? 'flex' : 'none';
 
     try {
       const page = await contentDB.getCustomPageBySlug(slug);
@@ -522,6 +581,39 @@ export async function renderHeroConfigurator(container) {
       if (route === '/shop') {
         const details = page?.productDetails || { price: 4500, currency: 'USD', isLowStock: true };
         document.getElementById('product-meta-json').value = JSON.stringify(details, null, 2);
+      }
+
+      if (route === '/about') {
+        const heroData = page?.aboutHero || {
+          name: 'Jane Doe',
+          role: 'Lead Systems Architect',
+          bio: 'Pioneering zero-build serverless solutions with native browser execution.',
+          avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+          socials: { github: 'https://github.com', linkedin: 'https://linkedin.com', twitter: 'https://x.com' }
+        };
+        document.getElementById('about-hero-name').value = heroData.name || '';
+        document.getElementById('about-hero-role').value = heroData.role || '';
+        document.getElementById('about-hero-bio').value = heroData.bio || '';
+        document.getElementById('about-hero-avatar').value = heroData.avatarUrl || '';
+        document.getElementById('about-hero-socials').value = [heroData.socials?.github, heroData.socials?.linkedin, heroData.socials?.twitter || heroData.socials?.x].filter(Boolean).join(', ') || '';
+
+        const pillars = page?.aboutPillars || {
+          zeroBuild: 'Running natively in the browser with ES Modules. No complex bundlers, transpilers, or build steps required. Clean, standard code.',
+          dataSovereignty: 'Ensuring complete control and encryption over user identity, files, and corporate credentials, utilizing localized encrypted datastores.',
+          aiAutomation: 'Empowering administrative teams with continuous background audits, automated workflows, and AI assistants.',
+          modularArchitecture: 'Developing extensible, zero-dependency visual page builders, customizable global navigation elements, and reusable components.'
+        };
+        document.getElementById('about-val-zero-build').value = pillars.zeroBuild || '';
+        document.getElementById('about-val-data-sovereignty').value = pillars.dataSovereignty || '';
+        document.getElementById('about-val-ai-automation').value = pillars.aiAutomation || '';
+        document.getElementById('about-val-modular-architecture').value = pillars.modularArchitecture || '';
+
+        const timeline = page?.aboutTimeline || [
+          { date: 'July 2024', title: 'Beta Concept Launch', description: 'Initial framework prototype deployed with native ES route splitting.' },
+          { date: 'March 2025', title: 'Production Ready', description: 'Enterprise-ready billing, HIPAA security, and custom SPA routing finalized.' },
+          { date: 'August 2026', title: 'Modular Upgrades', description: 'Unified Site Manager, GrapesJS integrations, and secure RBAC access completed.' }
+        ];
+        document.getElementById('about-timeline-json').value = JSON.stringify(timeline, null, 2);
       }
 
     } catch (e) {
@@ -617,6 +709,36 @@ export async function renderHeroConfigurator(container) {
           throw new Error('Invalid JSON format in product details field.');
         }
         page.productDetails = details;
+      }
+
+      if (route === '/about') {
+        const rawSocials = document.getElementById('about-hero-socials').value.split(',').map(s => s.trim()).filter(Boolean);
+        const socials = {
+          github: rawSocials.find(s => s.includes('github')) || '',
+          linkedin: rawSocials.find(s => s.includes('linkedin')) || '',
+          twitter: rawSocials.find(s => s.includes('twitter') || s.includes('x.com')) || ''
+        };
+
+        page.aboutHero = {
+          name: document.getElementById('about-hero-name').value,
+          role: document.getElementById('about-hero-role').value,
+          bio: document.getElementById('about-hero-bio').value,
+          avatarUrl: document.getElementById('about-hero-avatar').value,
+          socials
+        };
+
+        page.aboutPillars = {
+          zeroBuild: document.getElementById('about-val-zero-build').value,
+          dataSovereignty: document.getElementById('about-val-data-sovereignty').value,
+          aiAutomation: document.getElementById('about-val-ai-automation').value,
+          modularArchitecture: document.getElementById('about-val-modular-architecture').value
+        };
+
+        try {
+          page.aboutTimeline = JSON.parse(document.getElementById('about-timeline-json').value);
+        } catch (jsonErr) {
+          throw new Error('Invalid JSON format in milestone timeline array.');
+        }
       }
 
       await contentDB.saveCustomPage(page);
