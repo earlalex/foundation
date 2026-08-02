@@ -30,6 +30,7 @@ import { initAdminCommerce } from './modules/admin-commerce.js';
 import { initAdminEventsOps, initAppointmentConfig } from './modules/admin-events-ops.js';
 import { initAdminGrowth, loadChatbotAndVoiceTab } from './modules/admin-growth.js';
 import { initAdminOps, loadGscSecurityThreats, loadPerformanceTab, loadSeoAndAnalyticsTab } from './modules/admin-ops.js';
+import { initAdminSpark } from './modules/admin-spark.js';
 
 export function initAdminPage() {
   console.log('[Admin Page]: initAdminPage triggered');
@@ -42,7 +43,7 @@ export function initAdminPage() {
 
   if (isEditor) {
     // Hide forbidden sidebar tabs
-    const forbiddenTabs = ['site', 'business', 'config', 'products', 'finances', 'plugins'];
+    const forbiddenTabs = ['site', 'business', 'config', 'products', 'finances', 'plugins', 'spark'];
     forbiddenTabs.forEach(tab => {
       const btn = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
       if (btn) btn.style.display = 'none';
@@ -191,6 +192,14 @@ export function initAdminPage() {
       isConfigured: () => configManager.isSection3Configured(),
       getMissing: () => ["Gmail/SMTP sender credentials", "Test sample email verification", "Marketing Journey state storage"],
       initFn: loadChatbotAndVoiceTab
+    },
+    {
+      tabId: 'tab-spark',
+      title: "Gemini Spark (COO)",
+      wizardKey: 'section3',
+      isConfigured: () => configManager.isSection3Configured(),
+      getMissing: () => ["Gmail/SMTP sender credentials", "Test sample email verification", "Marketing Journey state storage", "Gemini Spark Onboarding API Key"],
+      initFn: initAdminSpark
     },
 
     // Section 4 Tabs
@@ -371,6 +380,8 @@ export function initAdminPage() {
       loadPerformanceTab();
     } else if (targetTab === 'chatbot') {
       loadChatbotAndVoiceTab();
+    } else if (targetTab === 'spark') {
+      initAdminSpark();
     } else if (targetTab === 'kanban') {
       initAdminGrowth();
     } else if (targetTab === 'plugins') {

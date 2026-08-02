@@ -142,6 +142,17 @@ export const defaultConfig = {
     welcomeEmailSubject: "Welcome to the Team!",
     isConfigured: false
   },
+  geminiSpark: {
+    apiKey: "",
+    frequency: "Daily Audit",
+    autonomyMode: "Strict Approval Mode",
+    permissions: {
+      draftWisePayrolls: true,
+      monitorInventory: true,
+      reviewHipaaLogs: true,
+      autoApproveNonFinancial: false
+    }
+  },
   iconSet: "default",
   customIconData: null,
   appointments: {
