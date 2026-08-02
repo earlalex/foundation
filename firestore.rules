@@ -31,9 +31,11 @@ service cloud.firestore {
     // =========================================================================
     // 1. MASTER CONFIGURATION & SETTINGS
     // =========================================================================
+    // Only verified Google authenticated admins can read/write administrative settings
     match /settings/config {
-      allow read: if true; // Public needs site identity & brand settings
-      allow write: if !exists(/databases/$(database)/documents/settings/config) || isAdmin();
+      allow read: if true;
+      allow write: if request.auth != null &&
+                      (request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails);
     }
 
     // =========================================================================
@@ -106,15 +108,12 @@ service cloud.firestore {
     // =========================================================================
     // 5. CMS CONTENT FEED & PUBLICATIONS (Blogs, Books, Courses, Events, etc.)
     // =========================================================================
-    match /content/{contentId} {
+    // Dynamic role-based document access
+    match /content/{docId} {
       allow read: if resource.data.access.visibility == 'public' || 
-                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') || 
-                  (isAuthenticated() && resource.data.access.visibility == 'subscriber') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'member') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'paid') ||
-                  isAdmin() || 
-                  isEditor();
-      allow write: if isAdmin() || isEditor();
+                   (request.auth != null && resource.data.access.visibility == 'authenticated') ||
+                   (request.auth != null && request.auth.token.role == resource.data.access.visibility);
+      allow write: if request.auth != null && request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails;
     }
 
     // =========================================================================
