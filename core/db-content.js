@@ -68,6 +68,7 @@ export async function saveContent(contentData) {
     longFormText: [],
     author: 'Default Author',
     date: new Date().toISOString(),
+    access: { visibility: 'public' },
     ...contentData
   };
 

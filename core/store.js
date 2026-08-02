@@ -211,3 +211,35 @@ store.registerAction('SET_SIMULATED_USER_TIER', (state, tier) => ({
   ...state,
   simulatedUserTier: tier || null
 }));
+store.registerAction('FLUSH_LOCAL_SENSITIVE_DATA', (state) => {
+  try {
+    const keysToFlush = [
+      'foundation_local_vault_credentials',
+      'foundation_local_payroll',
+      'foundation_local_expenses',
+      'foundation_local_invoices',
+      'foundation_local_budgets',
+      'foundation_local_employees',
+      'foundation_local_kanban_tasks',
+      'foundation_local_chat_logs',
+      'foundation_local_state_compliance',
+      'foundation_local_security_scans',
+      'foundation_local_registrations',
+      'foundation_local_appointments',
+      'foundation_local_marketing_workflows',
+      'foundation_local_marketing_segments',
+      'foundation_local_email_templates',
+      'foundation_local_course_progress',
+      'foundation_outbox'
+    ];
+    keysToFlush.forEach(key => localStorage.removeItem(key));
+    sessionStorage.clear();
+    console.log('[Store]: Local sensitive data secure flushed.');
+  } catch (e) {
+    console.warn('[Store Flush]: localStorage cleanup deferred.', e);
+  }
+  return {
+    ...state,
+    cart: { eventId: null, items: [] }
+  };
+});
