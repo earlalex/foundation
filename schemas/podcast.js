@@ -15,5 +15,6 @@ export const PodcastSchema = {
   audio: Type.optional(Type.object),
   images: Type.optional(Type.array()),
   preview: Type.optional(Type.object),
-  links: Type.optional(Type.array())
+  links: Type.optional(Type.array()),
+  tags: Type.optional(Type.array)
 };

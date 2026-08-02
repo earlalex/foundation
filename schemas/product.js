@@ -44,5 +44,6 @@ export const ProductSchema = {
     invoiceDueDays: Type.number,            // Days until invoice is due
     paymentTerms: Type.string,              // Payment terms text
     googleContactLink: Type.optional(Type.string) // Link to Google Contact for invoicing
-  }))
+  })),
+  tags: Type.optional(Type.array)
 };

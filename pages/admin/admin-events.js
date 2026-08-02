@@ -58,6 +58,28 @@ function setupLocationToggle() {
   });
 }
 
+async function ensureMockRegistrationsSeeded() {
+  try {
+    const list = await contentDB.getAllRegistrations();
+    if (list.length === 0) {
+      const mockReg = {
+        id: 'mock_reg_1',
+        eventId: 'sample-summit',
+        email: 'registrant1@example.com',
+        userId: 'mock_user_1',
+        accessCode: 'ASC-12345',
+        cartItems: JSON.stringify([
+          { type: 'ticket', quantity: 1, name: 'Early Bird Pass', price: 49.00 }
+        ]),
+        createdAt: new Date().toISOString()
+      };
+      await contentDB.saveRegistration(mockReg);
+    }
+  } catch (err) {
+    console.warn('[Admin Events]: Mock registration seeding failed:', err);
+  }
+}
+
 function setupDynamicRowAdding() {
   // 1. Ticket Rows
   document.getElementById('btn-admin-add-ticket-row')?.addEventListener('click', () => {

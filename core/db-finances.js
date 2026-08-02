@@ -6,6 +6,25 @@ import {
 
 export async function saveInvoice(invoice) {
   const db = getFirestoreDB();
+
+  // Trigger buyer customer sync to Google Contacts (Directive 5)
+  try {
+    const { syncBuyerToGoogleContacts } = await import('../utils/backend-google.js');
+    await syncBuyerToGoogleContacts({
+      givenName: invoice.customerName || invoice.customerEmail?.split('@')[0] || 'Customer',
+      familyName: '',
+      email: invoice.customerEmail || '',
+      phone: invoice.customerPhone || '',
+      purchaseName: invoice.items?.map(i => i.description || i.name || 'Framework Purchase').join(', ') || 'Framework Purchase',
+      purchasePrice: invoice.amountDue ? (invoice.amountDue / 100) : (invoice.total || invoice.amount || 0),
+      orderId: invoice.id,
+      paymentMethod: invoice.paymentMethod || 'Stripe',
+      date: invoice.date || new Date().toISOString().split('T')[0]
+    });
+  } catch (err) {
+    console.warn('[saveInvoice]: Google Contacts buyer sync deferred.', err.message);
+  }
+
   if (!db) {
     const local = getLocalInvoices();
     local[invoice.id] = invoice;

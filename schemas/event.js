@@ -27,5 +27,12 @@ export const EventSchema = {
   startTime: Type.optional(Type.string),
   endTime: Type.optional(Type.string),
   meetUrl: Type.optional(Type.string),
-  calendarEventId: Type.optional(Type.string)
+  calendarEventId: Type.optional(Type.string),
+
+  // Tag and Rich Agenda Elements (Directive 3 & 6)
+  tags: Type.optional(Type.array),
+  flyerImageUrl: Type.optional(Type.string),
+  agenda: Type.optional(Type.array),
+  lineup: Type.optional(Type.object),
+  ticketing: Type.optional(Type.object)
 };

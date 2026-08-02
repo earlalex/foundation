@@ -28,7 +28,7 @@ export function initAdminCms() {
     cmsTab.appendChild(managerCard);
   }
 
-  // 2. Create or ensure the Hero Section Configurator card is present (Directive 4)
+  // 2. Create or ensure the Public Site & Page Manager card is present (Directive 4)
   let heroConfigCard = document.getElementById('cms-hero-configurator-card');
   if (!heroConfigCard) {
     console.log('[CMS Module]: Creating #cms-hero-configurator-card dynamically...');
@@ -47,7 +47,7 @@ export function initAdminCms() {
   // 3. Render Categories & Items List
   renderContentManager(managerCard);
 
-  // 4. Render Hero Configurator panel (Directive 4)
+  // 4. Render Public Site & Page Manager panel (Directive 4)
   renderHeroConfigurator(heroConfigCard);
 
   // Hook into form submit of #cms-form to reset editing state and refresh lists
@@ -313,8 +313,8 @@ async function renderContentManager(container) {
 }
 
 /**
- * Render the Admin-Editable Hero Section Configurator (Directive 4)
- * Allows Admins to customize hero titles, copy, CTAs, and background per route
+ * Render the Admin-Editable Public Site & Page Manager (Directive 4)
+ * Allows Admins to customize hero, layouts, agenda/flyer, and category tags per route
  * @param {HTMLElement} container
  */
 export async function renderHeroConfigurator(container) {
@@ -324,15 +324,16 @@ export async function renderHeroConfigurator(container) {
     { id: '/events', label: 'Events Page' },
     { id: '/contact', label: 'Contact Page' },
     { id: '/education', label: 'Education Page' },
-    { id: '/podcast', label: 'Podcast Page' }
+    { id: '/podcast', label: 'Podcast Page' },
+    { id: '/shop', label: 'Shop Page' }
   ];
 
   container.innerHTML = `
     <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
-      <span>✨</span> SPA Pages Hero Section Configurator
+      <span>✨</span> Unified Public Site & Page Manager
     </h3>
     <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
-      Customize hero banners, headlines, CTAs, linear background gradients, or hero images per page route.
+      Configure Hero sections, Page layout toggles, Event Agendas/Flyers/Lineups, Tag labels, and Product details for every page. Saves to Firestore `/pages` and LocalStoragefallback instantly.
     </p>
 
     <form id="hero-configurator-form" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -343,58 +344,113 @@ export async function renderHeroConfigurator(container) {
             ${routes.map(r => `<option value="${r.id}">${r.label} (${r.id})</option>`).join('')}
           </select>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-top: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-top: 1.25rem;">
           <input type="checkbox" id="hero-config-enabled" checked style="cursor: pointer;" />
           <span style="font-size: 0.85rem; font-weight: bold; color: var(--theme-color-text-primary);">Enable Hero Section</span>
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr; gap:1rem;">
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Section Title:</label>
-          <input type="text" id="hero-config-title" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+      <!-- Hero Section configuration -->
+      <div style="border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem; border-radius: 6px;">
+        <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-primary);">Hero Config</h4>
+        <div style="display:grid; grid-template-columns: 1fr; gap:1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Section Title:</label>
+            <input type="text" id="hero-config-title" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Subtitle / Description Copy:</label>
+            <textarea id="hero-config-subtitle" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px); min-height: 50px;"></textarea>
+          </div>
         </div>
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Subtitle / Description Copy:</label>
-          <textarea id="hero-config-subtitle" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px); min-height: 50px;"></textarea>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Primary CTA Button Text:</label>
+            <input type="text" id="hero-config-primary-cta-text" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Primary CTA Destination Link:</label>
+            <input type="text" id="hero-config-primary-cta-url" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Secondary CTA Button Text:</label>
+            <input type="text" id="hero-config-secondary-cta-text" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Secondary CTA Destination Link:</label>
+            <input type="text" id="hero-config-secondary-cta-url" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Background Gradient (linear-gradient):</label>
+            <input type="text" id="hero-config-bg-gradient" placeholder="linear-gradient(135deg, #1a202c 0%, #2b6cb0 100%)" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Right Image URL (Optional):</label>
+            <input type="url" id="hero-config-image-url" placeholder="https://images.unsplash.com/... or blank" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Primary CTA Button Text:</label>
-          <input type="text" id="hero-config-primary-cta-text" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
-        </div>
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Primary CTA Destination Link:</label>
-          <input type="text" id="hero-config-primary-cta-url" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Secondary CTA Button Text:</label>
-          <input type="text" id="hero-config-secondary-cta-text" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
-        </div>
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Secondary CTA Destination Link:</label>
-          <input type="text" id="hero-config-secondary-cta-url" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+      <!-- Layout toggles section -->
+      <div style="border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem; border-radius: 6px;">
+        <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-primary);">Page Layout Toggles</h4>
+        <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 0.85rem; cursor:pointer;">
+            <input type="checkbox" id="layout-toggle-spotlight" checked /> Show Featured Spotlight
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 0.85rem; cursor:pointer;">
+            <input type="checkbox" id="layout-toggle-grid" checked /> Show Grid List
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 0.85rem; cursor:pointer;">
+            <input type="checkbox" id="layout-toggle-faq" checked /> Show FAQ Section
+          </label>
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Background Gradient (linear-gradient):</label>
-          <input type="text" id="hero-config-bg-gradient" placeholder="linear-gradient(135deg, #1a202c 0%, #2b6cb0 100%)" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+      <!-- Route-specific details section -->
+      <div id="route-specific-cms-details" style="border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem; border-radius: 6px;">
+        <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-primary);">Route-Specific Rich Content Settings</h4>
+
+        <!-- Category tags input (All routes) -->
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Category Filter Tags / Taxonomy Labels (comma-separated):</label>
+          <input type="text" id="route-specific-tags" placeholder="Zero-Build, Sovereignty, AI-Tools" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
         </div>
-        <div>
-          <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Hero Right Image URL (Optional):</label>
-          <input type="url" id="hero-config-image-url" placeholder="https://images.unsplash.com/... or blank" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+
+        <!-- Event specific sub-attributes -->
+        <div id="event-only-cms-attributes" style="display:none; flex-direction:column; gap:1rem;">
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Event Flyer Image URL:</label>
+            <input type="url" id="event-flyer-url" placeholder="/assets/images/summit-flyer.jpg" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px);" />
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Event Lineup (JSON Object):</label>
+            <textarea id="event-lineup-json" placeholder='{ "hosts": ["EarlAlex"], "headliners": ["Speaker 1"], "castAndAct": ["Mentor 1"], "openersAndPerformers": ["Live DJ Set"] }' style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px); font-family:monospace; font-size:0.8rem; min-height:80px;"></textarea>
+          </div>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Event Agenda Timeline (JSON Array of Objects):</label>
+            <textarea id="event-agenda-json" placeholder='[ { "time": "09:00 AM", "title": "Keynote Address", "description": "Opening vision", "speaker": "EarlAlex" } ]' style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px); font-family:monospace; font-size:0.8rem; min-height:100px;"></textarea>
+          </div>
+        </div>
+
+        <!-- Shop specific sub-attributes -->
+        <div id="shop-only-cms-attributes" style="display:none; flex-direction:column; gap:1rem;">
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Product Price & Currency Metadata (JSON):</label>
+            <textarea id="product-meta-json" placeholder='{ "price": 4500, "currency": "USD", "isLowStock": true }' style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 4px); font-family:monospace; font-size:0.8rem; min-height:60px;"></textarea>
+          </div>
         </div>
       </div>
 
       <button type="submit" id="btn-save-hero-config" class="btn-primary" style="padding: 10px 18px; font-weight: bold; align-self: flex-start; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: var(--theme-layout-border-radius, 4px); cursor: pointer; transition: background 0.2s;">
-        Save Hero Configuration
+        Save Site Manager Settings
       </button>
     </form>
   `;
@@ -404,6 +460,13 @@ export async function renderHeroConfigurator(container) {
   // Local function to pull dynamic custom page details and populate inputs
   const loadRouteHeroConfig = async (route) => {
     const slug = route.replace(/^\//, '') || 'home';
+
+    // Show/hide sub-attribute elements based on route value
+    const eventAttrs = document.getElementById('event-only-cms-attributes');
+    const shopAttrs = document.getElementById('shop-only-cms-attributes');
+    if (eventAttrs) eventAttrs.style.display = route === '/events' ? 'flex' : 'none';
+    if (shopAttrs) shopAttrs.style.display = route === '/shop' ? 'flex' : 'none';
+
     try {
       const page = await contentDB.getCustomPageBySlug(slug);
       const hero = page?.hero || {
@@ -427,8 +490,42 @@ export async function renderHeroConfigurator(container) {
       document.getElementById('hero-config-secondary-cta-url').value = hero.secondaryCtaUrl || '';
       document.getElementById('hero-config-bg-gradient').value = hero.backgroundGradient || 'linear-gradient(135deg, #1a202c 0%, #2b6cb0 100%)';
       document.getElementById('hero-config-image-url').value = hero.heroImageUrl || '';
+
+      // Populate layout settings
+      const layout = page?.layout || { showSpotlight: true, showGrid: true, showFaq: true };
+      document.getElementById('layout-toggle-spotlight').checked = layout.showSpotlight !== false;
+      document.getElementById('layout-toggle-grid').checked = layout.showGrid !== false;
+      document.getElementById('layout-toggle-faq').checked = layout.showFaq !== false;
+
+      // Populate route-specific attributes
+      document.getElementById('route-specific-tags').value = (page?.categoryTags || []).join(', ');
+
+      if (route === '/events') {
+        const details = page?.eventDetails || {};
+        document.getElementById('event-flyer-url').value = details.flyerUrl || '/assets/images/summit-flyer.jpg';
+
+        const lineupObj = details.lineup || {
+          hosts: ["EarlAlex"],
+          headliners: ["Keynote Guest Speaker"],
+          castAndAct: ["Mastermind Mentors"],
+          openersAndPerformers: ["Live DJ Set / Musical Guest"]
+        };
+        document.getElementById('event-lineup-json').value = JSON.stringify(lineupObj, null, 2);
+
+        const agendaArr = details.agenda || [
+          { time: "09:00 AM", title: "Keynote Address", description: "Opening remarks & vision", speaker: "EarlAlex" },
+          { time: "11:30 AM", title: "Zero-Build Panel", description: "Building without bundlers", speaker: "Tech Panel" }
+        ];
+        document.getElementById('event-agenda-json').value = JSON.stringify(agendaArr, null, 2);
+      }
+
+      if (route === '/shop') {
+        const details = page?.productDetails || { price: 4500, currency: 'USD', isLowStock: true };
+        document.getElementById('product-meta-json').value = JSON.stringify(details, null, 2);
+      }
+
     } catch (e) {
-      console.warn('[Hero Configurator]: Load error:', e);
+      console.warn('[Page Configurator]: Load error:', e);
     }
   };
 
@@ -461,6 +558,7 @@ export async function renderHeroConfigurator(container) {
         };
       }
 
+      // Gather Hero section config
       page.hero = {
         enabled: document.getElementById('hero-config-enabled').checked,
         title: document.getElementById('hero-config-title').value,
@@ -473,14 +571,62 @@ export async function renderHeroConfigurator(container) {
         heroImageUrl: document.getElementById('hero-config-image-url').value
       };
 
+      // Gather Layout config
+      page.layout = {
+        showSpotlight: document.getElementById('layout-toggle-spotlight').checked,
+        showGrid: document.getElementById('layout-toggle-grid').checked,
+        showFaq: document.getElementById('layout-toggle-faq').checked
+      };
+
+      // Gather tag filters
+      const rawTags = document.getElementById('route-specific-tags').value || '';
+      page.categoryTags = rawTags.split(',').map(t => t.trim()).filter(Boolean);
+
+      // Gather specific page configs
+      if (route === '/events') {
+        let lineup = {};
+        let agenda = [];
+        try {
+          lineup = JSON.parse(document.getElementById('event-lineup-json').value);
+          agenda = JSON.parse(document.getElementById('event-agenda-json').value);
+        } catch (jsonErr) {
+          throw new Error('Invalid JSON format in lineup or agenda timeline fields.');
+        }
+
+        page.eventDetails = {
+          flyerUrl: document.getElementById('event-flyer-url').value,
+          lineup,
+          agenda
+        };
+
+        // Also update the seeded live event sample-summit in database so changes reflect instantly! (Directive 4)
+        const event = await contentDB.getContentById('sample-summit');
+        if (event) {
+          event.flyerImageUrl = page.eventDetails.flyerUrl;
+          event.lineup = lineup;
+          event.agenda = agenda;
+          await contentDB.saveEvent(event);
+        }
+      }
+
+      if (route === '/shop') {
+        let details = {};
+        try {
+          details = JSON.parse(document.getElementById('product-meta-json').value);
+        } catch (jsonErr) {
+          throw new Error('Invalid JSON format in product details field.');
+        }
+        page.productDetails = details;
+      }
+
       await contentDB.saveCustomPage(page);
-      toast.success(`Hero banner override for "${route}" saved and activated successfully!`);
+      toast.success(`Public Site & Page layout overridden for "${route}" instantly!`);
     } catch (err) {
       toast.error(`Save Failed: ${err.message}`);
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = "Save Hero Configuration";
+        saveBtn.textContent = "Save Site Manager Settings";
       }
     }
   });

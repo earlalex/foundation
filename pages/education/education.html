@@ -1,0 +1,111 @@
+<!-- pages/education/education.html -->
+<div class="education-showcase-layout" style="font-family: var(--theme-font-body, system-ui, sans-serif); line-height: 1.6; color: var(--theme-color-text-primary, #1a202c);">
+
+  <!-- Hero Section -->
+  <section id="education-hero" class="reveal-on-scroll" style="padding: 5rem 1.5rem; text-align: center; color: white; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <h1 id="edu-hero-title" style="font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 900; margin-bottom: 1.25rem;">
+        Master the Future of Sovereign Engineering
+      </h1>
+      <p id="edu-hero-subtitle" style="font-size: clamp(1.1rem, 2vw, 1.25rem); color: #cbd5e1; margin-bottom: 2rem;">
+        Step-by-step courses and interactive starter worksheets covering zero-build pipelines, AI backoffice agents, and wise global payout networks.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="#courses-grid" id="edu-hero-primary-cta" class="btn-primary" style="background: var(--theme-color-accent, #38a169); padding: 12px 24px;">[ Enroll Now ]</a>
+        <a href="#worksheets-grid" id="edu-hero-secondary-cta" class="btn-secondary" style="border-color: rgba(255,255,255,0.4); color: white; padding: 12px 24px;">Explore Worksheets</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Skill Category Filter Bar -->
+  <section style="background: var(--theme-color-surface-alt, #f8fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem 1rem;">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+      <h3 style="font-size: 0.9rem; font-weight: bold; text-transform: uppercase; color: var(--theme-color-text-secondary, #475569); letter-spacing: 0.05em; margin: 0;">Filter by Topic / Skill</h3>
+      <div id="skill-filter-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+        <button class="filter-btn active" data-skill="all" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; cursor: pointer;">All Skills</button>
+        <button class="filter-btn" data-skill="Zero-Build" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: white; color: var(--theme-color-text-secondary); cursor: pointer;">Zero-Build</button>
+        <button class="filter-btn" data-skill="Sovereignty" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: white; color: var(--theme-color-text-secondary); cursor: pointer;">Sovereignty</button>
+        <button class="filter-btn" data-skill="AI-Tools" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: white; color: var(--theme-color-text-secondary); cursor: pointer;">AI Backoffice</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Course Cards -->
+  <section id="courses-grid" style="padding: 5rem 1.5rem; max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto;">
+    <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 2.5rem; text-align: center;">Interactive Educational Curriculum</h2>
+
+    <div id="education-courses-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+      <!-- Loaded dynamically via education.js -->
+      <p style="color: #cbd5e1; text-align: center;">Loading interactive courses...</p>
+    </div>
+  </section>
+
+  <!-- Starter Worksheets Grid -->
+  <section id="worksheets-grid" style="padding: 5rem 1.5rem; background: var(--theme-color-surface-alt, #f8fafc); border-top: 1px solid var(--theme-color-border, #e2e8f0);">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto;">
+      <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 2.5rem; text-align: center;">Downloadable Starter Worksheets</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <!-- Worksheet Card 1 -->
+        <div class="card" style="background: white; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+          <span style="font-size: 1.5rem;">📋</span>
+          <h3 style="font-size: 1.15rem; margin: 0;">Wise Outbound Payout Checklist</h3>
+          <p style="font-size: 0.85rem; color: var(--theme-color-text-secondary); line-height: 1.5; margin: 0;">Step-by-step checklist to configure GCash and local bank transfers in PHP offline using simulated backoffice payouts.</p>
+          <a href="#" style="background: #edf2f7; color: #1a202c; text-align: center; padding: 8px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold; margin-top: auto;">Download Checklist (.PDF)</a>
+        </div>
+        <!-- Worksheet Card 2 -->
+        <div class="card" style="background: white; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+          <span style="font-size: 1.5rem;">🔧</span>
+          <h3 style="font-size: 1.15rem; margin: 0;">Stripe Products Registration Blueprint</h3>
+          <p style="font-size: 0.85rem; color: var(--theme-color-text-secondary); line-height: 1.5; margin: 0;">Blueprint sheet to automate ticket tiers and sponsorship packages registration, mapping product IDs on Stripe proxy servers.</p>
+          <a href="#" style="background: #edf2f7; color: #1a202c; text-align: center; padding: 8px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold; margin-top: auto;">Download Blueprint (.PDF)</a>
+        </div>
+        <!-- Worksheet Card 3 -->
+        <div class="card" style="background: white; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+          <span style="font-size: 1.5rem;">☁️</span>
+          <h3 style="font-size: 1.15rem; margin: 0;">Cloudflare Edge Workers Scaffold</h3>
+          <p style="font-size: 0.85rem; color: var(--theme-color-text-secondary); line-height: 1.5; margin: 0;">A lightweight, Zero-Build serverless worker configuration script that handles incoming Stripe webhooks safely.</p>
+          <a href="#" style="background: #edf2f7; color: #1a202c; text-align: center; padding: 8px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold; margin-top: auto;">Download Scaffold (.ZIP)</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Student FAQ Accordion -->
+  <section style="padding: 5rem 1.5rem; max-width: 800px; margin: 0 auto;">
+    <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 2.5rem; text-align: center;">Sovereign Learning FAQ</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <details style="border: 1px solid var(--theme-color-border); border-radius: 6px; padding: 1rem; background: white; cursor: pointer;">
+        <summary style="font-weight: bold; font-size: 1.05rem; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+          <span>Do I need Webpack or build tools to complete this course?</span>
+          <span>▼</span>
+        </summary>
+        <p style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--theme-color-text-secondary); line-height: 1.6;">
+          Absolutely not! Our philosophy is entirely "Zero-Build". We build and program natively inside the browser using standard vanilla ES Module imports, saving time and removing compiler dependencies entirely.
+        </p>
+      </details>
+
+      <details style="border: 1px solid var(--theme-color-border); border-radius: 6px; padding: 1rem; background: white; cursor: pointer;">
+        <summary style="font-weight: bold; font-size: 1.05rem; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+          <span>Is my student learning progress synced across devices?</span>
+          <span>▼</span>
+        </summary>
+        <p style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--theme-color-text-secondary); line-height: 1.6;">
+          Yes! If you are signed in, your lesson progress is automatically synchronized in real-time to Firestore. If you are browsing anonymously, progress is safely cached inside LocalStorage on your machine.
+        </p>
+      </details>
+
+      <details style="border: 1px solid var(--theme-color-border); border-radius: 6px; padding: 1rem; background: white; cursor: pointer;">
+        <summary style="font-weight: bold; font-size: 1.05rem; outline: none; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+          <span>Are there any prerequisites?</span>
+          <span>▼</span>
+        </summary>
+        <p style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--theme-color-text-secondary); line-height: 1.6;">
+          A basic working knowledge of Javascript is helpful, but we guide you step-by-step from core building blocks up to designing advanced API integrations with Stripe and Wise.
+        </p>
+      </details>
+    </div>
+  </section>
+
+</div>

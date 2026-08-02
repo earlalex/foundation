@@ -52,96 +52,51 @@ function renderVideoPlayer(url) {
   `;
 }
 
-// Mock / seed data if no events exist in database
-const SEED_EVENT = {
-  id: 'sample-summit',
-  title: 'Ascension Avenue Summit 2026',
-  slug: 'ascension-summit-2026',
-  date: '2026-08-25',
-  description: 'Join us at the signature Ascension Avenue Summit of 2026 for high-impact workshops, direct networking, and keynotes on zero-build web technologies and business automation.',
-  location: {
-    type: 'physical',
-    venueName: 'Grand Empowerment Hall',
-    address: '123 Elevation Way, San Francisco, CA',
-    meetingUrl: ''
-  },
-  ticketTypes: [
-    {
-      id: 't-early',
-      name: 'Early Bird Pass',
-      price: 49.00,
-      capacity: 30,
-      sold: 25, // Leaves 5 remaining - trigger "Only 5 tickets left!"
-      description: 'Standard admission at our earliest promotional discount rate.'
-    },
-    {
-      id: 't-gen',
-      name: 'General Admission',
-      price: 99.00,
-      capacity: 100,
-      sold: 12,
-      description: 'Access to all main stages, networking panels, and standard seating.'
-    },
-    {
-      id: 't-vip',
-      name: 'VIP Networking Pass',
-      price: 299.00,
-      capacity: 20,
-      sold: 0,
-      description: 'Includes priority front-row seating, exclusive VIP networking luncheon, and official recordings.'
-    }
-  ],
-  vendorPackages: [
-    {
-      id: 'v-std',
-      name: 'Standard Vendor Booth',
-      price: 499.00,
-      capacity: 10,
-      sold: 0,
-      perks: [
-        '1x Premium Display Table',
-        '2x Exhibitor Passes',
-        'Company logo in summit program guide'
-      ]
-    },
-    {
-      id: 'v-prem',
-      name: 'Premium Exhibition Space',
-      price: 999.00,
-      capacity: 5,
-      sold: 0,
-      perks: [
-        'Double-wide Corner Booth Space',
-        '4x Exhibitor Passes',
-        'Dedicated keynote host mention',
-        'Featured social media highlight'
-      ]
-    }
-  ],
-  sponsorshipPackages: [
-    {
-      id: 's-head',
-      tier: 'Headline Partner',
-      price: 2500.00,
-      logoPlacement: 'Main Stage Backdrops & Web Footer',
-      complimentaryTickets: 5,
-      capacity: 1,
-      sold: 0
-    },
-    {
-      id: 's-gold',
-      tier: 'Gold Partner',
-      price: 1200.00,
-      logoPlacement: 'Secondary Screens & Web Footer',
-      complimentaryTickets: 2,
-      capacity: 3,
-      sold: 0
-    }
-  ],
-  accessVisibility: 'public'
-};
 
 export async function initEventsPage() {
+  // Load Customizable Hero Override (Directive 2)
+  try {
+    const pageData = await contentDB.getCustomPageBySlug('events');
+    if (pageData && pageData.hero) {
+      const hero = pageData.hero;
+      const heroSection = document.getElementById('events-hero');
+      const titleEl = document.getElementById('events-hero-title');
+      const subtitleEl = document.getElementById('events-hero-subtitle');
+      const primaryCta = document.getElementById('events-hero-primary-cta');
+      const secondaryCta = document.getElementById('events-hero-secondary-cta');
+
+      if (heroSection) {
+        if (hero.enabled === false) {
+          heroSection.style.display = 'none';
+        } else {
+          heroSection.style.display = 'block';
+          if (hero.backgroundGradient) {
+            heroSection.style.background = hero.backgroundGradient;
+          }
+          if (hero.heroImageUrl) {
+            heroSection.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('${hero.heroImageUrl}')`;
+            heroSection.style.backgroundSize = 'cover';
+            heroSection.style.backgroundPosition = 'center';
+          }
+        }
+      }
+
+      if (titleEl && hero.title) titleEl.textContent = hero.title;
+      if (subtitleEl && hero.subtitle) subtitleEl.textContent = hero.subtitle;
+
+      if (primaryCta) {
+        if (hero.primaryCtaText) primaryCta.textContent = hero.primaryCtaText;
+        if (hero.primaryCtaUrl) primaryCta.setAttribute('href', hero.primaryCtaUrl);
+      }
+      if (secondaryCta) {
+        if (hero.secondaryCtaText) secondaryCta.textContent = hero.secondaryCtaText;
+        if (hero.secondaryCtaUrl) secondaryCta.setAttribute('href', hero.secondaryCtaUrl);
+      }
+    }
+  } catch (err) {
+    console.warn('[Events Page]: Custom hero loader failed.', err);
+  }
+
   renderEventsGrid();
   setupEventListeners();
   renderCart();
@@ -248,6 +203,63 @@ function openBookingModal(evt) {
     } else {
       videoContainer.innerHTML = '';
       videoContainer.style.display = 'none';
+    }
+  }
+
+  // Render Flyer, Agenda & Lineup (Directive 3)
+  const richContainer = document.getElementById('modal-rich-details-container');
+  if (richContainer) {
+    const hasRichData = evt.flyerImageUrl || evt.agenda || evt.lineup;
+    if (hasRichData) {
+      const flyerImgSrc = convertGoogleDriveLink(evt.flyerImageUrl || evt.flyerUrl || '');
+      const agendaList = evt.agenda || [];
+      const lineupObj = evt.lineup || {};
+
+      const hostsHtml = (lineupObj.hosts || []).map(h => `<span style="display:inline-block; background:#ebf8ff; color:#2b6cb0; font-size:0.75rem; font-weight:bold; padding:4px 8px; border-radius:4px; margin-right:4px; margin-bottom:4px;">🎤 Host: ${h}</span>`).join('');
+      const headlinersHtml = (lineupObj.headliners || []).map(h => `<span style="display:inline-block; background:#faf5ff; color:#805ad5; font-size:0.75rem; font-weight:bold; padding:4px 8px; border-radius:4px; margin-right:4px; margin-bottom:4px;">⭐ Headliner: ${h}</span>`).join('');
+      const castHtml = (lineupObj.castAndAct || []).map(c => `<span style="display:inline-block; background:#e6fffa; color:#319795; font-size:0.75rem; font-weight:bold; padding:4px 8px; border-radius:4px; margin-right:4px; margin-bottom:4px;">👥 Cast: ${c}</span>`).join('');
+      const performersHtml = (lineupObj.openersAndPerformers || []).map(p => `<span style="display:inline-block; background:#fff5f5; color:#e53e3e; font-size:0.75rem; font-weight:bold; padding:4px 8px; border-radius:4px; margin-right:4px; margin-bottom:4px;">🎵 Act: ${p}</span>`).join('');
+
+      const lineupHtml = [hostsHtml, headlinersHtml, castHtml, performersHtml].filter(Boolean).join('');
+
+      const agendaHtml = agendaList.map((item, idx) => `
+        <details ${idx === 0 ? 'open' : ''} style="border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 6px; background:#f8fafc; padding: 0.75rem; margin-bottom: 0.5rem; cursor:pointer;">
+          <summary style="font-weight: bold; font-size: 0.9rem; outline:none; display:flex; justify-content:space-between; align-items:center;">
+            <span>⏱️ ${item.time} - ${item.title}</span>
+            <span style="font-size:0.8rem; color:#718096; font-weight:normal;">(by ${item.speaker || 'TBD'})</span>
+          </summary>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.825rem; color:#4a5568; line-height:1.4; text-align: left !important;">${item.description}</p>
+        </details>
+      `).join('');
+
+      richContainer.innerHTML = `
+        <!-- Left: Flyer & Lineup -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          ${flyerImgSrc ? `
+            <div style="border-radius: 8px; overflow:hidden; border: 1px solid #e2e8f0; aspect-ratio: 4/5; background:#edf2f7;">
+              <img src="${flyerImgSrc}" alt="Event Flyer" style="width:100%; height:100%; object-fit:cover;" />
+            </div>
+          ` : ''}
+          ${lineupHtml ? `
+            <div>
+              <h4 style="margin:0 0 0.5rem 0; font-size:0.9rem; font-weight:bold; color:var(--theme-color-text-primary);">Event Lineup & Cast</h4>
+              <div style="display:flex; flex-wrap:wrap;">${lineupHtml}</div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Right: Collapsible Agenda Timeline -->
+        <div>
+          <h4 style="margin:0 0 0.75rem 0; font-size:1rem; font-weight:800; color:var(--theme-color-text-primary);">collapsible Event Agenda Timeline</h4>
+          <div style="max-height: 400px; overflow-y:auto; padding-right:0.25rem;">
+            ${agendaHtml || '<p style="color:#a0aec0;font-size:0.85rem;">No agenda items posted.</p>'}
+          </div>
+        </div>
+      `;
+      richContainer.style.display = 'grid';
+    } else {
+      richContainer.innerHTML = '';
+      richContainer.style.display = 'none';
     }
   }
 
