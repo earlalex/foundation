@@ -16,7 +16,7 @@ const getBaseUrl = () => {
  * @returns {Object}
  */
 const getHeaders = () => {
-  const apiKey = configManager.current?.wise?.apiKey || '';
+  const apiKey = configManager.current.WISE_API_KEY || '';
   return {
     'Authorization': `Bearer ${apiKey}`,
     'Content-Type': 'application/json'
@@ -31,7 +31,7 @@ export async function getWiseProfile() {
   const url = `${getBaseUrl()}/v1/profiles`;
   const headers = getHeaders();
 
-  if (!configManager.current?.wise?.apiKey) {
+  if (!configManager.current.WISE_API_KEY) {
     console.log('[Wise Adapter]: API Key missing, returning simulated profile');
     return { id: 12345, type: 'business', name: 'Ascension Avenue Academy LLC' };
   }
@@ -55,7 +55,7 @@ export async function getWiseProfile() {
  * @returns {Promise<Object>}
  */
 export async function createRecipient(vaData) {
-  const profileId = configManager.current?.wise?.profileId || '12345';
+  const profileId = configManager.current.WISE_PROFILE_ID || '12345';
   const url = `${getBaseUrl()}/v1/accounts`;
   const headers = getHeaders();
 
@@ -71,7 +71,7 @@ export async function createRecipient(vaData) {
     }
   };
 
-  if (!configManager.current?.wise?.apiKey) {
+  if (!configManager.current.WISE_API_KEY) {
     console.log('[Wise Adapter]: API Key missing, returning simulated recipient');
     return { id: `rec_${Date.now()}`, ...accountDetails };
   }
@@ -97,7 +97,7 @@ export async function createRecipient(vaData) {
  * @returns {Promise<Object>}
  */
 export async function createQuote(sourceAmountUSD, targetCurrency = 'PHP') {
-  const profileId = configManager.current?.wise?.profileId || '12345';
+  const profileId = configManager.current.WISE_PROFILE_ID || '12345';
   const url = `${getBaseUrl()}/v2/quotes`;
   const headers = getHeaders();
 
@@ -108,7 +108,7 @@ export async function createQuote(sourceAmountUSD, targetCurrency = 'PHP') {
     sourceAmount: Number(sourceAmountUSD)
   };
 
-  if (!configManager.current?.wise?.apiKey) {
+  if (!configManager.current.WISE_API_KEY) {
     console.log('[Wise Adapter]: API Key missing, returning simulated quote');
     const rate = 56.25;
     const fee = 1.50;
@@ -184,7 +184,7 @@ export async function executePayout(recipientId, quoteId, reference) {
     }
   };
 
-  if (!configManager.current?.wise?.apiKey) {
+  if (!configManager.current.WISE_API_KEY) {
     console.log('[Wise Adapter]: API Key missing, returning simulated transfer');
     return {
       id: `trf_${Date.now()}`,

@@ -5,7 +5,7 @@ import { configManager } from '../core/config.js';
  * Dynamically injects GA4 script tags when Measurement ID is configured
  */
 export function initGoogleAnalytics() {
-  const measurementId = configManager.current.analytics?.googleAnalyticsId;
+  const measurementId = configManager.current.GA4_MEASUREMENT_ID || configManager.current.analytics?.googleAnalyticsId;
   if (!measurementId || measurementId.trim() === '') {
     console.log('[GA4 Engine]: GA4 Measurement ID not configured. Tracking disabled.');
     return;

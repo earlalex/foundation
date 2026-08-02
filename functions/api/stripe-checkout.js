@@ -2,6 +2,7 @@
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  // Unified Environment Variable Law: strictly read STRIPE_SECRET_KEY
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
   if (!stripeSecretKey) {
@@ -89,6 +90,7 @@ export async function onRequestPost(context) {
       params.append('line_items[0][quantity]', '1');
     } else {
       // Default: Create Checkout Session for membership price
+      // Unified Environment Variable Law: strictly read STRIPE_MEMBERSHIP_PRICE_ID
       const fallbackPriceId = env.STRIPE_MEMBERSHIP_PRICE_ID || 'price_1234567890';
       params.append('line_items[0][price]', fallbackPriceId);
       params.append('line_items[0][quantity]', '1');
