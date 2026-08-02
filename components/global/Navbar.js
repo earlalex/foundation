@@ -120,7 +120,8 @@ export function initNavbar() {
             </a>
 
             <!-- Multi-Language Selector Dropdown -->
-            <select id="nav-lang-selector" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-secondary, #4a5568); font-size: 0.85rem; font-weight: 600; cursor: pointer; outline: none; transition: border-color 0.2s;">
+            <label for="nav-lang-selector" class="sr-only">Select Language</label>
+            <select id="nav-lang-selector" aria-label="Select Language" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-surface, #ffffff); color: var(--theme-color-text-secondary, #4a5568); font-size: 0.85rem; font-weight: 600; cursor: pointer; outline: none; transition: border-color 0.2s;">
               <option value="en">English</option>
               <option value="es">Español</option>
               <option value="fr">Français</option>
