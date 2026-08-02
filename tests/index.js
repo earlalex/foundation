@@ -15,6 +15,7 @@ import { runPagesTests } from './pages.test.js';
 import { runVaultNaicsTests } from './vault-naics.test.js';
 import { runWizardsTests } from './wizards.test.js';
 import { runHooksPluginsTests } from './hooks-plugins.test.js';
+import { runSparkTests } from './spark.test.js';
 
 /**
  * Main test runner that executes all Foundation Framework test suites
@@ -42,7 +43,8 @@ export async function runAllTests() {
     { name: 'Security & VirusTotal', runner: runSecurityTests },
     { name: 'Password Vault & NAICS Classification', runner: runVaultNaicsTests },
     { name: 'Setup Wizards & Configuration Guards', runner: runWizardsTests },
-    { name: 'System Hooks & Plugin Extensions Registry', runner: runHooksPluginsTests }
+    { name: 'System Hooks & Plugin Extensions Registry', runner: runHooksPluginsTests },
+    { name: 'Gemini Spark COO Agent Operations', runner: runSparkTests }
   ];
 
   for (const suite of testSuites) {
@@ -90,5 +92,6 @@ export {
   runPagesTests,
   runVaultNaicsTests,
   runWizardsTests,
-  runHooksPluginsTests
+  runHooksPluginsTests,
+  runSparkTests
 };

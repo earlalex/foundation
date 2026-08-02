@@ -45,5 +45,10 @@ export const FRAMEWORK_AFFILIATES = Object.freeze({
     name: "Google Analytics 4",
     url: "https://analytics.google.com",
     description: "Industry-standard visitor and event tracking."
+  },
+  geminiSpark: {
+    name: "Gemini Spark",
+    url: "https://ai.google.dev/",
+    description: "Your 24/7 Chief Operating Officer and autonomous agent."
   }
 });
