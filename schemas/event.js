@@ -16,13 +16,13 @@ export const EventSchema = {
   access: Type.optional(Type.object),
   preview: Type.optional(Type.object),
   updatedAt: Type.optional(Type.string),
-
-  // Mandatory / Optional media fields
-  flyerUrl: Type.string, // Required flyer image URL
-  bannerUrl: Type.optional(Type.string), // Optional wide banner image URL
-  promoVideoUrl: Type.optional(Type.string), // Optional promo video URL
-
-  // Legacy / backup compatibility
+  
+  // Promotional Media Attributes (Optional for lightweight Google Meet events)
+  flyerUrl: Type.optional(Type.string), // Promotional flyer image URL
+  bannerUrl: Type.optional(Type.string), // Wide hero banner image URL
+  promoVideoUrl: Type.optional(Type.string), // Video teaser/ad URL
+  
+  // Event & Session Metadata
   eventType: Type.optional(Type.string),
   startTime: Type.optional(Type.string),
   endTime: Type.optional(Type.string),
