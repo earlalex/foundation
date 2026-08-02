@@ -45,5 +45,18 @@ export const ProductSchema = {
     paymentTerms: Type.string,              // Payment terms text
     googleContactLink: Type.optional(Type.string) // Link to Google Contact for invoicing
   })),
-  tags: Type.optional(Type.array)
+  tags: Type.optional(Type.array),
+
+  // Direct Crypto and NFT
+  enableCryptoPayment: Type.optional(Type.boolean),
+  enableNftCounterpart: Type.optional(Type.boolean),
+  nftMetadata: Type.optional(Type.object),
+
+  // Etsy-Style Physical / Handmade Attributes
+  isPhysicalProduct: Type.optional(Type.boolean),
+  isHandmade: Type.optional(Type.boolean),
+  inventory: Type.optional(Type.object),
+  craftDetails: Type.optional(Type.object),
+  variations: Type.optional(Type.array),
+  shippingOptions: Type.optional(Type.object)
 };

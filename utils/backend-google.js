@@ -291,7 +291,7 @@ export async function uploadReportToDrive(token, siteName, fileName, content) {
 
 /**
  * Sync credential securely to Google Workspace Passwords Vault
- *Associated with primary domain (admin@earlalex.com).
+ * Associated with primary domain (admin@earlalex.com).
  * Uses Google Workspace Admin SDK/Credentials API mock or live endpoints.
  * @param {string} token - Google OAuth access token
  * @param {Object} credentialRecord - Vault credential record to sync
@@ -320,10 +320,8 @@ export async function syncCredentialToGoogleVault(token, credentialRecord) {
     const googleVaultHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Call the Admin SDK / Credentials API / Passwords Vault endpoint:
-    // In our browser environment, we make a live API call or mock/simulate the request nicely.
     const url = 'https://admin.googleapis.com/admin/directory/v1/users/admin@earlalex.com/credentials';
 
-    // Attempt the fetch (this is a mock URL that may fail in headless local environments, so we gracefully catch or simulate)
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -418,7 +416,7 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
 }
 
 /**
- * Sync buyer contact and write immutable detailed purchase note (Directive 5)
+ * Sync buyer contact and write immutable detailed purchase note
  * @param {Object} customerData - Customer contact & purchase metrics
  * @param {string} [token] - Google OAuth access token
  * @returns {Promise<Object>} Results
@@ -498,6 +496,61 @@ export async function syncBuyerToGoogleContacts(customerData, token = null) {
   } catch (err) {
     errorHandler.handleError(err, 'Google Contacts Purchase Sync');
     return { success: false, error: err.message };
+  }
+}
+
+/**
+ * High-level orchestration function to provision a new Virtual Assistant.
+ * Auto-creates Workspace email, sets up Google Drive folder structure, and syncs credentials to password vault.
+ * @param {string} token - Google OAuth access token
+ * @param {Object} candidate - Candidate VA data object { firstName, lastName, domain }
+ * @returns {Promise<Object>} Status of provisioning
+ */
+export async function provisionVirtualAssistant(token, candidate) {
+  const firstName = candidate.firstName || 'First';
+  const lastName = candidate.lastName || 'Last';
+  const domain = candidate.domain || 'earlalex.com';
+  const vaName = `${firstName} ${lastName}`;
+  const generatedPassword = 'VA-Pass-' + Math.floor(Math.random() * 900000 + 100000) + '!';
+
+  console.log(`[VA Provisioner]: Initializing Workspace & Drive provisioning for: ${vaName}...`);
+
+  try {
+    // 1. Create Workspace User Email
+    const userResult = await createWorkspaceUser(token, firstName, lastName, domain, generatedPassword);
+    const primaryEmail = userResult.email;
+
+    // 2. Create Google Drive folder structure
+    await createVaDirectoryStructure(token, vaName);
+
+    // 3. Sync newly generated Workspace credentials to Password Vault (Google Workspace / LastPass)
+    const vaultRecord = {
+      id: `cred_va_workspace_${Date.now()}`,
+      serviceName: `Workspace Email - ${vaName}`,
+      loginUrl: 'https://mail.google.com',
+      username: primaryEmail,
+      encryptedPassKey: generatedPassword,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const syncResult = await syncCredentialToGoogleVault(token, vaultRecord);
+
+    console.log(`[VA Provisioner]: Provisioning completed successfully for ${vaName} (${primaryEmail})`);
+
+    return {
+      success: true,
+      email: primaryEmail,
+      password: generatedPassword,
+      vaultSync: syncResult,
+      simulated: !!userResult.simulated
+    };
+  } catch (err) {
+    console.error(`[VA Provisioner]: Orchestrated provisioning failed for ${vaName}:`, err);
+    return {
+      success: false,
+      error: err.message
+    };
   }
 }
 

@@ -13,6 +13,50 @@ const MARKETING_WORKFLOWS_COLLECTION = 'marketing_workflows';
 const EMAIL_TEMPLATES_COLLECTION = 'email_templates';
 const KANBAN_TASKS_COLLECTION = 'kanban_tasks';
 
+const getHipaaModule = async () => {
+  return await import('../utils/hipaa-audit.js');
+};
+
+async function decryptSensitiveFields(item) {
+  if (!item) return item;
+  const hasEncrypted = item.encryptedDescription || item.encryptedLongFormText || item.encryptedPersonalDetails;
+  if (hasEncrypted) {
+    try {
+      const hipaa = await getHipaaModule();
+      if (item.encryptedDescription) {
+        const dec = await hipaa.decryptPHIRecord(
+          item.encryptedDescription.cipherText,
+          item.encryptedDescription.iv,
+          item.encryptedDescription.salt
+        );
+        item.description = dec;
+      }
+      if (item.encryptedLongFormText) {
+        const dec = await hipaa.decryptPHIRecord(
+          item.encryptedLongFormText.cipherText,
+          item.encryptedLongFormText.iv,
+          item.encryptedLongFormText.salt
+        );
+        item.longFormText = JSON.parse(dec);
+      }
+      if (item.encryptedPersonalDetails) {
+        const dec = await hipaa.decryptPHIRecord(
+          item.encryptedPersonalDetails.cipherText,
+          item.encryptedPersonalDetails.iv,
+          item.encryptedPersonalDetails.salt
+        );
+        item.personalDetails = JSON.parse(dec);
+      }
+
+      // Log HIPAA Read access
+      await hipaa.logHipaaAccess('READ', item.id, 'SUCCESS', { notes: `Sensitive record decrypted/accessed: ${item.title || item.id}` });
+    } catch (err) {
+      console.warn('[HIPAA Secure Read]: Decryption or logging failed.', err);
+    }
+  }
+  return item;
+}
+
 /**
  * Save content to Firestore or localStorage fallback
  * @param {Object} contentData - Content data to save
@@ -28,23 +72,56 @@ export async function saveContent(contentData) {
   };
 
   schemaRegistry.validate(dataWithDefaults);
+
+  const isSensitive = dataWithDefaults.isPHIRecord || dataWithDefaults.type === 'va_candidate' || dataWithDefaults.type === 'va_hired';
+  let processedData = { ...dataWithDefaults };
+
+  if (isSensitive) {
+    try {
+      const hipaa = await getHipaaModule();
+      // Encrypt description and longFormText if they exist and are not already encrypted
+      if (processedData.description && !processedData.encryptedDescription && processedData.description !== '[ENCRYPTED ePHI]') {
+        const encDesc = await hipaa.encryptPHIRecord(processedData.description);
+        processedData.encryptedDescription = encDesc;
+        processedData.description = '[ENCRYPTED ePHI]';
+      }
+      if (processedData.longFormText && Array.isArray(processedData.longFormText) && processedData.longFormText.length > 0 && !processedData.encryptedLongFormText) {
+        const textStr = JSON.stringify(processedData.longFormText);
+        const encText = await hipaa.encryptPHIRecord(textStr);
+        processedData.encryptedLongFormText = encText;
+        processedData.longFormText = ['[ENCRYPTED ePHI]'];
+      }
+      if (processedData.personalDetails && !processedData.encryptedPersonalDetails) {
+        const detailsStr = JSON.stringify(processedData.personalDetails);
+        const encDetails = await hipaa.encryptPHIRecord(detailsStr);
+        processedData.encryptedPersonalDetails = encDetails;
+        delete processedData.personalDetails;
+      }
+
+      // Log HIPAA Write access
+      await hipaa.logHipaaAccess('WRITE', processedData.id, 'SUCCESS', { notes: `Sensitive record saved: ${processedData.title || processedData.id}` });
+    } catch (err) {
+      console.warn('[HIPAA Secure Write]: Encryption or logging failed.', err);
+    }
+  }
+
   const db = getFirestoreDB();
 
   if (!db) {
     const local = getLocalContent();
-    local[dataWithDefaults.id] = { ...dataWithDefaults, updatedAt: new Date().toISOString() };
+    local[processedData.id] = { ...processedData, updatedAt: new Date().toISOString() };
     saveLocalContent(local);
     return true;
   }
 
   try {
-    const docRef = doc(db, CONTENT_COLLECTION, dataWithDefaults.id);
-    await setDoc(docRef, { ...dataWithDefaults, updatedAt: new Date().toISOString() }, { merge: true });
+    const docRef = doc(db, CONTENT_COLLECTION, processedData.id);
+    await setDoc(docRef, { ...processedData, updatedAt: new Date().toISOString() }, { merge: true });
     return true;
   } catch (err) {
     console.warn('[DB]: Firestore permission or write error. Falling back to LocalStorage.', err.message);
     const local = getLocalContent();
-    local[dataWithDefaults.id] = { ...dataWithDefaults, updatedAt: new Date().toISOString() };
+    local[processedData.id] = { ...processedData, updatedAt: new Date().toISOString() };
     saveLocalContent(local);
     return true;
   }
@@ -62,7 +139,7 @@ export async function getContentById(id) {
     const local = getLocalContent();
     if (local[id]) {
       schemaRegistry.validate(local[id]);
-      return local[id];
+      return await decryptSensitiveFields(local[id]);
     }
     return null;
   }
@@ -73,7 +150,7 @@ export async function getContentById(id) {
     if (docSnap.exists()) {
       const data = docSnap.data();
       schemaRegistry.validate(data);
-      return data;
+      return await decryptSensitiveFields(data);
     }
   } catch (err) {
     console.warn('[DB]: Firestore read error. Falling back to LocalStorage.', err.message);
@@ -83,7 +160,7 @@ export async function getContentById(id) {
   if (local[id]) {
     try {
       schemaRegistry.validate(local[id]);
-      return local[id];
+      return await decryptSensitiveFields(local[id]);
     } catch (e) {}
   }
   return null;
@@ -109,13 +186,14 @@ export async function getAllContent() {
         q = query(contentRef, where('access.visibility', '==', 'public'));
       }
       const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
-      querySnapshot.forEach((docSnap) => {
+      for (const docSnap of querySnapshot.docs) {
         const data = docSnap.data();
         try {
           schemaRegistry.validate(data);
-          results.push(data);
+          const decrypted = await decryptSensitiveFields(data);
+          results.push(decrypted);
         } catch (e) {}
-      });
+      }
       if (results.length > 0) return results;
     } catch (err) {
       console.warn('[DB]: Cloud Firestore query bypassed or unreachable.', err.message);
@@ -124,12 +202,13 @@ export async function getAllContent() {
 
   // fallback to local
   const local = getLocalContent();
-  Object.values(local).forEach(item => {
+  for (const item of Object.values(local)) {
     try {
       schemaRegistry.validate(item);
-      results.push(item);
+      const decrypted = await decryptSensitiveFields(item);
+      results.push(decrypted);
     } catch (e) {}
-  });
+  }
   return results;
 }
 
@@ -166,13 +245,14 @@ export async function getContentByType(type, maxItems = 12) {
         );
       }
       const querySnapshot = await queryWith3SecTimeout(originalGetDocs(q));
-      querySnapshot.forEach((docSnap) => {
+      for (const docSnap of querySnapshot.docs) {
         const data = docSnap.data();
         try {
           schemaRegistry.validate(data);
-          results.push(data);
+          const decrypted = await decryptSensitiveFields(data);
+          results.push(decrypted);
         } catch (e) {}
-      });
+      }
       if (results.length > 0) return results;
     } catch (err) {
       console.warn('[DB]: Cloud Firestore query bypassed or unreachable.', err.message);
@@ -181,14 +261,15 @@ export async function getContentByType(type, maxItems = 12) {
 
   // fallback to local
   const local = getLocalContent();
-  Object.values(local).forEach(item => {
+  for (const item of Object.values(local)) {
     if (item.type === type && results.length < maxItems) {
       try {
         schemaRegistry.validate(item);
-        results.push(item);
+        const decrypted = await decryptSensitiveFields(item);
+        results.push(decrypted);
       } catch (e) {}
     }
-  });
+  }
   return results;
 }
 

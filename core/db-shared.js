@@ -292,18 +292,48 @@ export function getLocalContent() {
       // 9. Product / Service (product)
       const sampleProduct = {
         type: 'product',
-        id: '1-on-1-architecture-consultation',
-        title: '1-on-1 Architecture Consultation',
-        description: 'Strategic UI/UX and systems engineering consultation session.',
-        longFormText: ['Deep dive into system blueprints.', 'Receive custom action plan.'],
-        category: 'Consulting',
+        id: 'handmade-artisan-mug',
+        title: 'Handmade Artisan Mug',
+        description: 'An elegant, wheel-thrown ceramic mug perfect for your morning brew.',
+        longFormText: ['Every single artisan mug is hand-thrown and individually glazed.', 'Features a beautiful speckled texture and smooth lip.'],
+        category: 'Handmade Crafts',
         pricing: {
-          basePrice: 15000,
+          basePrice: 2400,
           currency: 'USD',
           paymentType: 'full_upfront'
         },
         tags: ["Zero-Build", "Sovereignty"],
-        access: { visibility: 'public' }
+        access: { visibility: 'public' },
+        isPhysicalProduct: true,
+        isHandmade: true,
+        sku: 'HND-MUG-001',
+        inventory: {
+          stockQuantity: 15,
+          lowStockThreshold: 3,
+          allowBackorders: false,
+          trackInventory: true
+        },
+        craftDetails: {
+          materials: ['Ceramic', 'Non-toxic Glaze', 'Eco-clay'],
+          productionLeadTime: '3-5 business days',
+          dimensions: { length: 4, width: 4, height: 5, unit: 'in' },
+          weight: { value: 1.2, unit: 'lbs' }
+        },
+        variations: [
+          { optionName: 'Color', values: ['Matte Black', 'Terracotta', 'Glacier Blue'] },
+          { optionName: 'Size', values: ['12 oz', '16 oz'] }
+        ],
+        shippingOptions: {
+          shippingClass: 'Standard Physical',
+          allowLocalPickup: true
+        },
+        enableCryptoPayment: true,
+        enableNftCounterpart: true,
+        nftMetadata: {
+          name: 'Handmade Artisan Mug Certificate of Authenticity',
+          description: 'ERC-1155 Digital Certificate verifying authenticity of a wheel-thrown ceramic mug.',
+          image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd'
+        }
       };
 
       const samples = [

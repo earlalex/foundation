@@ -23,7 +23,7 @@ import {
   saveInvoice, getInvoice, getAllInvoices, getInvoicesByCustomer, getInvoicesByGoogleContact, deleteInvoice,
   saveExpense, getExpenses, savePayrollRecord, getPayrollRecords,
   saveBudgetTargets, getBudgets, saveEmployee, getEmployees, deleteEmployee,
-  updateBudgetTargetsOnPayout, getFinanceTelemetry
+  updateBudgetTargetsOnPayout, saveStateCompliance, getStateCompliance
 } from './db-finances.js';
 
 import {
@@ -168,7 +168,8 @@ export class ContentDB {
   async saveEmployee(data) { return saveEmployee(data); }
   async getEmployees() { return getEmployees(); }
   async deleteEmployee(id) { return deleteEmployee(id); }
-  async getFinanceTelemetry() { return getFinanceTelemetry(); }
+  async saveStateCompliance(data) { return saveStateCompliance(data); }
+  async getStateCompliance() { return getStateCompliance(); }
 
   // Delegated VA methods
   async saveVaCandidate(data) { return saveVaCandidate(data); }
