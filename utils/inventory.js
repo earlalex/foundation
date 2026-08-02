@@ -209,6 +209,46 @@ export async function checkLowStockAlerts() {
 }
 
 /**
+ * Get summary of all products, stock levels, and low stock count
+ * @returns {Promise<Object>}
+ */
+export async function getInventorySummary() {
+  try {
+    const products = await contentDB.getContentByType('product') || [];
+    let totalProducts = products.length;
+    let lowStockCount = 0;
+    let totalStock = 0;
+
+    products.forEach(p => {
+      const inv = p.inventory;
+      if (inv) {
+        if (inv.trackInventory) {
+          totalStock += (inv.stockQuantity || 0);
+          if ((inv.stockQuantity || 0) <= (inv.lowStockThreshold || 0)) {
+            lowStockCount++;
+          }
+        }
+      }
+    });
+
+    return {
+      totalProducts,
+      totalStock,
+      lowStockCount,
+      hasLowStockAlerts: lowStockCount > 0
+    };
+  } catch (err) {
+    console.warn('[Inventory Summary]: Failed to calculate inventory summary:', err.message);
+    return {
+      totalProducts: 0,
+      totalStock: 0,
+      lowStockCount: 0,
+      hasLowStockAlerts: false
+    };
+  }
+}
+
+/**
  * Simple in-memory or localStorage stock counter for Spark COO monitoring
  */
 let memoryInventoryCounts = {

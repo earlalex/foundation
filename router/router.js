@@ -453,7 +453,7 @@ export class Router {
         const { trackPageView } = await import('../utils/analytics.js');
         trackPageView(cleanPath, document.title);
       } catch (err) {
-        console.warn('[GA4 Router]: Failed to track pageview:', err.message);
+        // silent catch
       }
 
       // ARIA Route Change Announcement and Focus Shifting (Directive 1)

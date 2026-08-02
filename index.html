@@ -48,7 +48,7 @@
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js', { scope: './' })
           .then((reg) => console.log('[ServiceWorker]: Registered with scope:', reg.scope))
-          .catch((err) => console.warn('[ServiceWorker]: Registration bypassed:', err));
+          .catch((err) => { /* silent catch */ });
       });
     }
   </script>

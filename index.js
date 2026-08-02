@@ -39,17 +39,34 @@ logger.info('Foundation Core initializing...');
  */
 window.foundationDevBypass = function() {
   window.__FOUNDATION_DEV_BYPASS__ = true;
+  window.__FOUNDATION_FREEZE_TEST_STATE__ = true;
   window.store = store;
   store.dispatch('SET_USER', {
     uid: 'admin_bypass',
-    email: 'admin@example.com',
+    email: 'admin@earlalex.com',
     displayName: 'Bypass Admin',
     isAdmin: true,
     role: 'admin'
   });
   store.dispatch('SET_DEV_MODE', true);
-  console.log('%c[Security Bypass Granted]: Emergency Console Dev Bypass Active.', 'color: #38a169; font-weight: bold;');
+  console.log('%c[Security Bypass Granted]: Emergency Console Dev Bypass Active. Verbosity logging enabled. Test state frozen.', 'color: #38a169; font-weight: bold;');
   window.router?.navigateTo('/admin');
+};
+
+/**
+ * Headless Playwright / CLI programmatic test execution trigger
+ * Usage in headless scripts: await window.runFoundationTests()
+ */
+window.runFoundationTests = async function() {
+  console.log('[Automation API]: Programmatic test suite trigger invoked.');
+  try {
+    const mod = await import('./tests/index.js');
+    const results = await mod.runAllTests();
+    return results;
+  } catch (err) {
+    console.error('[Automation API]: Headless test runner failure:', err);
+    return { success: false, error: err.message };
+  }
 };
 
 /**
@@ -69,13 +86,28 @@ function updateSimulationBadgeVisibility(state) {
       document.body.appendChild(badge);
     }
     const roleCapitalized = state.simulatedUserTier.charAt(0).toUpperCase() + state.simulatedUserTier.slice(1);
+    const activeTheme = state.theme || 'dark';
+
+    // Read pending tasks
+    let pendingCount = 0;
+    try {
+      const pendingTasks = JSON.parse(localStorage.getItem('foundation_pending_tasks') || '[]');
+      pendingCount = Array.isArray(pendingTasks) ? pendingTasks.length : 0;
+    } catch (e) {}
+
     badge.innerHTML = `
       <span class="badge-short-text">[ Simulation Mode ]</span>
-      <span class="badge-full-text">
-        <span>SIMULATION MODE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</span>
-        <button id="btn-return-admin-sim" style="background: #ffffff; color: #e53e3e; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; margin-left: 5px; transition: background 0.2s;">
-          Return to Admin Command Center
-        </button>
+      <span class="badge-full-text" style="display: flex; flex-direction: column; gap: 4px; padding: 6px; font-size: 0.8rem; text-align: left; line-height: 1.4;">
+        <div>SIMULATION MODE: Viewing site as [ <strong>${roleCapitalized}</strong> ]</div>
+        <div>Active Theme: [ <strong>${activeTheme.toUpperCase()}</strong> ] | Task Queue: [ <strong>${pendingCount} Pending</strong> ]</div>
+        <div style="display: flex; gap: 6px; margin-top: 4px;">
+          <button id="btn-return-admin-sim" style="background: #ffffff; color: #3182ce; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.75rem; transition: background 0.2s;">
+            Return to Admin
+          </button>
+          <button id="btn-reset-test-state" style="background: #e53e3e; color: #ffffff; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.75rem; transition: background 0.2s;">
+            Reset Test State
+          </button>
+        </div>
       </span>
     `;
 
@@ -86,6 +118,28 @@ function updateSimulationBadgeVisibility(state) {
         e.stopPropagation();
         store.dispatch('SET_SIMULATED_USER_TIER', null);
         window.router.navigateTo('/admin');
+      });
+    }
+
+    const btnReset = badge.querySelector('#btn-reset-test-state');
+    if (btnReset) {
+      btnReset.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Clean up mock/simulated states completely
+        store.dispatch('SET_SIMULATED_USER_TIER', null);
+        store.dispatch('LOGOUT');
+
+        try {
+          localStorage.removeItem('foundation_pending_tasks');
+          localStorage.removeItem('foundation_low_stock_alerts');
+          localStorage.removeItem('foundation_spark_tasks');
+          sessionStorage.clear();
+        } catch (err) {}
+
+        console.log('[Dev Mode Badge]: Simulated session data flushed cleanly.');
+        window.location.reload();
       });
     }
   } else {
