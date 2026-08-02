@@ -3,6 +3,7 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
   const signature = request.headers.get('stripe-signature');
+  // Unified Environment Variable Law: strictly read STRIPE_WEBHOOK_SECRET and STRIPE_SECRET_KEY
   const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
@@ -18,6 +19,7 @@ export async function onRequestPost(context) {
     const rawBody = await request.text();
     const event = JSON.parse(rawBody); // Standard JSON event payload
 
+    // Unified Environment Variable Law: strictly read FIREBASE_PROJECT_ID and FIREBASE_API_KEY
     const firebaseProjectId = env.FIREBASE_PROJECT_ID;
     const firestoreApiKey = env.FIREBASE_API_KEY;
 

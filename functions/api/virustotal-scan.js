@@ -41,6 +41,7 @@ export async function onRequestPost(context) {
     }
 
     // Read secret VirusTotal API key securely from Cloudflare Environment Variables
+    // Unified Environment Variable Law: strictly read VIRUSTOTAL_API_KEY
     const vtApiKey = context.env.VIRUSTOTAL_API_KEY;
 
     // Handle site audit / scheduled background scan action
@@ -160,6 +161,7 @@ export async function onRequestPost(context) {
       const overallRating = maliciousCount > 0 ? "High Risk" : "Secure";
 
       // Save schedule audit log silently in contentDB (via standard Firestore REST POST if configured)
+      // Unified Environment Variable Law: strictly read FIREBASE_PROJECT_ID
       const projectId = context.env.FIREBASE_PROJECT_ID || "demo-foundation-app";
       let saveSuccess = false;
       try {
