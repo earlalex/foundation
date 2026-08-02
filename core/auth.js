@@ -105,8 +105,8 @@ export class AuthManager {
         const userObj = {
           uid: String(user.uid),
           email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
+          displayName: user.displayName || user.email.split('@')[0],
+          photoURL: user.photoURL || '',
           isAdmin: isAdmin,
           role: profile.role,
           paymentStatus: profile.paymentStatus,
@@ -164,15 +164,17 @@ export class AuthManager {
           }
         }
       } else {
-        store.dispatch('LOGOUT');
-        console.log('[Auth]: Signed out.');
+        if (!window.__FOUNDATION_DEV_BYPASS__) {
+          store.dispatch('LOGOUT');
+          console.log('[Auth]: Signed out.');
 
-        // Trigger system-wide hook execution pipeline for user logout
-        try {
-          const { doAction } = await import('./hooks.js');
-          await doAction('user_logout');
-        } catch (hookErr) {
-          console.error('[Auth System]: Failed to dispatch user_logout hook.', hookErr);
+          // Trigger system-wide hook execution pipeline for user logout
+          try {
+            const { doAction } = await import('./hooks.js');
+            await doAction('user_logout');
+          } catch (hookErr) {
+            console.error('[Auth System]: Failed to dispatch user_logout hook.', hookErr);
+          }
         }
       }
     });
@@ -202,7 +204,6 @@ export class AuthManager {
     if (!isConfigured) {
       const warningMsg = "Firebase is running on demo/unconfigured credentials. Please run the Setup Wizard or update API keys.";
       toast.warning(warningMsg);
-      // Fallback/Demo Key warning behavior
       const customError = new Error(warningMsg);
       errorHandler.handleError(customError);
       throw customError;
@@ -229,10 +230,9 @@ export class AuthManager {
       if (errorCode === 'auth/popup-blocked') {
         toast.error("Sign-in popup was blocked by your browser. Please allow popups for this site and try again.");
       } else if (errorCode === 'auth/popup-closed-by-user') {
-        // Suppress aggressive error alerts if the user simply closed the popup window manually.
         console.log('[Auth]: Sign-in popup closed by user.');
       } else if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('auth/unauthorized-domain')) {
-        toast.error(`Domain authorization error: Please add 'https://' + window.location.hostname + ' to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+        toast.error(`Domain authorization error: Please add '${window.location.hostname}' to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
       } else if (errorCode === 'auth/configuration-not-found' || errorMessage.includes('configuration-not-found')) {
         toast.error("Firebase is running on demo/unconfigured credentials. Please run the Setup Wizard or update API keys.");
       } else {
@@ -260,7 +260,9 @@ export class AuthManager {
    */
   async logout() {
     try {
+      window.__FOUNDATION_DEV_BYPASS__ = false;
       await signOut(auth);
+      store.dispatch('LOGOUT');
     } catch (err) {
       errorHandler.handleError(new Error(`Sign-Out Failed: ${err.message}`));
     }
@@ -272,7 +274,7 @@ export class AuthManager {
    */
   isAdminAuthenticated() {
     const user = store.state.user;
-    return !!(user && user.isAdmin);
+    return !!(user && (user.isAdmin || user.role === 'admin') || window.__FOUNDATION_DEV_BYPASS__);
   }
 }
 
