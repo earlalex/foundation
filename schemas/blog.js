@@ -17,5 +17,6 @@ export const BlogSchema = {
   images: Type.optional(Type.array),
   preview: Type.optional(PreviewSchema),
   
-  links: Type.optional(Type.array)
+  links: Type.optional(Type.array),
+  tags: Type.optional(Type.array)
 };

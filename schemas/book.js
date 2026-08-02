@@ -17,5 +17,6 @@ export const BookSchema = {
   images: Type.optional(Type.array),       // Book cover / interior spreads
   preview: Type.optional(PreviewSchema),
   
-  links: Type.optional(Type.array)        // Buy links (Amazon, Direct PDF)
+  links: Type.optional(Type.array),       // Buy links (Amazon, Direct PDF)
+  tags: Type.optional(Type.array)
 };

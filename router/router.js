@@ -94,6 +94,14 @@ export class Router {
         await import('../pages/events/events.js');
       } else if (cleanPath === '/contact') {
         await import('../pages/contact/contact.js');
+      } else if (cleanPath === '/education') {
+        await import('../pages/education/education.js');
+      } else if (cleanPath === '/podcast') {
+        await import('../pages/podcast/podcast.js');
+      } else if (cleanPath === '/shop') {
+        await import('../pages/shop/shop.js');
+      } else if (cleanPath === '/tag' || cleanPath.startsWith('/tag/')) {
+        await import('../pages/tag/tag.js');
       } else if (cleanPath === '/detail') {
         await import('../pages/detail/detail.js');
       } else if (cleanPath === '/account') {
@@ -269,6 +277,8 @@ export class Router {
         cleanPath = '/home';
       } else if (this.routesManifest[relPath]) {
         cleanPath = relPath;
+      } else if (relPath.startsWith('/tag/')) {
+        cleanPath = '/tag';
       } else if (relPath.startsWith('/pages/')) {
         const slug = relPath.substring(7); // strip '/pages/'
         try {

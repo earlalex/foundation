@@ -291,7 +291,7 @@ export async function uploadReportToDrive(token, siteName, fileName, content) {
 
 /**
  * Sync credential securely to Google Workspace Passwords Vault
- *Associated with primary domain (admin@earlalex.com).
+ * Associated with primary domain (admin@earlalex.com).
  * Uses Google Workspace Admin SDK/Credentials API mock or live endpoints.
  * @param {string} token - Google OAuth access token
  * @param {Object} credentialRecord - Vault credential record to sync
@@ -320,10 +320,8 @@ export async function syncCredentialToGoogleVault(token, credentialRecord) {
     const googleVaultHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Call the Admin SDK / Credentials API / Passwords Vault endpoint:
-    // In our browser environment, we make a live API call or mock/simulate the request nicely.
     const url = 'https://admin.googleapis.com/admin/directory/v1/users/admin@earlalex.com/credentials';
 
-    // Attempt the fetch (this is a mock URL that may fail in headless local environments, so we gracefully catch or simulate)
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -414,6 +412,90 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
   } catch (err) {
     errorHandler.handleError(err, 'Google Contacts Sync');
     return false;
+  }
+}
+
+/**
+ * Sync buyer contact and write immutable detailed purchase note
+ * @param {Object} customerData - Customer contact & purchase metrics
+ * @param {string} [token] - Google OAuth access token
+ * @returns {Promise<Object>} Results
+ */
+export async function syncBuyerToGoogleContacts(customerData, token = null) {
+  if (!token) {
+    try {
+      const { getGoogleAccessToken } = await import('../core/google-services.js');
+      token = await getGoogleAccessToken(false);
+    } catch (e) {
+      console.warn('[syncBuyerToGoogleContacts]: Google access token retrieval deferred.', e);
+    }
+  }
+
+  const { givenName, familyName, email, phone, purchaseName, purchasePrice, orderId, paymentMethod, date } = customerData;
+  const noteContent = `Purchased [${purchaseName || 'Item'}] for $${Number(purchasePrice || 0).toFixed(2)} on ${date || new Date().toISOString().split('T')[0]}. Order ID: #${orderId || 'N/A'}. Payment Method: ${paymentMethod || 'Stripe'}.`;
+
+  if (!token) {
+    console.warn('[syncBuyerToGoogleContacts]: Google Access Token not available. Simulating Contact Sync:', customerData, noteContent);
+    return { success: true, simulated: true, note: noteContent };
+  }
+
+  try {
+    // 1. Search for existing contact by email or phone
+    let existingPerson = null;
+    const searchUrl = `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(email)}&readMask=names,emailAddresses,phoneNumbers,biographies`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      existingPerson = searchData.results?.[0]?.person;
+    }
+
+    if (existingPerson) {
+      // 2a. Update existing contact notes/biography
+      const resourceName = existingPerson.resourceName;
+      const etag = existingPerson.etag;
+      const currentBio = existingPerson.biographies?.[0]?.value || '';
+      const newBio = currentBio ? `${currentBio}\n${noteContent}` : noteContent;
+
+      await fetch(`https://people.googleapis.com/v1/${resourceName}:updateContact?updatePersonFields=biographies,names,phoneNumbers`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          etag,
+          names: existingPerson.names || [{ givenName, familyName }],
+          phoneNumbers: existingPerson.phoneNumbers || (phone ? [{ value: phone }] : []),
+          biographies: [{ value: newBio, contentType: 'TEXT_PLAIN' }]
+        })
+      });
+      console.log(`[Google Contacts Sync]: Updated contact ${email} with purchase notes.`);
+    } else {
+      // 2b. Create new contact with biography note
+      const contactPayload = {
+        names: [{ givenName, familyName }],
+        emailAddresses: [{ value: email }],
+        phoneNumbers: phone ? [{ value: phone }] : [],
+        biographies: [{ value: noteContent, contentType: 'TEXT_PLAIN' }]
+      };
+
+      await fetch('https://people.googleapis.com/v1/people:createContact', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(contactPayload)
+      });
+      console.log(`[Google Contacts Sync]: Created new contact ${email} with purchase notes.`);
+    }
+
+    return { success: true, note: noteContent };
+  } catch (err) {
+    errorHandler.handleError(err, 'Google Contacts Purchase Sync');
+    return { success: false, error: err.message };
   }
 }
 

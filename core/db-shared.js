@@ -74,8 +74,15 @@ export function getFirestoreDB() {
 // Loader helpers with automated seeding for exactly 1 item per schema type
 export function getLocalContent() {
   try {
-    const local = JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
-    const isSeeded = localStorage.getItem('foundation_content_seeded') === 'true';
+    let local = JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
+    let isSeeded = localStorage.getItem('foundation_content_seeded') === 'true';
+
+    // Auto-migrate: Force re-seeding if tags are missing on existing items
+    if (isSeeded && local['welcome-to-foundation-framework'] && !local['welcome-to-foundation-framework'].tags) {
+      isSeeded = false;
+      localStorage.removeItem('foundation_content_seeded');
+      local = {};
+    }
 
     if (!isSeeded) {
       // 1. Blog (blog)
@@ -90,6 +97,7 @@ export function getLocalContent() {
         ],
         author: 'Jane Doe',
         date: '2026-08-01',
+        tags: ["Zero-Build", "AI-Tools"],
         access: { visibility: 'public' }
       };
 
@@ -101,6 +109,7 @@ export function getLocalContent() {
         description: 'Learn the patterns and principles of modern zero-build engineering.',
         isbn: '978-3-16-148410-0',
         formats: ['PDF', 'Epub'],
+        tags: ["Zero-Build", "Sovereignty"],
         access: { visibility: 'public' },
         product: {
           isPurchasable: true,
@@ -116,6 +125,7 @@ export function getLocalContent() {
         id: 'vanilla-js-professional-course',
         title: 'Vanilla JS Professional Course',
         description: 'Master Vanilla JS, custom reactive stores, and native visual GrapesJS builder flows.',
+        tags: ["Vanilla-JS", "Zero-Build", "AI-Tools"],
         access: { visibility: 'public' },
         longFormText: ['Become a professional JS developer.', 'Build high performance applications.'],
         modules: [
@@ -143,10 +153,10 @@ export function getLocalContent() {
         ]
       };
 
-      // 4. Event (event)
+      // 4. Event (event) - Upgraded with Rich Event Schema (Directive 3)
       const sampleEvent = {
         type: 'event',
-        id: 'ascension-summit-2026',
+        id: 'sample-summit',
         title: 'Ascension Avenue Summit 2026',
         slug: 'ascension-summit-2026',
         date: '2026-08-25',
@@ -168,6 +178,22 @@ export function getLocalContent() {
             capacity: 30,
             sold: 25,
             description: 'Standard admission at our earliest promotional discount rate.'
+          },
+          {
+            id: 't-gen',
+            name: 'General Admission',
+            price: 99.00,
+            capacity: 100,
+            sold: 12,
+            description: 'Access to all main stages, networking panels, and standard seating.'
+          },
+          {
+            id: 't-vip',
+            name: 'VIP Networking Pass',
+            price: 299.00,
+            capacity: 20,
+            sold: 0,
+            description: 'Includes priority front-row seating, exclusive VIP networking luncheon, and official recordings.'
           }
         ],
         vendorPackages: [
@@ -191,6 +217,23 @@ export function getLocalContent() {
             sold: 0
           }
         ],
+        flyerImageUrl: '/assets/images/summit-flyer.jpg',
+        agenda: [
+          { time: "09:00 AM", title: "Keynote Address", description: "Opening remarks & vision", speaker: "EarlAlex" },
+          { time: "11:30 AM", title: "Zero-Build Panel", description: "Building without bundlers", speaker: "Tech Panel" }
+        ],
+        lineup: {
+          hosts: ["EarlAlex"],
+          headliners: ["Keynote Guest Speaker"],
+          castAndAct: ["Mastermind Mentors"],
+          openersAndPerformers: ["Live DJ Set / Musical Guest"]
+        },
+        ticketing: {
+          tiers: [
+            { name: "General Admission", price: 49, availableQty: 100 },
+            { name: "VIP All-Access", price: 199, availableQty: 20 }
+          ]
+        },
         accessVisibility: 'public'
       };
 
@@ -203,6 +246,7 @@ export function getLocalContent() {
         longFormText: ['Serverless workers are fast.', 'Learn step by step.'],
         author: 'Jane Doe',
         date: '2026-08-01',
+        tags: ["Sovereignty", "AI-Tools"],
         access: { visibility: 'public' }
       };
 
@@ -215,6 +259,7 @@ export function getLocalContent() {
         longFormText: ['Audio transcription available.'],
         author: 'Jane Doe',
         date: '2026-08-01',
+        tags: ["Sovereignty", "Live-Summit"],
         access: { visibility: 'public' }
       };
 
@@ -227,6 +272,7 @@ export function getLocalContent() {
         longFormText: ['The redesign boosted conversion by 45%.'],
         author: 'Jane Doe',
         date: '2026-08-01',
+        tags: ["Zero-Build", "Sovereignty"],
         access: { visibility: 'public' }
       };
 
@@ -239,6 +285,7 @@ export function getLocalContent() {
         longFormText: ['Get 3 months free.'],
         promoCode: 'FOUNDATION3',
         expirationDate: '2026-12-31',
+        tags: ["AI-Tools", "Live-Summit"],
         access: { visibility: 'public' }
       };
 
@@ -255,6 +302,7 @@ export function getLocalContent() {
           currency: 'USD',
           paymentType: 'full_upfront'
         },
+        tags: ["Zero-Build", "Sovereignty"],
         access: { visibility: 'public' },
         isPhysicalProduct: true,
         isHandmade: true,

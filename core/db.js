@@ -1,4 +1,5 @@
 // core/db.js - Re-export and Delegation Hub
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { getFirestoreDB, schemaRegistry, store, configManager } from './db-shared.js';
 import { FRAMEWORK_AFFILIATES } from './affiliates.js';
 

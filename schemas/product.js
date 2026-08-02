@@ -45,6 +45,7 @@ export const ProductSchema = {
     paymentTerms: Type.string,              // Payment terms text
     googleContactLink: Type.optional(Type.string) // Link to Google Contact for invoicing
   })),
+  tags: Type.optional(Type.array),
 
   // Direct Crypto and NFT
   enableCryptoPayment: Type.optional(Type.boolean),

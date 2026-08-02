@@ -55,5 +55,6 @@ export const EducationSchema = {
   links: Type.optional(Type.array),
 
   // Extended Multi-Module Curriculum Attributes
-  modules: Type.optional(Type.array(Type.object))
+  modules: Type.optional(Type.array(Type.object)),
+  tags: Type.optional(Type.array)
 };

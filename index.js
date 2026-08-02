@@ -166,6 +166,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       description: 'Manage your unlocked premium publications and subscription billing.',
       viewPath: './pages/account.html'
     },
+    '/education': {
+      title: 'Education',
+      description: 'Master sovereign engineering, zero-build pipelines, and automation.',
+      viewPath: './pages/education/education.html'
+    },
+    '/podcast': {
+      title: 'Podcast',
+      description: 'Listen to technical deep-dives on zero-build and edge deployment.',
+      viewPath: './pages/podcast/podcast.html'
+    },
+    '/shop': {
+      title: 'Artisanal Shop',
+      description: 'Curated artisanal wellness products and merchandise.',
+      viewPath: './pages/shop/shop.html'
+    },
+    '/tag': {
+      title: 'Tag Archive',
+      description: 'Browse tagged content archive.',
+      viewPath: './pages/tag/tag.html'
+    },
     '/404': {
       title: 'Page Not Found',
       description: 'The page you requested could not be found.',
@@ -281,6 +301,14 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/events/events.js').then(m => m.initEventsPage());
   } else if (e.detail.path === '/contact') {
     import('./pages/contact/contact.js').then(m => m.initContactPage());
+  } else if (e.detail.path === '/education') {
+    import('./pages/education/education.js').then(m => m.initEducationPage());
+  } else if (e.detail.path === '/podcast') {
+    import('./pages/podcast/podcast.js').then(m => m.initPodcastPage());
+  } else if (e.detail.path === '/shop') {
+    import('./pages/shop/shop.js').then(m => m.initShopPage());
+  } else if (e.detail.path === '/tag' || e.detail.path.startsWith('/tag/')) {
+    import('./pages/tag/tag.js').then(m => m.initTagPage());
   } else if (e.detail.path === '/detail') {
     import('./pages/detail/detail.js').then(m => m.initDetailPage());
   } else if (e.detail.path === '/admin') {

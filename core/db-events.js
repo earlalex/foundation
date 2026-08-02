@@ -137,6 +137,32 @@ export async function saveRegistration(regData) {
     console.warn('Failed to save registration locally', e);
   }
 
+  // Trigger buyer customer sync to Google Contacts (Directive 5)
+  try {
+    const { syncBuyerToGoogleContacts } = await import('../utils/backend-google.js');
+    let boughtItemsText = 'Tickets';
+    let purchasePrice = 0;
+    try {
+      const cart = JSON.parse(payload.cartItems || '[]');
+      boughtItemsText = cart.map(i => `${i.quantity}x ${i.name}`).join(', ') || 'Tickets';
+      purchasePrice = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    } catch (e) {}
+
+    await syncBuyerToGoogleContacts({
+      givenName: payload.name || payload.email?.split('@')[0] || 'Customer',
+      familyName: payload.lastName || '',
+      email: payload.email,
+      phone: payload.phone || '',
+      purchaseName: boughtItemsText,
+      purchasePrice: purchasePrice,
+      orderId: payload.id,
+      paymentMethod: payload.paymentMethod || 'Stripe',
+      date: payload.createdAt ? payload.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+    });
+  } catch (err) {
+    console.warn('[saveRegistration]: Google Contacts buyer sync deferred.', err.message);
+  }
+
   if (!db) return payload;
 
   try {

@@ -700,3 +700,39 @@ label {
   opacity: 1 !important;
   transform: translateY(0) !important;
 }
+
+/* --- Prevent Page Overflow & Touch-Friendly Horizontal Scrolling (Directive 1) --- */
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.horizontal-scroll-container {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  gap: var(--spacing-16, 1rem);
+  padding-bottom: var(--spacing-12, 0.75rem);
+}
+
+.horizontal-scroll-container > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/* Enforce equal card heights and uniform media aspect ratios */
+.card, content-card, price-card, bento-card, .case-study-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.card img, .card video, .card iframe,
+content-card img, bento-card img,
+.card-media, img.card-image, .aspect-ratio-16-9 {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  width: 100%;
+}
