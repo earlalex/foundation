@@ -422,15 +422,6 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
  * @returns {Promise<Object>} Results
  */
 export async function syncBuyerToGoogleContacts(customerData, token = null) {
-  if (!token) {
-    try {
-      const { getGoogleAccessToken } = await import('../core/google-services.js');
-      token = await getGoogleAccessToken(false);
-    } catch (e) {
-      console.warn('[syncBuyerToGoogleContacts]: Google access token retrieval deferred.', e);
-    }
-  }
-
   const { givenName, familyName, email, phone, purchaseName, purchasePrice, orderId, paymentMethod, date } = customerData;
   const noteContent = `Purchased [${purchaseName || 'Item'}] for $${Number(purchasePrice || 0).toFixed(2)} on ${date || new Date().toISOString().split('T')[0]}. Order ID: #${orderId || 'N/A'}. Payment Method: ${paymentMethod || 'Stripe'}.`;
 

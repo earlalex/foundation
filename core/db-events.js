@@ -139,6 +139,14 @@ export async function saveRegistration(regData) {
 
   // Trigger buyer customer sync to Google Contacts (Directive 5)
   try {
+    let token = null;
+    try {
+      const { getGoogleAccessToken } = await import('./google-services.js');
+      token = await getGoogleAccessToken(false);
+    } catch (tokenErr) {
+      console.warn('[saveRegistration]: Google access token retrieval deferred.', tokenErr);
+    }
+
     const { syncBuyerToGoogleContacts } = await import('../utils/backend-google.js');
     let boughtItemsText = 'Tickets';
     let purchasePrice = 0;
@@ -158,7 +166,7 @@ export async function saveRegistration(regData) {
       orderId: payload.id,
       paymentMethod: payload.paymentMethod || 'Stripe',
       date: payload.createdAt ? payload.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
-    });
+    }, token);
   } catch (err) {
     console.warn('[saveRegistration]: Google Contacts buyer sync deferred.', err.message);
   }
