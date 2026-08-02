@@ -49,6 +49,14 @@ export async function initDetailPage() {
       return;
     }
 
+    // Handle e-commerce product storefront details custom path
+    if (item.type === 'product') {
+      const { renderProductStorefront, initProductStorefrontListeners } = await import('../shop/product.js');
+      container.innerHTML = renderProductStorefront(item);
+      initProductStorefrontListeners(item);
+      return;
+    }
+
     // Render Unlocked vs Paywall View using Universal Renderer
     container.innerHTML = renderContent(item);
 

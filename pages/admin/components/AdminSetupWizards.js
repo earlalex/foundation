@@ -681,7 +681,7 @@ export class AdminSetupWizards {
         title: "Section 3: Growth & Marketing Wizard",
         steps: [
           {
-            title: "Step 1/2: Kanban, Lead Scoring & SMTP Defaults",
+            title: "Step 1/3: Kanban, Lead Scoring & SMTP Defaults",
             html: `
               <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
                 <p style="font-size: 0.85rem; color: #718096;">Establish workspace Kanban columns, Gmail dispatcher defaults, and Lead Scoring parameters.</p>
@@ -722,7 +722,7 @@ export class AdminSetupWizards {
             }
           },
           {
-            title: "Step 2/2: AI Chatbot & Telephony Setup",
+            title: "Step 2/3: AI Chatbot & Telephony Setup",
             html: `
               <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.25rem;">Configure the support chatbot persona parameters and Telnyx/Twilio phone credentials.</p>
@@ -778,6 +778,71 @@ export class AdminSetupWizards {
                 voiceWelcomeMessage: document.getElementById('wz-chat-voice-welcome').value,
                 telnyxPhoneNumber: document.getElementById('wz-chat-telnyx-num').value,
                 twilioPhoneNumber: document.getElementById('wz-chat-twilio-num').value
+              };
+            }
+          },
+          {
+            title: "Step 3/3: Onboard Employee #1 (Gemini Spark)",
+            html: `
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; max-height: 380px; overflow-y: auto; padding-right: 8px;">
+                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Onboard the Gemini Spark autonomous Chief Operating Agent with custom autonomy modes and permissions.</p>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Gemini API Key (Masked):</label>
+                  <input type="password" id="wz-spark-key" value="••••••••••••••••" placeholder="AIzaSy..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Shift Frequency:</label>
+                  <select id="wz-spark-frequency" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                    <option value="continuous">Continuous Background Audits</option>
+                    <option value="daily">Once Daily Pulse Check</option>
+                    <option value="weekly">Once Weekly Comprehensive Audit</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Autonomy Mode:</label>
+                  <select id="wz-spark-autonomy" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                    <option value="Level 1: Read & Audit">Level 1: Read & Audit Only</option>
+                    <option value="Level 2: Draft & Prepare">Level 2: Draft & Prepare Proposals</option>
+                    <option value="Level 3: Execute & Disburse" selected>Level 3: Full Execute & Disburse (SaaS/SOP Master)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Granular Agent Permissions:</label>
+                  <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 6px;">
+                      <input type="checkbox" id="wz-spark-perm-audit" checked /> Audit Ledger & Flag Discrepancies
+                    </label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px;">
+                      <input type="checkbox" id="wz-spark-perm-disburse" checked /> Disburse Wise Payouts (Level 3 Required)
+                    </label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px;">
+                      <input type="checkbox" id="wz-spark-perm-hipaa" checked /> Encrypt/Decrypt ePHI Records (HIPAA Compliance)
+                    </label>
+                  </div>
+                </div>
+                <div style="margin-top: 0.5rem; text-align: center; border-top: 1px solid #edf2f7; padding-top: 0.5rem;">
+                  <span style="font-size: 0.75rem; color: #718096; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    Powered by Wise Business <a href="${FRAMEWORK_AFFILIATES.wise.url}" target="_blank" rel="noopener" style="color: #2b6cb0; font-weight: bold; text-decoration: underline;">Affiliate Link</a>
+                  </span>
+                </div>
+              </div>
+            `,
+            validate: () => {
+              const k = document.getElementById('wz-spark-key')?.value;
+              if (!k) throw new Error("Gemini Spark key or placeholder is required.");
+            },
+            save: (data) => {
+              const kValue = document.getElementById('wz-spark-key').value;
+              data.sparkAgent = {
+                apiKey: kValue === '••••••••••••••••' ? (configManager.current.sparkAgent?.apiKey || 'AIzaSy_mock_spark_key') : kValue,
+                shiftFrequency: document.getElementById('wz-spark-frequency').value,
+                autonomyMode: document.getElementById('wz-spark-autonomy').value,
+                permissions: {
+                  audit: document.getElementById('wz-spark-perm-audit').checked,
+                  disburse: document.getElementById('wz-spark-perm-disburse').checked,
+                  hipaa: document.getElementById('wz-spark-perm-hipaa').checked
+                },
+                isOnboarded: true
               };
             }
           }

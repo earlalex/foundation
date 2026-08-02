@@ -418,6 +418,61 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
 }
 
 /**
+ * High-level orchestration function to provision a new Virtual Assistant.
+ * Auto-creates Workspace email, sets up Google Drive folder structure, and syncs credentials to password vault.
+ * @param {string} token - Google OAuth access token
+ * @param {Object} candidate - Candidate VA data object { firstName, lastName, domain }
+ * @returns {Promise<Object>} Status of provisioning
+ */
+export async function provisionVirtualAssistant(token, candidate) {
+  const firstName = candidate.firstName || 'First';
+  const lastName = candidate.lastName || 'Last';
+  const domain = candidate.domain || 'earlalex.com';
+  const vaName = `${firstName} ${lastName}`;
+  const generatedPassword = 'VA-Pass-' + Math.floor(Math.random() * 900000 + 100000) + '!';
+
+  console.log(`[VA Provisioner]: Initializing Workspace & Drive provisioning for: ${vaName}...`);
+
+  try {
+    // 1. Create Workspace User Email
+    const userResult = await createWorkspaceUser(token, firstName, lastName, domain, generatedPassword);
+    const primaryEmail = userResult.email;
+
+    // 2. Create Google Drive folder structure
+    await createVaDirectoryStructure(token, vaName);
+
+    // 3. Sync newly generated Workspace credentials to Password Vault (Google Workspace / LastPass)
+    const vaultRecord = {
+      id: `cred_va_workspace_${Date.now()}`,
+      serviceName: `Workspace Email - ${vaName}`,
+      loginUrl: 'https://mail.google.com',
+      username: primaryEmail,
+      encryptedPassKey: generatedPassword,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const syncResult = await syncCredentialToGoogleVault(token, vaultRecord);
+
+    console.log(`[VA Provisioner]: Provisioning completed successfully for ${vaName} (${primaryEmail})`);
+
+    return {
+      success: true,
+      email: primaryEmail,
+      password: generatedPassword,
+      vaultSync: syncResult,
+      simulated: !!userResult.simulated
+    };
+  } catch (err) {
+    console.error(`[VA Provisioner]: Orchestrated provisioning failed for ${vaName}:`, err);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+/**
  * Creates an official Workspace user account (`{{firstname}}.va@{{domain}}`).
  * @param {string} token - Google OAuth token
  * @param {string} firstName - Candidate's first name
