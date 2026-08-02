@@ -1,9 +1,16 @@
-// core/navbar.js
+// core/navbar.js - Foundation Global Header Navigation Controller
+import { store } from './store.js';
+import { configManager } from './config.js';
+import { themeEngine } from './theme.js';
+
+/**
+ * Initializes the global navigation header container (#global-header)
+ */
 export function initNavbar() {
   const headerContainer = document.getElementById('global-header');
   if (!headerContainer) return;
 
-  const siteTitle = configManager.current.siteTitle || 'Foundation';
+  const siteTitle = configManager.current?.siteTitle || 'Foundation';
 
   headerContainer.innerHTML = `
     <style>
@@ -71,7 +78,7 @@ export function initNavbar() {
       <div class="nav-container">
         <!-- Brand / Identity -->
         <a href="/home" style="text-decoration: none; font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); display: flex; align-items: center; gap: 0.5rem;">
-          ${configManager.current.siteLogo?.src ? `<img src="${configManager.current.siteLogo.src}" alt="${siteTitle}" style="height: 28px; width: auto;" />` : ''}
+          ${configManager.current?.siteLogo?.src ? `<img src="${configManager.current.siteLogo.src}" alt="${siteTitle}" style="height: 28px; width: auto;" />` : ''}
           <span>${siteTitle}</span>
         </a>
 
@@ -86,7 +93,7 @@ export function initNavbar() {
 
         <!-- Navigation Links -->
         <div id="nav-menu" class="nav-menu">
-          ${(configManager.current.navigation || [
+          ${(configManager.current?.navigation || [
             { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
             { label: "About", url: "/about", target: "_self", requiredRole: "public" },
             { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
@@ -206,7 +213,6 @@ export function initNavbar() {
       if (link.id === 'nav-cart-btn') return; // skip cart button from highlighting
 
       const linkPath = link.getAttribute('data-path') || link.getAttribute('href');
-      // Exact match for the path
       const isMatch = activeRoute === linkPath;
 
       if (isMatch) {
@@ -298,8 +304,12 @@ export function initNavbar() {
   if (langSelector) {
     langSelector.value = localStorage.getItem('foundation_language') || 'en';
     langSelector.addEventListener('change', async (e) => {
-      const { i18n } = await import('./i18n.js');
-      i18n.setLanguage(e.target.value);
+      try {
+        const { i18n } = await import('./i18n.js');
+        i18n.setLanguage(e.target.value);
+      } catch (err) {
+        console.warn('[Navbar i18n]: Translation module failed to load dynamically:', err);
+      }
     });
   }
 
