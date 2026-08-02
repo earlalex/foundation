@@ -411,3 +411,20 @@ function getLocalEmployees() {
 function saveLocalEmployees(employees) {
   localStorage.setItem('foundation_local_employees', JSON.stringify(employees));
 }
+
+export async function getFinanceTelemetry() {
+  const invoices = await getAllInvoices();
+  const paidInvoices = invoices.filter(i => i.status === 'paid' || i.status === 'Paid');
+  const totalRevenue = paidInvoices.reduce((sum, i) => sum + (Number(i.amountUSD || i.amount || 0)), 0);
+
+  const expenses = await getExpenses();
+  const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount || 0)), 0);
+
+  return {
+    totalRevenue,
+    totalExpenses,
+    balanceUSD: Math.max(0, totalRevenue - totalExpenses),
+    invoiceCount: invoices.length,
+    paidCount: paidInvoices.length
+  };
+}
