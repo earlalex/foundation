@@ -154,7 +154,7 @@ export async function onRequestPost(context) {
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
     if (serviceToken && callText) {
       try {
-        const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google.js');
+        const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google-serverless.js');
 
         // Create Transcript Markdown
         const siteName = "Foundation Framework";
