@@ -41,6 +41,9 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // Ignore non-http/https schemes (e.g. chrome-extension://) to prevent unsupported scheme errors
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
   // Bypass API calls from Service Worker caching
   if (url.pathname.startsWith('/api/')) return;
 
