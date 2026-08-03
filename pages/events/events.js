@@ -242,7 +242,7 @@ function openBookingModal(evt) {
           ` : ''}
           ${lineupHtml ? `
             <div>
-              <h4 style="margin:0 0 0.5rem 0; font-size:0.9rem; font-weight:bold; color:var(--theme-color-text-primary);">Event Lineup & Cast</h4>
+              <h3 style="margin:0 0 0.5rem 0; font-size:0.9rem; font-weight:bold; color:var(--theme-color-text-primary);">Event Lineup & Cast</h3>
               <div style="display:flex; flex-wrap:wrap;">${lineupHtml}</div>
             </div>
           ` : ''}
@@ -250,7 +250,7 @@ function openBookingModal(evt) {
 
         <!-- Right: Collapsible Agenda Timeline -->
         <div>
-          <h4 style="margin:0 0 0.75rem 0; font-size:1rem; font-weight:800; color:var(--theme-color-text-primary);">collapsible Event Agenda Timeline</h4>
+          <h3 style="margin:0 0 0.75rem 0; font-size:1rem; font-weight:800; color:var(--theme-color-text-primary);">collapsible Event Agenda Timeline</h3>
           <div style="max-height: 400px; overflow-y:auto; padding-right:0.25rem;">
             ${agendaHtml || '<p style="color:#a0aec0;font-size:0.85rem;">No agenda items posted.</p>'}
           </div>

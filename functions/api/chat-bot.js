@@ -41,6 +41,7 @@ export async function onRequestPost(context) {
     }
 
     // 1. Resolve Credentials (prioritize dynamic payload overrides, fall back to environment secrets)
+    // Unified Environment Variable Law: strictly read GEMINI_API_KEY and OPENAI_API_KEY
     const geminiKey = aiConfig.geminiApiKey || context.env.GEMINI_API_KEY;
     const openAiKey = aiConfig.openaiApiKey || context.env.OPENAI_API_KEY;
 

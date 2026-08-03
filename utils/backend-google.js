@@ -1,5 +1,18 @@
 // utils/backend-google.js
 import { errorHandler } from '../core/error-handler.js';
+import { getEnvVariable } from '../core/config.js';
+
+/**
+ * Retrieves Google standardized credentials using the unified resolver
+ * @returns {Object} Google environment variables
+ */
+export function getGoogleCredentials() {
+  return {
+    clientId: getEnvVariable('GOOGLE_CLIENT_ID'),
+    clientSecret: getEnvVariable('GOOGLE_CLIENT_SECRET'),
+    serviceAccountToken: getEnvVariable('GOOGLE_SERVICE_ACCOUNT_TOKEN')
+  };
+}
 
 /**
  * Uploads a transcript or communication log to Google Drive from Cloudflare Pages Environment:

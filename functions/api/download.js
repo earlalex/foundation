@@ -12,6 +12,7 @@ export async function onRequestGet(context) {
     return new Response('Invalid or missing download parameters.', { status: 400 });
   }
 
+  // Unified Environment Variable Law: strictly read FIREBASE_PROJECT_ID and FIREBASE_API_KEY
   const firebaseProjectId = env.FIREBASE_PROJECT_ID;
   const firestoreApiKey = env.FIREBASE_API_KEY;
 
@@ -22,6 +23,7 @@ export async function onRequestGet(context) {
 
   try {
     // 1. Fetch file directly from Google Drive API
+    // Unified Environment Variable Law: strictly read GOOGLE_SERVICE_ACCOUNT_TOKEN
     const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
       headers: { 'Authorization': `Bearer ${env.GOOGLE_SERVICE_ACCOUNT_TOKEN}` }
     });

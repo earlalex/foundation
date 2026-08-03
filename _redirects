@@ -1,3 +1,4 @@
+# Cloudflare Pages SPA Rewrite Rules
 # SPA redirect rules for Cloudflare Pages - Prevent 503 on direct subroutes (Directive 3)
 /api/*  /api/:splat  200
-/*      /index.html  200!
+/*      /index.html  200

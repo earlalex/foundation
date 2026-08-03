@@ -1,5 +1,14 @@
 // utils/securityScanner.js
 import { errorHandler } from '../core/error-handler.js';
+import { getEnvVariable } from '../core/config.js';
+
+/**
+ * Retrieves the standardized VirusTotal API Key for scanning operations
+ * @returns {string}
+ */
+export function getVirusTotalApiKey() {
+  return getEnvVariable('VIRUSTOTAL_API_KEY');
+}
 
 /**
  * Calculates SHA-256 hash of a file using browser-native Web Crypto API

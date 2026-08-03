@@ -39,6 +39,7 @@ export async function onRequestPost(context) {
     }
 
     // 2. Resolve Credentials (prioritize environment secrets, or fallback to default values)
+    // Unified Environment Variable Law: strictly read GEMINI_API_KEY and OPENAI_API_KEY
     const geminiKey = context.env.GEMINI_API_KEY;
     const openAiKey = context.env.OPENAI_API_KEY;
     const preferredProvider = context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
@@ -207,10 +208,11 @@ export async function onRequestPost(context) {
     }
 
     // 5. Perform Google Workspace Integrations dynamically using context helper credentials
+    // Unified Environment Variable Law: strictly read GOOGLE_SERVICE_ACCOUNT_TOKEN
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
     if (serviceToken) {
       try {
-        const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google.js');
+        const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google-serverless.js');
 
         // Create Transcript Markdown
         const siteName = "Foundation Framework";
