@@ -359,6 +359,16 @@ class ConfigEngine {
 
       console.log('[ConfigEngine]: Configuration synced to Firestore successfully.');
       localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
+
+      // Auto-Flush Outbox Engine: Purge sensitive local queues immediately on successful Cloud Firestore write acknowledgment
+      try {
+        const { syncOutboxToFirestore, flushSensitiveLocalData } = await import('./db.js');
+        await syncOutboxToFirestore();
+        flushSensitiveLocalData();
+      } catch (syncErr) {
+        console.warn('[ConfigEngine]: Outbox sync/flush after successful write failed.', syncErr.message);
+      }
+
       return true;
     } catch (err) {
       console.warn('[ConfigEngine]: Persisted locally. Firestore sync pending auth/rules.', err.message);

@@ -85,6 +85,19 @@ export class ChatWidget extends HTMLElement {
     const textSecColor = 'var(--theme-color-text-secondary, #4a5568)';
     const borderColor = 'var(--theme-color-border, #e2e8f0)';
 
+    const escapeHTML = (str) => {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+
+    const sanitizedName = escapeHTML(cfg.name || "Foundation Assistant");
+    const sanitizedWelcomeMessage = escapeHTML(cfg.welcomeMessage || "Hello! How can I help you explore our services today?");
+
     this.innerHTML = `
       <style>
         .chat-widget-container {
@@ -143,7 +156,7 @@ export class ChatWidget extends HTMLElement {
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="width: 8px; height: 8px; background: #48bb78; border-radius: 50%; display: inline-block;"></span>
-                <span id="chat-header-title">${cfg.name || "Foundation Assistant"}</span>
+                <span id="chat-header-title">${sanitizedName}</span>
               </div>
               <button id="chat-close-window-btn" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 1.25rem; line-height: 1; display: flex; align-items: center;">&times;</button>
             </div>
@@ -157,7 +170,7 @@ export class ChatWidget extends HTMLElement {
           <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: var(--theme-color-background, #f7fafc);">
             <!-- Welcome message -->
             <div id="chat-welcome-box" style="align-self: flex-start; max-width: 80%; background: ${surfaceColor}; border: 1px solid ${borderColor}; padding: 10px; border-radius: 8px; font-size: 0.9rem; color: ${textColor}; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              ${cfg.welcomeMessage || "Hello! How can I help you explore our services today?"}
+              ${sanitizedWelcomeMessage}
             </div>
           </div>
 

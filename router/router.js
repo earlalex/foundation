@@ -9,6 +9,25 @@ const RouteMetaSchema = {
   viewPath: Type.optional(Type.string)
 };
 
+/**
+ * Universal sanitization helper to neutralize HTML/script injection from untrusted input fields,
+ * search parameters, or dynamic route path slugs.
+ * @param {string} str - The raw string to sanitize
+ * @returns {string} The sanitized/escaped string
+ */
+export function sanitizeInputString(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/<[^>]*>/g, '') // strip any standard HTML tags
+    .replace(/[&<>'"]/g, (tag) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
+}
+
 export class Router {
   #isLoading = false;
 
@@ -22,7 +41,7 @@ export class Router {
       const urlParams = new URLSearchParams(window.location.search);
       const ref = urlParams.get('ref');
       if (ref) {
-        sessionStorage.setItem('foundation_ref_id', ref);
+        sessionStorage.setItem('foundation_ref_id', sanitizeInputString(ref));
       }
     }
 
@@ -280,7 +299,7 @@ export class Router {
       } else if (relPath.startsWith('/tag/')) {
         cleanPath = '/tag';
       } else if (relPath.startsWith('/pages/')) {
-        const slug = relPath.substring(7); // strip '/pages/'
+        const slug = sanitizeInputString(relPath.substring(7)); // strip '/pages/' and sanitize!
         try {
           const { contentDB } = await import('../core/db.js');
           customPageData = await contentDB.getCustomPageBySlug(slug);

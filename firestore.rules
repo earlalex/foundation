@@ -3,210 +3,39 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================================================================
-    // HELPER FUNCTIONS
-    // =========================================================================
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
+    // Helper function for Admin evaluation
     function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email == 'admin@earlalex.com' ||
-        request.auth.token.role == 'admin' ||
-        request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails
-      );
+      return request.auth != null &&
+             request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails;
     }
 
-    function isEditor() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'editor' || 
-        isAdmin()
-      );
-    }
-
-    function isSelf(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // =========================================================================
-    // 1. MASTER CONFIGURATION & SETTINGS
-    // =========================================================================
-    // Only verified Google authenticated admins can write administrative settings.
-    // Unauthenticated public reads allowed for initial setup state fetching (Directive 2 / Setup State)
+    // Global Site Configuration (Public Read, Admin Write)
     match /settings/config {
       allow read: if true;
-      allow write: if request.auth != null &&
-                      (request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails);
+      allow write: if isAdmin();
     }
 
-    // =========================================================================
-    // 2. USER DIRECTORY, PROFILES & AFFILIATE LOGS
-    // =========================================================================
-    match /users/{userId} {
-      allow read: if isAuthenticated() && (isSelf(userId) || isAdmin() || isEditor());
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isSelf(userId) || isAdmin());
-      allow delete: if isAdmin();
-
-      // Course Progress Subcollection
-      match /course_progress/{courseId} {
-        allow read, write: if isAuthenticated() && (isSelf(userId) || isAdmin());
-      }
-
-      // User Tickets Subcollection
-      match /tickets/{ticketId} {
-        allow read: if isAuthenticated() && (isSelf(userId) || isAdmin() || isEditor());
-        allow write: if isAuthenticated() && (isSelf(userId) || isAdmin());
-      }
-    }
-
-    // =========================================================================
-    // 3. INVOICES, PURCHASES & ORDERS
-    // =========================================================================
-    match /invoices/{invoiceId} {
-      allow read: if isAuthenticated() && (
-        resource.data.customerEmail == request.auth.token.email || 
-        resource.data.userId == request.auth.uid ||
-        isAdmin() ||
-        isEditor()
-      );
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /purchases/{purchaseId} {
-      allow read: if isAuthenticated() && (
-        resource.data.email == request.auth.token.email || 
-        resource.data.userId == request.auth.uid ||
-        isAdmin() ||
-        isEditor()
-      );
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /downloads/{downloadId} {
-      allow read: if isAuthenticated() && (
-        resource.data.userEmail == request.auth.token.email || 
-        isAdmin()
-      );
-      allow create, update: if isAuthenticated();
-      allow delete: if isAdmin();
-    }
-
-    // =========================================================================
-    // 4. EVENT REGISTRATIONS & TICKET PASSES
-    // =========================================================================
-    match /registrations/{registrationId} {
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.email == request.auth.token.email ||
-        isEditor() || 
-        isAdmin()
-      );
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
-    }
-
-    // =========================================================================
-    // 5. CMS CONTENT FEED & PUBLICATIONS (Blogs, Books, Courses, Events, etc.)
-    // =========================================================================
-    // Dynamic role-based document access
+    // Public vs Gated Content Access
     match /content/{docId} {
-      allow read: if resource.data.access.visibility == 'public' || 
+      allow read: if resource.data.access.visibility == 'public' ||
                    (request.auth != null && resource.data.access.visibility == 'authenticated') ||
                    (request.auth != null && request.auth.token.role == resource.data.access.visibility);
-      allow write: if request.auth != null && request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails;
-    }
-
-    // =========================================================================
-    // 6. CUSTOM DYNAMIC PAGES (GrapesJS / Block Editor Pages)
-    // =========================================================================
-    match /pages/{pageId} {
-      allow read: if resource.data.access.visibility == 'public' ||
-                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'subscriber') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'member') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'paid') ||
-                  isAdmin() || 
-                  isEditor();
-      allow write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 7. MARKETING AUTOMATION (Workflows, Journeys, Segments & Email Templates)
-    // =========================================================================
-    match /marketing_workflows/{workflowId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /marketing_segments/{segmentId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /marketing_journeys/{journeyId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /email_templates/{templateId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 8. SECURITY AUDITS & SCAN LOGS (OWASP ZAP, VirusTotal)
-    // =========================================================================
-    match /security_scans/{scanId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /security_audits/{auditId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 9. DELEGATED VA MANAGEMENT & KANBAN TASKS
-    // =========================================================================
-    match /kanban_tasks/{taskId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /va_candidates/{candidateId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /vault_credentials/{credentialId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 10. FINANCIAL RECORDS, EXPENSES, PAYROLL & BUDGETS (Admins Only)
-    // =========================================================================
-    match /finances_expenses/{expenseId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_payroll/{payrollId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_budgets/{budgetId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_employees/{employeeId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances/{docId} {
-      allow read, write: if isAdmin();
-      match /expenses/{expenseId} {
-        allow read, write: if isAdmin();
-      }
-      match /payroll/{payrollId} {
-        allow read, write: if isAdmin();
-      }
-      match /budgets/{budgetId} {
-        allow read, write: if isAdmin();
-      }
-    }
-    match /affiliate_commissions/{commissionId} {
-      allow read: if isAuthenticated() && (resource.data.affiliateId == request.auth.uid || isAdmin());
       allow write: if isAdmin();
+    }
+
+    // User Profile Protection (Users can read/write their own profile; Admins have full access)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Immutable Security Audit Logs (Read/Write restricted to authenticated Admins)
+    match /audit_logs/{logId} {
+      allow read, write: if isAdmin();
     }
 
     // Fallback rule to ensure authenticated admins are never locked out of arbitrary collections
     match /{document=**} {
       allow read, write: if isAdmin();
     }
-
   }
 }
