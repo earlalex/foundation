@@ -273,6 +273,12 @@ export class AuthManager {
    * @returns {boolean} True if user is authenticated and has admin privileges
    */
   isAdminAuthenticated() {
+    // STRICT ZERO-TRUST BOUNDARY SEPARATION:
+    // Client-side UI bypass flags (e.g., window.__FOUNDATION_DEV_BYPASS__ or store.state.devMode)
+    // are ONLY evaluated for local client-side UI rendering and routing simulation.
+    // They NEVER grant any actual read/write permissions to production Cloud Firestore databases
+    // or bypass serverless Edge API token-based security controls. Actual backend authorization
+    // is strictly enforced on the server-side via cryptographic request.auth tokens.
     const user = store.state.user;
     return !!(user && (user.isAdmin || user.role === 'admin') || window.__FOUNDATION_DEV_BYPASS__);
   }

@@ -1,6 +1,35 @@
 // functions/api/virustotal-scan.js
+
+// Simple Edge-friendly In-Memory Rate Limiter to defend against Denial-of-Wallet attacks
+const ipCache = new Map();
+const WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_LIMIT = 20; // 20 requests per minute
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  if (!ipCache.has(ip)) {
+    ipCache.set(ip, []);
+  }
+  const timestamps = ipCache.get(ip);
+  const validTimestamps = timestamps.filter(t => now - t < WINDOW_MS);
+  if (validTimestamps.length >= MAX_LIMIT) {
+    return false;
+  }
+  validTimestamps.push(now);
+  ipCache.set(ip, validTimestamps);
+  return true;
+}
+
 export async function onRequestPost(context) {
   try {
+    const ip = context.request.headers.get("CF-Connecting-IP") || "127.0.0.1";
+    if (!checkRateLimit(ip)) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a minute." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const contentType = context.request.headers.get("content-type") || "";
     let hashHex = null;
     let domain = null;

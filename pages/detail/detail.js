@@ -20,9 +20,22 @@ export async function initDetailPage() {
   const container = document.getElementById('detail-view-container');
   if (!container) return;
 
+  const sanitizeInputString = (str) => {
+    if (typeof str !== 'string') return str;
+    return str
+      .replace(/<[^>]*>/g, '')
+      .replace(/[&<>'"]/g, (tag) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[tag] || tag));
+  };
+
   const urlParams = new URLSearchParams(window.location.search);
-  const contentId = urlParams.get('id');
-  const resumeParam = urlParams.get('resume');
+  const contentId = sanitizeInputString(urlParams.get('id'));
+  const resumeParam = sanitizeInputString(urlParams.get('resume'));
 
   if (!contentId) {
     container.innerHTML = `

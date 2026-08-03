@@ -7,14 +7,30 @@ export class PriceCard extends HTMLElement {
     const buttonText = this.getAttribute('button-text') || 'Subscribe Now';
     const productId = this.getAttribute('product-id') || 'member_subscription';
 
+    const escapeHTML = (str) => {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+
+    const sanitizedTitle = escapeHTML(title);
+    const sanitizedPrice = escapeHTML(price);
+    const sanitizedDescription = escapeHTML(description);
+    const sanitizedButtonText = escapeHTML(buttonText);
+    const sanitizedProductId = escapeHTML(productId);
+
     this.innerHTML = `
       <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; border-top: 4px solid var(--theme-color-primary, #1e40af);">
         <div>
-          <h3 style="margin-top: 0; font-size: 1.25rem; font-weight: bold; color: var(--theme-color-text-primary, #1e293b);">${title}</h3>
-          <div style="font-size: 2rem; font-weight: 800; color: var(--theme-color-primary, #1e40af); margin: 0.5rem 0;">${price}</div>
-          <p style="font-size: 0.9rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.5; margin-bottom: 1.5rem;">${description}</p>
+          <h3 style="margin-top: 0; font-size: 1.25rem; font-weight: bold; color: var(--theme-color-text-primary, #1e293b);">${sanitizedTitle}</h3>
+          <div style="font-size: 2rem; font-weight: 800; color: var(--theme-color-primary, #1e40af); margin: 0.5rem 0;">${sanitizedPrice}</div>
+          <p style="font-size: 0.9rem; color: var(--theme-color-text-secondary, #475569); line-height: 1.5; margin-bottom: 1.5rem;">${sanitizedDescription}</p>
         </div>
-        <button class="btn-primary" data-product="${productId}" style="width: 100%;">${buttonText}</button>
+        <button class="btn-primary" data-product="${sanitizedProductId}" style="width: 100%;">${sanitizedButtonText}</button>
       </div>
     `;
 
