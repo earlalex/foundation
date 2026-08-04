@@ -162,7 +162,7 @@ export class ThemeEngine {
         console.warn('[ThemeEngine]: Failed to parse stored theme JSON. Resetting to default.');
       }
     }
-    this.applyTheme(activeTheme);
+    this.applyTheme(activeTheme, true);
 
     // Initialize High-Contrast Mode from local storage
     const highContrast = localStorage.getItem('foundation_high_contrast') === 'true';
@@ -189,7 +189,7 @@ export class ThemeEngine {
   /**
    * Translates a Brand Guide JSON object into standard CSS custom properties on :root
    */
-  applyTheme(themeConfig) {
+  applyTheme(themeConfig, isInitial = false) {
     if (!themeConfig || typeof themeConfig !== 'object') return;
     const root = document.documentElement;
 
@@ -228,13 +228,31 @@ export class ThemeEngine {
       });
     }
 
+    // Detect if the theme config has explicitly changed from what is currently saved
+    const savedThemeStr = localStorage.getItem('foundation_theme_config');
+    let hasChanged = true;
+    if (savedThemeStr) {
+      try {
+        const savedTheme = JSON.parse(savedThemeStr);
+        hasChanged = JSON.stringify(savedTheme) !== JSON.stringify(themeConfig);
+      } catch (e) {
+        hasChanged = true;
+      }
+    } else {
+      // If there was no saved theme in localStorage, we are using defaults.
+      // This is not an explicit user change, so we don't treat it as "explicitly changed" to avoid boot-time writes.
+      hasChanged = false;
+    }
+
     // Update Store & LocalStorage under foundation_theme_config
     localStorage.setItem('foundation_theme_config', JSON.stringify(themeConfig));
     store.dispatch('APPLY_THEME_JSON', themeConfig);
     console.log(`[ThemeEngine]: Applied design system -> "${themeConfig.name || 'Custom Theme'}"`);
 
-    // Synchronize to Firestore under /settings/config
-    this.syncThemeToFirestore(themeConfig);
+    // Synchronize to Firestore under /settings/config only if not initial boot or if the config has explicitly changed
+    if (!isInitial || hasChanged) {
+      this.syncThemeToFirestore(themeConfig);
+    }
   }
 
   loadGoogleFontIfNeeded(fontName) {
