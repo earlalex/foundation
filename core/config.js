@@ -454,7 +454,7 @@ class ConfigEngine {
 
       await Promise.race([
         setDoc(configRef, this.#activeConfig, { merge: true }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 2000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 5000))
       ]);
 
       console.log('[ConfigEngine]: Configuration synced to Firestore successfully.');
