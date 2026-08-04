@@ -93,3 +93,22 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Safeguard Service Worker message listeners and port safety
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+
+  // Invoke port message channel response synchronously to prevent channel closures
+  if (event.ports && event.ports[0]) {
+    try {
+      if (event.data.type === 'PING') {
+        event.ports[0].postMessage({ type: 'PONG', status: 'success' });
+      } else {
+        // Acknowledge other message types synchronously
+        event.ports[0].postMessage({ type: 'ACK', status: 'received' });
+      }
+    } catch (err) {
+      console.warn('[ServiceWorker]: Message port response failed:', err);
+    }
+  }
+});

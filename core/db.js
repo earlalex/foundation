@@ -1575,46 +1575,57 @@ export function flushSensitiveLocalData() {
   console.log('[Outbox Sync]: Secure flush complete. Sensitive data purged.');
 }
 
+let isSyncingOutbox = false;
+
 export async function syncOutboxToFirestore() {
-  const db = getFirestoreDB();
-  if (!db) {
-    console.log('[Outbox Sync]: Firestore database not configured/available yet.');
+  if (isSyncingOutbox) {
+    console.log('[Outbox Sync]: Batch write already in progress. Skipping duplicate execution.');
     return;
   }
-
-  let outbox = [];
+  isSyncingOutbox = true;
   try {
-    outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
-  } catch (e) {
-    console.error('[Outbox Sync]: Failed to parse outbox from localStorage', e);
-    return;
-  }
-
-  if (outbox.length === 0) {
-    console.log('[Outbox Sync]: No pending payloads in outbox.');
-    return;
-  }
-
-  console.log(`[Outbox Sync]: Connection recovered/established. Batch-writing ${outbox.length} pending payloads...`);
-
-  try {
-    const { writeBatch } = await import('./db-shared.js');
-    const batch = writeBatch(db);
-
-    for (const item of outbox) {
-      const docRef = doc(db, item.collection, item.docId);
-      if (docRef) {
-        batch.set(docRef, item.data, { merge: true });
-      }
+    const db = getFirestoreDB();
+    if (!db) {
+      console.log('[Outbox Sync]: Firestore database not configured/available yet.');
+      return;
     }
 
-    await batch.commit();
-    console.log('[Outbox Sync]: Successfully committed batch-write of pending payloads.');
+    let outbox = [];
+    try {
+      outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+    } catch (e) {
+      console.error('[Outbox Sync]: Failed to parse outbox from localStorage', e);
+      return;
+    }
 
-    localStorage.removeItem('foundation_outbox');
-    flushSensitiveLocalData();
-  } catch (err) {
-    console.error('[Outbox Sync]: Failed to commit batch-write to Firestore:', err.message);
+    if (outbox.length === 0) {
+      console.log('[Outbox Sync]: No pending payloads in outbox.');
+      return;
+    }
+
+    console.log(`[Outbox Sync]: Connection recovered/established. Batch-writing ${outbox.length} pending payloads...`);
+
+    try {
+      const { writeBatch } = await import('./db-shared.js');
+      const batch = writeBatch(db);
+
+      for (const item of outbox) {
+        const docRef = doc(db, item.collection, item.docId);
+        if (docRef) {
+          batch.set(docRef, item.data, { merge: true });
+        }
+      }
+
+      await batch.commit();
+      console.log('[Outbox Sync]: Successfully committed batch-write of pending payloads.');
+
+      localStorage.removeItem('foundation_outbox');
+      flushSensitiveLocalData();
+    } catch (err) {
+      console.error('[Outbox Sync]: Failed to commit batch-write to Firestore:', err.message);
+    }
+  } finally {
+    isSyncingOutbox = false;
   }
 }
 
