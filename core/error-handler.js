@@ -18,8 +18,13 @@ export class ErrorHandler {
     });
 
     window.addEventListener('unhandledrejection', (event) => {
-      const reason = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
-      this.handleError(reason, 'Unhandled Promise Rejection');
+      const msg = event.reason?.message || String(event.reason || '');
+      if (msg.includes('message channel closed before a response was received') ||
+          msg.includes('A listener indicated an asynchronous response')) {
+        event.preventDefault();
+        return; // Suppress extension channel noise cleanly
+      }
+      this.handleError(event.reason, 'Unhandled Promise Rejection');
     });
   }
 
