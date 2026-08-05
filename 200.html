@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Foundation</title>
-  
+
   <!-- Preload Critical Google Fonts -->
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style">
 
@@ -29,7 +29,7 @@
 
   <!-- ES Module Application Boot -->
   <script type="module" src="./index.js" onerror="handleScriptError()"></script>
-  
+
   <script>
     function handleScriptError() {
       const app = document.getElementById('app');
@@ -44,11 +44,6 @@
 
     // Register Service Worker with robust error handling
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'LOG') {
-          console.log('[SW LOG]:', event.data.text);
-        }
-      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js', { scope: './' })
           .then((reg) => console.log('[ServiceWorker]: Registered with scope:', reg.scope))
