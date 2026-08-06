@@ -31,6 +31,62 @@
     }
   </style>
 
+  <!-- Local SEO Microdata (Directive 4) -->
+  <script type="application/ld+json" id="local-seo-microdata">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Foundation HQ",
+      "image": "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "123 Innovation Way",
+        "addressLocality": "San Francisco",
+        "addressRegion": "CA",
+        "postalCode": "94105",
+        "addressCountry": "US"
+      },
+      "telephone": "+18005550199",
+      "email": "support@earlalex.com",
+      "url": "https://earlalex.com",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "142"
+      }
+    }
+  </script>
+  <script type="module">
+    // Dynamically inject business profile details into LocalBusiness microdata
+    import { configManager } from './core/config.js';
+    window.addEventListener('load', () => {
+      try {
+        const bp = configManager?.current?.businessProfile || {};
+        const scriptEl = document.getElementById('local-seo-microdata');
+        if (scriptEl && bp.isConfigured) {
+          const defaultData = JSON.parse(scriptEl.textContent);
+          const updated = {
+            ...defaultData,
+            "name": bp.legalName || defaultData.name,
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": bp.address || defaultData.address.streetAddress,
+              "addressLocality": bp.city || defaultData.address.addressLocality,
+              "addressRegion": bp.state || defaultData.address.addressRegion,
+              "postalCode": bp.zip || defaultData.address.postalCode,
+              "addressCountry": bp.country || defaultData.address.addressCountry
+            },
+            "telephone": bp.phone || defaultData.telephone,
+            "email": bp.supportEmail || bp.email || defaultData.email
+          };
+          scriptEl.textContent = JSON.stringify(updated, null, 2);
+        }
+      } catch (e) {
+        console.warn("[Local SEO Microdata]: Dynamic injection failed.", e);
+      }
+    });
+  </script>
+
   <!-- ES Module Application Boot -->
   <script type="module" src="./index.js" onerror="handleScriptError()"></script>
   

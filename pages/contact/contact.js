@@ -128,6 +128,11 @@ export async function initContactPage() {
 
       toast.success('Your message has been sent successfully!');
       e.target.reset();
+
+      // Post-action review prompt trigger (Directive 3)
+      setTimeout(() => {
+        toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
+      }, 1000);
     } catch (err) {
       errorHandler.handleError(err, 'Contact Page - Message Form');
       toast.error('Failed to send message. Please try again.');
@@ -254,6 +259,11 @@ export async function initContactPage() {
 
       await contentDB.saveAppointment(bookingData);
 
+      // Post-action review prompt trigger (Directive 3)
+      setTimeout(() => {
+        toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
+      }, 1500);
+
       // Remaining balance invoicing task
       const remainingBalance = price - amountToPay;
       if (remainingBalance > 0) {
@@ -334,6 +344,11 @@ async function finalizeAppointmentBookingAfterPayment(sessionId) {
       await contentDB.saveAppointment(bookingData);
 
       toast.success(`Appointment confirmed for ${date} at ${timeSlot}! Google Meet link generated and calendar invitations sent.`);
+
+      // Post-action review prompt trigger (Directive 3)
+      setTimeout(() => {
+        toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
+      }, 1500);
 
       // Clean query params from the URL bar cleanly
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -442,7 +457,7 @@ async function renderSchedulingCalendar() {
 
       // Check how many slots exist and how many are available
       const bookedOnThisDay = bookedAppointments.filter(a => a.date === dateStr);
-      const slotsForDay = calculateAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay, busyIntervals);
+      const slotsForDay = await calculateAvailableSlotsForDate(dateStr, apptConfig, bookedOnThisDay, busyIntervals);
       const isFullyBooked = slotsForDay.length === 0;
 
       const isAvailable = isOperatingDay && !isPast && !isFullyBooked;
@@ -521,14 +536,14 @@ function calculatePossibleSlotsCount(config) {
   return count;
 }
 
-function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIntervals) {
+async function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIntervals) {
   const duration = config.duration || 30;
   const buffer = config.buffer || 15;
   const startStr = config.operatingHours?.start || "09:00";
   const endStr = config.operatingHours?.end || "17:00";
 
   // Query Google freeBusy API in real time to filter slots
-  let busyIntervals = [];
+  let realtimeBusyIntervals = [];
   try {
     const { getGoogleAccessToken } = await import('../../core/google-services.js');
     const token = await getGoogleAccessToken(false);
@@ -549,11 +564,13 @@ function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIn
         })
       });
       const data = await response.json();
-      busyIntervals = data.calendars?.primary?.busy || [];
+      realtimeBusyIntervals = data.calendars?.primary?.busy || [];
     }
   } catch (err) {
     console.warn('[Calendar freeBusy Query]:', err);
   }
+
+  const combinedBusy = [...(busyIntervals || []), ...realtimeBusyIntervals];
 
   const start = new Date(`${dateStr}T${startStr}:00`);
   const end = new Date(`${dateStr}T${endStr}:00`);
@@ -565,14 +582,12 @@ function calculateAvailableSlotsForDate(dateStr, config, bookedOnThisDay, busyIn
     const slotStart = new Date(curr);
     const slotEnd = new Date(slotStart.getTime() + duration * 60000);
     const slotTimeStr = curr.toTimeString().substring(0, 5);
-    const slotStart = new Date(curr);
-    const slotEnd = new Date(curr.getTime() + duration * 60000);
 
     // Check if slot is already booked locally on this day
     const isLocalBooked = bookedOnThisDay.some(b => b.timeSlot === slotTimeStr);
 
     // Check if slot overlaps with busy intervals from Google Calendar
-    const isGoogleBusy = (busyIntervals || []).some(busy => {
+    const isGoogleBusy = (combinedBusy || []).some(busy => {
       const busyStart = new Date(busy.start).getTime();
       const busyEnd = new Date(busy.end).getTime();
       return (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart);

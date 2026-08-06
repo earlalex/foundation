@@ -1578,6 +1578,52 @@
           </div>
         </form>
       </div>
+
+      <!-- Google Business & AdSense Platform Integration Card (Directive 5) -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Google Business & AdSense Integrations Panel</h2>
+        <form id="adsense-gmb-config-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+          <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1rem; border-radius: 6px; font-size: 0.85rem; color: #2c5282;">
+            <strong>AdSense & GMB Integration Instructions:</strong><br>
+            Connect your website with Google My Business reviews and serve targeted AdSense ads globally. Configure slots, toggle in-feed placements, or trigger review prompt test banners.
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google Place ID (Business Profile):</label>
+              <input type="text" id="cfg-gmb-place-id" placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google AdSense Publisher ID:</label>
+              <input type="text" id="cfg-adsense-pub-id" placeholder="ca-pub-1234567890123456" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem;">Google AdSense Slot ID:</label>
+              <input type="text" id="cfg-adsense-slot-id" placeholder="1111111111" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem;">
+              <input type="checkbox" id="cfg-adsense-enable-in-feed" style="cursor: pointer;" />
+              <label for="cfg-adsense-enable-in-feed" style="font-weight: 600; font-size: 0.85rem; cursor: pointer;">Enable Automatic In-Feed Ad Placements</label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; align-items: center;">
+            <button type="submit" class="btn-primary">Save Google Business & Ads Settings</button>
+            <button type="button" id="btn-test-gmb-reviews" class="btn-primary" style="background: #3182ce; font-size: 0.85rem;">Preview GMB Reviews</button>
+            <button type="button" id="btn-test-review-toast" class="btn-primary" style="background: #805ad5; font-size: 0.85rem;">Test Review Toast Prompt</button>
+          </div>
+        </form>
+
+        <!-- Live Preview Showcase Container -->
+        <div id="admin-gmb-reviews-preview-container" style="display: none; margin-top: 1.5rem; border-top: 1px dashed #cbd5e0; padding-top: 1.25rem;">
+          <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--theme-color-text-primary, #2d3748); margin-bottom: 0.75rem;">Live Google Reviews Preview</h3>
+          <div id="admin-gmb-reviews-preview-box"></div>
+        </div>
+      </div>
     </div>
   </div>
 

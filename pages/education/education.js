@@ -123,6 +123,12 @@ export async function initEducationPage() {
         btn.addEventListener('click', (e) => {
           const cid = e.target.getAttribute('data-id');
           toast.success(`Successfully enrolled! Lesson dashboard unlocked.`);
+
+          // Post-action review prompt trigger (Directive 3)
+          setTimeout(() => {
+            toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
+          }, 1500);
+
           window.router?.navigateTo(`/detail?id=${cid}`);
         });
       });
