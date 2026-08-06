@@ -1,0 +1,28 @@
+[build]
+  publish = "."
+  command = ""
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/api/sitemap"
+  status = 200
+
+[[redirects]]
+  from = "/rss.xml"
+  to = "/api/rss"
+  status = 200
+
+[[redirects]]
+  from = "/feed"
+  to = "/api/rss"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
