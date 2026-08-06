@@ -1,5 +1,6 @@
 // utils/universalRenderer.js
 import { store } from '../core/store.js';
+import { configManager } from '../core/config.js';
 
 /**
  * Evaluates visibility permissions and renders either full unlocked content or a locked paywall gate.
@@ -138,6 +139,12 @@ export function renderContent(contentData) {
   // 4. Render Full Content Body for Authorized Users
   const paragraphs = contentData.longFormText || [contentData.description];
 
+  // Retrieve AdSense credentials from configManager
+  const config = configManager?.current || {};
+  const adsClientId = config.adsense?.publisherId || "";
+  const adsSlotId = config.adsense?.slotId || "";
+  const enableInFeed = config.adsense?.enableInFeed !== false;
+
   // DIRECTIVE 3: GrapesJS Visual Web Builder Render Path inside Article Body
   let bodyContentHTML = '';
   if (contentData.editorType === 'grapesjs') {
@@ -148,7 +155,14 @@ export function renderContent(contentData) {
       </div>
     `;
   } else {
-    bodyContentHTML = paragraphs.map(p => `<p style="margin-bottom: 1.5rem;">${p}</p>`).join('');
+    bodyContentHTML = paragraphs.map((p, idx) => {
+      let adHtml = "";
+      const pIdx = idx + 1; // paragraph index starting at 1
+      if (enableInFeed && (pIdx === 3 || pIdx === 7)) {
+        adHtml = `<adsense-unit client-id="${adsClientId}" slot-id="${adsSlotId}" format="auto" responsive="true"></adsense-unit>`;
+      }
+      return `<p style="margin-bottom: 1.5rem;">${p}</p>${adHtml}`;
+    }).join('');
   }
 
   return `

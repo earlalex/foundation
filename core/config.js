@@ -76,6 +76,16 @@ export const defaultConfig = {
     isConfigured: false
   },
   vault: {},
+  googleBusiness: {
+    placeId: "ChIJN1t_tDeuEmsRUsoyG83frY4",
+    starRating: 4.9,
+    totalReviews: 142
+  },
+  adsense: {
+    publisherId: "ca-pub-1234567890123456",
+    slotId: "1111111111",
+    enableInFeed: true
+  },
   // Newly added structured configs for section setup wizards
   businessProfile: {
     legalName: "",
