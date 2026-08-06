@@ -5,7 +5,8 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  getRedirectResult
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
@@ -54,6 +55,23 @@ export class AuthManager {
   constructor() {
     this.isAuthenticating = false;
     this.initAuthObserver();
+    this.checkRedirectResult();
+  }
+
+  /**
+   * Handle redirect results for authentication flows
+   */
+  async checkRedirectResult() {
+    try {
+      const result = await getRedirectResult(auth);
+      if (result && result.user) {
+        console.log('[Auth]: Redirect sign-in success:', result.user.email);
+      }
+    } catch (err) {
+      console.error('[Auth]: Error resolving redirect result:', err);
+    } finally {
+      sessionStorage.removeItem('firebase_auth_in_progress');
+    }
   }
 
   /**
@@ -113,6 +131,7 @@ export class AuthManager {
           affiliateCode: profile.affiliateCode,
           referredBy: profile.referredBy
         };
+        sessionStorage.removeItem('firebase_auth_in_progress');
         store.dispatch('SET_USER', userObj);
         console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role})`);
 
@@ -165,6 +184,10 @@ export class AuthManager {
         }
       } else {
         if (!window.__FOUNDATION_DEV_BYPASS__) {
+          if (sessionStorage.getItem('firebase_auth_in_progress') === 'true') {
+            console.log('[Auth]: Auth is in progress. Skipping premature sign-out bounce.');
+            return;
+          }
           store.dispatch('LOGOUT');
           console.log('[Auth]: Signed out.');
 
@@ -214,9 +237,11 @@ export class AuthManager {
     }
 
     this.isAuthenticating = true;
+    sessionStorage.setItem('firebase_auth_in_progress', 'true');
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      sessionStorage.removeItem('firebase_auth_in_progress');
       return result.user;
     } catch (err) {
       const errorCode = err.code || '';
@@ -229,6 +254,7 @@ export class AuthManager {
         await signInWithRedirect(auth, googleProvider);
       } catch (redirectErr) {
         console.error('[Auth]: Redirect authentication fallback failed.', redirectErr);
+        sessionStorage.removeItem('firebase_auth_in_progress');
       }
 
       if (errorCode === 'auth/popup-blocked') {

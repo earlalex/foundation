@@ -324,8 +324,13 @@ export class Router {
       const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || store.state.devMode === true;
       const hasUserSession = simulatedTier ? (simulatedTier !== 'prospect') : !!currentUser;
 
-      // Unauthenticated / Prospect Persona gatekeeping (Bypass if developer mode/bypass is active)
+      // Unauthenticated / Prospect Persona gatekeeping (Bypass if developer mode/bypass is active or if Google Auth is actively processing in the background)
       if (!hasUserSession && !isDevConsoleBypass && (cleanPath === '/account' || cleanPath === '/admin')) {
+        if (sessionStorage.getItem('firebase_auth_in_progress') === 'true') {
+          console.log('[Router Guard]: Auth is actively processing in the background. Skipping login redirection.');
+          this.#isLoading = false;
+          return;
+        }
         this.#isLoading = false;
         sessionStorage.setItem('intended_destination', cleanPath);
         await this.loadRoute('/login');

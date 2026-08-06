@@ -47,6 +47,7 @@ self.addEventListener('fetch', (event) => {
   // Bypass SW for API routes & Google Auth/Identity script requests
   if (url.pathname.startsWith('/api/') ||
       url.hostname === 'apis.google.com' ||
+      url.hostname === 'accounts.google.com' ||
       url.hostname.endsWith('.google.com')) {
     return;
   }
