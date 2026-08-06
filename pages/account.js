@@ -4,6 +4,7 @@ import { contentDB } from '../core/db.js';
 import { authManager } from '../core/auth.js';
 import { toast } from '../utils/toast.js';
 import { stripeService } from '../core/stripe.js';
+import { cleanTitle } from '../utils/universalRenderer.js';
 
 export async function initAccountPage() {
   const user = store.state.user;
@@ -298,7 +299,7 @@ function renderOperationalGoals(role) {
         </p>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
           <button class="btn-primary" onclick="document.getElementById('consent-newsletter').scrollIntoView({ behavior: 'smooth' });" style="padding: 8px 14px; font-size: 0.85rem;">Manage Opt-Ins</button>
-          <button class="btn-secondary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Materials')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">View Free Guides</button>
+          <button class="btn-secondary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Content')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">View Free Guides</button>
         </div>
       `;
       break;
@@ -308,7 +309,7 @@ function renderOperationalGoals(role) {
           You have full unrestricted access to Ascension Avenue Academy's complete suite of course materials, worksheets, and upcoming live meets. Manage billing or request affiliate program activation.
         </p>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          <button class="btn-primary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Materials')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem;">View Materials</button>
+          <button class="btn-primary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Content')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem;">View Content</button>
           <button class="btn-secondary" onclick="document.getElementById('acc-billing-card').scrollIntoView({ behavior: 'smooth' });" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">Billing Panel</button>
         </div>
       `;
@@ -321,7 +322,7 @@ function renderOperationalGoals(role) {
         </p>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
           <button class="btn-primary" onclick="document.getElementById('tab-btn-affiliate').click();" style="padding: 8px 14px; font-size: 0.85rem;">Affiliate Hub</button>
-          <button class="btn-secondary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Materials')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">Open Courses</button>
+          <button class="btn-secondary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Content')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">Open Courses</button>
         </div>
       `;
       break;
@@ -332,7 +333,7 @@ function renderOperationalGoals(role) {
         </p>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
           <button class="btn-primary" onclick="window.router.navigateTo('/admin')" style="padding: 8px 14px; font-size: 0.85rem; background: #805ad5;">Admin Command Center</button>
-          <button class="btn-secondary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Materials')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">Check Publications</button>
+          <button class="btn-secondary" onclick="const t = [...document.querySelectorAll('.account-tab-btn')].find(b => b.textContent.includes('Content')); t && t.click();" style="padding: 8px 14px; font-size: 0.85rem; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; border-radius: 6px;">Check Publications</button>
         </div>
       `;
       break;
@@ -494,7 +495,7 @@ async function loadUnlockedContent(role) {
         <div style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
             <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); letter-spacing: 0.5px;">${item.type}</span>
-            <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: bold; line-height: 1.3;">${item.title}</h4>
+            <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: bold; line-height: 1.3;">${cleanTitle(item.title)}</h4>
             <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: var(--theme-color-text-secondary, #718096); line-height: 1.4;">${item.description}</p>
           </div>
           <button onclick="window.router.navigateTo('/detail?id=${item.id}')" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; width: 100%;">
@@ -722,7 +723,7 @@ async function loadCourseProgressDashboard(role) {
         <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
             <div>
-              <h4 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-text-primary, #1a202c); font-weight: bold;">${course.title}</h4>
+              <h4 style="margin: 0; font-size: 1.1rem; color: var(--theme-color-text-primary, #1a202c); font-weight: bold;">${cleanTitle(course.title)}</h4>
               <p style="margin: 0.25rem 0 0.75rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">${completedCount} of ${totalLessons} lessons completed • ${scoreAvgText}</p>
             </div>
             <button onclick="window.router.navigateTo('/detail?id=${course.id}&resume=${resumeLesson?.id || ""}')" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; background: var(--theme-color-accent, #38a169);">
@@ -818,7 +819,7 @@ async function loadEventTicketsDashboard(user, role) {
               <span style="font-size: 0.75rem; background: #38a169; color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">CONFIRMED</span>
             </div>
 
-            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: white; line-height: 1.3;">${event.title}</h4>
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: white; line-height: 1.3;">${cleanTitle(event.title)}</h4>
 
             <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.82rem; color: #cbd5e0;">
               <div>📅 <strong>Date:</strong> ${event.date}</div>

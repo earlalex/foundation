@@ -108,9 +108,9 @@ async def run_verification():
         """)
         print(f"Buttons on page now: {buttons}")
 
-        # Click on Unlocked Materials button
-        print("Clicking Unlocked Materials tab...")
-        await page.click("button:has-text('Unlocked Materials')")
+        # Click on My Content button
+        print("Clicking My Content tab...")
+        await page.click("button:has-text('My Content')")
         await page.wait_for_timeout(2000)
 
         # Take high-fidelity screenshot
