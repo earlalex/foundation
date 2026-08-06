@@ -135,9 +135,51 @@ export function initSiteSettingsTab() {
         launchFactoryResetModal();
       });
     }
+
+    // Single Unified Onboarding Wizard Reconfiguration Trigger inside Site Settings
+    const reconfigSectionId = 'reconfig-section-wrapper';
+    let reconfigSection = document.getElementById(reconfigSectionId);
+    if (!reconfigSection) {
+      reconfigSection = document.createElement('div');
+      reconfigSection.id = reconfigSectionId;
+      reconfigSection.style.marginTop = '1rem';
+      reconfigSection.innerHTML = `
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-primary, #2b6cb0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+          <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Master Re-configuration</h2>
+          <p style="margin: 0 0 1rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.875rem;">
+            Click to re-open the Platform Master Settings Wizard to review or update credential profiles on demand.
+          </p>
+          <button type="button" id="btn-reconfigure-master-trigger" style="padding: 10px 20px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: var(--theme-layout-border-radius, 8px); font-weight: bold; cursor: pointer; transition: opacity 0.2s;">
+            Re-configure Platform Master Settings
+          </button>
+        </div>
+      `;
+      const tabSite = document.getElementById('tab-site');
+      if (tabSite) {
+        tabSite.appendChild(reconfigSection);
+      } else {
+        document.body.appendChild(reconfigSection);
+      }
+    }
+
+    const btnReconfig = document.getElementById('btn-reconfigure-master-trigger');
+    if (btnReconfig) {
+      const newBtn = btnReconfig.cloneNode(true);
+      btnReconfig.parentNode.replaceChild(newBtn, btnReconfig);
+      newBtn.addEventListener('click', () => {
+        import('./components/AdminSetupWizards.js').then(m => {
+          m.AdminSetupWizards.launch();
+        });
+      });
+    }
+
   } else {
     if (resetSection) {
       resetSection.remove();
+    }
+    const reconfigSection = document.getElementById('reconfig-section-wrapper');
+    if (reconfigSection) {
+      reconfigSection.remove();
     }
   }
 

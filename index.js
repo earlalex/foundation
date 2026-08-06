@@ -274,7 +274,7 @@ async function boot() {
   });
 
   // 5. Hard Guard: If uninstalled, render Setup Wizard. Otherwise, initialize route cleanly.
-  if (!isInstalled && !window.__FOUNDATION_DEV_BYPASS__) {
+  if (!configManager.current.isInstalled && !window.__FOUNDATION_DEV_BYPASS__) {
     logger.warn('[Core]: Platform unconfigured. Intercepting route to render Setup Wizard.');
     window.router.renderSetupWizard();
   } else {
@@ -357,7 +357,7 @@ window.addEventListener('pageLoaded', (e) => {
   }, 100);
 
   // Guard: Skip page controllers if platform is unconfigured / running setup wizard
-  const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
+  const isConfigured = configManager.current.isInstalled === true;
   if (!isConfigured && !window.__FOUNDATION_DEV_BYPASS__) return;
 
   if (e.detail.path === '/home') {

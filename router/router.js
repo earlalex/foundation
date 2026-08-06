@@ -261,7 +261,7 @@ export class Router {
 
     try {
       // 0. FIRST-RUN SETUP WIZARD GUARD
-      const isConfigured = configManager.current.isInstalled && (configManager.current.adminEmails?.length > 0);
+      const isConfigured = configManager.current.isInstalled === true;
       if (!isConfigured && !this.isTestInstance && !window.__FOUNDATION_DEV_BYPASS__) {
         this.renderSetupWizard();
         return;
@@ -492,68 +492,9 @@ export class Router {
     }
   }
 
-  renderSetupWizard() {
-    this.appContainer.innerHTML = `
-      <section style="max-width: 650px; margin: 3rem auto; padding: 2rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; font-family: system-ui, sans-serif; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-        <div style="text-align: center; margin-bottom: 2rem;">
-          <h1 style="margin: 0 0 0.5rem 0; color: #2b6cb0;">🚀 Foundation Setup Wizard</h1>
-          <p style="margin: 0; color: #718096; font-size: 0.95rem;">Configure your primary Google Workspace owner and site settings to initialize the framework.</p>
-        </div>
-        <form id="setup-wizard-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
-          <div>
-            <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Primary Google Workspace Admin Email (Owner):</label>
-            <input type="email" id="wizard-admin-email" placeholder="owner@yourdomain.com" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
-            <span style="font-size: 0.75rem; color: #718096;">System Administrator status will be anchored exclusively to this Google account.</span>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Website Title:</label>
-              <input type="text" id="wizard-site-title" placeholder="My Web Platform" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Base Domain URL:</label>
-              <input type="url" id="wizard-site-domain" value="${window.location.origin}" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
-            </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Firebase API Key:</label>
-              <input type="text" id="wizard-fb-key" placeholder="AIzaSy..." required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem;">Firebase Project ID:</label>
-              <input type="text" id="wizard-fb-project" placeholder="my-app-id" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
-            </div>
-          </div>
-          <button type="submit" id="btn-submit-wizard" class="btn-primary" style="padding: 12px; font-size: 1rem; background: #38a169; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 1rem;">
-            Complete Setup & Initialize Platform
-          </button>
-        </form>
-      </section>
-    `;
-
-    document.getElementById('setup-wizard-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = document.getElementById('btn-submit-wizard');
-      if (submitBtn) submitBtn.textContent = 'Saving & Initializing...';
-
-      const payload = {
-        siteTitle: document.getElementById('wizard-site-title')?.value.trim() || 'Foundation',
-        siteDomain: window.location.origin,
-        adminEmails: [document.getElementById('wizard-admin-email')?.value.trim()],
-        firebase: {
-          apiKey: document.getElementById('wizard-fb-key')?.value.trim(),
-          projectId: document.getElementById('wizard-fb-project')?.value.trim()
-        },
-        isInstalled: true
-      };
-
-      await configManager.saveSetupCredentials(payload);
-
-      // Force-load home route and trigger lifecycle render
-      await window.router.loadRoute('/home');
-      window.location.reload(); // Clean boot with initialized config
-    });
+  async renderSetupWizard() {
+    await import('../pages/admin/components/AdminSetupWizards.js');
+    this.appContainer.innerHTML = `<master-setup-wizard></master-setup-wizard>`;
   }
 
   updateMetadata(path) {
