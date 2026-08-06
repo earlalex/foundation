@@ -27,14 +27,12 @@ export const MARKETING_WORKFLOWS_COLLECTION = 'marketing_workflows';
 export const KANBAN_TASKS_COLLECTION = 'kanban_tasks';
 export const VAULT_CREDENTIALS_COLLECTION = 'vault_credentials';
 
-export function withTimeout(promise, ms = 2000) {
-  promise.catch((err) => {
-    console.warn('[DB Timeout Wrapper]: original promise rejected post-timeout/settlement:', err.message || err);
+export async function withTimeout(promise, ms = 6000) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Firestore operation timeout')), ms);
   });
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), ms))
-  ]);
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
 }
 
 export const getDoc = (docRef) => withTimeout(originalGetDoc(docRef));
