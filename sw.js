@@ -44,8 +44,12 @@ self.addEventListener('fetch', (event) => {
   // Ignore non-http/https schemes (e.g. chrome-extension://) to prevent unsupported scheme errors
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // Bypass API calls from Service Worker caching
-  if (url.pathname.startsWith('/api/')) return;
+  // Bypass SW for API routes & Google Auth/Identity script requests
+  if (url.pathname.startsWith('/api/') ||
+      url.hostname === 'apis.google.com' ||
+      url.hostname.endsWith('.google.com')) {
+    return;
+  }
 
   const isNavigation = event.request.mode === 'navigate';
 
