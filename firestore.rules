@@ -40,10 +40,7 @@ service cloud.firestore {
     // 2. USER DIRECTORY, PROFILES & AFFILIATE LOGS
     // =========================================================================
     match /users/{userId} {
-      allow read: if isAuthenticated() && (isSelf(userId) || isAdmin() || isEditor());
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isSelf(userId) || isAdmin());
-      allow delete: if isAdmin();
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
 
       // Course Progress Subcollection
       match /course_progress/{courseId} {
