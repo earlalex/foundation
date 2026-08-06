@@ -146,7 +146,8 @@ function updateSimulationBadgeVisibility(state) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function boot() {
+  console.log('[DEBUG INDEX.JS]: Booting Foundation Core...');
   // Lazy-load Non-critical Web Components (Directive 5)
   try {
     import('./components/global/AppointmentPicker.js');
@@ -326,7 +327,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('[Footer Newsletter]: Subscription error', err);
     }
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
 
 async function initGlobalFooter() {
   const footerContainer = document.getElementById('global-footer');

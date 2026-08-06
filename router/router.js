@@ -532,23 +532,22 @@ export class Router {
       const submitBtn = document.getElementById('btn-submit-wizard');
       if (submitBtn) submitBtn.textContent = 'Saving & Initializing...';
 
-      const adminEmail = document.getElementById('wizard-admin-email').value.trim();
-      const siteTitle = document.getElementById('wizard-site-title').value.trim();
-      const siteDomain = document.getElementById('wizard-site-domain').value.trim();
-      const apiKey = document.getElementById('wizard-fb-key').value.trim();
-      const projectId = document.getElementById('wizard-fb-project').value.trim();
-
       const payload = {
-        siteTitle,
-        siteDomain,
-        adminEmails: [adminEmail],
-        firebase: { apiKey, projectId },
+        siteTitle: document.getElementById('wizard-site-title')?.value.trim() || 'Foundation',
+        siteDomain: window.location.origin,
+        adminEmails: [document.getElementById('wizard-admin-email')?.value.trim()],
+        firebase: {
+          apiKey: document.getElementById('wizard-fb-key')?.value.trim(),
+          projectId: document.getElementById('wizard-fb-project')?.value.trim()
+        },
         isInstalled: true
       };
 
       await configManager.saveSetupCredentials(payload);
-      // Reload page cleanly so Firebase initializes with the saved keys on boot
-      window.location.href = window.location.origin + '/home';
+
+      // Force-load home route and trigger lifecycle render
+      await window.router.loadRoute('/home');
+      window.location.reload(); // Clean boot with initialized config
     });
   }
 
