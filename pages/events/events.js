@@ -673,6 +673,11 @@ function setupEventListeners() {
         closeCartSidebar();
         document.getElementById('booking-modal').style.display = 'none';
 
+        // Post-action review prompt trigger (Directive 3)
+        setTimeout(() => {
+          toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
+        }, 2000);
+
         // Redirect to stripe checkout
         window.location.href = resData.url;
       } else {

@@ -80,6 +80,18 @@ export function initIntegrationsTab() {
   if (cfgCfWorkflowUrl) cfgCfWorkflowUrl.value = currentCfg.cloudflare?.workflowUrl || '/api/workflow-trigger';
   if (cfgCfVtUrl) cfgCfVtUrl.value = currentCfg.cloudflare?.vtUrl || '/api/virustotal-scan';
 
+  // Google Business & AdSense fields
+  const cfgGmbPlaceId = document.getElementById('cfg-gmb-place-id');
+  const cfgAdsensePubId = document.getElementById('cfg-adsense-pub-id');
+  const cfgAdsenseSlotId = document.getElementById('cfg-adsense-slot-id');
+  const cfgAdsenseEnableInFeed = document.getElementById('cfg-adsense-enable-in-feed');
+
+  // Load existing values for Google Business & AdSense
+  if (cfgGmbPlaceId) cfgGmbPlaceId.value = currentCfg.googleBusiness?.placeId || 'ChIJN1t_tDeuEmsRUsoyG83frY4';
+  if (cfgAdsensePubId) cfgAdsensePubId.value = currentCfg.adsense?.publisherId || 'ca-pub-1234567890123456';
+  if (cfgAdsenseSlotId) cfgAdsenseSlotId.value = currentCfg.adsense?.slotId || '1111111111';
+  if (cfgAdsenseEnableInFeed) cfgAdsenseEnableInFeed.checked = currentCfg.adsense?.enableInFeed !== false;
+
   // Setup API key masking for sensitive fields
   [cfgFbKey, cfgGoogleClientSecret, cfgGeminiKey, cfgOpenaiKey, cfgStripeKey, cfgVtApiKey].forEach(setupApiKeyMasking);
 
@@ -103,6 +115,96 @@ export function initIntegrationsTab() {
   }
 
   // LastPass integrations form submit listener
+  // Google My Business & AdSense Form Submit Listener
+  document.getElementById('adsense-gmb-config-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.textContent;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving Settings...';
+    }
+
+    try {
+      const updated = {
+        ...configManager.current,
+        googleBusiness: {
+          placeId: cfgGmbPlaceId ? cfgGmbPlaceId.value.trim() : 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+          starRating: currentCfg.googleBusiness?.starRating || 4.9,
+          totalReviews: currentCfg.googleBusiness?.totalReviews || 142
+        },
+        adsense: {
+          publisherId: cfgAdsensePubId ? cfgAdsensePubId.value.trim() : 'ca-pub-1234567890123456',
+          slotId: cfgAdsenseSlotId ? cfgAdsenseSlotId.value.trim() : '1111111111',
+          enableInFeed: cfgAdsenseEnableInFeed ? cfgAdsenseEnableInFeed.checked : true
+        }
+      };
+
+      const success = await configManager.saveToFirebase(updated);
+      if (success) {
+        toast.success('Google Business & AdSense Settings updated successfully!');
+      } else {
+        toast.error('Failed to save settings. Please try again.');
+      }
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin Integrations - Google Business AdSense Form');
+      toast.error(`Error saving settings: ${err.message}`);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    }
+  });
+
+  // Preview GMB Reviews Connection Test
+  document.getElementById('btn-test-gmb-reviews')?.addEventListener('click', async () => {
+    const previewContainer = document.getElementById('admin-gmb-reviews-preview-container');
+    const previewBox = document.getElementById('admin-gmb-reviews-preview-box');
+    if (!previewContainer || !previewBox) return;
+
+    previewContainer.style.display = 'block';
+    previewBox.innerHTML = '<p style="color: #718096; font-size: 0.85rem;">Fetching live reviews summary via edge proxy...</p>';
+
+    try {
+      const placeId = cfgGmbPlaceId ? cfgGmbPlaceId.value.trim() : 'ChIJN1t_tDeuEmsRUsoyG83frY4';
+      const response = await fetch(`/api/google-business?placeId=${encodeURIComponent(placeId)}`);
+      if (!response.ok) throw new Error("Edge proxy failed to fetch details");
+      const data = await response.json();
+
+      const stars = "★".repeat(Math.round(data.rating || 5)) + "☆".repeat(5 - Math.round(data.rating || 5));
+      const reviewsList = (data.reviews || []).slice(0, 2).map(r => `
+        <div style="background: #f7fafc; padding: 10px; border-radius: 6px; border: 1px solid #edf2f7; font-size: 0.8rem; margin-top: 6px;">
+          <strong>${r.authorAttribution?.displayName || 'Anonymous'} (${r.relativePublishTimeDescription || 'Recently'})</strong>
+          <div style="color: #f6e05e; margin: 2px 0;">${"★".repeat(r.rating || 5)}</div>
+          <p style="margin: 0; color: #4a5568;">${r.text?.text || r.text || ''}</p>
+        </div>
+      `).join('');
+
+      previewBox.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <div style="font-size: 1.5rem; font-weight: 800; color: #2d3748;">${data.rating || 5}</div>
+          <div>
+            <div style="color: #f6e05e;">${stars}</div>
+            <div style="font-size: 0.75rem; color: #718096;">Based on ${data.userRatingCount || 100} Google My Business reviews</div>
+          </div>
+        </div>
+        ${reviewsList}
+      `;
+      toast.success('Live GMB reviews fetched and rendered successfully!');
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin - GMB Connection Test');
+      toast.error('Failed to preview GMB reviews.');
+      previewBox.innerHTML = '<p style="color: #e53e3e; font-size: 0.85rem;">Error querying edge proxy. Verify Place ID and Cloudflare settings.</p>';
+    }
+  });
+
+  // Test Review Prompt Toast Trigger
+  document.getElementById('btn-test-review-toast')?.addEventListener('click', () => {
+    toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
+    toast.success("Test review prompt triggered successfully!");
+  });
+
   document.getElementById('lastpass-integrations-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');

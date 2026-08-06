@@ -20,6 +20,8 @@ import './components/global/AppFooter.js';
 import './components/global/TooltipElement.js';
 import './components/global/BentoGrid.js';
 import './components/global/PriceCard.js';
+import './components/global/GoogleReviews.js';
+import './components/global/AdSenseUnit.js';
 
 // Automated Test Suites
 import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';

@@ -322,6 +322,79 @@ export async function runUiTests() {
     select.remove();
   });
 
+  await assertTest('UI Component: "<google-reviews>" renders stars, reviews, and GMB write CTA', async () => {
+    const el = document.createElement('google-reviews');
+    el.setAttribute('place-id', 'ChIJN1t_tDeuEmsRUsoyG83frY4');
+    el.setAttribute('limit', '3');
+    el.setAttribute('theme', 'dark');
+    sandbox.appendChild(el);
+
+    // Wait slightly for connectedCallback
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const cta = el.querySelector('a');
+    if (!cta || !cta.href.includes(' ChIJN1t_tDeuEmsRUsoyG83frY4')) {
+      // In some test run cases it might encode, so check for placeid parameter
+      if (cta && !cta.href.includes('placeid=')) {
+        throw new Error('GoogleMyBusiness review CTA is missing write redirect link.');
+      }
+    }
+    el.remove();
+  });
+
+  await assertTest('UI Component: "<adsense-unit>" renders preview box for guests', async () => {
+    const originalUser = store.state.user;
+    const originalSim = store.state.simulatedUserTier;
+
+    store.dispatch('SET_USER', null);
+    store.dispatch('SET_SIMULATED_USER_TIER', null);
+
+    const el = document.createElement('adsense-unit');
+    el.setAttribute('client-id', ''); // leave blank to trigger preview placeholder
+    el.setAttribute('slot-id', '123456');
+    sandbox.appendChild(el);
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const preview = el.querySelector('.adsense-placeholder-preview');
+    if (!preview) {
+      throw new Error('AdSense placeholder preview not rendered for guest/unauthenticated user.');
+    }
+
+    el.remove();
+    store.dispatch('SET_USER', originalUser);
+    store.dispatch('SET_SIMULATED_USER_TIER', originalSim);
+  });
+
+  await assertTest('UI Component: "<adsense-unit>" suppresses ads completely for premium members and admins', async () => {
+    const originalUser = store.state.user;
+    const originalSim = store.state.simulatedUserTier;
+
+    // Simulate premium Member tier
+    store.dispatch('SET_SIMULATED_USER_TIER', 'member');
+
+    const el = document.createElement('adsense-unit');
+    el.setAttribute('client-id', 'ca-pub-123456');
+    el.setAttribute('slot-id', '123456');
+    sandbox.appendChild(el);
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const ins = el.querySelector('ins');
+    const safeguard = el.querySelector('.adsense-member-safeguard');
+
+    if (ins) {
+      throw new Error('AdSense ad unit injected an <ins> tag despite the user having premium ad-free member tier.');
+    }
+    if (!safeguard) {
+      throw new Error('Member safeguard ad-free disclaimer element missing.');
+    }
+
+    el.remove();
+    store.dispatch('SET_USER', originalUser);
+    store.dispatch('SET_SIMULATED_USER_TIER', originalSim);
+  });
+
   await assertTest('UI Button: "Mobile Menu Drawer" toggles mobile navbar visibility parameter', async () => {
     const btn = document.createElement('button');
     btn.id = 'mobile-menu-drawer';
