@@ -175,6 +175,10 @@ export class AuthManager {
           } catch (hookErr) {
             console.error('[Auth System]: Failed to dispatch user_logout hook.', hookErr);
           }
+
+          if (!user && window.router) {
+            window.router.loadRoute(window.location.pathname || '/home');
+          }
         }
       }
     });
@@ -263,6 +267,9 @@ export class AuthManager {
       window.__FOUNDATION_DEV_BYPASS__ = false;
       await signOut(auth);
       store.dispatch('LOGOUT');
+      if (window.router) {
+        window.router.loadRoute(window.location.pathname || '/home');
+      }
     } catch (err) {
       errorHandler.handleError(new Error(`Sign-Out Failed: ${err.message}`));
     }

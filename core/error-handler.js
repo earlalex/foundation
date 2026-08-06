@@ -20,7 +20,8 @@ export class ErrorHandler {
     window.addEventListener('unhandledrejection', (event) => {
       const msg = event.reason?.message || String(event.reason || '');
       if (msg.includes('message channel closed before a response was received') ||
-          msg.includes('A listener indicated an asynchronous response')) {
+          msg.includes('A listener indicated an asynchronous response') ||
+          msg.includes('A listener indicated an asynchronous response by returning true')) {
         event.preventDefault();
         return; // Suppress extension channel noise cleanly
       }

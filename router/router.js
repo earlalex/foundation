@@ -419,13 +419,23 @@ export class Router {
         const fallbackPath = this.basePath + 'pages/404.html';
         response = await fetch(fallbackPath);
       }
-      const htmlContent = await response.text();
+      let htmlContent = await response.text();
 
       this.appContainer.innerHTML = htmlContent;
 
-      // DOM View Safeguard: if empty or missing child nodes, inject fallback components so the user never sees a blank page
-      if (!this.appContainer.innerHTML || this.appContainer.children.length === 0 || this.appContainer.innerHTML.trim() === '') {
-        this.appContainer.innerHTML = '<hero-banner></hero-banner><feature-grid></feature-grid>';
+      // Fallback View Container Check: prevent blank white screen viewport rendering
+      if (!this.appContainer.innerHTML || this.appContainer.innerHTML.trim() === '') {
+        console.warn(`[Router]: Empty template content parsed for path "${cleanPath}". Rendering fallback view.`);
+        this.appContainer.innerHTML = `
+          <section class="section-container" style="max-width: 600px; margin: 4rem auto; padding: 3rem 2rem; text-align: center; border-radius: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); background: var(--theme-color-surface, #ffffff);">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🔄</div>
+            <h2 style="font-size: 1.75rem; margin-bottom: 0.5rem;">Reloading Content</h2>
+            <p style="color: var(--theme-color-text-secondary, #718096); margin-bottom: 1.5rem; line-height: 1.6;">
+              Please wait while we refresh the current layout view...
+            </p>
+            <button onclick="window.router.navigateTo('/home')" class="btn-primary" style="padding: 10px 24px; font-weight: bold;">Go to Homepage</button>
+          </section>
+        `;
       }
 
       this.updateMetadata(cleanPath);
