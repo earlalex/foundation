@@ -1,2 +1,6 @@
-/ads.txt /ads.txt.js 200
-/api/*  /api/:splat  200
+/sitemap.xml   /api/sitemap     200
+/rss.xml       /api/rss         200
+/feed          /api/rss         200
+/api/*         /api/:splat      200
+/ads.txt       /ads.txt.js      200
+/*             /index.html      200
