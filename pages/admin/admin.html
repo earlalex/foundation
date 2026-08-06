@@ -838,6 +838,30 @@
         </form>
       </div>
 
+      <!-- RSS & SEO Indexing Panel -->
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">RSS & SEO Indexing Management</h2>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Direct links to your dynamic sitemaps and feed channels. Submit updates directly to Google Search Console indexing crawlers.
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0);">
+            <strong style="display: block; font-size: 0.9rem; margin-bottom: 4px;">Dynamic XML Sitemap</strong>
+            <a href="/sitemap.xml" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline; font-size: 0.85rem;">/sitemap.xml</a>
+          </div>
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0);">
+            <strong style="display: block; font-size: 0.9rem; margin-bottom: 4px;">Dynamic RSS Feed</strong>
+            <a href="/rss.xml" target="_blank" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: underline; font-size: 0.85rem;">/rss.xml</a>
+          </div>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+          <button type="button" id="btn-ping-search-engines" class="btn-primary" style="background: var(--theme-color-accent, #38a169); color: white; border: none; font-weight: bold; padding: 10px 18px; border-radius: var(--theme-layout-border-radius, 8px); cursor: pointer; transition: opacity 0.2s;">
+            Ping Search Engines
+          </button>
+          <span id="ping-engines-feedback" style="font-size: 0.85rem; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600;"></span>
+        </div>
+      </div>
+
       <!-- Icon Set Upload & Default Icon Library Card -->
       <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
         <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Icon Set Select & Custom Upload</h2>
