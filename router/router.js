@@ -35,6 +35,7 @@ export class Router {
     this.appContainer = document.getElementById('app');
     this.routesManifest = routesManifest;
     this.isTestInstance = isTestInstance;
+    this.currentRoute = null;
 
     // Capture referral code if present
     if (typeof window !== 'undefined' && window.location) {
@@ -224,6 +225,11 @@ export class Router {
   }
 
   async loadRoute(fullPath) {
+    if (this.currentRoute && this.currentRoute !== fullPath) {
+      sessionStorage.setItem('foundation_previous_route', this.currentRoute);
+    }
+    this.currentRoute = fullPath;
+
     if (this.#isLoading) return;
     this.#isLoading = true;
 

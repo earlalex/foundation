@@ -20,6 +20,23 @@ export async function initDetailPage() {
   const container = document.getElementById('detail-view-container');
   if (!container) return;
 
+  const backBtn = document.getElementById('btn-back-to-feed');
+  if (backBtn) {
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const previousRoute = sessionStorage.getItem('foundation_previous_route');
+
+      // If coming from /account or profile, return to /account directly
+      if (previousRoute && (previousRoute.includes('/account') || previousRoute.includes('/profile'))) {
+        window.router.navigateTo('/account');
+      } else if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.router.navigateTo('/home');
+      }
+    });
+  }
+
   const sanitizeInputString = (str) => {
     if (typeof str !== 'string') return str;
     return str

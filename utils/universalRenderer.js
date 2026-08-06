@@ -2,6 +2,24 @@
 import { store } from '../core/store.js';
 import { configManager } from '../core/config.js';
 
+export function cleanTitle(title) {
+  if (typeof title !== 'string') return title;
+  let cleaned = title
+    // Strip raw CMS type prefixes like [EDUCATION_MODULE_UNLOCKED] or similar bracketed prefixes
+    .replace(/^\[[A-Z0-9_-]+\]\s*/i, '')
+    // Strip prefixes like PUBLICATION_PREVIEW_ or similar uppercase words followed by underscore
+    .replace(/^[A-Z0-9_-]+_\s*/, '')
+    // Strip verbose suffixes
+    .replace(/\s*(?:-\s*Premium\s*Publications|\s*-\s*Premium\s*Publications\s*&\s*Unlocked\s*Materials|\s*-\s*Unlocked|\s*-\s*Preview|\s*\(UNLOCKED\)|\s*\(PREVIEW\))\s*$/i, '')
+    .trim();
+
+  // Truncate long article titles to a maximum of 50 characters with an ellipsis (...)
+  if (cleaned.length > 50) {
+    cleaned = cleaned.substring(0, 50).trim() + '...';
+  }
+  return cleaned;
+}
+
 /**
  * Evaluates visibility permissions and renders either full unlocked content or a locked paywall gate.
  */
@@ -225,6 +243,21 @@ if (typeof document !== 'undefined') {
         await authManager.loginWithGoogle();
       } catch (err) {
         console.error('[Delegated Paywall Login]: Login failed:', err);
+      }
+    }
+
+    const backBtn = e.target.closest('#btn-back-to-feed');
+    if (backBtn) {
+      e.preventDefault();
+      const previousRoute = sessionStorage.getItem('foundation_previous_route');
+
+      // If coming from /account or profile, return to /account directly
+      if (previousRoute && (previousRoute.includes('/account') || previousRoute.includes('/profile'))) {
+        window.router.navigateTo('/account');
+      } else if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.router.navigateTo('/home');
       }
     }
   });
