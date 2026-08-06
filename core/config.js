@@ -334,6 +334,7 @@ class ConfigEngine {
    * @returns {Promise<boolean>} True if configuration is valid, false otherwise
    */
   async init() {
+    console.log('[DEBUG CONFIG.JS]: configManager.init() starting...');
     this.#loadFromLocalStorage();
 
     const fb = this.#activeConfig.firebase;
