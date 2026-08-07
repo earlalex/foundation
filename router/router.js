@@ -148,12 +148,12 @@ export class Router {
         anchor.getAttribute('target') !== '_blank'
       ) {
         e.preventDefault();
-        this.navigateTo(anchor.pathname + anchor.search);
+        this.navigateTo(anchor.pathname + anchor.search + anchor.hash);
       }
     });
 
     window.addEventListener('popstate', () => {
-      this.loadRoute(window.location.pathname + window.location.search);
+      this.loadRoute(window.location.pathname + window.location.search + window.location.hash);
     });
   }
 
@@ -195,8 +195,16 @@ export class Router {
   }
 
   async navigateTo(path) {
-    // Normalize target path (remove leading/trailing slashes for comparison)
-    let cleanTarget = path;
+    // Separate hash from the path before doing path normalized comparison
+    let hash = '';
+    let targetPath = path;
+    const hashIdx = targetPath.indexOf('#');
+    if (hashIdx !== -1) {
+      hash = targetPath.substring(hashIdx);
+      targetPath = targetPath.substring(0, hashIdx);
+    }
+
+    let cleanTarget = targetPath;
     if (cleanTarget.endsWith('/')) {
       cleanTarget = cleanTarget.slice(0, -1);
     }
@@ -224,9 +232,15 @@ export class Router {
 
     if (relativeCurrent !== cleanTarget) {
       // Build the full URL to push to history
-      const pushUrl = this.basePath + cleanTarget.replace(/^\//, '');
+      const pushUrl = this.basePath + cleanTarget.replace(/^\//, '') + hash;
       window.history.pushState({}, '', pushUrl);
-      await this.loadRoute(cleanTarget);
+      await this.loadRoute(cleanTarget + hash);
+    } else {
+      // If the path is the same, but we have a hash fragment, update hash and re-load to scroll
+      if (hash) {
+        window.history.pushState({}, '', this.basePath + cleanTarget.replace(/^\//, '') + hash);
+        await this.loadRoute(cleanTarget + hash);
+      }
     }
   }
 

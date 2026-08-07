@@ -386,6 +386,8 @@ window.addEventListener('pageLoaded', (e) => {
 
   if (e.detail.path === '/home') {
     initHomePage();
+  } else if (e.detail.path === '/docs') {
+    import('./pages/docs/docs.js').then(m => m.initDocsPage());
   } else if (e.detail.path === '/about') {
     import('./pages/about/about.js').then(m => m.initAboutPage());
   } else if (e.detail.path === '/gallery') {
