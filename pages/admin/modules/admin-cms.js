@@ -1,6 +1,7 @@
 // pages/admin/modules/admin-cms.js
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
+import { getAssetSplits, saveAssetSplits } from '../../../core/royalties.js';
 
 let currentEditingItem = null;
 
@@ -10,6 +11,12 @@ export function initAdminCms() {
   if (!cmsTab) {
     console.error('[CMS Module]: Could not find #tab-cms container!');
     return;
+  }
+
+  // Inject Contributor Royalty Splits card into the #cms-form if not already present
+  const cmsForm = document.getElementById('cms-form');
+  if (cmsForm && !document.getElementById('cms-splits-card')) {
+    injectCmsSplitsCard(cmsForm);
   }
 
   // 1. Create or ensure the content manager card is present
@@ -51,14 +58,54 @@ export function initAdminCms() {
   renderHeroConfigurator(heroConfigCard);
 
   // Hook into form submit of #cms-form to reset editing state and refresh lists
-  const cmsForm = document.getElementById('cms-form');
   if (cmsForm) {
-    // We add a listener to clear editing state and update button label
     const originalSubmitBtn = cmsForm.querySelector('button[type="submit"]');
 
-    // Check if we already wrapped the submit
     if (cmsForm.dataset.listenerBound !== 'true') {
       cmsForm.dataset.listenerBound = 'true';
+
+      // Capture phase interceptor to validate split total percentages (Must equal 100% if custom splits are configured)
+      cmsForm.addEventListener('submit', async (e) => {
+        const rows = cmsForm.querySelectorAll('.cms-split-row');
+        if (rows.length > 0) {
+          let sum = 0;
+          rows.forEach(row => {
+            sum += parseFloat(row.querySelector('.cms-split-pct').value || 0);
+          });
+
+          if (Math.abs(sum - 100) > 0.01) {
+            e.preventDefault();
+            e.stopPropagation();
+            toast.error(`Contributor Royalty splits must sum up to exactly 100%! Current sum: ${sum}%`);
+            return;
+          }
+
+          // Gather splits
+          const splits = [];
+          rows.forEach(row => {
+            const userEmail = row.querySelector('.cms-split-user').value;
+            splits.push({
+              userId: userEmail,
+              userEmail: userEmail,
+              role: row.querySelector('.cms-split-role').value,
+              percentage: parseFloat(row.querySelector('.cms-split-pct').value || 0)
+            });
+          });
+
+          const contentId = document.getElementById('content-id').value;
+          const contentType = document.getElementById('content-type').value;
+
+          try {
+            await saveAssetSplits(contentId, contentType, splits);
+            console.log('[CMS Splits]: Split structures saved successfully for content:', contentId);
+          } catch (err) {
+            e.preventDefault();
+            e.stopPropagation();
+            toast.error(`Failed to save royalty splits: ${err.message}`);
+            return;
+          }
+        }
+      }, { capture: true });
 
       cmsForm.addEventListener('submit', async () => {
         // Wait briefly for standard saveContent to resolve, then refresh
@@ -67,9 +114,218 @@ export function initAdminCms() {
           const idInput = document.getElementById('content-id');
           if (idInput) idInput.readOnly = false;
           if (originalSubmitBtn) originalSubmitBtn.textContent = 'Publish Content Entry';
+
+          // Clear splits rows
+          const rowsContainer = document.getElementById('cms-splits-rows-container');
+          if (rowsContainer) rowsContainer.innerHTML = '';
+          const totalDisp = document.getElementById('cms-splits-total-display');
+          if (totalDisp) {
+            totalDisp.textContent = 'Total Split: 0%';
+            totalDisp.style.color = '#718096';
+          }
+
           renderContentManager(managerCard);
         }, 800);
       });
+    }
+  }
+}
+
+/**
+ * Injects the "Contributor Royalty Splits" accordion card right into the #cms-form.
+ */
+function injectCmsSplitsCard(form) {
+  const splitsCard = document.createElement('div');
+  splitsCard.id = 'cms-splits-card';
+  splitsCard.style.cssText = `
+    background: var(--theme-color-surface-alt, #f8fafc);
+    border: 1px solid var(--theme-color-border, #cbd5e0);
+    border-radius: var(--theme-layout-border-radius, 8px);
+    padding: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  `;
+
+  splitsCard.innerHTML = `
+    <h3 style="margin: 0; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0); cursor: pointer; display: flex; align-items: center; justify-content: space-between;" id="cms-splits-header">
+      <span>🤝 Contributor Royalty Splits & Allocations</span>
+      <span id="cms-splits-toggle-arrow">▶</span>
+    </h3>
+    <div id="cms-splits-body" style="display: none; margin-top: 1rem; border-top: 1px dashed #cbd5e0; padding-top: 1rem;">
+      <p style="font-size: 0.82rem; color: var(--theme-color-text-secondary, #718096); margin-bottom: 1rem; line-height: 1.4;">
+        Configure dynamic royalty split allocations. The total percentage must sum up to exactly 100%. Unconfigured assets default to 100% Admin allocation.
+      </p>
+      <div id="cms-splits-rows-container" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <button type="button" id="btn-cms-add-split" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; background: #319795; border: none; cursor: pointer;">
+          + Add Contributor Row
+        </button>
+        <div id="cms-splits-total-display" style="font-weight: bold; font-size: 0.95rem; color: #718096;">
+          Total Split: 0%
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Insert before the submit button
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    form.insertBefore(splitsCard, submitBtn);
+  } else {
+    form.appendChild(splitsCard);
+  }
+
+  // Accordion toggle
+  const header = splitsCard.querySelector('#cms-splits-header');
+  const body = splitsCard.querySelector('#cms-splits-body');
+  const arrow = splitsCard.querySelector('#cms-splits-toggle-arrow');
+  if (header && body && arrow) {
+    header.onclick = () => {
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        arrow.textContent = '▼';
+      } else {
+        body.style.display = 'none';
+        arrow.textContent = '▶';
+      }
+    };
+  }
+
+  // Add Row Handler
+  const addBtn = splitsCard.querySelector('#btn-cms-add-split');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      addCmsSplitRow();
+    };
+  }
+}
+
+/**
+ * Appends a new contributor split row to the accordion splits rows container.
+ */
+async function addCmsSplitRow(initialData = null) {
+  const container = document.getElementById('cms-splits-rows-container');
+  if (!container) return;
+
+  // Retrieve existing users to auto-populate select dropdown
+  let usersList = [];
+  try {
+    usersList = await contentDB.getAllUsers();
+  } catch (err) {}
+
+  const fallbackEmails = [
+    'admin@earlalex.com',
+    'editor@earlalex.com',
+    'director@earlalex.com',
+    'writer@earlalex.com',
+    'designer@earlalex.com',
+    'guest_creator@earlalex.com'
+  ];
+
+  const uniqueEmails = Array.from(new Set([
+    ...usersList.map(u => u.email).filter(Boolean),
+    ...fallbackEmails
+  ]));
+
+  const rowId = 'row_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5);
+
+  const rowDiv = document.createElement('div');
+  rowDiv.id = rowId;
+  rowDiv.className = 'cms-split-row';
+  rowDiv.style.cssText = `
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    background: white;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  `;
+
+  const userOptions = uniqueEmails.map(email => {
+    const isSelected = initialData && initialData.userEmail === email ? 'selected' : '';
+    return `<option value="${email}" ${isSelected}>${email}</option>`;
+  }).join('');
+
+  const roles = ['Director', 'Editor', 'Writer', 'Guest', 'Designer', 'Artist', 'Publisher'];
+  const roleOptions = roles.map(r => {
+    const isSelected = initialData && initialData.role === r ? 'selected' : '';
+    return `<option value="${r}" ${isSelected}>${r}</option>`;
+  }).join('');
+
+  const initialPct = initialData ? initialData.percentage : 0;
+
+  rowDiv.innerHTML = `
+    <select class="cms-split-user" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;">
+      ${userOptions}
+    </select>
+    <select class="cms-split-role" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;">
+      ${roleOptions}
+    </select>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="number" class="cms-split-pct" min="0" max="100" step="1" value="${initialPct}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+      <span style="font-size: 0.85rem; font-weight: bold; color: #4a5568;">%</span>
+    </div>
+    <button type="button" class="btn-cms-delete-split-row" style="background: none; border: none; color: #e53e3e; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Delete Row">✕</button>
+  `;
+
+  container.appendChild(rowDiv);
+
+  // Wire up real-time percentage change validator
+  const pctInput = rowDiv.querySelector('.cms-split-pct');
+  pctInput.addEventListener('input', () => validateCmsSplitsTotal());
+
+  // Wire delete row
+  rowDiv.querySelector('.btn-cms-delete-split-row').onclick = () => {
+    rowDiv.remove();
+    validateCmsSplitsTotal();
+  };
+
+  validateCmsSplitsTotal();
+}
+
+/**
+ * Validates real-time split totals, updating the display text and colors accordingly.
+ */
+function validateCmsSplitsTotal() {
+  const rows = document.querySelectorAll('.cms-split-row');
+  let sum = 0;
+  rows.forEach(row => {
+    sum += parseFloat(row.querySelector('.cms-split-pct').value || 0);
+  });
+
+  const display = document.getElementById('cms-splits-total-display');
+  if (display) {
+    display.textContent = `Total Split: ${sum}%`;
+    if (Math.abs(sum - 100) < 0.01) {
+      display.style.color = '#38a169'; // Green if valid 100%
+    } else {
+      display.style.color = '#e53e3e'; // Red if invalid
+    }
+  }
+}
+
+/**
+ * Loads configured splits into the form fields.
+ */
+export async function loadSplitsIntoCmsForm(splits) {
+  const container = document.getElementById('cms-splits-rows-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (splits && splits.length > 0) {
+    // Open accordion body
+    const body = document.getElementById('cms-splits-body');
+    const arrow = document.getElementById('cms-splits-toggle-arrow');
+    if (body && arrow) {
+      body.style.display = 'block';
+      arrow.textContent = '▼';
+    }
+
+    for (const split of splits) {
+      await addCmsSplitRow(split);
     }
   }
 }
@@ -238,18 +494,25 @@ async function renderContentManager(container) {
           if (item.editorType === 'grapesjs') {
             toggle.checked = true;
             toggle.dispatchEvent(new Event('change'));
-            // Wait for GrapesJS instance to initialize, then load project
-            setTimeout(() => {
-              const canvas = document.getElementById('grapesjs-cms-canvas');
-              if (canvas && canvas.children.length > 0) {
-                // If GrapesJS initialized, load projectData
-                // (Note: editor instance handles loading projectData on load route, but we can load dynamically if we want)
-              }
-            }, 300);
           } else {
             toggle.checked = false;
             toggle.dispatchEvent(new Event('change'));
           }
+        }
+
+        // Load splitting rules for the edited asset cleanly
+        try {
+          const splits = await getAssetSplits(item.id);
+          // Only render splits details if not the default admin split to keep UI uncluttered, or load explicitly
+          if (splits !== DEFAULT_ADMIN_SPLIT) {
+            await loadSplitsIntoCmsForm(splits);
+          } else {
+            const rowsContainer = document.getElementById('cms-splits-rows-container');
+            if (rowsContainer) rowsContainer.innerHTML = '';
+            validateCmsSplitsTotal();
+          }
+        } catch (splitErr) {
+          console.warn('[CMS Splits]: Failed to load asset splits:', splitErr);
         }
 
         // Change Publish button to update

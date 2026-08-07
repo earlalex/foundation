@@ -5,9 +5,11 @@ import { FormValidator } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { stripeService } from '../../core/stripe.js';
+import { getAssetSplits, saveAssetSplits } from '../../core/royalties.js';
 
 let selectedCourse = null;
 let grapesLessonEditor = null;
+let editingProductId = null;
 
 export function initProductsTab() {
   const productForm = document.getElementById('product-form');
@@ -55,6 +57,11 @@ export function initProductsTab() {
       // Load courses on tab switch
       loadCourses();
     });
+  }
+
+  // Inject Product Royalty splits card
+  if (productForm && !document.getElementById('product-splits-card')) {
+    injectProductSplitsCard(productForm);
   }
 
   // Handle payment type change to show/hide retainer fields
@@ -166,8 +173,66 @@ export function initProductsTab() {
     });
 
     productsTbody.querySelectorAll('.btn-edit-product').forEach(btn => {
-      btn.addEventListener('click', () => {
-        toast.info('Edit functionality coming soon.');
+      btn.addEventListener('click', async () => {
+        const productId = btn.dataset.productId;
+        try {
+          const products = await contentDB.getContentByType('product');
+          const product = products.find(p => p.id === productId);
+          if (!product) return;
+
+          editingProductId = productId;
+
+          // Populate inputs
+          document.getElementById('product-title').value = product.title || '';
+          document.getElementById('product-category').value = product.category || '';
+          document.getElementById('product-description').value = product.description || '';
+          document.getElementById('product-price').value = ((product.pricing?.basePrice || 0) / 100).toFixed(2);
+          document.getElementById('product-currency').value = product.pricing?.currency || 'USD';
+          document.getElementById('product-payment-type').value = product.pricing?.paymentType || 'full_upfront';
+
+          if (product.pricing?.paymentType === 'retainer_invoice') {
+            document.getElementById('retainer-fields').style.display = 'block';
+            document.getElementById('product-retainer-amount').value = ((product.pricing?.retainerAmount || 0) / 100).toFixed(2);
+            document.getElementById('product-retainer-percentage').value = product.pricing?.retainerPercentage || '';
+          } else {
+            document.getElementById('retainer-fields').style.display = 'none';
+          }
+
+          if (document.getElementById('product-stripe-id')) {
+            document.getElementById('product-stripe-id').value = product.stripe?.productId || '';
+          }
+          if (document.getElementById('product-stripe-price-id')) {
+            document.getElementById('product-stripe-price-id').value = product.stripe?.priceId || '';
+          }
+          if (document.getElementById('product-enable-ach')) {
+            document.getElementById('product-enable-ach').checked = !!product.stripe?.enableAch;
+          }
+          if (document.getElementById('product-invoice-days')) {
+            document.getElementById('product-invoice-days').value = product.invoiceSettings?.invoiceDueDays || 30;
+          }
+          if (document.getElementById('product-google-contact')) {
+            document.getElementById('product-google-contact').value = product.invoiceSettings?.googleContactLink || '';
+          }
+          if (document.getElementById('product-payment-terms')) {
+            document.getElementById('product-payment-terms').value = product.invoiceSettings?.paymentTerms || 'Net 30 days';
+          }
+
+          // Load Royalty splits
+          const splits = await getAssetSplits(productId);
+          await loadSplitsIntoProductForm(splits);
+
+          // Change submit button label
+          const submitBtn = productForm.querySelector('button[type="submit"]');
+          if (submitBtn) {
+            submitBtn.textContent = 'Update Product Entry';
+          }
+
+          productForm.scrollIntoView({ behavior: 'smooth' });
+          toast.info(`Loaded product "${product.title}" details & royalty splits for editing.`);
+
+        } catch (err) {
+          toast.error(`Failed to load product: ${err.message}`);
+        }
       });
     });
   }
@@ -190,6 +255,35 @@ export function initProductsTab() {
     }
 
     try {
+      // 1. Validate Product Royalty Splits if custom splits exist
+      const rows = productForm.querySelectorAll('.product-split-row');
+      let splits = [];
+      if (rows.length > 0) {
+        let sum = 0;
+        rows.forEach(row => {
+          sum += parseFloat(row.querySelector('.product-split-pct').value || 0);
+        });
+
+        if (Math.abs(sum - 100) > 0.01) {
+          toast.error(`Product splits total percentage must equal exactly 100%! Current sum: ${sum}%`);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
+          return;
+        }
+
+        rows.forEach(row => {
+          const userEmail = row.querySelector('.product-split-user').value;
+          splits.push({
+            userId: userEmail,
+            userEmail: userEmail,
+            role: row.querySelector('.product-split-role').value,
+            percentage: parseFloat(row.querySelector('.product-split-pct').value || 0)
+          });
+        });
+      }
+
       const title = document.getElementById('product-title').value;
       const category = document.getElementById('product-category').value;
       const description = document.getElementById('product-description').value;
@@ -222,9 +316,11 @@ export function initProductsTab() {
         stripePriceId = stripeRes.priceId;
       }
 
+      const productId = editingProductId || 'product_' + Date.now();
+
       const productData = {
         type: 'product',
-        id: 'product_' + Date.now(),
+        id: productId,
         title,
         category,
         description,
@@ -252,11 +348,30 @@ export function initProductsTab() {
       };
 
       await contentDB.saveContent(productData);
-      toast.success('Product created successfully and synced with Stripe!');
+
+      // Save splits if configured
+      if (splits.length > 0) {
+        await saveAssetSplits(productId, 'merchandise', splits);
+      }
+
+      toast.success(editingProductId ? 'Product details & royalty splits updated successfully!' : 'Product created successfully and synced with Stripe!');
       
       // Reset form
       productForm.reset();
+      editingProductId = null;
       retainerFields.style.display = 'none';
+      if (submitBtn) {
+        submitBtn.textContent = 'Create New Product/Service';
+      }
+
+      // Clear splits rows
+      const rowsContainer = document.getElementById('product-splits-rows-container');
+      if (rowsContainer) rowsContainer.innerHTML = '';
+      const totalDisp = document.getElementById('product-splits-total-display');
+      if (totalDisp) {
+        totalDisp.textContent = 'Total Split: 0%';
+        totalDisp.style.color = '#718096';
+      }
       
       // Reload products list
       loadProducts();
@@ -266,7 +381,6 @@ export function initProductsTab() {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
       }
     }
   });
@@ -785,4 +899,203 @@ export function initProductsTab() {
 
   // Initial load
   loadProducts();
+}
+
+/**
+ * Injects the "Product Royalty & Merch Splits" accordion card right into the #product-form.
+ */
+function injectProductSplitsCard(form) {
+  const splitsCard = document.createElement('div');
+  splitsCard.id = 'product-splits-card';
+  splitsCard.style.cssText = `
+    background: var(--theme-color-surface-alt, #f8fafc);
+    border: 1px solid var(--theme-color-border, #cbd5e0);
+    border-radius: var(--theme-layout-border-radius, 8px);
+    padding: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  `;
+
+  splitsCard.innerHTML = `
+    <h3 style="margin: 0; font-size: 1rem; color: var(--theme-color-primary, #2b6cb0); cursor: pointer; display: flex; align-items: center; justify-content: space-between;" id="product-splits-header">
+      <span>🤝 Product Royalty & Merch Splits</span>
+      <span id="product-splits-toggle-arrow">▶</span>
+    </h3>
+    <div id="product-splits-body" style="display: none; margin-top: 1rem; border-top: 1px dashed #cbd5e0; padding-top: 1rem;">
+      <p style="font-size: 0.82rem; color: var(--theme-color-text-secondary, #718096); margin-bottom: 1rem; line-height: 1.4;">
+        Configure royalty split allocations for designers, suppliers, artists, or brand partners. The total percentage must sum up to exactly 100%. Unconfigured assets default to 100% Admin allocation.
+      </p>
+      <div id="product-splits-rows-container" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <button type="button" id="btn-product-add-split" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem; background: #319795; border: none; cursor: pointer;">
+          + Add Contributor Row
+        </button>
+        <div id="product-splits-total-display" style="font-weight: bold; font-size: 0.95rem; color: #718096;">
+          Total Split: 0%
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Insert before the submit button
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    form.insertBefore(splitsCard, submitBtn);
+  } else {
+    form.appendChild(splitsCard);
+  }
+
+  // Accordion toggle
+  const header = splitsCard.querySelector('#product-splits-header');
+  const body = splitsCard.querySelector('#product-splits-body');
+  const arrow = splitsCard.querySelector('#product-splits-toggle-arrow');
+  if (header && body && arrow) {
+    header.onclick = () => {
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        arrow.textContent = '▼';
+      } else {
+        body.style.display = 'none';
+        arrow.textContent = '▶';
+      }
+    };
+  }
+
+  // Add Row Handler
+  const addBtn = splitsCard.querySelector('#btn-product-add-split');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      addProductSplitRow();
+    };
+  }
+}
+
+/**
+ * Appends a new contributor split row to the product splits rows container.
+ */
+async function addProductSplitRow(initialData = null) {
+  const container = document.getElementById('product-splits-rows-container');
+  if (!container) return;
+
+  // Retrieve existing users to auto-populate select dropdown
+  let usersList = [];
+  try {
+    usersList = await contentDB.getAllUsers();
+  } catch (err) {}
+
+  const fallbackEmails = [
+    'admin@earlalex.com',
+    'editor@earlalex.com',
+    'director@earlalex.com',
+    'writer@earlalex.com',
+    'designer@earlalex.com',
+    'supplier@earlalex.com'
+  ];
+
+  const uniqueEmails = Array.from(new Set([
+    ...usersList.map(u => u.email).filter(Boolean),
+    ...fallbackEmails
+  ]));
+
+  const rowId = 'row_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5);
+
+  const rowDiv = document.createElement('div');
+  rowDiv.id = rowId;
+  rowDiv.className = 'product-split-row';
+  rowDiv.style.cssText = `
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    background: white;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  `;
+
+  const userOptions = uniqueEmails.map(email => {
+    const isSelected = initialData && initialData.userEmail === email ? 'selected' : '';
+    return `<option value="${email}" ${isSelected}>${email}</option>`;
+  }).join('');
+
+  const roles = ['Designer', 'Supplier', 'Artist', 'Brand Partner', 'Publisher', 'Editor'];
+  const roleOptions = roles.map(r => {
+    const isSelected = initialData && initialData.role === r ? 'selected' : '';
+    return `<option value="${r}" ${isSelected}>${r}</option>`;
+  }).join('');
+
+  const initialPct = initialData ? initialData.percentage : 0;
+
+  rowDiv.innerHTML = `
+    <select class="product-split-user" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;">
+      ${userOptions}
+    </select>
+    <select class="product-split-role" style="padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;">
+      ${roleOptions}
+    </select>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="number" class="product-split-pct" min="0" max="100" step="1" value="${initialPct}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+      <span style="font-size: 0.85rem; font-weight: bold; color: #4a5568;">%</span>
+    </div>
+    <button type="button" class="btn-product-delete-split-row" style="background: none; border: none; color: #e53e3e; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Delete Row">✕</button>
+  `;
+
+  container.appendChild(rowDiv);
+
+  // Wire up real-time percentage change validator
+  const pctInput = rowDiv.querySelector('.product-split-pct');
+  pctInput.addEventListener('input', () => validateProductSplitsTotal());
+
+  // Wire delete row
+  rowDiv.querySelector('.btn-product-delete-split-row').onclick = () => {
+    rowDiv.remove();
+    validateProductSplitsTotal();
+  };
+
+  validateProductSplitsTotal();
+}
+
+/**
+ * Validates real-time split totals, updating the display text and colors accordingly.
+ */
+function validateProductSplitsTotal() {
+  const rows = document.querySelectorAll('.product-split-row');
+  let sum = 0;
+  rows.forEach(row => {
+    sum += parseFloat(row.querySelector('.product-split-pct').value || 0);
+  });
+
+  const display = document.getElementById('product-splits-total-display');
+  if (display) {
+    display.textContent = `Total Split: ${sum}%`;
+    if (Math.abs(sum - 100) < 0.01) {
+      display.style.color = '#38a169'; // Green if valid 100%
+    } else {
+      display.style.color = '#e53e3e'; // Red if invalid
+    }
+  }
+}
+
+/**
+ * Loads configured splits into the product form fields.
+ */
+export async function loadSplitsIntoProductForm(splits) {
+  const container = document.getElementById('product-splits-rows-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (splits && splits.length > 0) {
+    // Open accordion body
+    const body = document.getElementById('product-splits-body');
+    const arrow = document.getElementById('product-splits-toggle-arrow');
+    if (body && arrow) {
+      body.style.display = 'block';
+      arrow.textContent = '▼';
+    }
+
+    for (const split of splits) {
+      await addProductSplitRow(split);
+    }
+  }
 }

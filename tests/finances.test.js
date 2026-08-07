@@ -1,6 +1,7 @@
 // tests/finances.test.js
 import { configManager } from '../core/config.js';
 import { contentDB } from '../core/db.js';
+import { formatAddress, detectWallets } from '../core/crypto.js';
 
 export async function runFinancesTests() {
   console.group('  Running Finances, Payroll & ACH Processing Tests...');
@@ -312,6 +313,66 @@ export async function runFinancesTests() {
     }
     if (payload.application_fee_amount !== 500) {
       throw new Error('Platform fee application_fee_amount is not exactly 500 cents ($5.00).');
+    }
+  });
+
+  // --- NEW WEB3 & ROYALTY ENGINE TESTS ---
+  await assertTest('Web3: Formats crypto wallet addresses properly', () => {
+    const full = '0x71C7656EC7ab88b098defB751B7401B5f6d1476B';
+    const formatted = formatAddress(full);
+    if (formatted !== '0x71C7...476B') {
+      throw new Error(`Address formatting returned unexpected result. Got: ${formatted}`);
+    }
+  });
+
+  await assertTest('Web3: Presence detection recognizes wallet structures', () => {
+    const result = detectWallets();
+    if (!result.simulated) {
+      throw new Error('Wallet presence detection must support simulated fallbacks.');
+    }
+  });
+
+  await assertTest('Royalty Engine: Splits percentage sum validation works', async () => {
+    const { saveAssetSplits } = await import('../core/royalties.js');
+    const invalidSplits = [
+      { userId: 'writer@earlalex.com', userEmail: 'writer@earlalex.com', role: 'Writer', percentage: 40 },
+      { userId: 'editor@earlalex.com', userEmail: 'editor@earlalex.com', role: 'Editor', percentage: 50 }
+    ];
+
+    try {
+      await saveAssetSplits('test-asset-id', 'video', invalidSplits);
+      throw new Error('Should have failed split totals validation!');
+    } catch (err) {
+      if (!err.message.toLowerCase().includes('percentage')) {
+        throw err;
+      }
+    }
+  });
+
+  await assertTest('Royalty Engine: Distributes gross earnings converted logs correctly', async () => {
+    const { saveAssetSplits, logRoyaltyEarning, getExchangeRates } = await import('../core/royalties.js');
+    const validSplits = [
+      { userId: 'writer@earlalex.com', userEmail: 'writer@earlalex.com', role: 'Writer', percentage: 40 },
+      { userId: 'editor@earlalex.com', userEmail: 'editor@earlalex.com', role: 'Editor', percentage: 60 }
+    ];
+    await saveAssetSplits('demo-music-id', 'music', validSplits);
+
+    const grossUSD = 200.00;
+    const earning = await logRoyaltyEarning('demo-music-id', 'music', grossUSD, 'Sample single buy');
+
+    if (earning.grossUSD !== 200.00) {
+      throw new Error(`Gross USD earned recorded incorrectly. Got: ${earning.grossUSD}`);
+    }
+
+    const rates = await getExchangeRates();
+    const expectedEUR = Number((grossUSD * rates.EUR).toFixed(2));
+    if (earning.conversions.EUR !== expectedEUR) {
+      throw new Error(`Exchange rate EUR conversion history calculation mismatch. Expected: ${expectedEUR}, Got: ${earning.conversions.EUR}`);
+    }
+
+    const distWriter = earning.distributions.find(d => d.userEmail === 'writer@earlalex.com');
+    if (!distWriter || distWriter.allocatedAmountUSD !== 80.00) {
+      throw new Error(`Earning distribution calculation incorrect. Expected Writer allocation of $80.00, got: ${distWriter?.allocatedAmountUSD}`);
     }
   });
 

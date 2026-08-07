@@ -84,6 +84,7 @@
       <button class="account-tab-btn" id="tab-btn-affiliate" data-sec="affiliate" style="display: none;">Affiliate & Referral Hub</button>
       <button class="account-tab-btn" data-sec="messages">Message Center</button>
       <button class="account-tab-btn" data-sec="purchases">Billing</button>
+      <button class="account-tab-btn" data-sec="royalties">My Royalties & Splits</button>
       <button class="account-tab-btn" data-sec="settings">Settings</button>
     </nav>
 
@@ -333,6 +334,93 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- SECTION: MY ROYALTIES & SPLITS -->
+      <div id="sec-royalties" class="account-panel-view" style="display: none;">
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 2rem; border-radius: var(--theme-layout-border-radius, 8px); display: flex; flex-direction: column; gap: 1.5rem;">
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 1rem;">
+            <div>
+              <h2 style="margin: 0; font-size: 1.5rem; color: var(--theme-color-primary, #2b6cb0); font-weight: 800;">My Royalties & Splits Portal</h2>
+              <p style="margin: 0.25rem 0 0 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">View and manage your contributor allocations, splits, and request automated payouts.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="btn-royalties-download-csv" style="padding: 8px 14px; font-weight: bold; background: #319795; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">Download CSV</button>
+              <button id="btn-royalties-download-pdf" style="padding: 8px 14px; font-weight: bold; background: #805ad5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem;">Download PDF</button>
+            </div>
+          </div>
+
+          <!-- KPI Stats -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1.25rem; border-radius: 8px; text-align: center;">
+              <span style="font-size: 0.75rem; color: #15803d; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Gross Earned</span>
+              <strong id="roy-earned-gross" style="display: block; font-size: 2rem; color: #166534; margin-top: 4px;">$0.00</strong>
+            </div>
+            <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.25rem; border-radius: 8px; text-align: center;">
+              <span style="font-size: 0.75rem; color: #2b6cb0; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">My Net Royalties</span>
+              <strong id="roy-earned-net" style="display: block; font-size: 2rem; color: #2b6cb0; margin-top: 4px;">$0.00</strong>
+            </div>
+            <div style="background: #faf5ff; border: 1px solid #e9d8fd; padding: 1.25rem; border-radius: 8px; text-align: center;">
+              <span style="font-size: 0.75rem; color: #6b46c1; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Pending Payout</span>
+              <strong id="roy-earned-pending" style="display: block; font-size: 2rem; color: #6b46c1; margin-top: 4px;">$0.00</strong>
+            </div>
+          </div>
+
+          <!-- Dynamic Splits Listing -->
+          <div>
+            <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-text-primary, #1a202c);">Itemized Earnings by Asset</h3>
+            <div style="overflow-x: auto; margin-top: 0.75rem;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                <thead>
+                  <tr style="border-bottom: 2px solid var(--theme-color-border, #edf2f7); color: var(--theme-color-text-secondary); font-weight: bold;">
+                    <th style="padding: 10px;">Asset ID & Description</th>
+                    <th style="padding: 10px;">Asset Type</th>
+                    <th style="padding: 10px;">My Split %</th>
+                    <th style="padding: 10px;">My Allocation (USD)</th>
+                    <th style="padding: 10px;">Allocated Other Currencies</th>
+                  </tr>
+                </thead>
+                <tbody id="roy-earnings-tbody">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">No split allocations logged yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Request Payout Card -->
+          <div style="background: var(--theme-color-background, #f7fafc); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: 8px;">
+            <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Request Automated Payout</h3>
+            <p style="margin: 0.25rem 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.82rem;">Select your preferred payout corridor. Wise payments and Crypto wallets settle within 1 hour.</p>
+
+            <form id="roy-payout-form" style="display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Payout Destination:</label>
+                  <select id="roy-payout-method" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">
+                    <option value="crypto">Crypto Wallet (USDC/ETH)</option>
+                    <option value="wise">Wise Business API</option>
+                    <option value="stripe">Stripe Connect</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Payment Address / Account Details:</label>
+                  <input type="text" id="roy-payout-address" required placeholder="0x... or Bank Account #" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+                </div>
+                <div>
+                  <label style="display: block; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.25rem;">Request Amount (USD):</label>
+                  <input type="number" id="roy-payout-amount" required step="0.01" min="1" placeholder="50.00" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;" />
+                </div>
+              </div>
+              <button type="submit" class="btn-primary" style="align-self: flex-start; padding: 10px 20px; font-weight: bold; border-radius: 6px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; cursor: pointer;">
+                Submit Payout Request
+              </button>
+            </form>
+          </div>
+
         </div>
       </div>
 

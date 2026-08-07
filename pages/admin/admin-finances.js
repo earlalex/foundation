@@ -137,12 +137,102 @@ export function initFinancesTab() {
  * Handle interior tab navigation inside the Finances Panel
  */
 function setupSubTabs() {
-  const subtabs = ['expenses', 'payroll', 'budget'];
+  // Dynamically inject the "Royalty Splits & Payouts" sub-tab button next to the others if not present
+  const budgetBtn = document.getElementById('btn-subtab-budget');
+  if (budgetBtn && !document.getElementById('btn-subtab-royalties')) {
+    const royBtn = document.createElement('button');
+    royBtn.id = 'btn-subtab-royalties';
+    royBtn.style.cssText = budgetBtn.style.cssText;
+    royBtn.style.background = 'transparent';
+    royBtn.style.color = 'var(--theme-color-text-secondary, #4a5568)';
+    royBtn.style.border = '1px solid transparent';
+    royBtn.textContent = 'Royalty Splits & Payouts';
+    budgetBtn.parentNode.appendChild(royBtn);
+  }
+
+  // Dynamically inject the "#panel-subtab-royalties" panel after "#panel-subtab-budget" if not present
+  const budgetPanel = document.getElementById('panel-subtab-budget');
+  if (budgetPanel && !document.getElementById('panel-subtab-royalties')) {
+    const royPanel = document.createElement('div');
+    royPanel.id = 'panel-subtab-royalties';
+    royPanel.style.cssText = 'display: none; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);';
+    royPanel.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="background: #ebf8ff; border: 1px solid #bee3f8; padding: 1.5rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="margin-top: 0; font-size: 1.25rem; color: #2b6cb0;">Universal Royalty Splits & Contributor Payouts</h2>
+            <p style="margin: 0; font-size: 0.9rem; color: #2c5282;">
+              Track all gross platform volume allocations and execute secure 1-click batch payout runs directly to contributor crypto wallets or bank accounts.
+            </p>
+          </div>
+          <button id="btn-admin-batch-payout" class="btn-primary" style="padding: 10px 20px; font-weight: bold; background: #38a169; border: none; cursor: pointer; border-radius: var(--theme-layout-border-radius, 8px); color: white;">
+            ⚡ 1-Click Execute Batch Payouts
+          </button>
+        </div>
+
+        <!-- KPI summary stats -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border); text-align: center;">
+            <span style="font-size: 0.75rem; color: #718096; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Gross Royalty Volume</span>
+            <strong id="admin-roy-gross-vol" style="display: block; font-size: 1.5rem; color: var(--theme-color-primary, #2b6cb0); margin-top: 4px;">$0.00</strong>
+          </div>
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border); text-align: center;">
+            <span style="font-size: 0.75rem; color: #718096; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Awaiting Payout</span>
+            <strong id="admin-roy-awaiting" style="display: block; font-size: 1.5rem; color: #dd6b20; margin-top: 4px;">$0.00</strong>
+          </div>
+          <div style="background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border); text-align: center;">
+            <span style="font-size: 0.75rem; color: #718096; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Completed Payouts</span>
+            <strong id="admin-roy-completed" style="display: block; font-size: 1.5rem; color: #38a169; margin-top: 4px;">$0.00</strong>
+          </div>
+        </div>
+
+        <!-- Filter and Logs list -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0; font-size: 1.05rem;">Allocations & Payout Requests</h3>
+            <select id="admin-royalty-filter" style="padding: 6px 12px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">
+              <option value="all">All Asset Types</option>
+              <option value="video">Videos</option>
+              <option value="merchandise">Merchandise / Apparel</option>
+              <option value="podcast">Podcasts & Audio</option>
+              <option value="music">Music</option>
+            </select>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); color: var(--theme-color-text-secondary); font-weight: bold;">
+                  <th style="padding: 10px;">ID / Contributor</th>
+                  <th style="padding: 10px;">Asset Details</th>
+                  <th style="padding: 10px;">Allocation (USD)</th>
+                  <th style="padding: 10px;">Status</th>
+                  <th style="padding: 10px; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-royalties-tbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">No royalty split records or payout requests logged yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+    budgetPanel.parentNode.insertBefore(royPanel, budgetPanel.nextSibling);
+  }
+
+  const subtabs = ['expenses', 'payroll', 'budget', 'royalties'];
 
   subtabs.forEach(tab => {
     const btn = document.getElementById(`btn-subtab-${tab}`);
     if (btn) {
-      btn.addEventListener('click', () => {
+      // Clean up and bind fresh listener
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+
+      newBtn.addEventListener('click', () => {
         // Reset all buttons and panels
         subtabs.forEach(t => {
           const b = document.getElementById(`btn-subtab-${t}`);
@@ -158,9 +248,9 @@ function setupSubTabs() {
         });
 
         // Set active button and panel
-        btn.style.background = 'var(--theme-color-primary, #2b6cb0)';
-        btn.style.color = 'white';
-        btn.style.border = 'none';
+        newBtn.style.background = 'var(--theme-color-primary, #2b6cb0)';
+        newBtn.style.color = 'white';
+        newBtn.style.border = 'none';
 
         const activePanel = document.getElementById(`panel-subtab-${tab}`);
         if (activePanel) {
@@ -175,6 +265,8 @@ function setupSubTabs() {
         } else if (tab === 'payroll') {
           loadEmployeeDirectory();
           loadPayRunsList();
+        } else if (tab === 'royalties') {
+          loadAdminRoyaltiesDashboard();
         }
       });
     }
@@ -844,5 +936,191 @@ async function initBudgetAndCashflow() {
   } catch (err) {
     errorHandler.handleError(err, 'Admin Finances - Budget Dashboard');
     console.error('[BudgetAndCashflow] Init Dashboard Error:', err);
+  }
+}
+
+/**
+ * Universal Royalty Splits & Payouts Administrator Dashboard controller
+ */
+export async function loadAdminRoyaltiesDashboard() {
+  const tbody = document.getElementById('admin-royalties-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">Loading royalty logs...</td></tr>`;
+
+  try {
+    const { getAllEarnings } = await import('../../core/royalties.js');
+    const earnings = await getAllEarnings();
+    const payoutRequests = JSON.parse(localStorage.getItem('foundation_local_payout_requests') || '[]');
+
+    // Calculate Admin Royalty KPIs
+    let grossVolume = 0;
+    let awaitingTotal = 0;
+    let completedTotal = 0;
+
+    earnings.forEach(earn => {
+      grossVolume += earn.grossUSD || 0;
+    });
+
+    payoutRequests.forEach(req => {
+      if (req.status === 'pending') {
+        awaitingTotal += req.amountUSD || 0;
+      } else {
+        completedTotal += req.amountUSD || 0;
+      }
+    });
+
+    const grossVolEl = document.getElementById('admin-roy-gross-vol');
+    const awaitingEl = document.getElementById('admin-roy-awaiting');
+    const completedEl = document.getElementById('admin-roy-completed');
+
+    if (grossVolEl) grossVolEl.textContent = '$' + grossVolume.toFixed(2);
+    if (awaitingEl) awaitingEl.textContent = '$' + awaitingTotal.toFixed(2);
+    if (completedEl) completedEl.textContent = '$' + completedTotal.toFixed(2);
+
+    // Apply Filter values
+    const filterSelect = document.getElementById('admin-royalty-filter');
+    const filterType = filterSelect ? filterSelect.value : 'all';
+
+    const rows = [];
+
+    // 1. Add Payout Requests to table
+    payoutRequests.forEach(req => {
+      const isSelectedType = filterType === 'all' || filterType === 'merchandise'; // default mock map
+      if (!isSelectedType) return;
+
+      const dateStr = req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Recent';
+      const statusBadge = req.status === 'pending'
+        ? `<span style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #fffaf0; color: #dd6b20;">Pending Request</span>`
+        : `<span style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #e6fffa; color: #319795;">Paid</span>`;
+
+      const actionBtn = req.status === 'pending'
+        ? `<button class="btn-payout-execute btn-primary" data-req-id="${req.id}" style="padding: 4px 8px; font-size: 0.75rem; background: #38a169;">Pay Request</button>`
+        : `<span style="color: #a0aec0; font-style: italic; font-size: 0.8rem;">Settled</span>`;
+
+      rows.push(`
+        <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+          <td style="padding: 10px;">
+            <strong>${req.userEmail}</strong>
+            <div style="font-size: 0.75rem; color: #718096;">ID: ${req.id} | Date: ${dateStr}</div>
+          </td>
+          <td style="padding: 10px;">
+            <span style="font-weight: bold; text-transform: uppercase; font-size: 0.75rem; color: #805ad5;">Payout Request</span>
+            <div style="font-size: 0.75rem; color: #718096;">Method: ${req.method.toUpperCase()} | Dest: ${req.address}</div>
+          </td>
+          <td style="padding: 10px; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">$${req.amountUSD.toFixed(2)}</td>
+          <td style="padding: 10px;">${statusBadge}</td>
+          <td style="padding: 10px; text-align: right;">${actionBtn}</td>
+        </tr>
+      `);
+    });
+
+    // 2. Add raw allocation distributions
+    earnings.forEach(earn => {
+      const isSelectedType = filterType === 'all' || earn.assetType === filterType;
+      if (!isSelectedType) return;
+
+      const dateStr = earn.createdAt ? new Date(earn.createdAt).toLocaleDateString() : 'Recent';
+
+      earn.distributions?.forEach((dist, idx) => {
+        rows.push(`
+          <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7); background: #fdfdfd;">
+            <td style="padding: 10px;">
+              <strong>${dist.userEmail}</strong>
+              <div style="font-size: 0.75rem; color: #718096;">Role: ${dist.role} | Date: ${dateStr}</div>
+            </td>
+            <td style="padding: 10px;">
+              <strong>${earn.assetId}</strong>
+              <div style="font-size: 0.75rem; color: #718096;">Type: ${earn.assetType} | Split: ${dist.percentage}%</div>
+            </td>
+            <td style="padding: 10px; font-weight: bold; color: #319795;">$${dist.allocatedAmountUSD.toFixed(2)}</td>
+            <td style="padding: 10px;">
+              <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #ebf8ff; color: #2b6cb0;">Split Allocated</span>
+            </td>
+            <td style="padding: 10px; text-align: right; color: #cbd5e0; font-style: italic; font-size: 0.8rem;">Auto-assigned</td>
+          </tr>
+        `);
+      });
+    });
+
+    if (rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">No split allocations logged yet.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = rows.join('');
+
+    // Wire up filter selector change event
+    if (filterSelect) {
+      filterSelect.onchange = () => loadAdminRoyaltiesDashboard();
+    }
+
+    // Wire up individual pay request buttons
+    tbody.querySelectorAll('.btn-payout-execute').forEach(btn => {
+      btn.onclick = async () => {
+        const reqId = btn.dataset.reqId;
+        const reqIndex = payoutRequests.findIndex(r => r.id === reqId);
+        if (reqIndex !== -1) {
+          const req = payoutRequests[reqIndex];
+          req.status = 'completed';
+          payoutRequests[reqIndex] = req;
+          localStorage.setItem('foundation_local_payout_requests', JSON.stringify(payoutRequests));
+
+          // Simulate payout blockchain/bank settle latency
+          toast.info(`Executing 1-click single payout for $${req.amountUSD.toFixed(2)} via ${req.method.toUpperCase()}...`);
+          await new Promise(r => setTimeout(r, 1000));
+          toast.success(`payout transfer of $${req.amountUSD.toFixed(2)} successfully settled with contributor!`);
+
+          loadAdminRoyaltiesDashboard();
+        }
+      };
+    });
+
+    // Wire up 1-Click Batch Payouts Button
+    const btnBatch = document.getElementById('btn-admin-batch-payout');
+    if (btnBatch) {
+      // Recreate to avoid duplicates
+      const newBtn = btnBatch.cloneNode(true);
+      btnBatch.parentNode.replaceChild(newBtn, btnBatch);
+
+      newBtn.onclick = async () => {
+        const pendingCount = payoutRequests.filter(r => r.status === 'pending').length;
+        if (pendingCount === 0) {
+          toast.warning('No pending contributor payout requests awaiting batch settlement.');
+          return;
+        }
+
+        newBtn.disabled = true;
+        newBtn.textContent = 'Processing Batch settlement...';
+
+        toast.info(`Executing 1-click batch payout run for ${pendingCount} pending requests...`);
+
+        // Latency simulation
+        await new Promise(r => setTimeout(r, 1800));
+
+        payoutRequests.forEach((req, idx) => {
+          if (req.status === 'pending') {
+            req.status = 'completed';
+            payoutRequests[idx] = req;
+          }
+        });
+
+        localStorage.setItem('foundation_local_payout_requests', JSON.stringify(payoutRequests));
+        toast.success(`Batch settlement complete! ${pendingCount} payout requests successfully processed & cleared.`);
+
+        newBtn.disabled = false;
+        newBtn.textContent = '⚡ 1-Click Execute Batch Payouts';
+
+        loadAdminRoyaltiesDashboard();
+      };
+    }
+
+  } catch (err) {
+    console.error('[Admin Royalties Dashboard]: Load failed:', err);
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-danger); padding: 1.5rem;">Failed to load royalty command center.</td></tr>`;
   }
 }
