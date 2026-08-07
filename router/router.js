@@ -110,6 +110,10 @@ export class Router {
         await import('../pages/admin/admin.js');
       } else if (cleanPath === '/about') {
         await import('../pages/about/about.js');
+      } else if (cleanPath === '/gallery') {
+        await import('../pages/gallery/gallery.js');
+      } else if (cleanPath === '/videos') {
+        await import('../pages/videos/videos.js');
       } else if (cleanPath === '/events') {
         await import('../pages/events/events.js');
       } else if (cleanPath === '/contact') {
