@@ -1,0 +1,100 @@
+<!-- pages/docs/docs.html -->
+<div class="docs-page-layout" style="display: flex; gap: 2rem; padding: 3rem 1.5rem; font-family: var(--theme-font-body, system-ui, sans-serif); color: var(--theme-color-text-primary, #1a202c); max-width: 1200px; margin: 0 auto; flex-wrap: wrap;">
+
+  <!-- Sidebar Navigation -->
+  <aside class="docs-sidebar" style="flex: 0 0 280px; min-width: 240px; background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: var(--theme-layout-border-radius, 6px); padding: 1.5rem; align-self: flex-start; position: sticky; top: 100px;">
+    <h3 style="margin-top: 0; margin-bottom: 1.25rem; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800;">Documentation</h3>
+    <nav style="display: flex; flex-direction: column; gap: 0.5rem;">
+      <a href="#media-suite" class="docs-nav-item" style="display: block; color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">
+        ✍️ Publishing & Content
+      </a>
+      <a href="#royalties" class="docs-nav-item" style="display: block; color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">
+        📊 E-Commerce & Splits
+      </a>
+      <a href="#crypto-payments" class="docs-nav-item" style="display: block; color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">
+        💳 Crypto & Web3 Billing
+      </a>
+      <a href="#architecture" class="docs-nav-item" style="display: block; color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">
+        ⚡ Zero-Build Engine
+      </a>
+      <a href="#setup-wizard" class="docs-nav-item" style="display: block; color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">
+        ⚙️ Master Onboarding
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="docs-content" style="flex: 1; min-width: 320px; display: flex; flex-direction: column; gap: 4rem;">
+
+    <!-- Section 1: Media Suite -->
+    <section id="media-suite-section" style="scroll-margin-top: 100px;">
+      <h2 id="media-suite" style="color: var(--theme-color-primary, #2b6cb0); font-size: 1.75rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>✍️</span> Dynamic Publishing & Content Engine
+      </h2>
+      <p style="color: var(--theme-color-text-secondary, #4a5568); line-height: 1.7; font-size: 0.975rem;">
+        The Foundation platform integrates a dynamic publishing suite powered entirely by client-side markdown rendering and decentralized storage networks or local caches. By decoupling content delivery from traditional heavy database limits or compilation servers, your publications load instantly.
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); padding: 1.25rem; border-left: 4px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; margin: 1.5rem 0;">
+        <strong style="display: block; margin-bottom: 0.25rem;">Key Feature: Client-Side Caching</strong>
+        All published updates are synchronized locally to indexed databases inside the user's browser, permitting complete offline availability and lightning-fast instantaneous SPA tab switching.
+      </div>
+    </section>
+
+    <!-- Section 2: E-Commerce & Royalty Splits -->
+    <section id="royalties-section" style="scroll-margin-top: 100px;">
+      <h2 id="royalties" style="color: var(--theme-color-primary, #2b6cb0); font-size: 1.75rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>📊</span> E-Commerce & Royalty Splits Engine
+      </h2>
+      <p style="color: var(--theme-color-text-secondary, #4a5568); line-height: 1.7; font-size: 0.975rem;">
+        Monetize content and physical goods seamlessly using our Universal Royalty Splits Engine. Configure automatic gross percentage distributions across multiple contributor wallets or financial accounts.
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); padding: 1.25rem; border-left: 4px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; margin: 1.5rem 0;">
+        <strong style="display: block; margin-bottom: 0.25rem;">Split Validation Rule</strong>
+        All contributor allocations must sum to exactly 100%. Unconfigured assets dynamically default to 100% Platform Admin allocation. Outbound split payouts can be automatically run globally with Wise (formerly TransferWise) integration.
+      </div>
+    </section>
+
+    <!-- Section 3: Web3 & Crypto Payments -->
+    <section id="crypto-payments-section" style="scroll-margin-top: 100px;">
+      <h2 id="crypto-payments" style="color: var(--theme-color-primary, #2b6cb0); font-size: 1.75rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>💳</span> Web3 Wallet Connections & Stablecoin Payments
+      </h2>
+      <p style="color: var(--theme-color-text-secondary, #4a5568); line-height: 1.7; font-size: 0.975rem;">
+        The platform boasts a robust custom-built crypto checkout system. It natively supports connection flows for popular EVM browser extensions (MetaMask, Coinbase Wallet, WalletConnect) and Solana extensions (Phantom).
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); padding: 1.25rem; border-left: 4px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; margin: 1.5rem 0;">
+        <strong style="display: block; margin-bottom: 0.25rem;">Multi-Rail Settlements</strong>
+        Users can checkout using native cryptocurrencies, stablecoin equivalents (USDC, USDT), or fall back to traditional Visa/Mastercard processing powered by an embedded Stripe custom visual elements module.
+      </div>
+    </section>
+
+    <!-- Section 4: Zero-Build Architecture -->
+    <section id="architecture-section" style="scroll-margin-top: 100px;">
+      <h2 id="architecture" style="color: var(--theme-color-primary, #2b6cb0); font-size: 1.75rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>⚡</span> Zero-Build Vanilla Architecture & Caching
+      </h2>
+      <p style="color: var(--theme-color-text-secondary, #4a5568); line-height: 1.7; font-size: 0.975rem;">
+        By leveraging native browser ES Modules (`import`/`export`), the application runs without heavy Webpack, Vite, or Babel bundlers. Your code remains clean, transparent, and completely decoupled from fragile third-party dependency locks.
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); padding: 1.25rem; border-left: 4px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; margin: 1.5rem 0;">
+        <strong style="display: block; margin-bottom: 0.25rem;">Service Worker Cache Gating</strong>
+        Our Service Worker dynamically cleans redirected cached responses (stripping browser-enforced `redirected: true` flags) to guarantee seamless single page application routing and prevent runtime browser load failures.
+      </div>
+    </section>
+
+    <!-- Section 5: Master Onboarding & Setup -->
+    <section id="setup-wizard-section" style="scroll-margin-top: 100px;">
+      <h2 id="setup-wizard" style="color: var(--theme-color-primary, #2b6cb0); font-size: 1.75rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-border, #edf2f7); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>⚙️</span> Master Onboarding Wizard & Backoffice
+      </h2>
+      <p style="color: var(--theme-color-text-secondary, #4a5568); line-height: 1.7; font-size: 0.975rem;">
+        The system utilizes a Single Unified Master Onboarding Wizard to automatically provision Google Workspace administrative configurations, configure custom sitemaps, and initialize edge database access keys.
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); padding: 1.25rem; border-left: 4px solid var(--theme-color-primary, #2b6cb0); border-radius: 4px; margin: 1.5rem 0;">
+        <strong style="display: block; margin-bottom: 0.25rem;">Reconfiguration Option</strong>
+        Once configured, the Onboarding Wizard is locked to subscribers. Authenticated system administrators can re-trigger this onboarding setup setup at any time via the Admin Control Center Site Settings panel.
+      </div>
+    </section>
+
+  </main>
+</div>

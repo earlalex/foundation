@@ -32,24 +32,38 @@ export class ContentCard extends HTMLElement {
       `;
     }).join(' ');
 
+    // Check if this card represents "Dynamic Blogs & Publishing"
+    const isDynamicBlogs = sanitizedTitle.toLowerCase().includes('dynamic blogs') || sanitizedTitle.toLowerCase().includes('publishing') || sanitizedId === 'dynamic-blogs-and-publishing';
+
+    const learnMoreHtml = isDynamicBlogs ? `
+      <div style="margin-top: auto; padding-top: 1rem;">
+        <a href="/docs#media-suite" class="card-learn-more-link" data-link style="font-weight: bold; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+          Learn More <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    ` : '';
+
     this.innerHTML = `
       <article class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.04); height: 100%;">
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span style="color: #a0aec0; font-size: 0.8rem;">${sanitizedDate}</span>
-          </div>
-          <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #1a202c; font-weight: 700; line-height: 1.35;">
-            ${sanitizedId ? `<a href="/detail?id=${sanitizedId}" style="color: inherit; text-decoration: none; border-bottom: 1px dashed transparent; transition: border-color 0.2s;">${sanitizedTitle}</a>` : sanitizedTitle}
-          </h3>
-          ${sanitizedAuthor ? `<p style="color: #718096; font-size: 0.825rem; margin: 0 0 0.75rem 0;">By ${sanitizedAuthor}</p>` : ''}
-          <p style="margin: 0 0 1rem 0; color: #4a5568; font-size: 0.875rem; line-height: 1.5; text-align: left !important;">
-            ${sanitizedDescription}
-          </p>
-          ${tags.length > 0 ? `
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-              ${tagsHtml}
+        <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="color: #a0aec0; font-size: 0.8rem;">${sanitizedDate}</span>
             </div>
-          ` : ''}
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #1a202c; font-weight: 700; line-height: 1.35;">
+              ${sanitizedId ? `<a href="/detail?id=${sanitizedId}" style="color: inherit; text-decoration: none; border-bottom: 1px dashed transparent; transition: border-color 0.2s;">${sanitizedTitle}</a>` : sanitizedTitle}
+            </h3>
+            ${sanitizedAuthor ? `<p style="color: #718096; font-size: 0.825rem; margin: 0 0 0.75rem 0;">By ${sanitizedAuthor}</p>` : ''}
+            <p style="margin: 0 0 1rem 0; color: #4a5568; font-size: 0.875rem; line-height: 1.5; text-align: left !important;">
+              ${sanitizedDescription}
+            </p>
+            ${tags.length > 0 ? `
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 1rem;">
+                ${tagsHtml}
+              </div>
+            ` : ''}
+          </div>
+          ${learnMoreHtml}
         </div>
       </article>
     `;
@@ -63,6 +77,17 @@ export class ContentCard extends HTMLElement {
         window.router?.navigateTo(href);
       });
     });
+
+    // Make sure we intercept clicks on learn more link for dynamic SPA router transitions!
+    const learnMoreBtn = this.querySelector('.card-learn-more-link');
+    if (learnMoreBtn) {
+      learnMoreBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const href = learnMoreBtn.getAttribute('href');
+        window.router?.navigateTo(href);
+      });
+    }
   }
 }
 
