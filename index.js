@@ -199,6 +199,12 @@ async function boot() {
       description: 'Welcome to Foundation - A custom zero-build web framework.',
       viewPath: './pages/home/home.html'
     },
+    '/docs': {
+      template: './pages/docs/docs.html',
+      controller: './pages/docs/docs.js',
+      title: 'Platform Documentation & Setup Guide | Foundation',
+      viewPath: './pages/docs/docs.html'
+    },
     '/about': {
       title: 'About Me',
       description: 'Learn more about the creator and platform architect.',
@@ -403,5 +409,7 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/account.js').then(m => m.initAccountPage());
   } else if (e.detail.path === '/videos') {
     import('./pages/videos/videos.js').then(m => m.initVideosPage());
+  } else if (e.detail.path === '/docs') {
+    import('./pages/docs/docs.js').then(m => m.initDocsPage());
   }
 });

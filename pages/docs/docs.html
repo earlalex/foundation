@@ -1,0 +1,251 @@
+<!-- pages/docs/docs.html -->
+<div class="docs-view-container" style="display: flex; gap: 2.5rem; max-width: var(--theme-layout-container-max-width, 1200px); margin: 2rem auto; padding: 0 1.5rem; align-items: flex-start; font-family: var(--theme-font-body, system-ui, sans-serif); color: var(--theme-color-text-primary, #1a202c);">
+
+  <!-- Sticky Sidebar Navigation Tree -->
+  <nav class="docs-sidebar" aria-label="Documentation Sections Navigation" style="position: sticky; top: 5.5rem; width: 260px; min-width: 260px; max-height: calc(100vh - 7rem); overflow-y: auto; padding: 1.5rem; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: var(--theme-layout-border-radius, 8px); box-shadow: var(--theme-layout-box-shadow, 0 4px 6px rgba(0,0,0,0.03)); flex-shrink: 0;">
+    <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--theme-color-text-secondary, #4a5568); margin-bottom: 1.25rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-border, #e2e8f0); padding-bottom: 0.5rem;">Documentation Table of Contents</h3>
+    <ul class="docs-nav-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+      <li>
+        <a href="#overview" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Platform Overview section">
+          📖 1. Platform Overview
+        </a>
+      </li>
+      <li>
+        <a href="#architecture" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Architecture & Philosophy section">
+          ⚡ 2. Architecture & Philosophy
+        </a>
+      </li>
+      <li>
+        <a href="#setup-wizard" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Setup & Environment section">
+          ⚙️ 3. Setup & Environment
+        </a>
+      </li>
+      <li>
+        <a href="#media-suite" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Media & Streaming Suite section">
+          🎬 4. Media & Streaming
+        </a>
+      </li>
+      <li>
+        <a href="#royalties" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Royalty Splits Engine section">
+          📊 5. Royalty Engine
+        </a>
+      </li>
+      <li>
+        <a href="#crypto-payments" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Stripe & Web3 Payments section">
+          💳 6. Stripe & Web3 Payments
+        </a>
+      </li>
+      <li>
+        <a href="#seo-rss" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to SEO, RSS & Server Rules section">
+          🌐 7. SEO, RSS & Server Rules
+        </a>
+      </li>
+      <li>
+        <a href="#admin-center" class="docs-nav-link" style="display: block; padding: 0.6rem 0.8rem; font-size: 0.95rem; font-weight: 600; color: #1a202c; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; transition: all 0.2s ease-in-out;" aria-label="Go to Admin Control Center section">
+          🛠️ 8. Admin Control Center
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Sticky Main Content Area -->
+  <main class="docs-content" style="flex: 1; min-width: 0;">
+    <header style="margin-bottom: 3rem; border-bottom: 1px solid var(--theme-color-border, #cbd5e1); padding-bottom: 1.5rem;">
+      <h1 style="font-size: clamp(2rem, 4.5vw, 2.75rem); font-weight: 800; color: var(--theme-color-primary, #2b6cb0); line-height: 1.25; margin-bottom: 0.75rem;">
+        Platform Documentation & Setup Guide
+      </h1>
+      <p style="font-size: 1.15rem; color: var(--theme-color-text-secondary, #4a5568); line-height: 1.6; max-width: 800px;">
+        Welcome to the technical specification and onboarding manual for the Foundation Business OS. Learn about our zero-build architecture, database structures, media pipelines, and global deployment rules.
+      </p>
+    </header>
+
+    <!-- Section 1: Platform Overview -->
+    <section id="overview" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        1. Platform Overview
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        <strong>Foundation</strong> is a highly optimized, custom Zero-Build JAMstack Platform and business-oriented Operating System (OS). It enables developers, agencies, and business owners to deploy fully fledged web applications, high-performance physical or digital e-commerce storefronts, student portals, and automated backoffice routines directly onto serverless edge infrastructures.
+      </p>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1.5rem;">
+        By eliminating compile-time bundle overheads and relying strictly on standard native browser APIs, Foundation delivers absolute speed to both end users and development teams alike.
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #e2e8f0); border-left: 4px solid var(--theme-color-primary, #2b6cb0); padding: 1.25rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 0.5rem 0; font-weight: 700;">Core Capabilities Matrix:</h4>
+        <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.6;">
+          <li>⚡ <strong>Zero-Build Architecture:</strong> Production deployment with zero bundling, build pipelines, or dev compile steps.</li>
+          <li>🛍️ <strong>Hybrid E-Commerce:</strong> Scalable catalog for physical goods with real-time stock reservation alerts.</li>
+          <li>🔐 <strong>Zero-Trust Database:</strong> Fully audited localized and remote Firestore endpoints built on dynamic permission sets.</li>
+          <li>🎬 <strong>Media Portal:</strong> In-house native audio streaming, video player gates, and masonry picture galleries.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Section 2: Architecture & Zero-Build Philosophy -->
+    <section id="architecture" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        2. Architecture & Philosophy
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        Modern web development is too often bogged down by heavy toolchains, complex build steps, and oversized dependencies. Foundation takes a contrarian, sovereign approach by returning to the core of standard web standards:
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: var(--theme-layout-border-radius, 8px); padding: 1.5rem; box-shadow: var(--theme-layout-box-shadow);">
+          <h3 style="font-size: 1.15rem; margin-top: 0; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem;">Vanilla ES Modules</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 0; line-height: 1.5;">
+            Every JavaScript module inside the framework is loaded natively via browser ES module syntax. Unbundled dependencies, direct paths, and dynamic browser imports mean instant local updates and zero cold starts.
+          </p>
+        </div>
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: var(--theme-layout-border-radius, 8px); padding: 1.5rem; box-shadow: var(--theme-layout-box-shadow);">
+          <h3 style="font-size: 1.15rem; margin-top: 0; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem;">Native Web Components</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 0; line-height: 1.5;">
+            UI widgets (e.g., CTA Blocks, Hero Banners, Radio stream, etc.) are implemented utilizing standard Custom Elements and shadow DOM. This guarantees isolation, zero layout shifts, and standard-compliant rendering.
+          </p>
+        </div>
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: var(--theme-layout-border-radius, 8px); padding: 1.5rem; box-shadow: var(--theme-layout-box-shadow);">
+          <h3 style="font-size: 1.15rem; margin-top: 0; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem;">Client-Side SPA Routing</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 0; line-height: 1.5;">
+            Our core router processes URL requests cleanly entirely in the client-side session context, serving templates dynamically without full page requests or navigation jank. Transitions are handled instantly with zero flicker.
+          </p>
+        </div>
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: var(--theme-layout-border-radius, 8px); padding: 1.5rem; box-shadow: var(--theme-layout-box-shadow);">
+          <h3 style="font-size: 1.15rem; margin-top: 0; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem;">Cloudflare Workers Edge</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 0; line-height: 1.5;">
+            Dynamic routes, APIs, and microservices run directly on Cloudflare Workers edge serverless instances. By keeping business logic geographically proximal to end-users, we eliminate connection latencies and server overhead.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Setup & Environment Variables -->
+    <section id="setup-wizard" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        3. Setup & Environment Variables
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        Configuring your Foundation Business OS instance takes only a few minutes. If the system is not yet configured, launching the root application path will automatically invoke the integrated Master Onboarding Wizard.
+      </p>
+      <h3 style="font-size: 1.25rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem;">Wrangler & Cloudflare Page Variables</h3>
+      <p style="font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.6;">
+        Before spinning up your serverless instance, set up the required environment variables in your local <code>wrangler.json</code> or your Cloudflare Pages dashboard settings:
+      </p>
+      <div style="background: #0f172a; color: #f1f5f9; padding: 1.25rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem; line-height: 1.5; margin-bottom: 1.5rem; overflow-x: auto;">
+        <span style="color: #64748b;">// System Environment Bindings Matrix</span><br/>
+        FOUNDATION_INSTALLED: "true",<br/>
+        FIREBASE_PROJECT_ID: "your-firebase-project-id",<br/>
+        FIREBASE_API_KEY: "AIzaSyYourApiKeyHere",<br/>
+        FIREBASE_AUTH_DOMAIN: "your-project.firebaseapp.com",<br/>
+        STRIPE_SECRET_KEY: "sk_live_...",<br/>
+        STRIPE_WEBHOOK_SECRET: "whsec_...",<br/>
+        VIRUSTOTAL_API_KEY: "vt_api_..."
+      </div>
+      <h3 style="font-size: 1.25rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem;">Database Initialization</h3>
+      <p style="font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.6;">
+        Foundation uses Firebase Firestore for metadata persistence and global content delivery. To secure your database from unauthorized reads and writes, the database establishes a strict Zero-Trust db boundary. You must copy the <code>firestore.rules</code> file from the root directory directly to your Firebase Console settings.
+      </p>
+    </section>
+
+    <!-- Section 4: Media & Streaming Suite -->
+    <section id="media-suite" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        4. Media & Streaming Suite
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        The system comes out-of-the-box with a high-performance, responsive media suite utilizing standard HTML5 capabilities:
+      </p>
+      <ul style="padding-left: 1.5rem; line-height: 1.7; margin-bottom: 1.5rem;">
+        <li>
+          <strong>Instagram-Style Photo Gallery (<code>&lt;photo-gallery&gt;</code>):</strong>
+          Masonry layouts designed using custom CSS grids. Implements responsive image display, dynamic lazy loading optimization (`lazyLoader.js`), overlay engagement stats, and localized social sharing dispatches.
+        </li>
+        <li>
+          <strong>YouTube-Style Video Portal (<code>&lt;video-library&gt;</code>):</strong>
+          Enables hosting HLS, MP4, or YouTube video catalogs. It supports a programmatically adjustable, client-side guest paywall timeout lock: guests are prompted to register or upgrade to premium memberships when video previews expire, while administrators and paid members skip gates automatically.
+        </li>
+        <li>
+          <strong>24/7 Web Radio Stream (<code>&lt;radio-stream-player&gt;</code>):</strong>
+          Sticky continuous audio broadcaster mounted completely outside the single-page application SPA navigation container (`index.html`). Users can browse, navigate routes, and complete actions without interrupting stream play. Admin can configure stream feeds and toggle active queue settings from the Admin Control Center.
+        </li>
+      </ul>
+    </section>
+
+    <!-- Section 5: Universal Royalty Engine & Splits -->
+    <section id="royalties" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        5. Universal Royalty Engine & Splits
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        Our custom-engineered Universal Royalty Splits Engine (managed inside <code>core/royalties.js</code>) is designed to model and enforce contributor equity payout structures across physical or digital media products:
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 6px; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">Engine Rules & Invariants:</h4>
+        <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.6; font-size: 0.95rem;">
+          <li><strong>Sum-to-100% Invariant:</strong> Multi-contributor allocation rules are evaluated strictly. The sum of splits configured must equal exactly 100% during validation.</li>
+          <li><strong>Admin Fallback Rule:</strong> For any asset or product purchased without a specified royalty structure, allocation falls back to 100% System Admin automatically.</li>
+          <li><strong>FX & Crypto Rates Logs:</strong> Calculates multi-currency settlement splits natively, with rates logged with crypto exchange reference points.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Section 6: Stripe & Web3 Crypto Payments -->
+    <section id="crypto-payments" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        6. Stripe & Web3 Crypto Payments
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        Foundation handles monetization using a dual-gateway system supporting Stripe and Web3 crypto checkouts.
+      </p>
+      <h3 style="font-size: 1.25rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem;">Stripe Configuration</h3>
+      <p style="font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.6;">
+        Set up Stripe product API keys within your Admin Control Center Settings (`tab-config`). Standard billing hooks and direct payment checkouts dispatch through the backend endpoint proxy <code>/functions/api/stripe-checkout.js</code>. The endpoint contains rate limits targeting IP subnets to prevent malicious API exhaustion attacks.
+      </p>
+      <h3 style="font-size: 1.25rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem;">Web3 Wallet Core (<code>core/crypto.js</code>)</h3>
+      <p style="font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.6;">
+        Native checkout component <code>&lt;crypto-checkout&gt;</code> coordinates EVM (MetaMask, Coinbase, WalletConnect) and Solana (Phantom) browser handshakes directly. It validates signed challenge-response blocks securely and formats block hashes for display before dispatching token settlement orders (supporting stablecoins such as USDC, USDT alongside native coin balances).
+      </p>
+    </section>
+
+    <!-- Section 7: SEO, RSS & Server Rules -->
+    <section id="seo-rss" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        7. SEO, RSS & Server Rules
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        Search Engine Optimization (SEO) and automated content syndication are critical to organic enterprise growth. Foundation manages this natively:
+      </p>
+      <ul style="padding-left: 1.5rem; line-height: 1.7; margin-bottom: 1.5rem;">
+        <li>
+          <strong>Dynamic Sitemap (<code>/functions/api/sitemap.js</code>):</strong>
+          Serves <code>/sitemap.xml</code> on demand by aggregating static routes along with dynamic Firestore pages and CMS articles. Responses are edge-cached for high performance and contain search priority weights.
+        </li>
+        <li>
+          <strong>Broadcasting Feed (<code>/functions/api/rss.js</code>):</strong>
+          Generates <code>/rss.xml</code> and <code>/feed</code>, conforming to standard RSS 2.0 and iTunes audio configurations (for podcast discovery). Features type-based feed filtering.
+        </li>
+        <li>
+          <strong>Zero-Build Server Deploy Templates:</strong>
+          Root files pre-configure single-page routing structures and rewrites natively across multiple clouds, including Vercel (<code>vercel.json</code>), Netlify (<code>netlify.toml</code>), Nginx (<code>nginx.conf</code>), Apache (<code>.htaccess</code>), and IIS (<code>web.config</code>). These rule files rewrite feed targets and sitemaps cleanly directly into Cloudflare edge proxies.
+        </li>
+      </ul>
+    </section>
+
+    <!-- Section 8: Admin Control Center -->
+    <section id="admin-center" style="scroll-margin-top: 5rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.85rem; font-weight: 800; border-bottom: 2px solid var(--theme-color-primary, #2b6cb0); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
+        8. Admin Control Center
+      </h2>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        Authenticated Administrators and Editors can access the core system dashboard at <code>/admin</code>.
+      </p>
+      <p style="font-size: 1rem; color: var(--theme-color-text-primary, #1a202c); line-height: 1.7; margin-bottom: 1rem;">
+        The backoffice provides modular sections for Managing Site Configurations, setting Cloud API Credentials, drafting custom CMS Pages, updating Web Radio stream paths, toggling AdSense placements, tracking inventory stock limits, and triggering diagnostic workflow simulations.
+      </p>
+      <div style="background: var(--theme-color-surface-alt, #f8fafc); border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 6px; padding: 1.5rem;">
+        <h4 style="margin: 0 0 0.5rem 0; font-weight: bold;">🔑 Safety Lock Enforcement:</h4>
+        <p style="font-size: 0.9rem; margin-bottom: 0; line-height: 1.5;">
+          All developer console overrides or simulation flags configured locally (such as <code>window.__FOUNDATION_DEV_BYPASS__</code> or <code>store.state.devMode</code>) are strictly isolated client-side and never propagate past server-verified Firestore rules or edge API session-token verifications. Security boundaries remain 100% active at all times.
+        </p>
+      </div>
+    </section>
+  </main>
+</div>

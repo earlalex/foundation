@@ -108,6 +108,8 @@ export class Router {
     try {
       if (cleanPath === '/admin') {
         await import('../pages/admin/admin.js');
+      } else if (cleanPath === '/docs') {
+        await import('../pages/docs/docs.js');
       } else if (cleanPath === '/about') {
         await import('../pages/about/about.js');
       } else if (cleanPath === '/gallery') {
