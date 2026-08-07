@@ -17,16 +17,42 @@
     </div>
   </section>
 
-  <!-- Category Filter Tags -->
-  <section style="background: var(--theme-color-surface-alt, #f8fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem 1rem;">
-    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
-      <h3 style="font-size: 0.9rem; font-weight: bold; text-transform: uppercase; color: var(--theme-color-text-secondary, #475569); letter-spacing: 0.05em; margin: 0;">Shop Categories</h3>
-      <div id="shop-filter-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
-        <button class="shop-filter-btn active" data-category="all" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; cursor: pointer;">All Products</button>
-        <button class="shop-filter-btn" data-category="Apothecary" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: white; color: var(--theme-color-text-secondary); cursor: pointer;">Handmade Apothecary</button>
-        <button class="shop-filter-btn" data-category="Merchandise" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: white; color: var(--theme-color-text-secondary); cursor: pointer;">Official Merchandise</button>
-        <button class="shop-filter-btn" data-category="Consulting" style="padding: 6px 12px; border: 1px solid var(--theme-color-border); border-radius: 4px; font-weight: bold; background: white; color: var(--theme-color-text-secondary); cursor: pointer;">Services & Consultations</button>
+  <!-- Interactive Search, Filter & Sort Header -->
+  <section style="background: var(--theme-color-surface-alt, #f8fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 2rem 1rem;">
+    <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; align-items: center;">
+
+      <!-- Real-time Search Bar -->
+      <div style="width: 100%; max-width: 600px; position: relative;">
+        <input type="search" id="shop-search-input" placeholder="🔍 Search products by title, description, or tags..."
+               style="width: 100%; padding: 14px 44px 14px 18px; border: 2px solid var(--theme-color-border, #cbd5e1); border-radius: 30px; outline: none; font-size: 1rem; color: #1a202c; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: border-color 0.2s, box-shadow 0.2s;" />
       </div>
+
+      <!-- Category Filter Tags -->
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center; width: 100%;">
+        <h3 style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--theme-color-text-secondary, #475569); letter-spacing: 0.08em; margin: 0;">Filter By Category</h3>
+        <div id="shop-filter-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+          <button class="shop-filter-btn active" data-category="all" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; cursor: pointer; transition: all 0.2s;">All Products</button>
+          <button class="shop-filter-btn" data-category="Artisanal Merch" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: white; color: var(--theme-color-text-secondary, #4a5568); cursor: pointer; transition: all 0.2s;">Artisanal Merch</button>
+          <button class="shop-filter-btn" data-category="Digital Downloads" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: white; color: var(--theme-color-text-secondary, #4a5568); cursor: pointer; transition: all 0.2s;">Digital Downloads</button>
+          <button class="shop-filter-btn" data-category="Apparel" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: white; color: var(--theme-color-text-secondary, #4a5568); cursor: pointer; transition: all 0.2s;">Apparel</button>
+          <button class="shop-filter-btn" data-category="Event Tickets" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: white; color: var(--theme-color-text-secondary, #4a5568); cursor: pointer; transition: all 0.2s;">Event Tickets</button>
+          <button class="shop-filter-btn" data-category="Audio/Music" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: white; color: var(--theme-color-text-secondary, #4a5568); cursor: pointer; transition: all 0.2s;">Audio/Music</button>
+          <button class="shop-filter-btn" data-category="Apothecary" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 20px; font-weight: bold; background: white; color: var(--theme-color-text-secondary, #4a5568); cursor: pointer; transition: all 0.2s;">Botanical Apothecary</button>
+        </div>
+      </div>
+
+      <!-- Sorting Controls -->
+      <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+        <label for="shop-sort-select" style="font-weight: 800; color: var(--theme-color-text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em;">Sort By:</label>
+        <select id="shop-sort-select" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 6px; background: white; font-weight: bold; color: var(--theme-color-text-secondary, #2d3748); cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <option value="default">Default Arrivals</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="newest">Newest Arrivals</option>
+          <option value="rating-desc">Top Rated</option>
+        </select>
+      </div>
+
     </div>
   </section>
 

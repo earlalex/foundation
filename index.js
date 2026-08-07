@@ -201,8 +201,9 @@ async function boot() {
       viewPath: './pages/home/home.html'
     },
     '/docs': {
-      title: 'Platform Documentation',
-      description: 'Complete technical specifications, zero-build system guides, and integration details.',
+      template: './pages/docs/docs.html',
+      controller: './pages/docs/docs.js',
+      title: 'Platform Documentation & Setup Guide | Foundation',
       viewPath: './pages/docs/docs.html'
     },
     '/about': {
@@ -411,5 +412,7 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/account.js').then(m => m.initAccountPage());
   } else if (e.detail.path === '/videos') {
     import('./pages/videos/videos.js').then(m => m.initVideosPage());
+  } else if (e.detail.path === '/docs') {
+    import('./pages/docs/docs.js').then(m => m.initDocsPage());
   }
 });
