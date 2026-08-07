@@ -347,40 +347,64 @@ class ConfigEngine {
     console.log('[DEBUG CONFIG.JS]: configManager.init() starting...');
     this.#loadFromLocalStorage();
 
-    const fb = this.#activeConfig.firebase;
-    const hasLocalKeys = fb && fb.projectId && fb.projectId !== "YOUR_PROJECT_ID" && fb.projectId !== "demo-foundation-app" && fb.apiKey && fb.apiKey !== "YOUR_API_KEY";
-
-    if (!hasLocalKeys && !this.#activeConfig.isInstalled) {
-      console.warn('[ConfigEngine]: Unconfigured environment. Setup Wizard required.');
-      return false;
+    // 1. Environment Flag Check
+    let envInstalled = false;
+    if (typeof context !== 'undefined' && context.env?.FOUNDATION_INSTALLED === 'true') {
+      envInstalled = true;
+    }
+    if (typeof window !== 'undefined') {
+      if (window.ENV?.FOUNDATION_INSTALLED === 'true' || window.ENV?.FOUNDATION_INSTALLED === true ||
+          window.env?.FOUNDATION_INSTALLED === 'true' || window.env?.FOUNDATION_INSTALLED === true) {
+        envInstalled = true;
+      }
+    }
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.FOUNDATION_INSTALLED === 'true' || process.env.FOUNDATION_INSTALLED === true) {
+        envInstalled = true;
+      }
     }
 
+    // 2. Local Storage Fallback Check
+    const localInstalled = this.#activeConfig && this.#activeConfig.isInstalled === true;
+
+    // 3. Remote Database Flag Check
+    let remoteInstalled = false;
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
       
       const docSnap = await Promise.race([
         getDoc(configRef),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 2000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 6000))
       ]);
 
       if (docSnap && docSnap.exists()) {
         const firestoreData = docSnap.data();
-        this.#activeConfig = { ...defaultConfig, ...firestoreData, isInstalled: true };
+        if (firestoreData.isInstalled === true) {
+          remoteInstalled = true;
+        }
+        // Merge firestore data
+        this.#activeConfig = { ...defaultConfig, ...firestoreData };
+        if (envInstalled || remoteInstalled || localInstalled) {
+          this.#activeConfig.isInstalled = true;
+        }
         localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
-        console.log('[ConfigEngine]: Master configuration verified from Firestore.');
-        return true;
-      } else if (hasLocalKeys) {
-        console.log('[ConfigEngine]: Local setup credentials loaded. Attempting initial sync to Firestore...');
-        await this.syncToFirestore();
-        return true;
-      } else {
-        return false;
+        console.log('[ConfigEngine]: Master configuration synced from Firestore.');
       }
     } catch (err) {
-      console.warn('[ConfigEngine]: Operating with active local setup configuration.', err.message);
-      return this.#activeConfig.isInstalled && this.#activeConfig.adminEmails?.length > 0;
+      console.warn('[ConfigEngine]: Firestore remote check failed, using local/env states:', err.message);
     }
+
+    const finalInstalled = envInstalled || remoteInstalled || localInstalled;
+    if (finalInstalled) {
+      this.#activeConfig.isInstalled = true;
+      localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
+      console.log('[ConfigEngine]: Installation verified. Setup wizard bypassed.');
+      return true;
+    }
+
+    console.warn('[ConfigEngine]: Unconfigured environment. Setup Wizard required.');
+    return false;
   }
 
   /**
