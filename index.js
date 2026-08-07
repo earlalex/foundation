@@ -27,6 +27,11 @@ import './components/global/AdSenseUnit.js';
 import { runSchemaTests, runStoreTests, runRouterTests, runServicesTests } from './tests/index.js';
 import { toast } from './utils/toast.js';
 
+// Critical Web Components
+import './components/global/PhotoGallery.js';
+import './components/global/VideoLibrary.js';
+import './components/global/RadioStreamPlayer.js';
+
 // Page Controllers (Lazily Loaded in Route Splitting / pageLoaded events)
 import { initHomePage } from './pages/home/home.js';
 
@@ -199,6 +204,16 @@ async function boot() {
       description: 'Learn more about the creator and platform architect.',
       viewPath: './pages/about/about.html'
     },
+    '/gallery': {
+      title: 'Photo Gallery',
+      description: 'Instagram-Style Photo Showcase & Blueprints Portfolio.',
+      viewPath: './pages/gallery/gallery.html'
+    },
+    '/videos': {
+      title: 'Video Streaming Library',
+      description: 'YouTube/Twitch-Style Video Streaming Portal & Masterminds.',
+      viewPath: './pages/videos/videos.html'
+    },
     '/events': {
       title: 'Events & Live Meets',
       description: 'Upcoming webinars and interactive video sessions.',
@@ -366,6 +381,8 @@ window.addEventListener('pageLoaded', (e) => {
     initHomePage();
   } else if (e.detail.path === '/about') {
     import('./pages/about/about.js').then(m => m.initAboutPage());
+  } else if (e.detail.path === '/gallery') {
+    import('./pages/gallery/gallery.js').then(m => m.initGalleryPage());
   } else if (e.detail.path === '/events') {
     import('./pages/events/events.js').then(m => m.initEventsPage());
   } else if (e.detail.path === '/contact') {
@@ -384,5 +401,7 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/admin/admin.js').then(m => m.initAdminPage());
   } else if (e.detail.path === '/account') {
     import('./pages/account.js').then(m => m.initAccountPage());
+  } else if (e.detail.path === '/videos') {
+    import('./pages/videos/videos.js').then(m => m.initVideosPage());
   }
 });

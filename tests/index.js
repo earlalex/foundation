@@ -17,6 +17,7 @@ import { runWizardsTests } from './wizards.test.js';
 import { runHooksPluginsTests } from './hooks-plugins.test.js';
 import { runSparkTests } from './spark.test.js';
 import { runUiTests } from './ui.test.js';
+import { runMediaTests } from './media.test.js';
 
 /**
  * Main test runner that executes all Foundation Framework test suites
@@ -46,7 +47,8 @@ export async function runAllTests() {
     { name: 'Setup Wizards & Configuration Guards', runner: runWizardsTests },
     { name: 'System Hooks & Plugin Extensions Registry', runner: runHooksPluginsTests },
     { name: 'Gemini Spark COO Agent Operations', runner: runSparkTests },
-    { name: 'UI Buttons & Interactive Controls', runner: runUiTests }
+    { name: 'UI Buttons & Interactive Controls', runner: runUiTests },
+    { name: 'Photo Gallery, Video Streaming & Radio Player', runner: runMediaTests }
   ];
 
   for (const suite of testSuites) {

@@ -184,6 +184,8 @@ export const defaultConfig = {
     { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
     { label: "About", url: "/about", target: "_self", requiredRole: "public" },
     { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
+    { label: "Gallery", url: "/gallery", target: "_self", requiredRole: "public" },
+    { label: "Videos", url: "/videos", target: "_self", requiredRole: "public" },
     { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
   ],
   footer: {

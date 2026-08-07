@@ -26,6 +26,7 @@ import { initPublicProfileTab } from './admin-public-profile.js';
 // Import newly split domain modules
 import { initAdminIdentity } from './modules/admin-identity.js';
 import { initAdminCms } from './modules/admin-cms.js';
+import { initAdminMedia } from './modules/admin-media.js';
 import { initAdminCommerce } from './modules/admin-commerce.js';
 import { initAdminEventsOps, initAppointmentConfig } from './modules/admin-events-ops.js';
 import { initAdminGrowth, loadChatbotAndVoiceTab } from './modules/admin-growth.js';
@@ -59,6 +60,8 @@ export function initAdminPage() {
 
     // Shift default active tab to cms
     const activeBtn = document.querySelector('.admin-tab.active');
+
+    // Disable media tab as well for editors if you want, but for now we keep it standard
     if (activeBtn && forbiddenTabs.includes(activeBtn.getAttribute('data-tab'))) {
       activeBtn.classList.remove('active');
       const cmsBtn = document.querySelector('.admin-tab[data-tab="cms"]');
@@ -247,6 +250,14 @@ export function initAdminPage() {
       initFn: initPagesTab
     },
     {
+      tabId: 'tab-media',
+      title: "Media & Radio",
+      wizardKey: 'section1',
+      isConfigured: () => configManager.isSection1Configured(),
+      getMissing: () => ["Google Workspace OAuth credentials", "Firebase Project connections", "Cloudflare Pages/Zone endpoints"],
+      initFn: initAdminMedia
+    },
+    {
       tabId: 'tab-cms',
       title: "CMS Publisher",
       wizardKey: 'section4',
@@ -390,6 +401,8 @@ export function initAdminPage() {
       initVasTab();
     } else if (targetTab === 'cms') {
       initAdminCms();
+    } else if (targetTab === 'media') {
+      initAdminMedia();
     }
   });
 
