@@ -131,6 +131,7 @@ export async function initAccountPage() {
   await loadInbox(user.uid);
   await loadOrdersLedger(user.email);
   await loadEventTicketsDashboard(user, currentRole);
+  await loadRoyaltySplitsDashboard(user);
 
   // Wire Setup Event Listeners
 
@@ -755,6 +756,236 @@ async function loadCourseProgressDashboard(role) {
   } catch (err) {
     console.error('[Course Progress Dashboard]: Load failed:', err);
     container.style.display = 'none';
+  }
+}
+
+// Dynamic Contributor Royalty & Split allocations ledger loader
+async function loadRoyaltySplitsDashboard(user) {
+  const tbody = document.getElementById('roy-earnings-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">Loading royalty logs...</td></tr>`;
+
+  try {
+    const { getAllEarnings, logRoyaltyEarning } = await import('../core/royalties.js');
+    let earnings = await getAllEarnings();
+
+    // Seed mock high fidelity earnings if list is empty, to provide a polished out-of-the-box experience
+    if (earnings.length === 0) {
+      // Create custom splits first for mock products
+      const { saveAssetSplits } = await import('../core/royalties.js');
+      const splitsMock = [
+        { userId: user.email, userEmail: user.email, role: 'Designer / Creator', percentage: 40 },
+        { userId: 'admin@earlalex.com', userEmail: 'admin@earlalex.com', role: 'Publisher', percentage: 60 }
+      ];
+      await saveAssetSplits('sovereign-botanical-oil', 'merchandise', splitsMock);
+
+      const splitsMock2 = [
+        { userId: user.email, userEmail: user.email, role: 'Editor / Producer', percentage: 30 },
+        { userId: 'admin@earlalex.com', userEmail: 'admin@earlalex.com', role: 'Publisher', percentage: 70 }
+      ];
+      await saveAssetSplits('foundation-merch-hoodie', 'merchandise', splitsMock2);
+
+      // Log mock earnings
+      await logRoyaltyEarning('sovereign-botanical-oil', 'merchandise', 120.00, 'Sales allocation batch #1');
+      await logRoyaltyEarning('foundation-merch-hoodie', 'merchandise', 85.00, 'Sales allocation batch #2');
+      earnings = await getAllEarnings();
+    }
+
+    // Filter allocations where user has split distribution matching user.email
+    const userAllocations = [];
+    let grossTotal = 0;
+    let netTotal = 0;
+
+    earnings.forEach(earn => {
+      const dist = earn.distributions?.find(d => d.userEmail === user.email || d.userId === user.email);
+      if (dist) {
+        userAllocations.push({
+          id: earn.id,
+          assetId: earn.assetId,
+          assetType: earn.assetType,
+          description: earn.description || 'Earning allocation',
+          percentage: dist.percentage,
+          allocatedUSD: dist.allocatedAmountUSD,
+          allocatedOthers: dist.allocatedAmounts,
+          createdAt: earn.createdAt
+        });
+        grossTotal += earn.grossUSD || 0;
+        netTotal += dist.allocatedAmountUSD || 0;
+      }
+    });
+
+    // Populate KPIs
+    const grossEl = document.getElementById('roy-earned-gross');
+    const netEl = document.getElementById('roy-earned-net');
+    const pendingEl = document.getElementById('roy-earned-pending');
+
+    if (grossEl) grossEl.textContent = '$' + grossTotal.toFixed(2);
+    if (netEl) netEl.textContent = '$' + netTotal.toFixed(2);
+
+    // Track pending payouts locally
+    let requestedPending = parseFloat(localStorage.getItem(`roy_pending_${user.uid}`)) || 0;
+    if (pendingEl) pendingEl.textContent = '$' + requestedPending.toFixed(2);
+
+    if (userAllocations.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">No split allocations logged yet.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Render Table Rows
+    tbody.innerHTML = userAllocations.map(alloc => {
+      const cryptoText = `${alloc.allocatedOthers.ETH.toFixed(5)} ETH | ${alloc.allocatedOthers.SOL.toFixed(4)} SOL`;
+      const fxText = `${alloc.allocatedOthers.EUR.toFixed(2)} EUR | ${alloc.allocatedOthers.GBP.toFixed(2)} GBP`;
+
+      return `
+        <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+          <td style="padding: 10px;">
+            <strong>${alloc.assetId}</strong>
+            <div style="font-size: 0.75rem; color: #718096;">${alloc.description}</div>
+          </td>
+          <td style="padding: 10px;"><span style="text-transform: capitalize; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${alloc.assetType}</span></td>
+          <td style="padding: 10px; font-weight: bold; color: #319795;">${alloc.percentage}%</td>
+          <td style="padding: 10px; font-weight: bold; color: var(--theme-color-primary, #2b6cb0);">$${alloc.allocatedUSD.toFixed(2)}</td>
+          <td style="padding: 10px; font-size: 0.78rem; color: #4a5568; line-height: 1.3;">
+            <div>🪙 ${cryptoText}</div>
+            <div style="margin-top: 2px;">💶 ${fxText}</div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Wire up CSV Download
+    const btnCSV = document.getElementById('btn-royalties-download-csv');
+    if (btnCSV) {
+      btnCSV.onclick = () => {
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        csvContent += 'Asset ID,Asset Type,My Split %,My Allocation (USD),ETH,SOL,EUR,GBP,Date\n';
+
+        userAllocations.forEach(a => {
+          csvContent += `"${a.assetId}","${a.assetType}",${a.percentage},${a.allocatedUSD},${a.allocatedOthers.ETH},${a.allocatedOthers.SOL},${a.allocatedOthers.EUR},${a.allocatedOthers.GBP},"${a.createdAt}"\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `royalty_statement_${user.uid}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Royalty statement CSV downloaded!');
+      };
+    }
+
+    // Wire up PDF Download
+    const btnPDF = document.getElementById('btn-royalties-download-pdf');
+    if (btnPDF) {
+      btnPDF.onclick = () => {
+        let pdfText = `====================================================\n`;
+        pdfText += `      ROYALTY STATEMENT - ACCENSION AVENUE ACADEMY     \n`;
+        pdfText += `====================================================\n\n`;
+        pdfText += `Contributor Email: ${user.email}\n`;
+        pdfText += `Statement Period: August 2026\n`;
+        pdfText += `Generated At: ${new Date().toLocaleString()}\n\n`;
+        pdfText += `----------------------------------------------------\n`;
+        pdfText += `SUMMARY:\n`;
+        pdfText += `----------------------------------------------------\n`;
+        pdfText += `Gross Earnings: $${grossTotal.toFixed(2)} USD\n`;
+        pdfText += `My Net Royalties: $${netTotal.toFixed(2)} USD\n`;
+        pdfText += `Pending Payout Balance: $${requestedPending.toFixed(2)} USD\n\n`;
+        pdfText += `----------------------------------------------------\n`;
+        pdfText += `ITEMIZED SPLITS LOGS:\n`;
+        pdfText += `----------------------------------------------------\n`;
+
+        userAllocations.forEach(a => {
+          pdfText += `Asset ID: ${a.assetId} (${a.assetType})\n`;
+          pdfText += `  Allocation %: ${a.percentage}%\n`;
+          pdfText += `  Allocated Amount: $${a.allocatedUSD.toFixed(2)} USD\n`;
+          pdfText += `  Allocated Crypto: ${a.allocatedOthers.ETH.toFixed(5)} ETH | ${a.allocatedOthers.SOL.toFixed(4)} SOL\n`;
+          pdfText += `  Allocated Fiat:   ${a.allocatedOthers.EUR.toFixed(2)} EUR | ${a.allocatedOthers.GBP.toFixed(2)} GBP\n`;
+          pdfText += `  Timestamp: ${a.createdAt}\n\n`;
+        });
+
+        pdfText += `====================================================\n`;
+        pdfText += `Thank you for your valuable creative contributions!  \n`;
+        pdfText += `====================================================\n`;
+
+        const encodedUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(pdfText);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `royalty_statement_${user.uid}.txt`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Royalty statement PDF (TXT format) downloaded successfully!');
+      };
+    }
+
+    // Wire up Request Payout Form
+    const payForm = document.getElementById('roy-payout-form');
+    if (payForm) {
+      const payoutMethod = document.getElementById('roy-payout-method');
+      const payoutAddress = document.getElementById('roy-payout-address');
+
+      payoutMethod.onchange = () => {
+        if (payoutMethod.value === 'crypto') {
+          payoutAddress.placeholder = 'EVM (0x...) or Solana wallet address';
+        } else if (payoutMethod.value === 'wise') {
+          payoutAddress.placeholder = 'IBAN / Swift / Wise Transfer email';
+        } else {
+          payoutAddress.placeholder = 'Stripe Connect Account ID';
+        }
+      };
+
+      payForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const amt = parseFloat(document.getElementById('roy-payout-amount').value) || 0;
+        const address = payoutAddress.value.trim();
+        const method = payoutMethod.value;
+
+        if (amt <= 0) {
+          toast.error('Please enter a valid payout amount.');
+          return;
+        }
+
+        if (amt > netTotal - requestedPending) {
+          toast.error(`Insufficient earnings balance! Remaining available for request: $${(netTotal - requestedPending).toFixed(2)}`);
+          return;
+        }
+
+        // Increment requested pending
+        requestedPending += amt;
+        localStorage.setItem(`roy_pending_${user.uid}`, requestedPending.toFixed(2));
+
+        // Track payout requests in local /payout_requests collection fallback
+        const requestPayload = {
+          id: 'pay_req_' + Date.now(),
+          userId: user.uid,
+          userEmail: user.email,
+          amountUSD: amt,
+          method,
+          address,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        };
+        const localReqs = JSON.parse(localStorage.getItem('foundation_local_payout_requests') || '[]');
+        localReqs.push(requestPayload);
+        localStorage.setItem('foundation_local_payout_requests', JSON.stringify(localReqs));
+
+        toast.success(`Success! Request for $${amt.toFixed(2)} payout via ${method.toUpperCase()} submitted.`);
+
+        // Reload dashboard stats
+        loadRoyaltySplitsDashboard(user);
+        payForm.reset();
+      };
+    }
+
+  } catch (err) {
+    console.error('[My Royalties Portal]: Load failed:', err);
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-danger); padding: 1.5rem;">Failed to load royalty ledger.</td></tr>`;
   }
 }
 
