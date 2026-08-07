@@ -47,6 +47,28 @@ const app = getFirebaseApp();
 export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+let isSigningIn = false;
+
+export async function loginWithGoogle() {
+  if (isSigningIn) {
+    console.warn('[Auth]: Google sign-in operation already in progress. Ignoring duplicate trigger.');
+    return;
+  }
+  isSigningIn = true;
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    return result;
+  } catch (error) {
+    if (error.code !== 'auth/popup-closed-by-user') {
+      console.error('[Auth]: Google login failed:', error);
+    }
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+}
+
 /**
  * AuthManager handles Firebase authentication with Google sign-in
  * Manages user state in the store, including admin status based on configured admin emails
@@ -209,6 +231,7 @@ export class AuthManager {
 
   /**
    * Sign in with Google popup
+   * Delegates to the standalone loginWithGoogle function with debounce lock.
    * @returns {Promise<Object>} Firebase user object
    * @throws {Error} If sign-in fails
    */
@@ -240,10 +263,16 @@ export class AuthManager {
     sessionStorage.setItem('firebase_auth_in_progress', 'true');
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = await loginWithGoogle();
       sessionStorage.removeItem('firebase_auth_in_progress');
-      return result.user;
+      if (result) {
+        return result.user;
+      }
+      return null;
     } catch (err) {
+      if (!err) {
+        return null;
+      }
       const errorCode = err.code || '';
       const errorMessage = err.message || '';
 

@@ -2,207 +2,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================================================================
-    // HELPER FUNCTIONS
-    // =========================================================================
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.email == 'admin@earlalex.com' ||
-        request.auth.token.role == 'admin' ||
-        request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.adminEmails
+        request.auth.token.role == 'admin'
       );
     }
 
-    function isEditor() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'editor' || 
-        isAdmin()
-      );
-    }
-
-    function isSelf(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // =========================================================================
-    // 1. MASTER CONFIGURATION & SETTINGS
-    // =========================================================================
     match /settings/config {
-      allow read: if true; // Public needs site identity & brand settings
-      allow write: if !exists(/databases/$(database)/documents/settings/config) || isAdmin();
-    }
-
-    // =========================================================================
-    // 2. USER DIRECTORY, PROFILES & AFFILIATE LOGS
-    // =========================================================================
-    match /users/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-
-      // Course Progress Subcollection
-      match /course_progress/{courseId} {
-        allow read, write: if isAuthenticated() && (isSelf(userId) || isAdmin());
-      }
-
-      // User Tickets Subcollection
-      match /tickets/{ticketId} {
-        allow read: if isAuthenticated() && (isSelf(userId) || isAdmin() || isEditor());
-        allow write: if isAuthenticated() && (isSelf(userId) || isAdmin());
-      }
-    }
-
-    // =========================================================================
-    // 3. INVOICES, PURCHASES & ORDERS
-    // =========================================================================
-    match /invoices/{invoiceId} {
-      allow read: if isAuthenticated() && (
-        resource.data.customerEmail == request.auth.token.email || 
-        resource.data.userId == request.auth.uid ||
-        isAdmin() ||
-        isEditor()
-      );
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /purchases/{purchaseId} {
-      allow read: if isAuthenticated() && (
-        resource.data.email == request.auth.token.email || 
-        resource.data.userId == request.auth.uid ||
-        isAdmin() ||
-        isEditor()
-      );
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /downloads/{downloadId} {
-      allow read: if isAuthenticated() && (
-        resource.data.userEmail == request.auth.token.email || 
-        isAdmin()
-      );
-      allow create, update: if isAuthenticated();
-      allow delete: if isAdmin();
-    }
-
-    // =========================================================================
-    // 4. EVENT REGISTRATIONS & TICKET PASSES
-    // =========================================================================
-    match /registrations/{registrationId} {
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.email == request.auth.token.email ||
-        isEditor() || 
-        isAdmin()
-      );
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
-    }
-
-    // =========================================================================
-    // 5. CMS CONTENT FEED & PUBLICATIONS (Blogs, Books, Courses, Events, etc.)
-    // =========================================================================
-    match /content/{contentId} {
-      allow read: if resource.data.access.visibility == 'public' || 
-                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') || 
-                  (isAuthenticated() && resource.data.access.visibility == 'subscriber') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'member') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'paid') ||
-                  isAdmin() || 
-                  isEditor();
-      allow write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 6. CUSTOM DYNAMIC PAGES (GrapesJS / Block Editor Pages)
-    // =========================================================================
-    match /pages/{pageId} {
-      allow read: if resource.data.access.visibility == 'public' ||
-                  (isAuthenticated() && resource.data.access.visibility == 'authenticated') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'subscriber') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'member') ||
-                  (isAuthenticated() && resource.data.access.visibility == 'paid') ||
-                  isAdmin() || 
-                  isEditor();
-      allow write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 7. MARKETING AUTOMATION (Workflows, Journeys, Segments & Email Templates)
-    // =========================================================================
-    match /marketing_workflows/{workflowId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /marketing_segments/{segmentId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /marketing_journeys/{journeyId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /email_templates/{templateId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 8. SECURITY AUDITS & SCAN LOGS (OWASP ZAP, VirusTotal)
-    // =========================================================================
-    match /security_scans/{scanId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /security_audits/{auditId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 9. DELEGATED VA MANAGEMENT & KANBAN TASKS
-    // =========================================================================
-    match /kanban_tasks/{taskId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /va_candidates/{candidateId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-    match /vault_credentials/{credentialId} {
-      allow read, write: if isAdmin() || isEditor();
-    }
-
-    // =========================================================================
-    // 10. FINANCIAL RECORDS, EXPENSES, PAYROLL & BUDGETS (Admins Only)
-    // =========================================================================
-    match /finances_expenses/{expenseId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_payroll/{payrollId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_budgets/{budgetId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances_employees/{employeeId} {
-      allow read, write: if isAdmin();
-    }
-    match /finances/{docId} {
-      allow read, write: if isAdmin();
-      match /expenses/{expenseId} {
-        allow read, write: if isAdmin();
-      }
-      match /payroll/{payrollId} {
-        allow read, write: if isAdmin();
-      }
-      match /budgets/{budgetId} {
-        allow read, write: if isAdmin();
-      }
-    }
-    match /affiliate_commissions/{commissionId} {
-      allow read: if isAuthenticated() && (resource.data.affiliateId == request.auth.uid || isAdmin());
+      allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Fallback rule to ensure authenticated admins are never locked out of arbitrary collections
+    match /pages/{pageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /content/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
     match /{document=**} {
       allow read, write: if isAdmin();
     }
-
   }
 }

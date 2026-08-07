@@ -44,11 +44,11 @@ self.addEventListener('fetch', (event) => {
   // Ignore non-http/https schemes (e.g. chrome-extension://) to prevent unsupported scheme errors
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // Bypass SW for API routes & Google Auth/Identity script requests
+  // Bypass Service Worker for external APIs and CDN domains
   if (url.pathname.startsWith('/api/') ||
-      url.hostname === 'apis.google.com' ||
-      url.hostname === 'accounts.google.com' ||
-      url.hostname.endsWith('.google.com')) {
+      url.hostname.includes('google') ||
+      url.hostname.includes('unsplash') ||
+      url.hostname.includes('cloudflare')) {
     return;
   }
 
