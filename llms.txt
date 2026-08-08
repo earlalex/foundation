@@ -1,0 +1,15 @@
+# Foundation Business OS & Zero-Build Web Platform
+
+> Foundation is a zero-build JAMstack platform providing e-commerce, media streaming, course delivery, and backoffice tools.
+
+## Core Endpoints & Pages
+- Main Site: [https://foundation-5b8.pages.dev/](https://foundation-5b8.pages.dev/)
+- Storefront Catalog: [https://foundation-5b8.pages.dev/shop](https://foundation-5b8.pages.dev/shop)
+- Platform Documentation: [https://foundation-5b8.pages.dev/docs](https://foundation-5b8.pages.dev/docs)
+- Sitemap Feed: [https://foundation-5b8.pages.dev/sitemap.xml](https://foundation-5b8.pages.dev/sitemap.xml)
+- RSS Broadcasting Feed: [https://foundation-5b8.pages.dev/rss.xml](https://foundation-5b8.pages.dev/rss.xml)
+
+## Interactive Capabilities
+- Searchable Storefront: Real-time product search and checkout via Stripe and Web3 crypto wallets.
+- Universal Royalty Engine: Automated percentage splits for contributors on content and merch.
+- Web Radio & Video Portal: 24/7 continuous stream audio player and gated VOD video portal.

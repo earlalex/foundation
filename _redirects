@@ -3,4 +3,5 @@
 /feed          /api/rss         200
 /api/*         /api/:splat      200
 /ads.txt       /ads.txt.js      200
+/llms.txt      /llms.txt        200
 /*             /index.html      200

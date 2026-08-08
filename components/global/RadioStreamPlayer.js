@@ -296,7 +296,8 @@ export class RadioStreamPlayer extends HTMLElement {
 
         <div class="radio-right">
           <!-- Playlist selection queue -->
-          <select class="playlist-dropdown" id="radio-playlist-selector">
+          <label for="radio-playlist-selector" class="sr-only">Select Radio Channel</label>
+          <select class="playlist-dropdown" id="radio-playlist-selector" aria-label="Select Radio Channel">
             <option value="-1">📡 Play Live Web Radio Stream</option>
             ${this.playlist.map((track, idx) => `
               <option value="${idx}">🎵 ${track.title}</option>
@@ -305,7 +306,8 @@ export class RadioStreamPlayer extends HTMLElement {
 
           <div class="volume-container">
             <button class="radio-btn" id="btn-radio-mute" style="font-size: 1rem;">🔊</button>
-            <input type="range" class="volume-slider" id="radio-volume" min="0" max="1" step="0.05" value="0.8" />
+            <label for="radio-volume" class="sr-only">Radio Stream Volume</label>
+            <input type="range" id="radio-volume" class="volume-slider" aria-label="Radio Stream Volume" min="0" max="100" step="5" value="80" />
           </div>
         </div>
       </div>
@@ -354,7 +356,7 @@ export class RadioStreamPlayer extends HTMLElement {
     if (volumeSlider) {
       volumeSlider.oninput = (e) => {
         if (!this.audio) return;
-        this.audio.volume = e.target.value;
+        this.audio.volume = e.target.value / 100;
       };
     }
 

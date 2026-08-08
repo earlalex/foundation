@@ -22,10 +22,11 @@
     <div style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; align-items: center;">
 
       <!-- Real-time Search Bar -->
-      <div style="width: 100%; max-width: 600px; position: relative;">
-        <input type="search" id="shop-search-input" placeholder="🔍 Search products by title, description, or tags..."
+      <form id="shop-search-form" data-webmcp-tool="shop_search_filter_submit" style="width: 100%; max-width: 600px; position: relative;" onsubmit="event.preventDefault();">
+        <label for="shop-search-input" class="sr-only">Search products</label>
+        <input type="search" id="shop-search-input" data-webmcp-input="search_query" aria-label="Search products" placeholder="🔍 Search products by title, description, or tags..."
                style="width: 100%; padding: 14px 44px 14px 18px; border: 2px solid var(--theme-color-border, #cbd5e1); border-radius: 30px; outline: none; font-size: 1rem; color: #1a202c; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: border-color 0.2s, box-shadow 0.2s;" />
-      </div>
+      </form>
 
       <!-- Category Filter Tags -->
       <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center; width: 100%;">
@@ -44,7 +45,7 @@
       <!-- Sorting Controls -->
       <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
         <label for="shop-sort-select" style="font-weight: 800; color: var(--theme-color-text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.05em;">Sort By:</label>
-        <select id="shop-sort-select" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 6px; background: white; font-weight: bold; color: var(--theme-color-text-secondary, #2d3748); cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        <select id="shop-sort-select" aria-label="Sort By" style="padding: 8px 16px; border: 1px solid var(--theme-color-border, #cbd5e1); border-radius: 6px; background: white; font-weight: bold; color: var(--theme-color-text-secondary, #2d3748); cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
           <option value="default">Default Arrivals</option>
           <option value="price-asc">Price: Low to High</option>
           <option value="price-desc">Price: High to Low</option>
