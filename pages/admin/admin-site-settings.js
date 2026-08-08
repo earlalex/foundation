@@ -190,6 +190,8 @@ export function initSiteSettingsTab() {
   const siteDescriptionInput = document.getElementById('site-description');
   const lookerUrlInput = document.getElementById('looker-studio-url');
   const headerScriptsInput = document.getElementById('header-scripts');
+  const siteHeroBannerUrlInput = document.getElementById('site-hero-banner-url');
+  const featureImagenToggle = document.getElementById('feature-imagen-toggle');
 
   if (siteTitleInput) siteTitleInput.value = currentCfg.siteTitle || '';
   if (siteTaglineInput) siteTaglineInput.value = currentCfg.siteTagline || '';
@@ -197,6 +199,8 @@ export function initSiteSettingsTab() {
   if (siteDescriptionInput) siteDescriptionInput.value = currentCfg.siteDescription || '';
   if (lookerUrlInput) lookerUrlInput.value = currentCfg.thirdParty?.lookerStudioEmbedUrl || '';
   if (headerScriptsInput) headerScriptsInput.value = currentCfg.headerScripts || '';
+  if (siteHeroBannerUrlInput) siteHeroBannerUrlInput.value = currentCfg.siteHeroBannerUrl || '';
+  if (featureImagenToggle) featureImagenToggle.checked = currentCfg.features?.imagenAiGenerator !== false;
 
   // Initialize form validator
   const siteSettingsForm = document.getElementById('site-settings-form');
@@ -241,8 +245,34 @@ export function initSiteSettingsTab() {
         siteDomain: siteDomainInput.value,
         siteDescription: siteDescriptionInput.value,
         siteLogo: logoAsset,
-        siteFavicon: faviconAsset
+        siteFavicon: faviconAsset,
+        siteHeroBannerUrl: siteHeroBannerUrlInput ? siteHeroBannerUrlInput.value : '',
+        features: {
+          ...(currentCfg.features || {}),
+          imagenAiGenerator: featureImagenToggle ? featureImagenToggle.checked : true
+        }
       };
+
+      // Auto-update /pages/home hero image if we generated/saved one!
+      if (siteHeroBannerUrlInput && siteHeroBannerUrlInput.value) {
+        try {
+          const { contentDB } = await import('../../core/db.js');
+          let page = await contentDB.getCustomPageBySlug('home');
+          if (!page) {
+            page = {
+              id: 'home',
+              slug: 'home',
+              title: 'Home Page',
+              access: { visibility: 'public' }
+            };
+          }
+          if (!page.hero) page.hero = {};
+          page.hero.heroImageUrl = siteHeroBannerUrlInput.value;
+          await contentDB.saveCustomPage(page);
+        } catch (err) {
+          console.warn('Failed to auto-sync generated hero banner to /pages/home:', err);
+        }
+      }
 
       const success = await configManager.saveToFirebase(updatedSiteConfig);
       if (success) {
@@ -339,6 +369,96 @@ export function initSiteSettingsTab() {
         btnPing.textContent = 'Ping Search Engines';
       }
     });
+  }
+
+  // --- GOOGLE IMAGEN 3 API SITE HERO GENERATION ---
+  const btnSiteGenerateHero = document.getElementById('btn-site-generate-hero');
+  if (btnSiteGenerateHero) {
+    btnSiteGenerateHero.onclick = async (e) => {
+      e.preventDefault();
+      if (configManager.current.features?.imagenAiGenerator === false) {
+        toast.error("Imagen AI Generator feature is disabled in Site Settings.");
+        return;
+      }
+      const tagInput = document.getElementById('site-tagline');
+      const tag = tagInput ? tagInput.value.trim() : 'modern minimal web design';
+
+      btnSiteGenerateHero.disabled = true;
+      btnSiteGenerateHero.textContent = "Generating...";
+      try {
+        const { generateHeroBackground } = await import('../../utils/ai-imagen.js');
+        const imgUrl = await generateHeroBackground(tag);
+        const urlInput = document.getElementById('site-hero-banner-url');
+        if (urlInput) {
+          urlInput.value = imgUrl;
+          toast.success("Successfully generated Hero Banner background image!");
+        }
+      } catch (err) {
+        console.error("[Imagen Site Hero Error]:", err);
+        toast.error("Failed to generate background image.");
+      } finally {
+        btnSiteGenerateHero.disabled = false;
+        btnSiteGenerateHero.textContent = "✨ Generate AI Visual Asset with Imagen";
+      }
+    };
+  }
+
+  // --- AI TEST REVIEWS GENERATOR INTEGRATION ---
+  const btnGenTestReviews = document.getElementById('btn-generate-ai-test-reviews');
+  if (btnGenTestReviews) {
+    btnGenTestReviews.onclick = async (e) => {
+      e.preventDefault();
+      if (configManager.current.features?.imagenAiGenerator === false) {
+        toast.error("Imagen AI Generator feature is disabled in Site Settings.");
+        return;
+      }
+
+      btnGenTestReviews.disabled = true;
+      btnGenTestReviews.textContent = "Generating AI Reviews...";
+      try {
+        const { generateImage } = await import('../../utils/ai-imagen.js');
+
+        const reviewTemplates = [
+          { name: "Jessica Vance", text: "Truly mind-blowing zero-build performance! The page loads in milliseconds. Love the architecture." },
+          { name: "Liam O'Connor", text: "Secure, reliable, and completely local-first. Zero trust model is implemented flawlessly." },
+          { name: "Aria Sterling", text: "The visual GrapesJS integration works like a charm. Truly modern ES modules standards!" }
+        ];
+
+        const generatedReviews = [];
+        for (const rev of reviewTemplates) {
+          const avatarUrl = await generateImage(`Professional centered avatar headshot of ${rev.name}, clean studio lighting, neutral background`, '1:1');
+          generatedReviews.push({
+            authorAttribution: {
+              displayName: rev.name,
+              photoUri: avatarUrl
+            },
+            rating: 5,
+            text: {
+              text: rev.text
+            },
+            relativePublishTimeDescription: "Just now"
+          });
+        }
+
+        // Save generated reviews list to site config features.aiGeneratedReviews
+        const updatedConfig = {
+          ...configManager.current,
+          features: {
+            ...(configManager.current.features || {}),
+            aiGeneratedReviews: generatedReviews
+          }
+        };
+
+        await configManager.saveToFirebase(updatedConfig);
+        toast.success("Successfully generated 3 unique AI Test Reviews with headshot head avatars!");
+      } catch (err) {
+        console.error("[Gen Test Reviews Error]:", err);
+        toast.error("Failed to generate AI test reviews.");
+      } finally {
+        btnGenTestReviews.disabled = false;
+        btnGenTestReviews.textContent = "✨ Generate AI Test Reviews";
+      }
+    };
   }
 }
 

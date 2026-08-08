@@ -704,6 +704,21 @@
               <input type="file" id="site-favicon" accept="image/x-icon,image/png" style="width: 100%; padding: 6px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-size: 0.85rem; box-sizing: border-box;" />
             </div>
           </div>
+          <div style="margin-top: 1rem; margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Hero Banner Background Image URL:</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="text" id="site-hero-banner-url" placeholder="https://unsplash.com/photo-..." style="flex: 1; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+              <button type="button" id="btn-site-generate-hero" class="btn-primary" style="background: #319795; font-size: 0.85rem; padding: 8px 14px; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap;">
+                ✨ Generate AI Visual Asset with Imagen
+              </button>
+            </div>
+          </div>
+          <div style="margin-top: 1rem; margin-bottom: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; cursor: pointer;">
+              <input type="checkbox" id="feature-imagen-toggle" checked style="cursor: pointer;" />
+              Enable Google Imagen (Imagen 3 API) AI Generator
+            </label>
+          </div>
           <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
             Save Identity Settings
           </button>
@@ -1623,6 +1638,7 @@
             <button type="submit" class="btn-primary">Save Google Business & Ads Settings</button>
             <button type="button" id="btn-test-gmb-reviews" class="btn-primary" style="background: #3182ce; font-size: 0.85rem;">Preview GMB Reviews</button>
             <button type="button" id="btn-test-review-toast" class="btn-primary" style="background: #805ad5; font-size: 0.85rem;">Test Review Toast Prompt</button>
+            <button type="button" id="btn-generate-ai-test-reviews" class="btn-primary" style="background: #38a169; font-size: 0.85rem;">✨ Generate AI Test Reviews</button>
           </div>
         </form>
 
@@ -1759,6 +1775,16 @@
               <textarea id="product-payment-terms" placeholder="Net 30 days from invoice date. Late payments subject to 1.5% monthly fee." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
             </div>
 
+            <div style="min-width: 0; margin-top: 0.5rem; margin-bottom: 1rem;">
+              <label style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem;">Product Image URL:</label>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="text" id="product-image-url" placeholder="https://unsplash.com/photo-..." style="flex: 1; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+                <button type="button" id="btn-product-generate-media" class="btn-primary" style="background: #319795; font-size: 0.85rem; padding: 8px 14px; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap;">
+                  ✨ Generate AI Visual Asset with Imagen
+                </button>
+              </div>
+            </div>
+
             <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
               Create Product
             </button>
@@ -1767,7 +1793,12 @@
 
         <!-- Products List -->
         <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
-          <h2 style="margin-top: 0; font-size: 1.25rem;">Existing Products</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 style="margin: 0; font-size: 1.25rem;">Existing Products</h2>
+            <button type="button" id="btn-generate-ai-test-products" class="btn-primary" style="background: #38a169; font-size: 0.85rem; padding: 8px 14px; border: none; cursor: pointer; border-radius: 4px; font-weight: bold;">
+              ✨ Generate AI Test Products
+            </button>
+          </div>
           <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
             <thead>
               <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); text-align: left;">
@@ -2874,8 +2905,17 @@
             </div>
           </div>
         </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Featured Image URL (Or generate via AI):</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="text" id="cms-featured-image-url" placeholder="https://unsplash.com/photo-..." style="flex: 1; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <button type="button" id="btn-cms-generate-media" class="btn-primary" style="background: #319795; font-size: 0.85rem; padding: 8px 14px; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap;">
+              ✨ Generate AI Visual Asset with Imagen
+            </button>
+          </div>
+        </div>
         <div>
-          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Attach Featured Media (Auto-Uploads to Google Drive):</label>
+          <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Or Attach Featured Media (Auto-Uploads to Google Drive):</label>
           <input type="file" id="media-file" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px;" />
         </div>
         <div>
