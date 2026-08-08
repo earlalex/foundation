@@ -743,3 +743,30 @@ content-card img, bento-card img,
   object-fit: cover;
   width: 100%;
 }
+
+/* --- Floating Chat Widget Offsets & Transitions (Directive 2) --- */
+:root {
+  --chat-widget-bottom: 20px;
+}
+
+body.has-sticky-player {
+  --chat-widget-bottom: 95px;
+}
+
+chat-widget {
+  position: fixed;
+  bottom: var(--chat-widget-bottom, 20px);
+  right: 20px;
+  z-index: 10000;
+  transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mutual Exclusion and Layering */
+body.modal-open chat-widget,
+body.cart-drawer-open chat-widget,
+body.modal-open .chat-widget-container,
+body.cart-drawer-open .chat-widget-container {
+  opacity: 0.3 !important;
+  pointer-events: none !important;
+  z-index: 100 !important;
+}

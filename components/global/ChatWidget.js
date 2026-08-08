@@ -9,6 +9,7 @@ export class ChatWidget extends HTMLElement {
     this.history = [];
     this.isOpen = false;
     this.isAdmin = false;
+    this.isTucked = false;
     this.storageKey = 'foundation_chat_history';
     const uniqueId = Math.random().toString(36).substring(2, 9);
     this.chatFormId = `foundation-chat-form-${uniqueId}`;
@@ -28,11 +29,16 @@ export class ChatWidget extends HTMLElement {
       return;
     }
 
+    // Load tucked state from sessionStorage
+    if (sessionStorage.getItem('foundation_chat_tucked') === 'true') {
+      this.isTucked = true;
+    }
+
     // Load chat history from localStorage
     this.loadHistoryFromStorage();
 
     // Subscribe to store updates to dynamically adjust persona when auth / dev bypass state changes
-    store.subscribe((state) => {
+    this.unsubscribe = store.subscribe((state) => {
       const currentlyAdmin = !!(state.user?.isAdmin || state.devMode || window.__FOUNDATION_DEV_BYPASS__);
       if (currentlyAdmin !== this.isAdmin) {
         this.isAdmin = currentlyAdmin;
@@ -46,6 +52,45 @@ export class ChatWidget extends HTMLElement {
     this.setupEventListeners();
     this.updatePersona();
     this.renderHistory();
+
+    // Setup MutationObserver to watch for modal or cart sidebar open
+    this.observer = new MutationObserver(() => {
+      const cartSidebar = document.getElementById('cart-sidebar');
+      const isCartOpen = cartSidebar && (cartSidebar.style.right === '0px' || cartSidebar.style.right === '0');
+
+      const bookingModal = document.getElementById('booking-modal');
+      const isBookingModalOpen = bookingModal && bookingModal.style.display && bookingModal.style.display !== 'none';
+
+      const hasModalClass = document.body.classList.contains('modal-open');
+      const hasDrawerClass = document.body.classList.contains('cart-drawer-open');
+
+      if (isCartOpen && !hasDrawerClass) {
+        document.body.classList.add('cart-drawer-open');
+      } else if (!isCartOpen && hasDrawerClass) {
+        document.body.classList.remove('cart-drawer-open');
+      }
+
+      if (isBookingModalOpen && !hasModalClass) {
+        document.body.classList.add('modal-open');
+      } else if (!isBookingModalOpen && hasModalClass && !document.querySelector('.modal-overlay')) {
+        document.body.classList.remove('modal-open');
+      }
+    });
+
+    this.observer.observe(document.body, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['style', 'class']
+    });
+  }
+
+  disconnectedCallback() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+    if (this.observer) {
+      this.observer.disconnect();
+    }
   }
 
   loadHistoryFromStorage() {
@@ -102,10 +147,11 @@ export class ChatWidget extends HTMLElement {
       <style>
         .chat-widget-container {
           position: fixed;
-          bottom: 20px;
+          bottom: var(--chat-widget-bottom, 20px);
           right: 20px;
           z-index: 10000;
           font-family: system-ui, -apple-system, sans-serif;
+          transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .chat-window {
           display: none;
@@ -138,8 +184,13 @@ export class ChatWidget extends HTMLElement {
         }
       </style>
       <div class="chat-widget-container">
+        <!-- Docked/Minimized Edge Tab -->
+        <div id="chat-docked-tab" style="display: ${this.isTucked ? 'flex' : 'none'}; position: fixed; right: 0; bottom: 150px; width: 30px; height: 110px; background: ${primaryColor}; color: white; border-radius: 6px 0 0 6px; cursor: pointer; align-items: center; justify-content: center; writing-mode: vertical-rl; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; box-shadow: -2px 4px 10px rgba(0,0,0,0.15); z-index: 10000; padding: 4px; text-orientation: mixed; white-space: nowrap;">
+          💬 ASSISTANT
+        </div>
+
         <!-- Floating Toggle Button -->
-        <button id="chat-toggle-btn" aria-label="Toggle AI Assistant" style="width: 56px; height: 56px; border-radius: 50%; background: ${primaryColor}; color: white; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;">
+        <button id="chat-toggle-btn" aria-label="Toggle AI Assistant" style="width: 56px; height: 56px; border-radius: 50%; background: ${primaryColor}; color: white; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: ${this.isTucked ? 'none' : 'flex'}; align-items: center; justify-content: center; transition: transform 0.2s;">
           <svg id="chat-icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
@@ -158,7 +209,10 @@ export class ChatWidget extends HTMLElement {
                 <span style="width: 8px; height: 8px; background: #48bb78; border-radius: 50%; display: inline-block;"></span>
                 <span id="chat-header-title">${sanitizedName}</span>
               </div>
-              <button id="chat-close-window-btn" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 1.25rem; line-height: 1; display: flex; align-items: center;">&times;</button>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button id="chat-minimize-window-btn" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 1.25rem; line-height: 1; display: flex; align-items: center; padding: 0 4px;" title="Minimize to side tab">&minus;</button>
+                <button id="chat-close-window-btn" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 1.25rem; line-height: 1; display: flex; align-items: center;">&times;</button>
+              </div>
             </div>
             <!-- Dynamic Mode Badge -->
             <div id="chat-header-badge" style="display: none; align-self: flex-start; font-size: 0.7rem; background: rgba(255, 255, 255, 0.2); padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -224,6 +278,8 @@ export class ChatWidget extends HTMLElement {
   setupEventListeners() {
     const toggleBtn = this.querySelector('#chat-toggle-btn');
     const closeWindowBtn = this.querySelector('#chat-close-window-btn');
+    const minimizeBtn = this.querySelector('#chat-minimize-window-btn');
+    const dockedTab = this.querySelector('#chat-docked-tab');
     const chatWindow = this.querySelector('#chat-window');
     const iconOpen = this.querySelector('#chat-icon-open');
     const iconClose = this.querySelector('#chat-icon-close');
@@ -249,8 +305,32 @@ export class ChatWidget extends HTMLElement {
       }
     };
 
+    const tuckChat = () => {
+      this.isOpen = false;
+      this.isTucked = true;
+      if (chatWindow) chatWindow.style.display = 'none';
+      if (toggleBtn) toggleBtn.style.display = 'none';
+      if (dockedTab) dockedTab.style.display = 'flex';
+      sessionStorage.setItem('foundation_chat_tucked', 'true');
+    };
+
+    const untuckChat = () => {
+      this.isTucked = false;
+      if (dockedTab) dockedTab.style.display = 'none';
+      if (toggleBtn) toggleBtn.style.display = 'flex';
+      sessionStorage.removeItem('foundation_chat_tucked');
+    };
+
     toggleBtn?.addEventListener('click', toggleChat);
     closeWindowBtn?.addEventListener('click', toggleChat);
+    minimizeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tuckChat();
+    });
+    dockedTab?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      untuckChat();
+    });
 
     clearHistoryBtn?.addEventListener('click', () => {
       if (confirm('Clear all chat history? This cannot be undone.')) {
