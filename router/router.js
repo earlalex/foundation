@@ -314,6 +314,27 @@ export class Router {
         relPath = '/' + relPath;
       }
 
+      // Feature Toggle Gatekeeper Check
+      let isFeatureDisabled = false;
+      const features = configManager.current.features || {};
+      if (relPath === '/videos' && features.videoPortal === false) {
+        isFeatureDisabled = true;
+      } else if (relPath === '/gallery' && features.photoGallery === false) {
+        isFeatureDisabled = true;
+      }
+
+      if (isFeatureDisabled) {
+        this.#isLoading = false;
+        try {
+          const { toast } = await import('../utils/toast.js');
+          toast.error("Module disabled in Site Settings.");
+        } catch (e) {
+          console.warn("Toast failed during redirect", e);
+        }
+        await this.loadRoute('/home');
+        return;
+      }
+
       let cleanPath = '/home';
       let isCustomDynamicPage = false;
       let customPageData = null;
