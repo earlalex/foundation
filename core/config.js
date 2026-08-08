@@ -182,10 +182,14 @@ export const defaultConfig = {
   },
   navigation: [
     { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
-    { label: "About", url: "/about", target: "_self", requiredRole: "public" },
+    { label: "Documentation", url: "/docs", target: "_self", requiredRole: "public" },
+    { label: "Shop", url: "/shop", target: "_self", requiredRole: "public" },
     { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
     { label: "Gallery", url: "/gallery", target: "_self", requiredRole: "public" },
     { label: "Videos", url: "/videos", target: "_self", requiredRole: "public" },
+    { label: "Education", url: "/education", target: "_self", requiredRole: "public" },
+    { label: "Podcast", url: "/podcast", target: "_self", requiredRole: "public" },
+    { label: "About", url: "/about", target: "_self", requiredRole: "public" },
     { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
   ],
   footer: {

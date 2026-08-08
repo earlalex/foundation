@@ -96,13 +96,14 @@ export function initNavbar() {
           <div id="nav-menu" class="nav-menu">
             ${(configManager.current?.navigation || [
               { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
-              { label: "About", url: "/about", target: "_self", requiredRole: "public" },
+              { label: "Documentation", url: "/docs", target: "_self", requiredRole: "public" },
+              { label: "Shop", url: "/shop", target: "_self", requiredRole: "public" },
               { label: "Events", url: "/events", target: "_self", requiredRole: "public" },
               { label: "Gallery", url: "/gallery", target: "_self", requiredRole: "public" },
               { label: "Videos", url: "/videos", target: "_self", requiredRole: "public" },
               { label: "Education", url: "/education", target: "_self", requiredRole: "public" },
               { label: "Podcast", url: "/podcast", target: "_self", requiredRole: "public" },
-              { label: "Shop", url: "/shop", target: "_self", requiredRole: "public" },
+              { label: "About", url: "/about", target: "_self", requiredRole: "public" },
               { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
             ]).map(item => `
               <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" data-role="${item.requiredRole || 'public'}" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${item.label}</a>
