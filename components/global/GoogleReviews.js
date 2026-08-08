@@ -1,4 +1,5 @@
 // components/global/GoogleReviews.js
+import { configManager } from '../../core/config.js';
 
 export class GoogleReviews extends HTMLElement {
   static get observedAttributes() {
@@ -37,11 +38,17 @@ export class GoogleReviews extends HTMLElement {
       if (!response.ok) throw new Error("API responded with error");
       const data = await response.json();
 
+      // Prepend AI generated reviews if configured!
+      const aiReviews = configManager.current.features?.aiGeneratedReviews || [];
+      if (aiReviews && aiReviews.length > 0) {
+        data.reviews = [...aiReviews, ...(data.reviews || [])];
+      }
+
       this.renderReviewsList(data);
     } catch (err) {
       console.warn("[GoogleReviews Component]: Live load failed, rendering mock details.", err);
       // Fallback details if fetch is offline/fails
-      this.renderReviewsList({
+      const fallbackData = {
         rating: 4.9,
         userRatingCount: 142,
         reviews: [
@@ -58,7 +65,14 @@ export class GoogleReviews extends HTMLElement {
             relativePublishTimeDescription: "1 week ago"
           }
         ]
-      });
+      };
+
+      const aiReviews = configManager.current.features?.aiGeneratedReviews || [];
+      if (aiReviews && aiReviews.length > 0) {
+        fallbackData.reviews = [...aiReviews, ...fallbackData.reviews];
+      }
+
+      this.renderReviewsList(fallbackData);
     }
   }
 
