@@ -29,18 +29,18 @@
           <h2 style="margin-top: 0; font-size: 1.35rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 1.25rem;">
             Send Inquiry
           </h2>
-          <form id="contact-message-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <form id="contact-form" data-webmcp-tool="contact_form_submit" style="display: flex; flex-direction: column; gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Your Name:</label>
-              <input type="text" id="msg-name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              <label for="contact-name" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Your Name:</label>
+              <input type="text" id="contact-name" data-webmcp-input="user_name" aria-label="Your Name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Your Email:</label>
-              <input type="email" id="msg-email" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              <label for="contact-email" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Your Email:</label>
+              <input type="email" id="contact-email" data-webmcp-input="user_email" aria-label="Work Email Address" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Message Body:</label>
-              <textarea id="msg-body" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 120px; box-sizing: border-box; resize: vertical;"></textarea>
+              <label for="contact-body" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Message Body:</label>
+              <textarea id="contact-body" data-webmcp-input="message_body" aria-label="Message Body" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 120px; box-sizing: border-box; resize: vertical;"></textarea>
             </div>
             <button type="submit" class="btn-primary" style="padding: 12px; font-weight: bold; border-radius: 4px; width: 100%;">
               Deliver Message
@@ -105,33 +105,33 @@
 
         <!-- Appointment Form Info -->
         <form id="appointment-form" style="display: grid; grid-template-columns: 1fr; gap: 1rem; border-top: 1px solid var(--theme-color-border, #edf2f7); padding-top: 1.5rem;">
-          <input type="hidden" id="appt-date" required />
+          <input type="hidden" id="appt-date" aria-label="Appointment Date" required />
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" class="appointment-details-row">
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
-              <input type="text" id="appt-name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              <label for="appt-name" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Full Name:</label>
+              <input type="text" id="appt-name" aria-label="Full Name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
-              <input type="email" id="appt-email" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+              <label for="appt-email" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Email Address:</label>
+              <input type="email" id="appt-email" aria-label="Email Address" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Notes / Message:</label>
-              <textarea id="appt-notes" placeholder="Consultation notes..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
+              <label for="appt-notes" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Notes / Message:</label>
+              <textarea id="appt-notes" aria-label="Notes / Message" placeholder="Consultation notes..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;"></textarea>
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Available Time Slot:</label>
-              <select id="appt-timeslot" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+              <label for="appt-timeslot" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Available Time Slot:</label>
+              <select id="appt-timeslot" aria-label="Available Time Slot" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
                 <option value="">Select a date on the calendar above first...</option>
               </select>
             </div>
             <div>
-              <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Consultation Objectives & Notes (Optional):</label>
-              <textarea id="appt-notes" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; min-height: 60px; resize: vertical;"></textarea>
+              <label for="appt-notes-objectives" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem;">Consultation Objectives & Notes (Optional):</label>
+              <textarea id="appt-notes-objectives" aria-label="Consultation Objectives & Notes" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; min-height: 60px; resize: vertical;"></textarea>
             </div>
             <div style="margin-top: 0.5rem;">
               <button type="submit" id="btn-book-appt" class="btn-primary" style="background: #38a169; width: 100%; padding: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;">

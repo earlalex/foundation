@@ -82,24 +82,24 @@ export class AdminSetupWizards {
         <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
           <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure the default visual sections of your home page.</p>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Hero Headline:</label>
-            <input type="text" id="wz-home-headline" value="${prefilledHeadline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-home-headline" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Hero Headline:</label>
+            <input type="text" id="wz-home-headline" aria-label="Hero Headline" value="${prefilledHeadline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Hero Sub-headline:</label>
-            <input type="text" id="wz-home-subheadline" value="${prefilledSubheadline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-home-subheadline" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Hero Sub-headline:</label>
+            <input type="text" id="wz-home-subheadline" aria-label="Hero Sub-headline" value="${prefilledSubheadline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Banner Background Image URL:</label>
-            <input type="url" id="wz-home-bg" value="${prefilledBg}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-home-bg" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Banner Background Image URL:</label>
+            <input type="url" id="wz-home-bg" aria-label="Banner Background Image URL" value="${prefilledBg}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Featured Section Order (comma separated):</label>
-            <input type="text" id="wz-home-sections" value="${prefilledSections}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-home-sections" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Featured Section Order (comma separated):</label>
+            <input type="text" id="wz-home-sections" aria-label="Featured Section Order (comma separated)" value="${prefilledSections}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Primary CTA Buttons (comma separated):</label>
-            <input type="text" id="wz-home-cta" value="${prefilledCta}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-home-cta" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Primary CTA Buttons (comma separated):</label>
+            <input type="text" id="wz-home-cta" aria-label="Primary CTA Buttons (comma separated)" value="${prefilledCta}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
         </div>
       `;
@@ -154,20 +154,20 @@ export class AdminSetupWizards {
         <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
           <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Customize Founder details, Mission timeline, and story highlights.</p>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Founder/Team Story:</label>
-            <textarea id="wz-about-story" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 80px; box-sizing: border-box;">${prefilledFounderStory}</textarea>
+            <label for="wz-about-story" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Founder/Team Story:</label>
+            <textarea id="wz-about-story" aria-label="Founder/Team Story" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 80px; box-sizing: border-box;">${prefilledFounderStory}</textarea>
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Mission Statement:</label>
-            <input type="text" id="wz-about-mission" value="${prefilledMission}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-about-mission" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Mission Statement:</label>
+            <input type="text" id="wz-about-mission" aria-label="Mission Statement" value="${prefilledMission}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Milestones Timeline (comma separated Year:Event):</label>
-            <input type="text" id="wz-about-timeline" value="${prefilledTimeline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-about-timeline" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Milestones Timeline (comma separated Year:Event):</label>
+            <input type="text" id="wz-about-timeline" aria-label="Milestones Timeline (comma separated Year:Event)" value="${prefilledTimeline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Executive Bio:</label>
-            <textarea id="wz-about-bio" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 80px; box-sizing: border-box;">${prefilledBio}</textarea>
+            <label for="wz-about-bio" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Executive Bio:</label>
+            <textarea id="wz-about-bio" aria-label="Executive Bio" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 80px; box-sizing: border-box;">${prefilledBio}</textarea>
           </div>
         </div>
       `;
@@ -249,20 +249,20 @@ export class AdminSetupWizards {
         <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
           <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Establish policies, Terms, and headlines for the Events Subsystem.</p>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Event Header Copy:</label>
-            <input type="text" id="wz-events-header" value="${prefilledHeaderCopy}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-events-header" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Event Header Copy:</label>
+            <input type="text" id="wz-events-header" aria-label="Event Header Copy" value="${prefilledHeaderCopy}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Default Ticket Terms:</label>
-            <input type="text" id="wz-events-terms" value="${prefilledTicketTerms}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-events-terms" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Default Ticket Terms:</label>
+            <input type="text" id="wz-events-terms" aria-label="Default Ticket Terms" value="${prefilledTicketTerms}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Refund Policy:</label>
-            <textarea id="wz-events-refund" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;">${prefilledRefundPolicy}</textarea>
+            <label for="wz-events-refund" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Refund Policy:</label>
+            <textarea id="wz-events-refund" aria-label="Refund Policy" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;">${prefilledRefundPolicy}</textarea>
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Vendor Space Notices:</label>
-            <textarea id="wz-events-vendor-notice" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;">${prefilledVendorNotice}</textarea>
+            <label for="wz-events-vendor-notice" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Vendor Space Notices:</label>
+            <textarea id="wz-events-vendor-notice" aria-label="Vendor Space Notices" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; min-height: 60px; box-sizing: border-box;">${prefilledVendorNotice}</textarea>
           </div>
         </div>
       `;
@@ -329,20 +329,20 @@ export class AdminSetupWizards {
         <div style="display: flex; flex-direction: column; gap: 1rem; text-align: left; max-height: 420px; overflow-y: auto; padding-right: 8px;">
           <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Configure the high-impact text blocks of your Consultation & Contact page.</p>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Consultation Hero Copy Headline:</label>
-            <input type="text" id="wz-contact-hero" value="${prefilledHeroCopy}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-contact-hero" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Consultation Hero Copy Headline:</label>
+            <input type="text" id="wz-contact-hero" aria-label="Consultation Hero Copy Headline" value="${prefilledHeroCopy}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Booking Deposit Rules:</label>
-            <input type="text" id="wz-contact-deposit" value="${prefilledDepositRules}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-contact-deposit" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Booking Deposit Rules:</label>
+            <input type="text" id="wz-contact-deposit" aria-label="Booking Deposit Rules" value="${prefilledDepositRules}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Operating Hours Details:</label>
-            <input type="text" id="wz-contact-hours" value="${prefilledHoursText}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-contact-hours" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Operating Hours Details:</label>
+            <input type="text" id="wz-contact-hours" aria-label="Operating Hours Details" value="${prefilledHoursText}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Direct Message Confirmation Notice (Trust Indicator):</label>
-            <input type="text" id="wz-contact-confirm" value="${prefilledConfirmation}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <label for="wz-contact-confirm" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Direct Message Confirmation Notice (Trust Indicator):</label>
+            <input type="text" id="wz-contact-confirm" aria-label="Direct Message Confirmation Notice" value="${prefilledConfirmation}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
         </div>
       `;
@@ -711,20 +711,20 @@ export class MasterSetupWizard extends HTMLElement {
               "Configures core branding, metadata headers, canonical URLs, and primary administrator access rights across the platform."
             </div>
             <div class="form-group">
-              <label>Website Title *</label>
-              <input type="text" id="m-site-title" value="Foundation Framework" required />
+              <label for="m-site-title">Website Title *</label>
+              <input type="text" id="m-site-title" aria-label="Website Title" value="Foundation Framework" required />
             </div>
             <div class="form-group">
-              <label>Base Domain *</label>
-              <input type="url" id="m-site-domain" value="${origin}" required />
+              <label for="m-site-domain">Base Domain *</label>
+              <input type="url" id="m-site-domain" aria-label="Base Domain" value="${origin}" required />
             </div>
             <div class="form-group">
-              <label>Primary Admin Email *</label>
-              <input type="email" id="m-admin-email" value="admin@earlalex.com" required />
+              <label for="m-admin-email">Primary Admin Email *</label>
+              <input type="email" id="m-admin-email" aria-label="Primary Admin Email" value="admin@earlalex.com" required />
             </div>
             <div class="form-group">
-              <label>Support Email *</label>
-              <input type="email" id="m-support-email" value="support@earlalex.com" required />
+              <label for="m-support-email">Support Email *</label>
+              <input type="email" id="m-support-email" aria-label="Support Email" value="support@earlalex.com" required />
             </div>
           </div>
 
@@ -734,24 +734,24 @@ export class MasterSetupWizard extends HTMLElement {
               "Powers real-time NoSQL storage via Cloud Firestore, user profile persistence, and 1-Click Google OAuth SSO authentication. Retrieve these from the Firebase Console and Google Cloud API Console."
             </div>
             <div class="form-group">
-              <label>Firebase API Key *</label>
-              <input type="text" id="m-fb-key" value="AIzaSy_fb_mock_key_992" required />
+              <label for="m-fb-key">Firebase API Key *</label>
+              <input type="text" id="m-fb-key" aria-label="Firebase API Key" value="AIzaSy_fb_mock_key_992" required />
             </div>
             <div class="form-group">
-              <label>Firebase Project ID *</label>
-              <input type="text" id="m-fb-project" value="demo-proj-id" required />
+              <label for="m-fb-project">Firebase Project ID *</label>
+              <input type="text" id="m-fb-project" aria-label="Firebase Project ID" value="demo-proj-id" required />
             </div>
             <div class="form-group">
-              <label>Google Client ID *</label>
-              <input type="text" id="m-google-id" value="g_client_id_01" required />
+              <label for="m-google-id">Google Client ID *</label>
+              <input type="text" id="m-google-id" aria-label="Google Client ID" value="g_client_id_01" required />
             </div>
             <div class="form-group">
-              <label>Google Client Secret *</label>
-              <input type="password" id="m-google-secret" value="g_secret_99" required />
+              <label for="m-google-secret">Google Client Secret *</label>
+              <input type="password" id="m-google-secret" aria-label="Google Client Secret" value="g_secret_99" required />
             </div>
             <div class="form-group">
-              <label>Google Service Account Token *</label>
-              <textarea id="m-google-service-token" style="height: 60px;" required>{"type": "service_account"}</textarea>
+              <label for="m-google-service-token">Google Service Account Token *</label>
+              <textarea id="m-google-service-token" aria-label="Google Service Account Token" style="height: 60px;" required>{"type": "service_account"}</textarea>
             </div>
           </div>
 
@@ -761,23 +761,23 @@ export class MasterSetupWizard extends HTMLElement {
               "Enables the site chatbot, Gemini Spark COO autonomous agent, background marketing copywriting, and automated voice telephony responses."
             </div>
             <div class="form-group">
-              <label>Gemini API Key *</label>
-              <input type="password" id="m-gemini-key" value="gemini_api_key_101" required />
+              <label for="m-gemini-key">Gemini API Key *</label>
+              <input type="password" id="m-gemini-key" aria-label="Gemini API Key" value="gemini_api_key_101" required />
             </div>
             <div class="form-group">
-              <label>OpenAI API Key *</label>
-              <input type="password" id="m-openai-key" value="openai_api_key_mock" required />
+              <label for="m-openai-key">OpenAI API Key *</label>
+              <input type="password" id="m-openai-key" aria-label="OpenAI API Key" value="openai_api_key_mock" required />
             </div>
             <div class="form-group">
-              <label>Preferred Model *</label>
-              <select id="m-preferred-model" required>
+              <label for="m-preferred-model">Preferred Model *</label>
+              <select id="m-preferred-model" aria-label="Preferred Model" required>
                 <option value="gemini" selected>Google Gemini</option>
                 <option value="openai">OpenAI GPT-4</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Default Voice Model *</label>
-              <select id="m-voice-model" required>
+              <label for="m-voice-model">Default Voice Model *</label>
+              <select id="m-voice-model" aria-label="Default Voice Model" required>
                 <option value="alloy" selected>Alloy</option>
                 <option value="echo">Echo</option>
                 <option value="fable">Fable</option>
@@ -794,28 +794,28 @@ export class MasterSetupWizard extends HTMLElement {
               "Enables credit card processing, $29/mo member paywall subscriptions, ACH bank transfers, and automated international Virtual Assistant payroll disbursements via Wise Business API."
             </div>
             <div class="form-group">
-              <label>Stripe Secret Key *</label>
-              <input type="password" id="m-stripe-sec" value="sk_test_123" required />
+              <label for="m-stripe-sec">Stripe Secret Key *</label>
+              <input type="password" id="m-stripe-sec" aria-label="Stripe Secret Key" value="sk_test_123" required />
             </div>
             <div class="form-group">
-              <label>Stripe Publishable Key *</label>
-              <input type="text" id="m-stripe-pub" value="pk_test_456" required />
+              <label for="m-stripe-pub">Stripe Publishable Key *</label>
+              <input type="text" id="m-stripe-pub" aria-label="Stripe Publishable Key" value="pk_test_456" required />
             </div>
             <div class="form-group">
-              <label>Stripe Webhook Secret *</label>
-              <input type="password" id="m-stripe-webhook" value="whsec_mock" required />
+              <label for="m-stripe-webhook">Stripe Webhook Secret *</label>
+              <input type="password" id="m-stripe-webhook" aria-label="Stripe Webhook Secret" value="whsec_mock" required />
             </div>
             <div class="form-group">
-              <label>Stripe Membership Price ID *</label>
-              <input type="text" id="m-stripe-price" value="price_abc" required />
+              <label for="m-stripe-price">Stripe Membership Price ID *</label>
+              <input type="text" id="m-stripe-price" aria-label="Stripe Membership Price ID" value="price_abc" required />
             </div>
             <div class="form-group">
-              <label>Wise API Token *</label>
-              <input type="password" id="m-wise-key" value="wise_api_key_mock" required />
+              <label for="m-wise-key">Wise API Token *</label>
+              <input type="password" id="m-wise-key" aria-label="Wise API Token" value="wise_api_key_mock" required />
             </div>
             <div class="form-group">
-              <label>Wise Profile ID *</label>
-              <input type="text" id="m-wise-profile" value="wise_profile_id_mock" required />
+              <label for="m-wise-profile">Wise Profile ID *</label>
+              <input type="text" id="m-wise-profile" aria-label="Wise Profile ID" value="wise_profile_id_mock" required />
             </div>
           </div>
 
@@ -825,24 +825,24 @@ export class MasterSetupWizard extends HTMLElement {
               "Enables automated SMS notifications, appointment confirmation texts, and two-way AI voice call interactions."
             </div>
             <div class="form-group">
-              <label>Telnyx API Key *</label>
-              <input type="password" id="m-telnyx-key" value="telnyx_api_key_mock" required />
+              <label for="m-telnyx-key">Telnyx API Key *</label>
+              <input type="password" id="m-telnyx-key" aria-label="Telnyx API Key" value="telnyx_api_key_mock" required />
             </div>
             <div class="form-group">
-              <label>Telnyx Phone Number *</label>
-              <input type="text" id="m-telnyx-phone" value="+18005550199" required />
+              <label for="m-telnyx-phone">Telnyx Phone Number *</label>
+              <input type="text" id="m-telnyx-phone" aria-label="Telnyx Phone Number" value="+18005550199" required />
             </div>
             <div class="form-group">
-              <label>Twilio Account SID *</label>
-              <input type="text" id="m-twilio-sid" value="AC_twilio_sid_mock" required />
+              <label for="m-twilio-sid">Twilio Account SID *</label>
+              <input type="text" id="m-twilio-sid" aria-label="Twilio Account SID" value="AC_twilio_sid_mock" required />
             </div>
             <div class="form-group">
-              <label>Twilio Auth Token *</label>
-              <input type="password" id="m-twilio-token" value="twilio_token_mock" required />
+              <label for="m-twilio-token">Twilio Auth Token *</label>
+              <input type="password" id="m-twilio-token" aria-label="Twilio Auth Token" value="twilio_token_mock" required />
             </div>
             <div class="form-group">
-              <label>Twilio Phone Number *</label>
-              <input type="text" id="m-twilio-phone" value="+18005550100" required />
+              <label for="m-twilio-phone">Twilio Phone Number *</label>
+              <input type="text" id="m-twilio-phone" aria-label="Twilio Phone Number" value="+18005550100" required />
             </div>
           </div>
 
@@ -852,20 +852,20 @@ export class MasterSetupWizard extends HTMLElement {
               "Powers automated background malware signature scanning on uploads, OWASP ZAP penetration testing, and secure credential vault synchronization."
             </div>
             <div class="form-group">
-              <label>VirusTotal API Key *</label>
-              <input type="password" id="m-vt-key" value="vt_api_mock_token" required />
+              <label for="m-vt-key">VirusTotal API Key *</label>
+              <input type="password" id="m-vt-key" aria-label="VirusTotal API Key" value="vt_api_mock_token" required />
             </div>
             <div class="form-group">
-              <label>OWASP ZAP Endpoint *</label>
-              <input type="url" id="m-zap-endpoint" value="https://wwtesw.zaproxy.org/" required />
+              <label for="m-zap-endpoint">OWASP ZAP Endpoint *</label>
+              <input type="url" id="m-zap-endpoint" aria-label="OWASP ZAP Endpoint" value="https://wwtesw.zaproxy.org/" required />
             </div>
             <div class="form-group">
-              <label>LastPass CID *</label>
-              <input type="text" id="m-lastpass-cid" value="lp_cid_mock" required />
+              <label for="m-lastpass-cid">LastPass CID *</label>
+              <input type="text" id="m-lastpass-cid" aria-label="LastPass CID" value="lp_cid_mock" required />
             </div>
             <div class="form-group">
-              <label>LastPass Master Hash *</label>
-              <input type="password" id="m-lastpass-hash" value="lp_hash_mock" required />
+              <label for="m-lastpass-hash">LastPass Master Hash *</label>
+              <input type="password" id="m-lastpass-hash" aria-label="LastPass Master Hash" value="lp_hash_mock" required />
             </div>
           </div>
 
@@ -875,20 +875,20 @@ export class MasterSetupWizard extends HTMLElement {
               "Injects Google Analytics 4 tracking tags, populates executive Looker Studio dashboards, renders live Google Maps reviews, and activates AdSense units for non-paying visitors."
             </div>
             <div class="form-group">
-              <label>GA4 Measurement ID *</label>
-              <input type="text" id="m-ga4-id" value="G-987654321" required />
+              <label for="m-ga4-id">GA4 Measurement ID *</label>
+              <input type="text" id="m-ga4-id" aria-label="GA4 Measurement ID" value="G-987654321" required />
             </div>
             <div class="form-group">
-              <label>Looker Studio Embed URL *</label>
-              <input type="url" id="m-looker-url" value="https://lookerstudio.google.com/embed/reporting/123" required />
+              <label for="m-looker-url">Looker Studio Embed URL *</label>
+              <input type="url" id="m-looker-url" aria-label="Looker Studio Embed URL" value="https://lookerstudio.google.com/embed/reporting/123" required />
             </div>
             <div class="form-group">
-              <label>Google Place ID *</label>
-              <input type="text" id="m-google-place" value="place_id_mock" required />
+              <label for="m-google-place">Google Place ID *</label>
+              <input type="text" id="m-google-place" aria-label="Google Place ID" value="place_id_mock" required />
             </div>
             <div class="form-group">
-              <label>Google AdSense Publisher ID *</label>
-              <input type="text" id="m-adsense-pub" value="ca-pub-123456789" required />
+              <label for="m-adsense-pub">Google AdSense Publisher ID *</label>
+              <input type="text" id="m-adsense-pub" aria-label="Google AdSense Publisher ID" value="ca-pub-123456789" required />
             </div>
           </div>
 

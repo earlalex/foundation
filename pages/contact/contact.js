@@ -74,7 +74,7 @@ export async function initContactPage() {
   // Auto-populate Corporate Contact Details from Business Profile
   autoPopulateBusinessInfo();
 
-  const msgForm = document.getElementById('contact-message-form');
+  const msgForm = document.getElementById('contact-form') || document.getElementById('contact-message-form');
   const apptForm = document.getElementById('appointment-form');
 
   // 3-Month Multi-Calendar Elements
@@ -114,9 +114,9 @@ export async function initContactPage() {
   // --- Standard Inquiry Form ---
   msgForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('msg-name').value;
-    const email = document.getElementById('msg-email').value;
-    const body = document.getElementById('msg-body').value;
+    const name = (document.getElementById('contact-name') || document.getElementById('msg-name')).value;
+    const email = (document.getElementById('contact-email') || document.getElementById('msg-email')).value;
+    const body = (document.getElementById('contact-body') || document.getElementById('msg-body')).value;
 
     try {
       await createGoogleContact({ name, email });
@@ -144,7 +144,9 @@ export async function initContactPage() {
     e.preventDefault();
     const name = document.getElementById('appt-name').value;
     const email = document.getElementById('appt-email').value;
-    const notes = document.getElementById('appt-notes').value || '';
+    const briefNotes = document.getElementById('appt-notes')?.value || '';
+    const objNotes = document.getElementById('appt-notes-objectives')?.value || '';
+    const notes = [briefNotes, objNotes].filter(Boolean).join(' | ');
     const date = apptDateInput.value;
     const timeSlot = apptTimeslotInput.value;
 
