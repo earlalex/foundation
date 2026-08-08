@@ -331,6 +331,7 @@ export function initSiteSettingsTab() {
   initIconSetManager();
   initNavigationEditor();
   initFooterLayoutEditor();
+  initFeatureTogglesEditor();
 
   // Bind RSS & SEO Indexing "Ping Search Engines" button
   const btnPing = document.getElementById('btn-ping-search-engines');
@@ -1029,4 +1030,143 @@ function launchFactoryResetModal() {
 
   document.body.appendChild(modal);
   renderModalContent();
+}
+
+function initFeatureTogglesEditor() {
+  const tabSite = document.getElementById('tab-site');
+  if (!tabSite) return;
+
+  let togglesCard = document.getElementById('feature-toggles-card');
+  if (!togglesCard) {
+    togglesCard = document.createElement('div');
+    togglesCard.id = 'feature-toggles-card';
+    togglesCard.style.cssText = `
+      background: var(--theme-color-surface, #ffffff);
+      border: 1px solid var(--theme-color-border, #e2e8f0);
+      padding: 1.5rem;
+      border-radius: var(--theme-layout-border-radius, 8px);
+      margin-top: 1.5rem;
+    `;
+
+    // Insert before the factory reset card if present, or just append
+    const resetWrapper = document.getElementById('factory-reset-section-wrapper');
+    if (resetWrapper) {
+      tabSite.insertBefore(togglesCard, resetWrapper);
+    } else {
+      tabSite.appendChild(togglesCard);
+    }
+  }
+
+  const features = configManager.current.features || {
+    chatWidget: true,
+    webRadioPlayer: true,
+    videoPortal: true,
+    photoGallery: true,
+    aiSparkAgent: true,
+    dummyDataGenerator: true,
+    adSenseUnits: false,
+    web3CryptoCheckout: true
+  };
+
+  togglesCard.innerHTML = `
+    <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0);">Platform Feature Toggles & Module Bypasser</h2>
+    <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+      Toggle individual modules. When disabled, their scripts and UI elements will consume zero CPU, memory, or network overhead.
+    </p>
+    <form id="feature-toggles-form" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-chat" ${features.chatWidget ? 'checked' : ''} style="cursor: pointer;" />
+          Chat Widget (AI Assistant)
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-radio" ${features.webRadioPlayer ? 'checked' : ''} style="cursor: pointer;" />
+          Web Radio Player
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-video" ${features.videoPortal ? 'checked' : ''} style="cursor: pointer;" />
+          Video Portal
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-gallery" ${features.photoGallery ? 'checked' : ''} style="cursor: pointer;" />
+          Photo Gallery
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-spark" ${features.aiSparkAgent ? 'checked' : ''} style="cursor: pointer;" />
+          AI Spark COO Agent
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-dummy" ${features.dummyDataGenerator ? 'checked' : ''} style="cursor: pointer;" />
+          AI Dummy Data Generator
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-adsense" ${features.adSenseUnits ? 'checked' : ''} style="cursor: pointer;" />
+          AdSense Units
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="toggle-feat-web3" ${features.web3CryptoCheckout ? 'checked' : ''} style="cursor: pointer;" />
+          Web3 Crypto Checkout
+        </label>
+      </div>
+      <button type="submit" class="btn-primary" style="align-self: flex-start; margin-top: 0.5rem;">
+        Save Feature Toggles
+      </button>
+    </form>
+  `;
+
+  document.getElementById('feature-toggles-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = e.target.querySelector('button[type="submit"]');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const updatedFeatures = {
+        chatWidget: document.getElementById('toggle-feat-chat').checked,
+        webRadioPlayer: document.getElementById('toggle-feat-radio').checked,
+        videoPortal: document.getElementById('toggle-feat-video').checked,
+        photoGallery: document.getElementById('toggle-feat-gallery').checked,
+        aiSparkAgent: document.getElementById('toggle-feat-spark').checked,
+        dummyDataGenerator: document.getElementById('toggle-feat-dummy').checked,
+        adSenseUnits: document.getElementById('toggle-feat-adsense').checked,
+        web3CryptoCheckout: document.getElementById('toggle-feat-web3').checked
+      };
+
+      const success = await configManager.saveToFirebase({
+        ...configManager.current,
+        features: updatedFeatures
+      });
+
+      if (success) {
+        toast.success("Feature toggles and module bypass settings saved successfully!");
+
+        // Immediately apply state changes (e.g. remove radio player if disabled)
+        if (!updatedFeatures.webRadioPlayer) {
+          const radioPlayer = document.querySelector('radio-stream-player');
+          if (radioPlayer) {
+            radioPlayer.style.display = 'none';
+            radioPlayer.remove();
+          }
+        }
+        if (!updatedFeatures.chatWidget) {
+          const chatWidget = document.querySelector('chat-widget');
+          if (chatWidget) {
+            chatWidget.style.display = 'none';
+            chatWidget.remove();
+          }
+        }
+      } else {
+        toast.error("Failed to save feature toggles.");
+      }
+    } catch (err) {
+      toast.error(`Error saving feature toggles: ${err.message}`);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Feature Toggles';
+      }
+    }
+  });
 }

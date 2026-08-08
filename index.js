@@ -306,7 +306,7 @@ async function boot() {
   }
 
   // Mount Chat Widget globally if enabled and available
-  const chatbotEnabled = configManager.current.chatbot?.enabled !== false;
+  const chatbotEnabled = configManager.current.chatbot?.enabled !== false && configManager.current.features?.chatWidget !== false;
   if (chatbotEnabled) {
     const chatWidget = document.createElement('chat-widget');
     document.body.appendChild(chatWidget);

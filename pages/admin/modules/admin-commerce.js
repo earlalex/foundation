@@ -3,6 +3,7 @@ import { initProductsTab } from '../admin-products.js';
 import { initFinancesTab } from '../admin-finances.js';
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
+import { configManager } from '../../../core/config.js';
 
 export function initAdminCommerce() {
   // 1. Initialize original sub-tabs (Products & Services list, Finances tracker)
@@ -11,6 +12,75 @@ export function initAdminCommerce() {
 
   // 2. Inject Fulfillment & Orders Sub-tab & State Compliance alerts
   injectOrdersSubtabAndCompliance();
+
+  // 3. Render AI Dummy Products Generator if enabled
+  renderAICommerceGenerator();
+}
+
+function renderAICommerceGenerator() {
+  const panel = document.getElementById('panel-subtab-products');
+  if (!panel) return;
+
+  if (configManager.current.features?.dummyDataGenerator === false) {
+    const existing = document.getElementById('commerce-ai-generator-card');
+    if (existing) existing.remove();
+    return;
+  }
+
+  let card = document.getElementById('commerce-ai-generator-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'commerce-ai-generator-card';
+    card.style.cssText = `
+      background: var(--theme-color-surface, #ffffff);
+      border: 1px solid var(--theme-color-border, #cbd5e0);
+      padding: 1.5rem;
+      border-radius: var(--theme-layout-border-radius, 8px);
+      margin-bottom: 1.5rem;
+    `;
+    panel.insertBefore(card, panel.firstChild);
+  }
+
+  card.innerHTML = `
+    <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 6px;">
+      <span>✨</span> AI Contextualized Product Generator
+    </h3>
+    <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+      Draft 5 tailored product records autonomously, with pricing, category tags, descriptions, stock, and high-fidelity images matched directly to your site's business niche.
+    </p>
+    <button id="btn-gen-ai-products" class="btn-primary" style="background: var(--theme-color-accent, #38a169); border: none; font-weight: bold; padding: 10px 18px; border-radius: var(--theme-layout-border-radius, 8px); cursor: pointer;">
+      ✨ Generate AI Test Products
+    </button>
+  `;
+
+  card.querySelector('#btn-gen-ai-products').onclick = async (e) => {
+    e.preventDefault();
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = 'Generating 5 Products...';
+    try {
+      const siteTitle = configManager.current.siteTitle || 'Foundation';
+      const bp = configManager.current.businessProfile || {};
+      const niche = bp.naicsDefinition || bp.dba || 'Sovereign Tech & Wellness';
+
+      const { generateAITestProducts } = await import('../../../utils/dummyDataGenerator.js');
+      const generated = await generateAITestProducts(siteTitle, niche, 5);
+
+      for (const item of generated) {
+        await contentDB.saveContent(item);
+      }
+
+      toast.success("Successfully generated and saved 5 contextual shop products into database!");
+
+      // Refresh products table list if function is imported / exposed
+      initProductsTab();
+    } catch (err) {
+      toast.error("Failed to generate products: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✨ Generate AI Test Products';
+    }
+  };
 }
 
 /**

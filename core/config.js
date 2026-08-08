@@ -89,6 +89,16 @@ export const defaultConfig = {
     slotId: "1111111111",
     enableInFeed: true
   },
+  features: {
+    chatWidget: true,
+    webRadioPlayer: true,
+    videoPortal: true,
+    photoGallery: true,
+    aiSparkAgent: true,
+    dummyDataGenerator: true,
+    adSenseUnits: false,
+    web3CryptoCheckout: true
+  },
   // Newly added structured configs for section setup wizards
   businessProfile: {
     legalName: "",

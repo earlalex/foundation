@@ -1,5 +1,6 @@
 // components/global/AdSenseUnit.js
 import { store } from '../../core/store.js';
+import { configManager } from '../../core/config.js';
 
 export class AdSenseUnit extends HTMLElement {
   static get observedAttributes() {
@@ -42,6 +43,9 @@ export class AdSenseUnit extends HTMLElement {
   }
 
   shouldRenderAd() {
+    if (configManager.current.features?.adSenseUnits === false && !store.state.devMode) {
+      return false;
+    }
     const user = store.state.user;
     const simulatedTier = store.state.simulatedUserTier;
     const userRole = simulatedTier || user?.role || 'prospect';

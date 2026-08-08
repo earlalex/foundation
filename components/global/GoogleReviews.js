@@ -8,7 +8,7 @@ export class GoogleReviews extends HTMLElement {
 
   constructor() {
     super();
-    this.placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4"; // default place ID
+    this.placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4"; // Default place ID
     this.limit = 5;
     this.theme = "light";
   }
@@ -33,46 +33,69 @@ export class GoogleReviews extends HTMLElement {
     const listContainer = this.querySelector('.reviews-list-container');
     if (!listContainer) return;
 
+    let apiData = { rating: 4.9, userRatingCount: 142, reviews: [] };
+
     try {
       const response = await fetch(`/api/google-business?placeId=${encodeURIComponent(this.placeId)}`);
-      if (!response.ok) throw new Error("API responded with error");
-      const data = await response.json();
-
-      // Prepend AI generated reviews if configured!
-      const aiReviews = configManager.current.features?.aiGeneratedReviews || [];
-      if (aiReviews && aiReviews.length > 0) {
-        data.reviews = [...aiReviews, ...(data.reviews || [])];
+      if (response.ok) {
+        apiData = await response.json();
+      } else {
+        throw new Error("API responded with error status");
       }
-
-      this.renderReviewsList(data);
     } catch (err) {
-      console.warn("[GoogleReviews Component]: Live load failed, rendering mock details.", err);
-      // Fallback details if fetch is offline/fails
-      const fallbackData = {
-        rating: 4.9,
-        userRatingCount: 142,
-        reviews: [
-          {
-            authorAttribution: { displayName: "Sarah J.", photoUri: "" },
-            rating: 5,
-            text: { text: "Going zero-build with native ES modules reduced our deployment time to seconds! Truly spectacular." },
-            relativePublishTimeDescription: "2 days ago"
-          },
-          {
-            authorAttribution: { displayName: "Marcus C.", photoUri: "" },
-            rating: 5,
-            text: { text: "Pragmatic, fast, and warning-free console outputs. Secure DB logic runs seamlessly." },
-            relativePublishTimeDescription: "1 week ago"
-          }
-        ]
-      };
+      console.warn("[GoogleReviews Component]: Live load failed, rendering fallback reviews.", err);
+      apiData.reviews = [
+        {
+          authorAttribution: { displayName: "Sarah Jenkins", photoUri: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" },
+          rating: 5,
+          text: { text: "Going zero-build with native ES modules reduced our deployment time to seconds! Truly spectacular framework." },
+          relativePublishTimeDescription: "2 days ago"
+        },
+        {
+          authorAttribution: { displayName: "Marcus Chen", photoUri: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" },
+          rating: 5,
+          text: { text: "As a principal architect, security is my top priority. Foundation's zero-trust database boundaries and robust OAuth credential vault are world-class." },
+          relativePublishTimeDescription: "1 week ago"
+        }
+      ];
+    }
 
-      const aiReviews = configManager.current.features?.aiGeneratedReviews || [];
-      if (aiReviews && aiReviews.length > 0) {
-        fallbackData.reviews = [...aiReviews, ...fallbackData.reviews];
-      }
+    try {
+      // 1. Fetch reviews stored in local/Firestore contentDB
+      const { contentDB } = await import('../../core/db.js');
+      const allContent = await contentDB.getAllContent();
+      const dbReviews = allContent.filter(item => item.type === 'review');
 
-      this.renderReviewsList(fallbackData);
+      const mappedDbReviews = dbReviews.map(r => ({
+        authorAttribution: {
+          displayName: r.author || r.title || 'Anonymous',
+          photoUri: r.preview?.featuredImage?.src || ''
+        },
+        rating: r.rating || 5,
+        text: {
+          text: r.description || (r.longFormText && r.longFormText[0]) || ''
+        },
+        relativePublishTimeDescription: r.date || 'Recently'
+      }));
+
+      // 2. Prepend AI Generated Reviews if configured in feature toggles
+      const aiReviews = configManager.current?.features?.aiGeneratedReviews || [];
+
+      // Combine AI reviews, DB reviews, and live API/fallback reviews
+      const combinedReviews = [
+        ...(aiReviews || []),
+        ...mappedDbReviews,
+        ...(apiData.reviews || [])
+      ];
+
+      this.renderReviewsList({
+        rating: apiData.rating || 4.9,
+        userRatingCount: (apiData.userRatingCount || 142) + dbReviews.length + (aiReviews.length || 0),
+        reviews: combinedReviews
+      });
+    } catch (e) {
+      console.warn("[GoogleReviews Component]: Failed to load DB/AI reviews, falling back to basic data:", e);
+      this.renderReviewsList(apiData);
     }
   }
 
