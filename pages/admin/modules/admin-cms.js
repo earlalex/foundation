@@ -2,6 +2,7 @@
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
 import { getAssetSplits, saveAssetSplits } from '../../../core/royalties.js';
+import { configManager } from '../../../core/config.js';
 
 let currentEditingItem = null;
 
@@ -12,6 +13,9 @@ export function initAdminCms() {
     console.error('[CMS Module]: Could not find #tab-cms container!');
     return;
   }
+
+  // Render AI Dummy Content & Reviews card if feature is enabled
+  renderAICmsGenerator(cmsTab);
 
   // Inject Contributor Royalty Splits card into the #cms-form if not already present
   const cmsForm = document.getElementById('cms-form');
@@ -328,6 +332,105 @@ export async function loadSplitsIntoCmsForm(splits) {
       await addCmsSplitRow(split);
     }
   }
+}
+
+function renderAICmsGenerator(container) {
+  if (configManager.current.features?.dummyDataGenerator === false) {
+    const existing = document.getElementById('cms-ai-generator-card');
+    if (existing) existing.remove();
+    return;
+  }
+
+  let card = document.getElementById('cms-ai-generator-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'cms-ai-generator-card';
+    card.style.cssText = `
+      background: var(--theme-color-surface, #ffffff);
+      border: 1px solid var(--theme-color-border, #cbd5e0);
+      padding: 1.5rem;
+      border-radius: var(--theme-layout-border-radius, 8px);
+      margin-top: 1.5rem;
+    `;
+    container.insertBefore(card, container.firstChild);
+  }
+
+  card.innerHTML = `
+    <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 6px;">
+      <span>✨</span> AI Contextualized Content Generator
+    </h3>
+    <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+      Autonomously generate tailored test reviews and blog posts using Google Gemini or high-fidelity local templates, designed around your site branding & niche settings.
+    </p>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <button id="btn-gen-ai-reviews" class="btn-primary" style="background: var(--theme-color-accent, #38a169); border: none; font-weight: bold; padding: 10px 18px; border-radius: var(--theme-layout-border-radius, 8px); cursor: pointer;">
+        ✨ Generate AI Test Reviews
+      </button>
+      <button id="btn-gen-ai-blogs" class="btn-primary" style="background: var(--theme-color-primary, #2b6cb0); border: none; font-weight: bold; padding: 10px 18px; border-radius: var(--theme-layout-border-radius, 8px); cursor: pointer;">
+        ✨ Generate AI Test Blogs
+      </button>
+    </div>
+  `;
+
+  card.querySelector('#btn-gen-ai-reviews').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = 'Generating 5 Reviews...';
+    try {
+      const siteTitle = configManager.current.siteTitle || 'Foundation';
+      const bp = configManager.current.businessProfile || {};
+      const niche = bp.naicsDefinition || bp.dba || 'Sovereign Tech & Wellness';
+
+      const { generateAICustomerReviews } = await import('../../../utils/dummyDataGenerator.js');
+      const generated = await generateAICustomerReviews(siteTitle, niche, 5);
+
+      for (const item of generated) {
+        await contentDB.saveContent(item);
+      }
+
+      toast.success("Successfully generated and saved 5 contextual customer reviews into database!");
+
+      // Refresh list
+      const managerCard = document.getElementById('cms-content-manager-card');
+      if (managerCard) renderContentManager(managerCard);
+    } catch (err) {
+      toast.error("Failed to generate reviews: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✨ Generate AI Test Reviews';
+    }
+  });
+
+  card.querySelector('#btn-gen-ai-blogs').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = 'Generating 5 Blogs...';
+    try {
+      const siteTitle = configManager.current.siteTitle || 'Foundation';
+      const bp = configManager.current.businessProfile || {};
+      const niche = bp.naicsDefinition || bp.dba || 'Sovereign Tech & Wellness';
+
+      const { generateAITestBlogs } = await import('../../../utils/dummyDataGenerator.js');
+      const generated = await generateAITestBlogs(siteTitle, niche, 5);
+
+      for (const item of generated) {
+        await contentDB.saveContent(item);
+      }
+
+      toast.success("Successfully generated and saved 5 contextual blog posts into database!");
+
+      // Refresh list
+      const managerCard = document.getElementById('cms-content-manager-card');
+      if (managerCard) renderContentManager(managerCard);
+    } catch (err) {
+      toast.error("Failed to generate blog posts: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✨ Generate AI Test Blogs';
+    }
+  });
 }
 
 async function renderContentManager(container) {

@@ -20,6 +20,11 @@ export class RadioStreamPlayer extends HTMLElement {
   }
 
   async connectedCallback() {
+    if (configManager.current.features?.webRadioPlayer === false) {
+      this.style.display = 'none';
+      this.remove();
+      return;
+    }
     document.body.classList.add('has-sticky-player');
     this.playlist = await radioCoordinator.getRadioPlaylist();
     this.render();

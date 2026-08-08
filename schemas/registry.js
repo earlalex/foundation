@@ -1,4 +1,5 @@
 import { validateSchema, Type } from '../core/validator.js';
+import { AccessSchema, PreviewSchema } from './common.js';
 import { AnnouncementSchema } from './announcement.js';
 import { BlogSchema } from './blog.js';
 import { BookSchema } from './book.js';
@@ -22,6 +23,18 @@ class SchemaRegistry {
   constructor() {
     this.register('announcement', AnnouncementSchema);
     this.register('blog', BlogSchema);
+    this.register('review', {
+      type: Type.string,
+      id: Type.string,
+      title: Type.string,
+      author: Type.string,
+      description: Type.string,
+      longFormText: Type.array,
+      rating: Type.number,
+      date: Type.string,
+      preview: Type.optional(PreviewSchema),
+      access: Type.optional(AccessSchema)
+    });
     this.register('book', BookSchema);
     this.register('education', EducationSchema);
     this.register('howto', HowToSchema);

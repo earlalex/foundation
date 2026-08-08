@@ -32,33 +32,60 @@ export class GoogleReviews extends HTMLElement {
     const listContainer = this.querySelector('.reviews-list-container');
     if (!listContainer) return;
 
+    let apiData = { rating: 4.9, userRatingCount: 142, reviews: [] };
     try {
       const response = await fetch(`/api/google-business?placeId=${encodeURIComponent(this.placeId)}`);
-      if (!response.ok) throw new Error("API responded with error");
-      const data = await response.json();
-
-      this.renderReviewsList(data);
+      if (response.ok) {
+        apiData = await response.json();
+      } else {
+        throw new Error("API responded with error status");
+      }
     } catch (err) {
-      console.warn("[GoogleReviews Component]: Live load failed, rendering mock details.", err);
-      // Fallback details if fetch is offline/fails
+      console.warn("[GoogleReviews Component]: Live load failed, rendering mock fallback reviews.", err);
+      apiData.reviews = [
+        {
+          authorAttribution: { displayName: "Sarah Jenkins", photoUri: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" },
+          rating: 5,
+          text: { text: "Going zero-build with native ES modules reduced our deployment time to seconds! Truly spectacular framework." },
+          relativePublishTimeDescription: "2 days ago"
+        },
+        {
+          authorAttribution: { displayName: "Marcus Chen", photoUri: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" },
+          rating: 5,
+          text: { text: "As a principal architect, security is my top priority. Foundation's zero-trust database boundaries and robust OAuth credential vault are world-class." },
+          relativePublishTimeDescription: "1 week ago"
+        }
+      ];
+    }
+
+    try {
+      // Load generated reviews from contentDB
+      const { contentDB } = await import('../../core/db.js');
+      const allContent = await contentDB.getAllContent();
+      const dbReviews = allContent.filter(item => item.type === 'review');
+
+      const mappedDbReviews = dbReviews.map(r => ({
+        authorAttribution: {
+          displayName: r.author || 'Anonymous',
+          photoUri: r.preview?.featuredImage?.src || ''
+        },
+        rating: r.rating || 5,
+        text: {
+          text: r.description || (r.longFormText && r.longFormText[0]) || ''
+        },
+        relativePublishTimeDescription: r.date || 'Recently'
+      }));
+
+      const combinedReviews = [...mappedDbReviews, ...(apiData.reviews || [])];
+
       this.renderReviewsList({
-        rating: 4.9,
-        userRatingCount: 142,
-        reviews: [
-          {
-            authorAttribution: { displayName: "Sarah J.", photoUri: "" },
-            rating: 5,
-            text: { text: "Going zero-build with native ES modules reduced our deployment time to seconds! Truly spectacular." },
-            relativePublishTimeDescription: "2 days ago"
-          },
-          {
-            authorAttribution: { displayName: "Marcus C.", photoUri: "" },
-            rating: 5,
-            text: { text: "Pragmatic, fast, and warning-free console outputs. Secure DB logic runs seamlessly." },
-            relativePublishTimeDescription: "1 week ago"
-          }
-        ]
+        rating: apiData.rating || 4.9,
+        userRatingCount: (apiData.userRatingCount || 142) + dbReviews.length,
+        reviews: combinedReviews
       });
+    } catch (e) {
+      console.warn("[GoogleReviews Component]: Failed to load DB reviews:", e);
+      this.renderReviewsList(apiData);
     }
   }
 
