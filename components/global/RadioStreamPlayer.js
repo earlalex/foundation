@@ -20,6 +20,7 @@ export class RadioStreamPlayer extends HTMLElement {
   }
 
   async connectedCallback() {
+    document.body.classList.add('has-sticky-player');
     this.playlist = await radioCoordinator.getRadioPlaylist();
     this.render();
     this.setupAudio();
@@ -31,6 +32,7 @@ export class RadioStreamPlayer extends HTMLElement {
   }
 
   disconnectedCallback() {
+    document.body.classList.remove('has-sticky-player');
     if (this.unsubscribe) this.unsubscribe();
     this.clearTeaserTimer();
     if (this.audio) {
