@@ -11,6 +11,9 @@ export const defaultConfig = {
   siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
   adminEmails: [],
+  features: {
+    imagenAiGenerator: true
+  },
   sectionWizards: {
     section1: false,
     section2: false,

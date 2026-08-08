@@ -129,6 +129,44 @@ export function initAdminCms() {
       });
     }
   }
+
+  // --- GOOGLE IMAGEN 3 API BUTTON INTEGRATION ---
+  const btnCmsGenerate = document.getElementById('btn-cms-generate-media');
+  if (btnCmsGenerate) {
+    btnCmsGenerate.onclick = async (e) => {
+      e.preventDefault();
+      const { configManager } = await import('../../../core/config.js');
+      if (configManager.current.features?.imagenAiGenerator === false) {
+        toast.error("Imagen AI Generator feature is disabled in Site Settings.");
+        return;
+      }
+      const titleInput = document.getElementById('content-title');
+      const title = titleInput ? titleInput.value.trim() : '';
+
+      if (!title) {
+        toast.warning("Please enter a Content Title first to tailor the AI image.");
+        return;
+      }
+
+      btnCmsGenerate.disabled = true;
+      btnCmsGenerate.textContent = "Generating...";
+      try {
+        const { generateArticleHeader } = await import('../../../utils/ai-imagen.js');
+        const imgUrl = await generateArticleHeader(title);
+        const urlInput = document.getElementById('cms-featured-image-url');
+        if (urlInput) {
+          urlInput.value = imgUrl;
+          toast.success("Successfully generated featured image banner!");
+        }
+      } catch (err) {
+        console.error("[Imagen CMS Generation Error]:", err);
+        toast.error("Failed to generate featured image.");
+      } finally {
+        btnCmsGenerate.disabled = false;
+        btnCmsGenerate.textContent = "✨ Generate AI Visual Asset with Imagen";
+      }
+    };
+  }
 }
 
 /**
@@ -487,6 +525,9 @@ async function renderContentManager(container) {
           bodyInput.value = item.longFormText ? item.longFormText.join('\n') : '';
         }
         if (affiliateInput) affiliateInput.value = item.affiliateAdCode || '';
+        if (document.getElementById('cms-featured-image-url')) {
+          document.getElementById('cms-featured-image-url').value = item.preview?.featuredImage?.src || '';
+        }
 
         // If GrapesJS editor mode is toggled, sync it
         const toggle = document.getElementById('cms-editor-type-toggle');

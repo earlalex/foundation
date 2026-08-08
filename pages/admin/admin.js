@@ -544,6 +544,21 @@ export function initAdminPage() {
       const currentDate = new Date().toISOString().split('T')[0];
       const paragraphs = rawBody ? rawBody.split('\n').filter((p) => p.trim().length > 0) : [];
 
+      const cmsFeaturedImageUrl = document.getElementById('cms-featured-image-url')?.value || '';
+      const featuredImagePayload = assetData
+        ? {
+            type: assetData.category,
+            src: assetData.src,
+            localPath: assetData.localPath
+          }
+        : (cmsFeaturedImageUrl
+            ? {
+                type: 'image',
+                src: cmsFeaturedImageUrl,
+                localPath: ''
+              }
+            : null);
+
       const payload = {
         type: contentType,
         id: contentId,
@@ -556,13 +571,7 @@ export function initAdminPage() {
         affiliateAdCode,
         preview: {
           teaserText: description,
-          featuredImage: assetData
-            ? {
-                type: assetData.category,
-                src: assetData.src,
-                localPath: assetData.localPath
-              }
-            : null
+          featuredImage: featuredImagePayload
         }
       };
 
@@ -614,6 +623,9 @@ export function initAdminPage() {
       if (success) {
         toast.success(`Successfully published "${title}"!`);
         e.target.reset();
+        if (document.getElementById('cms-featured-image-url')) {
+          document.getElementById('cms-featured-image-url').value = '';
+        }
         if (eventFieldsContainer) eventFieldsContainer.style.display = 'none';
         updateLivePreview();
       } else {
