@@ -216,6 +216,9 @@ export function initProductsTab() {
           if (document.getElementById('product-payment-terms')) {
             document.getElementById('product-payment-terms').value = product.invoiceSettings?.paymentTerms || 'Net 30 days';
           }
+          if (document.getElementById('product-image-url')) {
+            document.getElementById('product-image-url').value = product.image || '';
+          }
 
           // Load Royalty splits
           const splits = await getAssetSplits(productId);
@@ -298,6 +301,7 @@ export function initProductsTab() {
       const invoiceDays = parseInt(document.getElementById('product-invoice-days').value) || 30;
       const googleContact = document.getElementById('product-google-contact').value;
       const paymentTerms = document.getElementById('product-payment-terms').value;
+      const imageUrl = document.getElementById('product-image-url')?.value || '';
 
       // Convert price to cents for Stripe compatibility
       const basePrice = Math.round(price * 100);
@@ -324,6 +328,7 @@ export function initProductsTab() {
         title,
         category,
         description,
+        image: imageUrl,
         longFormText: description ? [description] : [],
         pricing: {
           basePrice,
@@ -358,6 +363,9 @@ export function initProductsTab() {
       
       // Reset form
       productForm.reset();
+      if (document.getElementById('product-image-url')) {
+        document.getElementById('product-image-url').value = '';
+      }
       editingProductId = null;
       retainerFields.style.display = 'none';
       if (submitBtn) {
@@ -899,6 +907,105 @@ export function initProductsTab() {
 
   // Initial load
   loadProducts();
+
+  // --- GOOGLE IMAGEN 3 API BUTTON INTEGRATION ---
+  const btnProductGenerate = document.getElementById('btn-product-generate-media');
+  if (btnProductGenerate) {
+    btnProductGenerate.onclick = async (e) => {
+      e.preventDefault();
+      if (configManager.current.features?.imagenAiGenerator === false) {
+        toast.error("Imagen AI Generator feature is disabled in Site Settings.");
+        return;
+      }
+      const titleInput = document.getElementById('product-title');
+      const categoryInput = document.getElementById('product-category');
+      const title = titleInput ? titleInput.value.trim() : '';
+      const category = categoryInput ? categoryInput.value.trim() : '';
+
+      if (!title) {
+        toast.warning("Please enter a Product Title first to tailor the mockup.");
+        return;
+      }
+
+      btnProductGenerate.disabled = true;
+      btnProductGenerate.textContent = "Generating...";
+      try {
+        const { generateProductMockup } = await import('../../utils/ai-imagen.js');
+        const imgUrl = await generateProductMockup(title, category || 'Product');
+        const urlInput = document.getElementById('product-image-url');
+        if (urlInput) {
+          urlInput.value = imgUrl;
+          toast.success("Successfully generated product mockup image!");
+        }
+      } catch (err) {
+        console.error("[Imagen Product Mockup Error]:", err);
+        toast.error("Failed to generate product mockup.");
+      } finally {
+        btnProductGenerate.disabled = false;
+        btnProductGenerate.textContent = "✨ Generate AI Visual Asset with Imagen";
+      }
+    };
+  }
+
+  // --- AI TEST PRODUCTS GENERATOR INTEGRATION ---
+  const btnGenTestProducts = document.getElementById('btn-generate-ai-test-products');
+  if (btnGenTestProducts) {
+    btnGenTestProducts.onclick = async (e) => {
+      e.preventDefault();
+      if (configManager.current.features?.imagenAiGenerator === false) {
+        toast.error("Imagen AI Generator feature is disabled in Site Settings.");
+        return;
+      }
+
+      btnGenTestProducts.disabled = true;
+      btnGenTestProducts.textContent = "Generating AI Products...";
+      try {
+        const { generateProductMockup } = await import('../../utils/ai-imagen.js');
+
+        const sampleProducts = [
+          { title: "Premium Ceramic Flask", category: "Apothecary", price: 3500 },
+          { title: "Sovereign Cotton Tote", category: "Artisanal Merch", price: 2000 },
+          { title: "Zero-Build Blueprint Hoodie", category: "Apparel", price: 7500 }
+        ];
+
+        for (const p of sampleProducts) {
+          const imgUrl = await generateProductMockup(p.title, p.category);
+          const productId = 'product_test_' + Math.floor(Math.random() * 10000);
+
+          await contentDB.saveContent({
+            type: 'product',
+            id: productId,
+            title: p.title,
+            category: p.category,
+            description: `Auto-generated premium ${p.title} crafted using secure zero-build standards.`,
+            image: imgUrl,
+            pricing: {
+              basePrice: p.price,
+              currency: 'USD',
+              paymentType: 'full_upfront'
+            },
+            inventory: {
+              stockQuantity: 15,
+              lowStockThreshold: 3,
+              trackInventory: true
+            },
+            tags: ["Zero-Build", "Sovereignty", "AI-Generated"],
+            rating: 4.9,
+            date: new Date().toISOString().split('T')[0]
+          });
+        }
+
+        toast.success("Successfully generated 3 unique AI Test Products with Imagen Mockups!");
+        loadProducts(); // Reload products list cleanly
+      } catch (err) {
+        console.error("[Gen Test Products Error]:", err);
+        toast.error("Failed to generate AI test products.");
+      } finally {
+        btnGenTestProducts.disabled = false;
+        btnGenTestProducts.textContent = "✨ Generate AI Test Products";
+      }
+    };
+  }
 }
 
 /**
