@@ -1050,7 +1050,7 @@ function initFeatureTogglesEditor() {
 
     // Insert before the factory reset card if present, or just append
     const resetWrapper = document.getElementById('factory-reset-section-wrapper');
-    if (resetWrapper) {
+    if (resetWrapper && resetWrapper.parentNode === tabSite) {
       tabSite.insertBefore(togglesCard, resetWrapper);
     } else {
       tabSite.appendChild(togglesCard);
