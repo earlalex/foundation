@@ -91,8 +91,18 @@ export function renderContent(contentData) {
   const isPaidMember = userRole === 'member' || userRole === 'affiliate' || userRole === 'admin' || (user?.isAdmin && !simulatedTier);
   const hasUserSession = simulatedTier ? (simulatedTier !== 'prospect') : !!user;
 
+  // Google Authenticated users, Editors, and Admins are always authorized
+  const isAuthorizedEditor = !simulatedTier && !!(user && (
+    user.provider === 'google.com' ||
+    user.role === 'admin' ||
+    user.role === 'editor' ||
+    user.isAdmin
+  ));
+
   let hasPermission = false;
-  if (visibility === 'public') {
+  if (isAuthorizedEditor) {
+    hasPermission = true;
+  } else if (visibility === 'public') {
     hasPermission = true;
   } else if (visibility === 'authenticated' && hasUserSession) {
     hasPermission = true;

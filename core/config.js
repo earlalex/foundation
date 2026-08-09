@@ -493,7 +493,10 @@ class ConfigEngine {
     localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
     console.log('[ConfigEngine]: Credentials saved to LocalStorage.');
 
-    await this.syncToFirestore();
+    // Dispatch Firestore sync in the background without waiting for it to finish
+    this.syncToFirestore().catch(err => {
+      console.warn('[ConfigEngine]: Background Firestore sync failed:', err.message);
+    });
     return true;
   }
 

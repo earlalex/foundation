@@ -2,8 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper Functions
     function isAuthenticated() {
       return request.auth != null;
+    }
+
+    // True if user is a Google-authenticated user, an explicit Admin, or an Editor
+    function isAuthorizedEditor() {
+      return isAuthenticated() && (
+        request.auth.token.firebase.sign_in_provider == 'google.com' ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'editor' ||
+        request.auth.token.email == 'admin@earlalex.com'
+      );
     }
 
     function isAdmin() {
@@ -13,27 +24,48 @@ service cloud.firestore {
       );
     }
 
+    // Site Configurations & Identity Settings
     match /settings/config {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthorizedEditor();
     }
 
+    // CMS Pages & Custom Content
     match /pages/{pageId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthorizedEditor();
     }
 
+    // Content Feeds (Blogs, Podcasts, Videos, Products, Reviews)
     match /content/{contentId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthorizedEditor();
     }
 
+    // Security Audits & Spark Tasks
+    match /security_audits/{auditId} {
+      allow read, write: if isAuthorizedEditor();
+    }
+
+    match /spark_tasks/{taskId} {
+      allow read, write: if isAuthorizedEditor();
+    }
+
+    // User Accounts & User Directories
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAuthorizedEditor());
     }
 
-    match /{document=**} {
+    // HIPAA Logs (Strict Admin Access Only)
+    match /hipaa_logs/{logId} {
       allow read, write: if isAdmin();
+    }
+
+    // Global Fallback
+    match /{document=**} {
+      allow read: if true;
+      allow write: if isAuthorizedEditor();
     }
   }
 }

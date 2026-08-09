@@ -276,7 +276,7 @@ export function initSiteSettingsTab() {
 
       const success = await configManager.saveToFirebase(updatedSiteConfig);
       if (success) {
-        toast.success(`Site Identity settings saved for "${siteTitleInput.value}"!`);
+        toast.success("Saved!");
       } else {
         toast.error('Failed to save site settings. Please try again.');
       }
