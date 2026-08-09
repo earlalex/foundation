@@ -448,7 +448,7 @@ export async function getZapScanHistory() {
   }
 
   try {
-    const querySnapshot = await originalGetDocs(collection(db, ZAP_SCANS_COLLECTION));
+    const querySnapshot = await getDocs(collection(db, ZAP_SCANS_COLLECTION));
     return querySnapshot.docs.map(docSnap => docSnap.data()).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   } catch (err) {
     const local = JSON.parse(localStorage.getItem('foundation_local_security_scans') || '{}');
@@ -490,7 +490,7 @@ export async function getMarketingSegments() {
   }
 
   try {
-    const querySnapshot = await originalGetDocs(collection(db, MARKETING_SEGMENTS_COLLECTION));
+    const querySnapshot = await getDocs(collection(db, MARKETING_SEGMENTS_COLLECTION));
     return querySnapshot.docs.map(docSnap => docSnap.data());
   } catch (err) {
     const local = JSON.parse(localStorage.getItem('foundation_local_marketing_segments') || '{}');
@@ -553,7 +553,7 @@ export async function getEmailTemplates() {
   }
 
   try {
-    const querySnapshot = await originalGetDocs(collection(db, EMAIL_TEMPLATES_COLLECTION));
+    const querySnapshot = await getDocs(collection(db, EMAIL_TEMPLATES_COLLECTION));
     return querySnapshot.docs.map(docSnap => docSnap.data());
   } catch (err) {
     const local = JSON.parse(localStorage.getItem('foundation_local_email_templates') || '{}');
@@ -614,7 +614,7 @@ export async function getMarketingWorkflows() {
   }
 
   try {
-    const querySnapshot = await originalGetDocs(collection(db, MARKETING_WORKFLOWS_COLLECTION));
+    const querySnapshot = await getDocs(collection(db, MARKETING_WORKFLOWS_COLLECTION));
     return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (err) {
     console.warn('[DB]: Firestore marketing workflows get error. Falling back to LocalStorage.', err.message);
@@ -719,7 +719,7 @@ export async function getVaultCredentials() {
   }
 
   try {
-    const querySnapshot = await originalGetDocs(collection(db, VAULT_CREDENTIALS_COLLECTION));
+    const querySnapshot = await getDocs(collection(db, VAULT_CREDENTIALS_COLLECTION));
     return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (err) {
     console.warn('[DB]: Firestore vault credentials get error. Falling back to LocalStorage.', err.message);
