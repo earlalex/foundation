@@ -36,6 +36,13 @@ import './components/global/RadioStreamPlayer.js';
 // Page Controllers (Lazily Loaded in Route Splitting / pageLoaded events)
 import { initHomePage } from './pages/home/home.js';
 
+// Catch and suppress non-critical browser extension message channel errors
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && event.reason.message && event.reason.message.includes('message channel closed before a response was received')) {
+    event.preventDefault(); // Suppress noisy extension channel error
+  }
+});
+
 logger.info('Foundation Core initializing...');
 
 /**

@@ -27,7 +27,7 @@ export const MARKETING_WORKFLOWS_COLLECTION = 'marketing_workflows';
 export const KANBAN_TASKS_COLLECTION = 'kanban_tasks';
 export const VAULT_CREDENTIALS_COLLECTION = 'vault_credentials';
 
-export async function withTimeout(promise, ms = 6000) {
+export async function withTimeout(promise, ms = 1500) {
   let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error('Firestore operation timeout')), ms);
@@ -72,11 +72,11 @@ export const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
 
 export function queryWith3SecTimeout(promise) {
   promise.catch((err) => {
-    console.warn('[DB 3s Query Wrapper]: original query rejected post-timeout/settlement:', err.message || err);
+    console.warn('[DB 1.5s Query Wrapper]: original query rejected post-timeout/settlement:', err.message || err);
   });
   return Promise.race([
     promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), 3000))
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore operation timeout')), 1500))
   ]);
 }
 
