@@ -178,31 +178,34 @@ async function initializeCurriculumPlayer(course, resumeParam) {
 
   updateProgressBar();
 
-  // Render Syllabus
-  renderSyllabusList();
-
   // Select Initial Lesson
-  let activeLesson = allLessons[0];
+  let currentLesson = allLessons[0];
   if (resumeParam) {
-    activeLesson = allLessons.find(l => l.id === resumeParam) || allLessons[0];
+    currentLesson = allLessons.find(l => l.id === resumeParam) || allLessons[0];
   } else if (progress.lastAccessedLesson) {
     const lastIncomplete = allLessons.find(l => !progress.completedLessons.includes(l.id));
     if (lastIncomplete) {
-      activeLesson = lastIncomplete;
+      currentLesson = lastIncomplete;
     } else {
-      activeLesson = allLessons.find(l => l.id === progress.lastAccessedLesson) || allLessons[0];
+      currentLesson = allLessons.find(l => l.id === progress.lastAccessedLesson) || allLessons[0];
     }
   }
 
-  if (activeLesson) {
-    loadActiveLesson(activeLesson);
+  // Render Syllabus
+  renderSyllabusList();
+
+  if (currentLesson) {
+    loadActiveLesson(currentLesson);
   }
 
   function renderSyllabusList() {
     const container = document.getElementById('syllabus-modules-list');
     if (!container) return;
 
-    container.innerHTML = course.modules.map((mod, modIdx) => {
+    const modules = course.modules || [];
+    const activeLesson = currentLesson || (modules[0] && modules[0].lessons[0]) || null;
+
+    container.innerHTML = modules.map((mod, modIdx) => {
       const lessons = mod.lessons || [];
       const lessonsHtml = lessons.map(lesson => {
         const isCompleted = progress.completedLessons?.includes(lesson.id);
@@ -248,7 +251,7 @@ async function initializeCurriculumPlayer(course, resumeParam) {
         const lessonId = row.dataset.lessonId;
         const target = allLessons.find(l => l.id === lessonId);
         if (target) {
-          activeLesson = target;
+          currentLesson = target;
           loadActiveLesson(target);
           renderSyllabusList(); // Refresh active highlight
         }
