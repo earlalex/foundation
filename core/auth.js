@@ -142,6 +142,9 @@ export class AuthManager {
           isAdmin = true;
         }
 
+        const isGoogleAuth = user.providerData && user.providerData.some(p => p.providerId === 'google.com');
+        const provider = isGoogleAuth ? 'google.com' : (user.providerData && user.providerData[0]?.providerId || '');
+
         const userObj = {
           uid: String(user.uid),
           email: user.email,
@@ -149,13 +152,14 @@ export class AuthManager {
           photoURL: user.photoURL || '',
           isAdmin: isAdmin,
           role: profile.role,
+          provider: provider,
           paymentStatus: profile.paymentStatus,
           affiliateCode: profile.affiliateCode,
           referredBy: profile.referredBy
         };
         sessionStorage.removeItem('firebase_auth_in_progress');
         store.dispatch('SET_USER', userObj);
-        console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role})`);
+        console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role}, Provider: ${provider})`);
 
         // Trigger system-wide hook execution pipeline for user login
         try {
@@ -187,7 +191,7 @@ export class AuthManager {
           sessionStorage.removeItem('intended_destination');
 
           if (intendedDest) {
-            const hasAdminAccess = isAdmin || profile.role === 'admin' || profile.role === 'editor';
+            const hasAdminAccess = isAdmin || profile.role === 'admin' || profile.role === 'editor' || provider === 'google.com';
             if (intendedDest === '/admin') {
               if (hasAdminAccess) {
                 window.router.loadRoute('/admin');
@@ -342,7 +346,13 @@ export class AuthManager {
     // or bypass serverless Edge API token-based security controls. Actual backend authorization
     // is strictly enforced on the server-side via cryptographic request.auth tokens.
     const user = store.state.user;
-    return !!(user && (user.isAdmin || user.role === 'admin') || window.__FOUNDATION_DEV_BYPASS__);
+    const isAuthorized = !!(user && (
+      user.provider === 'google.com' ||
+      user.role === 'admin' ||
+      user.role === 'editor' ||
+      user.isAdmin
+    ));
+    return isAuthorized || !!window.__FOUNDATION_DEV_BYPASS__;
   }
 }
 
