@@ -20,9 +20,15 @@ export class AppNavbar extends HTMLElement {
     const siteTitle = configManager.current?.siteTitle || 'Foundation';
     const navigation = configManager.current?.navigation || [];
     const state = store.state;
-    const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
+    const user = state.user;
+    const currentRole = state.simulatedUserTier || user?.role || 'prospect';
+    const adminEmails = configManager.current?.adminEmails || ['admin@earlalex.com'];
+    const isPrimaryAdmin = currentRole === 'admin' || (user && adminEmails.map(e => e.toLowerCase()).includes(user.email.toLowerCase()) && !state.simulatedUserTier);
+    const isEditor = currentRole === 'editor';
+    const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || state.devMode === true;
+
+    const hasAdminAccess = (isPrimaryAdmin || isEditor || isDevConsoleBypass) && currentRole !== 'subscriber' && currentRole !== 'member';
     const isBypass = state.user?.isAdmin || window.__FOUNDATION_DEV_BYPASS__;
-    const hasAdminAccess = currentRole === 'admin' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
 
     this.innerHTML = `
       <style>
