@@ -6,7 +6,10 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged,
-  getRedirectResult
+  getRedirectResult,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { store } from './store.js';
 import { errorHandler } from './error-handler.js';
@@ -45,6 +48,9 @@ export function getFirebaseApp() {
 
 const app = getFirebaseApp();
 export const auth = getAuth(app);
+export function getFirebaseAuth() {
+  return auth;
+}
 const googleProvider = new GoogleAuthProvider();
 
 let isSigningIn = false;
@@ -78,6 +84,7 @@ export class AuthManager {
     this.isAuthenticating = false;
     this.initAuthObserver();
     this.checkRedirectResult();
+    this.checkEmailSignInLink();
   }
 
   /**
@@ -233,18 +240,40 @@ export class AuthManager {
     });
   }
 
-  /**
-   * Sign in with Google popup
-   * Delegates to the standalone loginWithGoogle function with debounce lock.
-   * @returns {Promise<Object>} Firebase user object
-   * @throws {Error} If sign-in fails
-   */
   async loginWithGoogle() {
-    if (this.isAuthenticating) {
-      const busyMsg = "Authentication is already in progress. Please wait.";
-      toast.warning(busyMsg);
-      throw new Error(busyMsg);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(getFirebaseAuth(), provider);
+      const user = result.user;
+
+      // Update application state
+      store.dispatch('SET_USER', {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        provider: 'google.com',
+        role: 'member'
+      });
+
+      const { toast } = await import('../utils/toast.js');
+      toast.success(`Welcome back, ${user.displayName || user.email}!`);
+
+      // Navigate to account or destination route
+      window.router.navigateTo('/account');
+    } catch (err) {
+      console.warn('[Auth Core]: Google OAuth popup error / closed by user:', err);
+      throw err;
     }
+  }
+
+  /**
+   * Sends a magic sign-in link to the specified email address.
+   * @param {string} email
+   */
+  async sendMagicLink(email) {
+    if (!email) throw new Error("Email is required.");
 
     // Check if Firebase is running on demo/unconfigured credentials
     const currentFbConfig = configManager.current.firebase;
@@ -256,62 +285,45 @@ export class AuthManager {
                           currentFbConfig.apiKey !== "YOUR_API_KEY";
 
     if (!isConfigured) {
-      const warningMsg = "Firebase is running on demo/unconfigured credentials. Please run the Setup Wizard or update API keys.";
-      toast.warning(warningMsg);
-      const customError = new Error(warningMsg);
-      errorHandler.handleError(customError);
-      throw customError;
+      console.log(`[Auth Magic Link Simulation]: Magic link dispatched to ${email}`);
+      return;
     }
 
-    this.isAuthenticating = true;
-    sessionStorage.setItem('firebase_auth_in_progress', 'true');
-
     try {
-      const result = await loginWithGoogle();
-      sessionStorage.removeItem('firebase_auth_in_progress');
-      if (result) {
-        return result.user;
-      }
-      return null;
+      const actionCodeSettings = {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: true
+      };
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', email);
     } catch (err) {
-      if (!err) {
-        return null;
-      }
-      const errorCode = err.code || '';
-      const errorMessage = err.message || '';
+      console.error('[Auth Core]: Send magic link failed', err);
+      throw err;
+    }
+  }
 
-      // Gracefully fallback to signInWithRedirect or catch promise rejection cleanly
-      try {
-        console.warn('[Auth]: Popup authentication failed or was closed. Attempting redirect fallback...', err);
-        const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-        await signInWithRedirect(auth, googleProvider);
-      } catch (redirectErr) {
-        console.error('[Auth]: Redirect authentication fallback failed.', redirectErr);
-        sessionStorage.removeItem('firebase_auth_in_progress');
+  /**
+   * Checks if the incoming URL is a Magic Sign-In link and completes the authentication.
+   */
+  async checkEmailSignInLink() {
+    try {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+          email = window.prompt('Please provide your email for confirmation');
+        }
+        if (email) {
+          this.isAuthenticating = true;
+          sessionStorage.setItem('firebase_auth_in_progress', 'true');
+          const result = await signInWithEmailLink(auth, email, window.location.href);
+          window.localStorage.removeItem('emailForSignIn');
+          sessionStorage.removeItem('firebase_auth_in_progress');
+          console.log('[Auth]: Email link sign-in success:', result.user.email);
+        }
       }
-
-      if (errorCode === 'auth/popup-blocked') {
-        toast.error("Sign-in popup was blocked by your browser. Please allow popups for this site and try again.");
-      } else if (errorCode === 'auth/popup-closed-by-user') {
-        console.log('[Auth]: Sign-in popup closed by user.');
-      } else if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('auth/unauthorized-domain')) {
-        toast.error(`Domain authorization error: Please add '${window.location.hostname}' to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
-      } else if (errorCode === 'auth/configuration-not-found' || errorMessage.includes('configuration-not-found')) {
-        toast.error("Firebase is running on demo/unconfigured credentials. Please run the Setup Wizard or update API keys.");
-      } else {
-        toast.error(`Google Sign-In Failed: ${errorMessage}`);
-      }
-
-      let customError;
-      if (errorCode === 'auth/unauthorized-domain' || errorMessage.includes('auth/unauthorized-domain')) {
-        customError = new Error(
-          `Unauthorized Domain: Please add "${window.location.hostname}" (or your base domain "foundation-5b8.pages.dev") to your Firebase Console -> Authentication -> Settings -> Authorized Domains list.`
-        );
-      } else {
-        customError = err;
-      }
-      errorHandler.handleError(customError);
-      throw customError;
+    } catch (err) {
+      console.error('[Auth]: Error resolving email link sign-in:', err);
+      sessionStorage.removeItem('firebase_auth_in_progress');
     } finally {
       this.isAuthenticating = false;
     }
