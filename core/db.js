@@ -1590,6 +1590,22 @@ export async function syncOutboxToFirestore() {
       return;
     }
 
+    // Verify authentication completes and is established before syncing
+    let isUserAuth = false;
+    try {
+      const { auth } = await import('./auth.js');
+      if (auth && auth.currentUser) {
+        isUserAuth = true;
+      }
+    } catch (authErr) {
+      console.warn('[Outbox Sync]: Dynamic auth import or status check deferred.', authErr.message);
+    }
+
+    if (!isUserAuth) {
+      console.log('[Outbox Sync]: Postponing outbox sync until authentication is fully completed.');
+      return;
+    }
+
     let outbox = [];
     try {
       outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
@@ -1658,9 +1674,22 @@ if (typeof window !== 'undefined') {
     console.warn('[Outbox Sync]: Firebase reconnection listener registration deferred.', err.message);
   }
 
-  setTimeout(() => {
-    syncOutboxToFirestore();
-  }, 2000);
+  // Wrap the initial outbox flush inside Firebase's onAuthStateChanged() observer so payload syncing only starts after request.auth is established
+  try {
+    const { auth } = await import('./auth.js');
+    const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('[Outbox Sync]: Authentication established. Triggering initial outbox sync...');
+        syncOutboxToFirestore();
+      }
+    });
+  } catch (err) {
+    console.warn('[Outbox Sync]: Firebase auth state observer registration deferred, falling back to timeout.', err.message);
+    setTimeout(() => {
+      syncOutboxToFirestore();
+    }, 2000);
+  }
 }
 
 /**
