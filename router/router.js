@@ -134,6 +134,8 @@ export class Router {
         await import('../pages/account.js');
       } else if (cleanPath === '/login') {
         await import('../pages/login.js');
+      } else if (cleanPath === '/privacy' || cleanPath === '/terms' || cleanPath === '/cookies') {
+        await import('../pages/legal/legal.js');
       }
     } catch (importErr) {
       console.error(`[Router loadRouteModule]: Graceful defensive catch. Failed to dynamically import page controller module for route "${cleanPath}". Diagnostic details: ${importErr.stack || importErr.message || importErr}`);
