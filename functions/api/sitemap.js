@@ -8,7 +8,10 @@ const staticRoutes = [
   { path: '/education', priority: '0.8', changefreq: 'weekly' },
   { path: '/podcast', priority: '0.8', changefreq: 'weekly' },
   { path: '/shop', priority: '0.8', changefreq: 'weekly' },
-  { path: '/contact', priority: '0.8', changefreq: 'weekly' }
+  { path: '/contact', priority: '0.8', changefreq: 'weekly' },
+  { path: '/privacy', priority: '0.5', changefreq: 'monthly' },
+  { path: '/terms', priority: '0.5', changefreq: 'monthly' },
+  { path: '/cookies', priority: '0.5', changefreq: 'monthly' }
 ];
 
 const fallbackItems = [

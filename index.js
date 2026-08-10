@@ -278,6 +278,21 @@ async function boot() {
       description: 'Browse tagged content archive.',
       viewPath: './pages/tag/tag.html'
     },
+    '/privacy': {
+      title: 'Privacy Policy | Foundation',
+      description: 'Platform Privacy Policy and Data Safeguards.',
+      viewPath: './pages/legal/privacy.html'
+    },
+    '/terms': {
+      title: 'Terms of Service | Foundation',
+      description: 'Platform Terms of Service and Usage Agreement.',
+      viewPath: './pages/legal/terms.html'
+    },
+    '/cookies': {
+      title: 'Cookie Settings & Preferences | Foundation',
+      description: 'Manage cookie preferences and tracking consent.',
+      viewPath: './pages/legal/cookies.html'
+    },
     '/404': {
       title: 'Page Not Found',
       description: 'The page you requested could not be found.',
@@ -423,5 +438,7 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/videos/videos.js').then(m => m.initVideosPage());
   } else if (e.detail.path === '/docs') {
     import('./pages/docs/docs.js').then(m => m.initDocsPage());
+  } else if (e.detail.path === '/privacy' || e.detail.path === '/terms' || e.detail.path === '/cookies') {
+    import('./pages/legal/legal.js').then(m => m.initLegalPage(e.detail.path));
   }
 });
