@@ -417,6 +417,8 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/admin/admin.js').then(m => m.initAdminPage());
   } else if (e.detail.path === '/account') {
     import('./pages/account.js').then(m => m.initAccountPage());
+  } else if (e.detail.path === '/login') {
+    import('./pages/login.js').then(m => m.initLoginPage());
   } else if (e.detail.path === '/videos') {
     import('./pages/videos/videos.js').then(m => m.initVideosPage());
   } else if (e.detail.path === '/docs') {

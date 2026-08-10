@@ -132,6 +132,8 @@ export class Router {
         await import('../pages/detail/detail.js');
       } else if (cleanPath === '/account') {
         await import('../pages/account.js');
+      } else if (cleanPath === '/login') {
+        await import('../pages/login.js');
       }
     } catch (importErr) {
       console.error(`[Router loadRouteModule]: Graceful defensive catch. Failed to dynamically import page controller module for route "${cleanPath}". Diagnostic details: ${importErr.stack || importErr.message || importErr}`);
@@ -474,6 +476,15 @@ export class Router {
       let htmlContent = await response.text();
 
       this.appContainer.innerHTML = htmlContent;
+
+      if (cleanPath === '/login') {
+        try {
+          const { initLoginPage } = await import('../pages/login.js');
+          initLoginPage();
+        } catch (err) {
+          console.error('[Router]: Failed to auto-initialize login page:', err);
+        }
+      }
 
       // Fallback View Container Check: prevent blank white screen viewport rendering
       if (!this.appContainer.innerHTML || this.appContainer.innerHTML.trim() === '') {
