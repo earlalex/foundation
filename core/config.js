@@ -38,7 +38,7 @@ export const defaultConfig = {
     ga4PropertyId: ""
   },
   analytics: {
-    googleAnalyticsId: ""
+    googleAnalyticsId: "G-XXXXXXXXXX"
   },
   cloudflare: {
     zoneId: "",

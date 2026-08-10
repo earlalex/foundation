@@ -44,8 +44,9 @@ self.addEventListener('fetch', (event) => {
   // Ignore non-http/https schemes (e.g. chrome-extension://) to prevent unsupported scheme errors
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // Bypass Service Worker for external APIs and CDN domains
+  // Bypass Service Worker for external APIs, CDN domains, and the login route
   if (url.pathname.startsWith('/api/') ||
+      url.pathname.includes('/login') ||
       url.hostname.includes('google') ||
       url.hostname.includes('unsplash') ||
       url.hostname.includes('cloudflare')) {
