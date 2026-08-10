@@ -10,7 +10,7 @@ export const defaultConfig = {
   siteTagline: "A zero-build web framework",
   siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
-  adminEmails: [],
+  adminEmails: ['admin@earlalex.com'],
   features: {
     imagenAiGenerator: true
   },

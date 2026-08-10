@@ -110,111 +110,7 @@ export class AuthManager {
   initAuthObserver() {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const adminEmails = configManager.current.adminEmails || [];
-        let isAdmin = adminEmails.includes(user.email) || user.email === 'admin@earlalex.com';
-
-        let profile = {
-          role: isAdmin ? 'admin' : 'subscriber',
-          paymentStatus: 'None',
-          affiliateCode: `aff_${String(user.uid).substring(0, 5)}`
-        };
-
-        // Try syncing from ContentDB user profile if it exists
-        try {
-          const { contentDB } = await import('./db.js');
-          const syncedUser = await contentDB.getUser(user.email);
-          if (syncedUser) {
-            profile = {
-              role: syncedUser.role || profile.role,
-              paymentStatus: syncedUser.paymentStatus || profile.paymentStatus,
-              affiliateCode: syncedUser.affiliateCode || profile.affiliateCode,
-              referredBy: syncedUser.referredBy || null
-            };
-          } else {
-            // Save initial subscriber profile
-            await contentDB.saveUser({
-              id: String(user.uid),
-              name: user.displayName || 'Subscriber',
-              email: user.email,
-              role: profile.role,
-              paymentStatus: profile.paymentStatus,
-              affiliateCode: profile.affiliateCode
-            });
-          }
-        } catch (dbErr) {
-          console.warn('[Auth Sync]: DB profiling sync skipped or unavailable.', dbErr);
-        }
-
-        if (profile.role === 'admin' || user.email === 'admin@earlalex.com') {
-          isAdmin = true;
-        }
-
-        const isGoogleAuth = user.providerData && user.providerData.some(p => p.providerId === 'google.com');
-        const provider = isGoogleAuth ? 'google.com' : (user.providerData && user.providerData[0]?.providerId || '');
-
-        const userObj = {
-          uid: String(user.uid),
-          email: user.email,
-          displayName: user.displayName || user.email.split('@')[0],
-          photoURL: user.photoURL || '',
-          isAdmin: isAdmin,
-          role: profile.role,
-          provider: provider,
-          paymentStatus: profile.paymentStatus,
-          affiliateCode: profile.affiliateCode,
-          referredBy: profile.referredBy
-        };
-        sessionStorage.removeItem('firebase_auth_in_progress');
-        store.dispatch('SET_USER', userObj);
-        console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${isAdmin}, Role: ${profile.role}, Provider: ${provider})`);
-
-        // Trigger system-wide hook execution pipeline for user login
-        try {
-          const { doAction } = await import('./hooks.js');
-          await doAction('user_login', userObj);
-        } catch (hookErr) {
-          console.error('[Auth System]: Failed to dispatch user_login hook.', hookErr);
-        }
-
-        // Smoothly redirect and update UI elements on status changes
-        if (window.router) {
-          const currentPath = window.location.pathname;
-          let relPath = currentPath;
-          const basePath = window.router.basePath || '/';
-          if (basePath !== '/' && currentPath.startsWith(basePath.slice(0, -1))) {
-            relPath = currentPath.slice(basePath.length - 1);
-          }
-          if (relPath.endsWith('/index.html')) {
-            relPath = relPath.replace(/\/index\.html$/, '');
-          }
-          while (relPath.length > 1 && relPath.endsWith('/')) {
-            relPath = relPath.slice(0, -1);
-          }
-          if (relPath === '' || relPath === '/') {
-            relPath = '/home';
-          }
-
-          const intendedDest = sessionStorage.getItem('intended_destination');
-          sessionStorage.removeItem('intended_destination');
-
-          if (intendedDest) {
-            const hasAdminAccess = isAdmin || profile.role === 'admin' || profile.role === 'editor' || provider === 'google.com';
-            if (intendedDest === '/admin') {
-              if (hasAdminAccess) {
-                window.router.loadRoute('/admin');
-              } else {
-                window.router.loadRoute('/account');
-              }
-            } else {
-              window.router.loadRoute(intendedDest);
-            }
-          } else if (relPath === '/login') {
-            window.router.loadRoute('/account');
-          } else {
-            // Reload the current active route to update paywall views and interactive components
-            window.router.loadRoute(currentPath);
-          }
-        }
+        await this.handleUserSession(user);
       } else {
         if (!window.__FOUNDATION_DEV_BYPASS__) {
           if (sessionStorage.getItem('firebase_auth_in_progress') === 'true') {
@@ -240,12 +136,135 @@ export class AuthManager {
     });
   }
 
+  /**
+   * Handle user session updates and auto-elevate primary admins
+   * @param {Object} user - Firebase user object
+   */
+  async handleUserSession(user) {
+    const adminEmails = configManager.current?.adminEmails || ['admin@earlalex.com'];
+    const isPrimaryAdmin = adminEmails.map(e => e.toLowerCase()).includes(user.email.toLowerCase()) || user.email.toLowerCase() === 'admin@earlalex.com';
+
+    let profile = {
+      role: isPrimaryAdmin ? 'admin' : 'subscriber',
+      paymentStatus: 'None',
+      affiliateCode: `aff_${String(user.uid).substring(0, 5)}`
+    };
+
+    // Try syncing from ContentDB user profile if it exists
+    try {
+      const { contentDB } = await import('./db.js');
+      const syncedUser = await contentDB.getUser(user.email);
+      if (syncedUser) {
+        profile = {
+          role: isPrimaryAdmin ? 'admin' : (syncedUser.role || profile.role),
+          paymentStatus: syncedUser.paymentStatus || profile.paymentStatus,
+          affiliateCode: syncedUser.affiliateCode || profile.affiliateCode,
+          referredBy: syncedUser.referredBy || null
+        };
+      } else {
+        // Save initial subscriber profile
+        await contentDB.saveUser({
+          id: String(user.uid),
+          name: user.displayName || 'Subscriber',
+          email: user.email,
+          role: profile.role,
+          paymentStatus: profile.paymentStatus,
+          affiliateCode: profile.affiliateCode
+        });
+      }
+    } catch (dbErr) {
+      console.warn('[Auth Sync]: DB profiling sync skipped or unavailable.', dbErr);
+    }
+
+    const isGoogleAuth = user.providerData && user.providerData.some(p => p.providerId === 'google.com');
+    const provider = isGoogleAuth ? 'google.com' : (user.providerData && user.providerData[0]?.providerId || '');
+
+    const userRecord = {
+      displayName: user.displayName || user.email.split('@')[0],
+      photoURL: user.photoURL || '',
+      provider: provider,
+      paymentStatus: profile.paymentStatus,
+      affiliateCode: profile.affiliateCode,
+      referredBy: profile.referredBy,
+      role: profile.role
+    };
+
+    const effectiveRole = isPrimaryAdmin ? 'admin' : (userRecord?.role || 'subscriber');
+    const effectiveAdmin = isPrimaryAdmin || userRecord?.isAdmin || false;
+
+    const userObj = {
+      ...userRecord,
+      uid: String(user.uid),
+      email: user.email,
+      role: effectiveRole,
+      isAdmin: effectiveAdmin
+    };
+
+    sessionStorage.removeItem('firebase_auth_in_progress');
+    store.dispatch('SET_USER', userObj);
+    console.log(`[Auth]: Authenticated as ${user.email} (Admin: ${effectiveAdmin}, Role: ${effectiveRole}, Provider: ${provider})`);
+
+    // Trigger system-wide hook execution pipeline for user login
+    try {
+      const { doAction } = await import('./hooks.js');
+      await doAction('user_login', userObj);
+    } catch (hookErr) {
+      console.error('[Auth System]: Failed to dispatch user_login hook.', hookErr);
+    }
+
+    // Smoothly redirect and update UI elements on status changes
+    if (window.router) {
+      const currentPath = window.location.pathname;
+      let relPath = currentPath;
+      const basePath = window.router.basePath || '/';
+      if (basePath !== '/' && currentPath.startsWith(basePath.slice(0, -1))) {
+        relPath = currentPath.slice(basePath.length - 1);
+      }
+      if (relPath.endsWith('/index.html')) {
+        relPath = relPath.replace(/\/index\.html$/, '');
+      }
+      while (relPath.length > 1 && relPath.endsWith('/')) {
+        relPath = relPath.slice(0, -1);
+      }
+      if (relPath === '' || relPath === '/') {
+        relPath = '/home';
+      }
+
+      const intendedDest = sessionStorage.getItem('intended_destination');
+      sessionStorage.removeItem('intended_destination');
+
+      if (intendedDest) {
+        const hasAdminAccess = effectiveAdmin || effectiveRole === 'admin' || effectiveRole === 'editor' || provider === 'google.com';
+        if (intendedDest === '/admin') {
+          if (hasAdminAccess) {
+            window.router.loadRoute('/admin');
+          } else {
+            window.router.loadRoute('/account');
+          }
+        } else {
+          window.router.loadRoute(intendedDest);
+        }
+      } else if (relPath === '/login') {
+        window.router.loadRoute('/account');
+      } else {
+        // Reload the current active route to update paywall views and interactive components
+        window.router.loadRoute(currentPath);
+      }
+    }
+  }
+
   async loginWithGoogle() {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(getFirebaseAuth(), provider);
       const user = result.user;
+
+      const adminEmails = configManager.current?.adminEmails || ['admin@earlalex.com'];
+      const isPrimaryAdmin = adminEmails.map(e => e.toLowerCase()).includes(user.email.toLowerCase()) || user.email.toLowerCase() === 'admin@earlalex.com';
+
+      const effectiveRole = isPrimaryAdmin ? 'admin' : 'member';
+      const effectiveAdmin = isPrimaryAdmin;
 
       // Update application state
       store.dispatch('SET_USER', {
@@ -254,7 +273,8 @@ export class AuthManager {
         displayName: user.displayName,
         photoURL: user.photoURL,
         provider: 'google.com',
-        role: 'member'
+        role: effectiveRole,
+        isAdmin: effectiveAdmin
       });
 
       const { toast } = await import('../utils/toast.js');

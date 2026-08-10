@@ -362,9 +362,15 @@ export function initNavbar() {
     }
 
     function syncNavbarVisibility(state) {
-      const currentRole = state.simulatedUserTier || state.user?.role || 'prospect';
+      const user = state.user;
+      const currentRole = state.simulatedUserTier || user?.role || 'prospect';
+      const adminEmails = configManager.current?.adminEmails || ['admin@earlalex.com'];
+      const isPrimaryAdmin = currentRole === 'admin' || (user && adminEmails.map(e => e.toLowerCase()).includes(user.email.toLowerCase()) && !state.simulatedUserTier);
+      const isEditor = currentRole === 'editor';
+      const isDevConsoleBypass = window.__FOUNDATION_DEV_BYPASS__ === true || state.devMode === true;
+
+      const hasAdminAccess = (isPrimaryAdmin || isEditor || isDevConsoleBypass) && currentRole !== 'subscriber' && currentRole !== 'member';
       const isBypass = state.user?.isAdmin || window.__FOUNDATION_DEV_BYPASS__;
-      const hasAdminAccess = currentRole === 'admin' || (state.user?.isAdmin && !state.simulatedUserTier) || window.__FOUNDATION_DEV_BYPASS__;
 
       // Profile Link
       ['nav-profile-link', 'mobile-nav-profile-link'].forEach(id => {
