@@ -9,6 +9,84 @@ export async function onRequestPost(context) {
     const contentType = context.request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       const body = await context.request.json();
+
+      // Check if it is a Telnyx Call Control Webhook Event
+      const isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
+      if (isTelnyx) {
+        const eventType = body.data.event_type;
+        const callControlId = body.data.payload.call_control_id;
+        const env = context.env || {};
+        const telnyxApiKey = env.TELNYX_API_KEY;
+
+        const handleTelnyxBackground = async () => {
+          try {
+            if (eventType === 'call.initiated') {
+              // Answer the incoming call automatically via Telnyx Call Control API
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${telnyxApiKey}`
+                }
+              });
+            } else if (eventType === 'call.answered') {
+              // Speak initial AI greeting to caller
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${telnyxApiKey}`
+                },
+                body: JSON.stringify({
+                  payload: "Hello! Thank you for calling Foundation support. How can I help you today?",
+                  voice: "female",
+                  language: "en-US"
+                })
+              });
+            }
+
+            // Google Workspace Telephony Log Integration
+            const serviceToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
+            if (serviceToken && (eventType === 'call.hangup' || eventType === 'call.speak.ended' || eventType === 'call.answered')) {
+              const { uploadCommunicationLogToDrive, syncGoogleContactCommunication } = await import('../../utils/backend-google-serverless.js');
+
+              const callerPhone = body.data.payload.from || 'Unknown Caller';
+              const duration = body.data.payload.duration_seconds || body.data.payload.duration || 0;
+              const occurredAt = body.data.occurred_at || new Date().toISOString();
+              const siteName = "Foundation Framework";
+              const fileName = `telnyx_voice_log_${Date.now()}.md`;
+
+              const mdTranscript = `## Telnyx Voice Session\n\n- **Date/Time**: ${new Date(occurredAt).toLocaleString()}\n- **Event**: ${eventType}\n- **Caller**: ${callerPhone}\n- **Duration**: ${duration} seconds\n- **Call Control ID**: ${callControlId}\n- **Hangup Reason**: ${body.data.payload.hangup_reason || 'N/A'}`;
+
+              // Save Transcript to Google Drive
+              await uploadCommunicationLogToDrive(serviceToken, siteName, fileName, mdTranscript);
+
+              // Record interaction under Google Contacts
+              await syncGoogleContactCommunication({
+                phone: callerPhone,
+                name: `Caller (${callerPhone})`,
+                type: 'voice',
+                timestamp: occurredAt,
+                token: serviceToken
+              });
+            }
+          } catch (bgErr) {
+            console.error('[Telnyx Webhook Background Error]:', bgErr);
+          }
+        };
+
+        if (context.waitUntil) {
+          context.waitUntil(handleTelnyxBackground());
+        } else {
+          handleTelnyxBackground();
+        }
+
+        return new Response("OK", {
+          status: 200,
+          headers: { "Content-Type": "text/plain" }
+        });
+      }
+
       provider = "json";
       // Vapi.ai / generic voice webhook parameters
       callText = body.message?.toolCalls?.[0]?.function?.arguments || body.message?.text || body.text || "";
