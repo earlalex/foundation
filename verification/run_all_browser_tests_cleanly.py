@@ -24,7 +24,7 @@ async def run_tests():
         """)
 
         print("Navigating to http://localhost:3000/...")
-        await page.goto("http://localhost:3000/")
+        await page.goto("http://localhost:3000/", wait_until="domcontentloaded")
 
         # Wait a moment for page initialization
         await page.wait_for_timeout(2000)
