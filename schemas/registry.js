@@ -22,6 +22,26 @@ class SchemaRegistry {
 
   constructor() {
     this.register('announcement', AnnouncementSchema);
+    this.register('custom_modal', {
+      type: Type.string,
+      id: Type.string,
+      title: Type.string,
+      modalType: Type.string, // 'newsletter', 'product', 'announcement', 'discount'
+      triggerType: Type.string, // 'immediate', 'delay', 'scroll', 'exit'
+      triggerValue: Type.optional(Type.any),
+      targetPages: Type.string, // 'all', 'home', 'shop'
+      contentHtml: Type.optional(Type.string),
+      imageUrl: Type.optional(Type.string),
+      ctaText: Type.optional(Type.string),
+      ctaUrl: Type.optional(Type.string),
+      discountCode: Type.optional(Type.string),
+      isActive: Type.optional(Type.boolean),
+      description: Type.optional(Type.string),
+      longFormText: Type.optional(Type.array),
+      author: Type.optional(Type.string),
+      date: Type.optional(Type.string),
+      access: Type.optional(AccessSchema)
+    });
     this.register('blog', BlogSchema);
     this.register('review', {
       type: Type.string,
