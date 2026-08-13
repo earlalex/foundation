@@ -116,7 +116,10 @@ export function initNavbar() {
           <span style="font-size: 0.75rem; background: var(--theme-color-border, #cbd5e1); color: var(--theme-color-text-secondary, #4a5568); padding: 1px 6px; border-radius: 4px; font-weight: 500;">Network OK</span>
         </div>
         <!-- Right Group -->
-        <div class="utility-right">
+        <div class="utility-right" style="display: flex; align-items: center; gap: 1rem;">
+          <!-- Real-Time Notification Bell Dropdown -->
+          <notification-center></notification-center>
+
           <!-- Accessible High-Contrast Toggle -->
           <button id="nav-high-contrast-toggle" class="nav-link" style="background: transparent; border: none; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.85rem;" aria-label="Toggle High Contrast Mode">
             🌓 Contrast

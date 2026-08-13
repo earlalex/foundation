@@ -770,3 +770,29 @@ body.cart-drawer-open .chat-widget-container {
   pointer-events: none !important;
   z-index: 100 !important;
 }
+
+/* --- Directive 1: Modal & Wizard Viewport Containment --- */
+.modal-container, .wizard-container, .dialog-card {
+  max-height: calc(100vh - 40px) !important;
+  max-height: calc(100dvh - 40px) !important; /* Mobile safe viewport fallback */
+  max-width: min(90vw, 750px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Header and footer stay pinned */
+  box-sizing: border-box;
+}
+
+.modal-body, .wizard-step-body {
+  overflow-y: auto !important; /* Internal scrollbar for tall content */
+  flex: 1;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Ensure mobile browser toolbars and soft keyboards are handled gracefully */
+@media (max-width: 768px) {
+  .modal-container, .wizard-container, .dialog-card {
+    max-height: calc(100dvh - 20px) !important;
+    max-width: 95vw;
+  }
+}
