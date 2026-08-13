@@ -548,6 +548,21 @@ export class MasterSetupWizard extends HTMLElement {
         this.remove();
       };
     }
+
+    // Bind help guides togglers
+    this.querySelectorAll('.help-btn-guide').forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetId = btn.getAttribute('data-target');
+        const panel = this.querySelector(`#${targetId}`);
+        if (panel) {
+          const isCollapsed = panel.style.display === 'none';
+          panel.style.display = isCollapsed ? 'block' : 'none';
+          btn.textContent = isCollapsed ? '[❌ Hide Guide]' : '[❓ How to get this]';
+        }
+      };
+    });
   }
 
   async finishSetup() {
@@ -711,19 +726,31 @@ export class MasterSetupWizard extends HTMLElement {
               "Configures core branding, metadata headers, canonical URLs, and primary administrator access rights across the platform."
             </div>
             <div class="form-group">
-              <label for="m-site-title">Website Title *</label>
+              <label for="m-site-title">Website Title * <span class="help-btn-guide" data-target="help-m-site-title" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-site-title" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                Your company or brand's public display name across the platform.
+              </div>
               <input type="text" id="m-site-title" aria-label="Website Title" value="Foundation Framework" required />
             </div>
             <div class="form-group">
-              <label for="m-site-domain">Base Domain *</label>
+              <label for="m-site-domain">Base Domain * <span class="help-btn-guide" data-target="help-m-site-domain" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-site-domain" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                The canonical production URL where your platform will be hosted (e.g., <code>https://earlalex.com</code>).
+              </div>
               <input type="url" id="m-site-domain" aria-label="Base Domain" value="${origin}" required />
             </div>
             <div class="form-group">
-              <label for="m-admin-email">Primary Admin Email *</label>
+              <label for="m-admin-email">Primary Admin Email * <span class="help-btn-guide" data-target="help-m-admin-email" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-admin-email" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                The email address for the root system administrator. Used to grant complete dashboard control.
+              </div>
               <input type="email" id="m-admin-email" aria-label="Primary Admin Email" value="admin@earlalex.com" required />
             </div>
             <div class="form-group">
-              <label for="m-support-email">Support Email *</label>
+              <label for="m-support-email">Support Email * <span class="help-btn-guide" data-target="help-m-support-email" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-support-email" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                The default email address displayed on your legal policy pages and invoice receipts.
+              </div>
               <input type="email" id="m-support-email" aria-label="Support Email" value="support@earlalex.com" required />
             </div>
           </div>
@@ -734,23 +761,50 @@ export class MasterSetupWizard extends HTMLElement {
               "Powers real-time NoSQL storage via Cloud Firestore, user profile persistence, and 1-Click Google OAuth SSO authentication. Retrieve these from the Firebase Console and Google Cloud API Console."
             </div>
             <div class="form-group">
-              <label for="m-fb-key">Firebase API Key *</label>
+              <label for="m-fb-key">Firebase API Key * <span class="help-btn-guide" data-target="help-m-fb-key" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-fb-key" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Go to <a href="https://console.firebase.google.com/" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Firebase Console</a>.<br>
+                2. Select your project (or create one).<br>
+                3. Go to Project Settings &rarr; General.<br>
+                4. Scroll to Your Apps and copy the <code>apiKey</code> from the Web App config block.
+              </div>
               <input type="text" id="m-fb-key" aria-label="Firebase API Key" value="AIzaSy_fb_mock_key_992" required />
             </div>
             <div class="form-group">
-              <label for="m-fb-project">Firebase Project ID *</label>
+              <label for="m-fb-project">Firebase Project ID * <span class="help-btn-guide" data-target="help-m-fb-project" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-fb-project" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Go to <a href="https://console.firebase.google.com/" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Firebase Console</a>.<br>
+                2. Project ID is listed under your project title card on the homepage, or inside Project Settings &rarr; General &rarr; Project ID.
+              </div>
               <input type="text" id="m-fb-project" aria-label="Firebase Project ID" value="demo-proj-id" required />
             </div>
             <div class="form-group">
-              <label for="m-google-id">Google Client ID *</label>
+              <label for="m-google-id">Google Client ID * <span class="help-btn-guide" data-target="help-m-google-id" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-google-id" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Open <a href="https://console.cloud.google.com/" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Google Cloud Console</a>.<br>
+                2. Search and enable <strong>Gmail, Google Drive, People, and Admin SDK APIs</strong>.<br>
+                3. Go to <strong>APIs & Services</strong> &rarr; <strong>Credentials</strong>.<br>
+                4. Create an OAuth 2.0 Client ID (Web Application) with Authorized Redirect URI set to <code>https://&lt;your-domain&gt;/api/auth/callback</code>.<br>
+                5. Copy the generated Client ID.
+              </div>
               <input type="text" id="m-google-id" aria-label="Google Client ID" value="g_client_id_01" required />
             </div>
             <div class="form-group">
-              <label for="m-google-secret">Google Client Secret *</label>
+              <label for="m-google-secret">Google Client Secret * <span class="help-btn-guide" data-target="help-m-google-secret" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-google-secret" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Open <a href="https://console.cloud.google.com/" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Google Cloud Console</a>.<br>
+                2. Navigate to Credentials and copy the Google Client Secret associated with your OAuth 2.0 Client ID.
+              </div>
               <input type="password" id="m-google-secret" aria-label="Google Client Secret" value="g_secret_99" required />
             </div>
             <div class="form-group">
-              <label for="m-google-service-token">Google Service Account Token *</label>
+              <label for="m-google-service-token">Google Service Account Token * <span class="help-btn-guide" data-target="help-m-google-service-token" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-google-service-token" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Open Google Cloud Console &rarr; Service Accounts &rarr; Create Service Account.<br>
+                2. Generate and download a Service Account JSON private key.<br>
+                3. Paste the complete downloaded JSON key here.<br>
+                4. Delegate Domain-Wide Authority for your administrative email domain (e.g. <code>admin@&lt;your-domain&gt;</code>).
+              </div>
               <textarea id="m-google-service-token" aria-label="Google Service Account Token" style="height: 60px;" required>{"type": "service_account"}</textarea>
             </div>
           </div>
@@ -761,11 +815,19 @@ export class MasterSetupWizard extends HTMLElement {
               "Enables the site chatbot, Gemini Spark COO autonomous agent, background marketing copywriting, and automated voice telephony responses."
             </div>
             <div class="form-group">
-              <label for="m-gemini-key">Gemini API Key *</label>
+              <label for="m-gemini-key">Gemini API Key * <span class="help-btn-guide" data-target="help-m-gemini-key" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-gemini-key" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Navigate to <a href="https://aistudio.google.com/" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Google AI Studio Console</a>.<br>
+                2. Click <strong>Get API Key</strong> and generate a free/premium api key for Google Gemini 2.5 Flash.
+              </div>
               <input type="password" id="m-gemini-key" aria-label="Gemini API Key" value="gemini_api_key_101" required />
             </div>
             <div class="form-group">
-              <label for="m-openai-key">OpenAI API Key *</label>
+              <label for="m-openai-key">OpenAI API Key * <span class="help-btn-guide" data-target="help-m-openai-key" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-openai-key" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Navigate to <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#2b6cb0; text-decoration:underline;">OpenAI Developer Dashboard</a>.<br>
+                2. Create a new secret key for <code>gpt-4o-mini</code> completion.
+              </div>
               <input type="password" id="m-openai-key" aria-label="OpenAI API Key" value="openai_api_key_mock" required />
             </div>
             <div class="form-group">
@@ -794,27 +856,53 @@ export class MasterSetupWizard extends HTMLElement {
               "Enables credit card processing, $29/mo member paywall subscriptions, ACH bank transfers, and automated international Virtual Assistant payroll disbursements via Wise Business API."
             </div>
             <div class="form-group">
-              <label for="m-stripe-sec">Stripe Secret Key *</label>
+              <label for="m-stripe-sec">Stripe Secret Key * <span class="help-btn-guide" data-target="help-m-stripe-sec" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-stripe-sec" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Deep-link to <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Stripe Developers Dashboard</a>.<br>
+                2. Copy your Secret Key (begins with <code>sk_</code>).
+              </div>
               <input type="password" id="m-stripe-sec" aria-label="Stripe Secret Key" value="sk_test_123" required />
             </div>
             <div class="form-group">
-              <label for="m-stripe-pub">Stripe Publishable Key *</label>
+              <label for="m-stripe-pub">Stripe Publishable Key * <span class="help-btn-guide" data-target="help-m-stripe-pub" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-stripe-pub" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Copy your Stripe Publishable Key (begins with <code>pk_</code>) from the Developers Dashboard.
+              </div>
               <input type="text" id="m-stripe-pub" aria-label="Stripe Publishable Key" value="pk_test_456" required />
             </div>
             <div class="form-group">
-              <label for="m-stripe-webhook">Stripe Webhook Secret *</label>
+              <label for="m-stripe-webhook">Stripe Webhook Secret * <span class="help-btn-guide" data-target="help-m-stripe-webhook" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-stripe-webhook" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Go to Stripe Developers &rarr; Webhooks &rarr; Add endpoint.<br>
+                2. Point endpoint URL to <code>https://&lt;your-domain&gt;/api/stripe-webhook</code>.<br>
+                3. Enable events: <code>checkout.session.completed</code>, <code>invoice.payment_failed</code>, <code>customer.subscription.deleted</code>.<br>
+                4. Copy the Webhook Signing Secret (starts with <code>whsec_</code>).
+              </div>
               <input type="password" id="m-stripe-webhook" aria-label="Stripe Webhook Secret" value="whsec_mock" required />
             </div>
             <div class="form-group">
-              <label for="m-stripe-price">Stripe Membership Price ID *</label>
+              <label for="m-stripe-price">Stripe Membership Price ID * <span class="help-btn-guide" data-target="help-m-stripe-price" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-stripe-price" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Navigate to Stripe Dashboard &rarr; Products.<br>
+                2. Create a Monthly Subscription Product (e.g., $29/mo).<br>
+                3. Copy its dynamic Price API ID (starts with <code>price_</code>).
+              </div>
               <input type="text" id="m-stripe-price" aria-label="Stripe Membership Price ID" value="price_abc" required />
             </div>
             <div class="form-group">
-              <label for="m-wise-key">Wise API Token *</label>
+              <label for="m-wise-key">Wise API Token * <span class="help-btn-guide" data-target="help-m-wise-key" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-wise-key" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Log into your Wise Business Account Settings.<br>
+                2. Navigate to API Tokens &rarr; Create a Read/Write API Token.<br>
+                3. Copy and paste the Wise Token here.
+              </div>
               <input type="password" id="m-wise-key" aria-label="Wise API Token" value="wise_api_key_mock" required />
             </div>
             <div class="form-group">
-              <label for="m-wise-profile">Wise Profile ID *</label>
+              <label for="m-wise-profile">Wise Profile ID * <span class="help-btn-guide" data-target="help-m-wise-profile" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-wise-profile" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                Copy your Business Profile ID from the Wise API details page or retrieve it via a GET call to <code>/v1/profiles</code>.
+              </div>
               <input type="text" id="m-wise-profile" aria-label="Wise Profile ID" value="wise_profile_id_mock" required />
             </div>
           </div>
@@ -825,23 +913,44 @@ export class MasterSetupWizard extends HTMLElement {
               "Enables automated SMS notifications, appointment confirmation texts, and two-way AI voice call interactions."
             </div>
             <div class="form-group">
-              <label for="m-telnyx-key">Telnyx API Key *</label>
+              <label for="m-telnyx-key">Telnyx API Key * <span class="help-btn-guide" data-target="help-m-telnyx-key" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-telnyx-key" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Create an account in <a href="https://portal.telnyx.com/" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Telnyx Portal</a>.<br>
+                2. Navigate to API Keys and copy your API v2 Key.
+              </div>
               <input type="password" id="m-telnyx-key" aria-label="Telnyx API Key" value="telnyx_api_key_mock" required />
             </div>
             <div class="form-group">
-              <label for="m-telnyx-phone">Telnyx Phone Number *</label>
+              <label for="m-telnyx-phone">Telnyx Phone Number * <span class="help-btn-guide" data-target="help-m-telnyx-phone" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-telnyx-phone" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Navigate to Voice API Applications under Telnyx Portal &rarr; Create App.<br>
+                2. Set Webhook URL to <code>https://&lt;your-domain&gt;/api/voice-webhook</code>.<br>
+                3. Copy your purchased/assigned Telnyx phone number.
+              </div>
               <input type="text" id="m-telnyx-phone" aria-label="Telnyx Phone Number" value="+18005550199" required />
             </div>
             <div class="form-group">
-              <label for="m-twilio-sid">Twilio Account SID *</label>
+              <label for="m-twilio-sid">Twilio Account SID * <span class="help-btn-guide" data-target="help-m-twilio-sid" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-twilio-sid" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Open <a href="https://www.twilio.com/console" target="_blank" style="color:#2b6cb0; text-decoration:underline;">Twilio Console</a>.<br>
+                2. Copy the Account SID listed on the main dashboard.
+              </div>
               <input type="text" id="m-twilio-sid" aria-label="Twilio Account SID" value="AC_twilio_sid_mock" required />
             </div>
             <div class="form-group">
-              <label for="m-twilio-token">Twilio Auth Token *</label>
+              <label for="m-twilio-token">Twilio Auth Token * <span class="help-btn-guide" data-target="help-m-twilio-token" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-twilio-token" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Open Twilio Console.<br>
+                2. Copy the Auth Token listed alongside the Account SID.
+              </div>
               <input type="password" id="m-twilio-token" aria-label="Twilio Auth Token" value="twilio_token_mock" required />
             </div>
             <div class="form-group">
-              <label for="m-twilio-phone">Twilio Phone Number *</label>
+              <label for="m-twilio-phone">Twilio Phone Number * <span class="help-btn-guide" data-target="help-m-twilio-phone" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-twilio-phone" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Purchase or choose an active phone number in Twilio Phone Numbers panel.<br>
+                2. Set the Messaging Webhook URL to <code>https://&lt;your-domain&gt;/api/sms-webhook</code> (HTTP POST).
+              </div>
               <input type="text" id="m-twilio-phone" aria-label="Twilio Phone Number" value="+18005550100" required />
             </div>
           </div>
@@ -852,7 +961,11 @@ export class MasterSetupWizard extends HTMLElement {
               "Powers automated background malware signature scanning on uploads, OWASP ZAP penetration testing, and secure credential vault synchronization."
             </div>
             <div class="form-group">
-              <label for="m-vt-key">VirusTotal API Key *</label>
+              <label for="m-vt-key">VirusTotal API Key * <span class="help-btn-guide" data-target="help-m-vt-key" style="color:var(--theme-color-primary, #2b6cb0); font-size:0.75rem; font-weight:bold; cursor:pointer; margin-left:0.5rem; text-decoration:underline;">[❓ How to get this]</span></label>
+              <div id="help-m-vt-key" class="help-guide-panel" style="display:none; background:#f7fafc; border:1px solid #cbd5e0; padding:10px; border-radius:6px; font-size:0.8rem; color:#4a5568; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                1. Navigate to <a href="https://www.virustotal.com/gui/my-apikey" target="_blank" style="color:#2b6cb0; text-decoration:underline;">VirusTotal API Access</a>.<br>
+                2. Copy your 64-character free or premium API key for automated scanning.
+              </div>
               <input type="password" id="m-vt-key" aria-label="VirusTotal API Key" value="vt_api_mock_token" required />
             </div>
             <div class="form-group">
