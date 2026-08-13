@@ -11,6 +11,7 @@ export const defaultConfig = {
   siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
   adminEmails: ['admin@earlalex.com'],
+  monthlySnapshotDay: 1,
   features: {
     imagenAiGenerator: true
   },

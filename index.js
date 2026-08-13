@@ -186,6 +186,11 @@ async function boot() {
   // 1. Initialize Master Configuration (reads LocalStorage / Firestore)
   const isInstalled = await configManager.init();
 
+  // Trigger automated monthly snapshot check silently in the background
+  if (isInstalled) {
+    import('./utils/snapshotEngine.js').then(m => m.checkAndTriggerMonthlySnapshot()).catch(() => {});
+  }
+
   // 2. Boot Test Suites in Dev Mode
   if (store.state.devMode) {
     logger.group('Dev Mode Test Suite Execution');
