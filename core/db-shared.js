@@ -62,6 +62,21 @@ export async function setDoc(docRef, data, options) {
       });
       localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
       console.log(`[DB Shared setDoc]: Queued ${collectionName}/${docId} to /foundation_outbox.`);
+
+      // Quiet Notification Dropdown Logging
+      try {
+        const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+        history.unshift({
+          id: 'notif_outbox_queue_' + Date.now(),
+          message: `Outbox Queue: Saved changes for ${collectionName}/${docId} offline.`,
+          type: 'info',
+          category: 'System Alerts',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+        localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('notification-received'));
+      } catch (notifErr) {}
     } catch (queueErr) {
       console.error('[DB Shared setDoc]: Failed to queue write to outbox:', queueErr);
     }
