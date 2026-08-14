@@ -134,6 +134,12 @@ export const defaultConfig = {
     enableAch: false,
     isConfigured: false
   },
+  email: {
+    defaultFromEmail: "noreply@earlalex.com",
+    primaryProvider: "MailChannels (Free Cloudflare)",
+    inboundForwardingTarget: "admin@earlalex.com",
+    isConfigured: false
+  },
   google: {
     clientId: "",
     clientSecret: "",
