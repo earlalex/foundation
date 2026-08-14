@@ -30,7 +30,11 @@ export function initModalDismissal() {
       target.closest('.wizard-container') ||
       target.classList.contains('setup-wizard-modal') ||
       target.tagName.toLowerCase() === 'master-setup-wizard' ||
-      target.id === 'setup-wizard-modal';
+      target.id === 'setup-wizard-modal' ||
+      target.querySelector('master-setup-wizard') ||
+      target.querySelector('.wizard-card') ||
+      target.querySelector('.setup-wizard-modal') ||
+      target.classList.contains('setup-wizard-modal-overlay');
 
     if (isSetupWizard) {
       console.log('[Modal Policy]: Ignored backdrop click on Setup Wizard to prevent accidental data loss.');
