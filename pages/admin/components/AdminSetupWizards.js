@@ -1344,15 +1344,34 @@ export class MasterSetupWizard extends HTMLElement {
       }
     };
 
-    // Email DNS guide close
+// Email DNS guide close & toggle handling
     const emailHelpPanel = this.querySelector('#help-m-free-email');
     this.querySelectorAll('.help-btn-guide').forEach(btn => {
       btn.onclick = (e) => {
         e.preventDefault();
-        emailHelpPanel.style.display = 'block';
+        e.stopPropagation();
+        const targetId = btn.getAttribute('data-target');
+        const panel = this.querySelector(`#${targetId}`);
+        if (panel) {
+          const isCollapsed = panel.style.display === 'none';
+          panel.style.display = isCollapsed ? 'block' : 'none';
+
+          const originalText = btn.getAttribute('data-label') || btn.textContent;
+          if (!btn.getAttribute('data-label')) {
+            btn.setAttribute('data-label', originalText);
+          }
+          btn.textContent = isCollapsed ? '[❌ Hide Guide]' : originalText;
+        }
       };
     });
 
+    const helpCloseBtn = this.querySelector('.help-close-btn');
+    if (helpCloseBtn) {
+      helpCloseBtn.onclick = (e) => {
+        e.preventDefault();
+        if (emailHelpPanel) emailHelpPanel.style.display = 'none';
+      };
+    }
     this.querySelector('.help-close-btn').onclick = (e) => {
       e.preventDefault();
       emailHelpPanel.style.display = 'none';
@@ -1502,6 +1521,26 @@ export class MasterSetupWizard extends HTMLElement {
       }
 
       // 5. Clean reload
+      if (this.isModal) {
+        this.remove();
+        window.location.reload();
+      } else {
+        window.router.loadRoute('/home');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    } catch (err) {
+      toast.error("Failed to complete platform setup: " + err.message);
+      const finishBtn = this.querySelector('#master-finish-btn');
+      if (finishBtn) {
+        finishBtn.disabled = false;
+        finishBtn.textContent = '✨ Finish Installation & Lock State';
+      }
+    }
+  }
+
+// 5. Clean reload
       if (this.isModal) {
         this.remove();
         window.location.reload();

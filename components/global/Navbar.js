@@ -168,7 +168,7 @@ export function initNavbar() {
 
           <!-- Navigation Links -->
           <div id="nav-menu" class="nav-menu">
-            ${(configManager.current?.navigation || [
+            ${((configManager.current?.navigation && configManager.current.navigation.length > 0) ? configManager.current.navigation : [
               { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
               { label: "Documentation", url: "/docs", target: "_self", requiredRole: "public" },
               { label: "Shop", url: "/shop", target: "_self", requiredRole: "public" },
@@ -401,7 +401,23 @@ export function initNavbar() {
         mobileAuthBtnElement.textContent = state.user ? 'Sign Out' : 'Sign In';
       }
 
+      const features = configManager.current.features || {};
+
       document.querySelectorAll('.dynamic-nav-link').forEach(link => {
+        const path = link.getAttribute('data-path');
+        if (path === '/videos' && features.videoPortal === false) {
+          link.style.display = 'none';
+          return;
+        }
+        if (path === '/gallery' && features.photoGallery === false) {
+          link.style.display = 'none';
+          return;
+        }
+        if (path === '/podcast' && features.webRadioPlayer === false) {
+          link.style.display = 'none';
+          return;
+        }
+
         const requiredRole = link.getAttribute('data-role');
         if (!requiredRole || requiredRole === 'public') {
           link.style.display = 'inline-block';
