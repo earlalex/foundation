@@ -16,6 +16,15 @@ import { FRAMEWORK_AFFILIATES } from '../../../core/affiliates.js';
 
 export class AdminSetupWizards {
   /**
+   * Launch the Free Email DNS Guide Modal.
+   */
+  static launchDnsGuideModal() {
+    import('../admin-site-settings.js').then(m => {
+      m.launchDnsGuideModal();
+    });
+  }
+
+  /**
    * Helper to retrieve current onboarding sequence progress
    */
   static getOnboardingProgress() {
@@ -559,7 +568,12 @@ export class MasterSetupWizard extends HTMLElement {
         if (panel) {
           const isCollapsed = panel.style.display === 'none';
           panel.style.display = isCollapsed ? 'block' : 'none';
-          btn.textContent = isCollapsed ? '[❌ Hide Guide]' : '[❓ How to get this]';
+
+          const originalText = btn.getAttribute('data-label') || btn.textContent;
+          if (!btn.getAttribute('data-label')) {
+            btn.setAttribute('data-label', originalText);
+          }
+          btn.textContent = isCollapsed ? '[❌ Hide Guide]' : originalText;
         }
       };
     });
@@ -752,6 +766,19 @@ export class MasterSetupWizard extends HTMLElement {
                 The default email address displayed on your legal policy pages and invoice receipts.
               </div>
               <input type="email" id="m-support-email" aria-label="Support Email" value="support@earlalex.com" required />
+            </div>
+            <div class="form-group">
+              <span class="help-btn-guide" data-target="help-m-free-email" style="color: var(--theme-color-accent, #38a169); font-size: 0.8rem; font-weight: bold; cursor: pointer; text-decoration: underline;">[❓ How to set up Free Emails]</span>
+              <div id="help-m-free-email" class="help-guide-panel" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:6px; font-size:0.8rem; color:#166534; margin-top:5px; margin-bottom:5px; line-height:1.4;">
+                <strong>Free Email DNS Configuration Guide:</strong><br>
+                To dispatch free outbound transactional emails with high deliverability via MailChannels and receive free inbound forwarding via Cloudflare Email Routing, configure these DNS records on your domain registrar:
+                <ul style="margin: 5px 0; padding-left: 15px;">
+                  <li><strong>SPF Record (TXT):</strong> Value: <code>v=spf1 include:relay.mailchannels.net ~all</code></li>
+                  <li><strong>MailChannels Domain Lockdown (TXT):</strong> Name: <code>_mailchannels</code>, Value: <code>v=mc1 cfid=&lt;your-pages-subdomain&gt;.pages.dev</code></li>
+                  <li><strong>DMARC Record (TXT):</strong> Name: <code>_dmarc</code>, Value: <code>v=DMARC1; p=none; rua=mailto:admin@yourdomain.com</code></li>
+                  <li><strong>Cloudflare Inbound MX Records:</strong> Point MX records to <code>isaac.mx.cloudflare.net</code> and <code>linda.mx.cloudflare.net</code>.</li>
+                </ul>
+              </div>
             </div>
           </div>
 
