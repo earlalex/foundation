@@ -1539,26 +1539,6 @@ export class MasterSetupWizard extends HTMLElement {
       }
     }
   }
-
-// 5. Clean reload
-      if (this.isModal) {
-        this.remove();
-        window.location.reload();
-      } else {
-        window.router.loadRoute('/home');
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      }
-    } catch (err) {
-      toast.error("Failed to complete platform setup: " + err.message);
-      const finishBtn = this.querySelector('#master-finish-btn');
-      if (finishBtn) {
-        finishBtn.disabled = false;
-        finishBtn.textContent = '✨ Finish Installation & Lock State';
-      }
-    }
-  }
 }
 
 if (!customElements.get('master-setup-wizard')) {
