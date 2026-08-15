@@ -153,7 +153,12 @@ export async function onRequestPost(context) {
     if (uid) {
       params.append('metadata[userUid]', uid);
     }
-    params.append('metadata[role]', role || 'member');
+    // Security: Sanitize role to prevent privilege escalation to admin/editor via checkout
+    let requestedRole = String(role || 'member').toLowerCase();
+    if (['admin', 'editor'].includes(requestedRole)) {
+      requestedRole = 'member';
+    }
+    params.append('metadata[role]', requestedRole);
     if (productId) {
       params.append('metadata[productId]', productId);
     }
@@ -165,6 +170,9 @@ export async function onRequestPost(context) {
     }
     if (body.metadata && typeof body.metadata === 'object') {
       for (const [mKey, mVal] of Object.entries(body.metadata)) {
+        if (mKey === 'role' && ['admin', 'editor'].includes(String(mVal).toLowerCase())) {
+          continue; // Block privilege escalation attempts via custom metadata object
+        }
         params.append(`metadata[${mKey}]`, String(mVal));
       }
     }

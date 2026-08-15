@@ -312,6 +312,80 @@ async function runTests() {
     assert(false, 'Invalid key test threw exception: ' + err.message);
   }
 
+  // Test 8: Security - Prevent Privilege Escalation via Checkout Role & Webhook Metadata
+  try {
+    // 8a: Checkout payload requesting role: "admin"
+    const mockEnv = { STRIPE_SECRET_KEY: 'sk_test_simulated123', STRIPE_PRICE_ID: 'price_test_456' };
+    const checkoutRequest = new Request('https://example.com/api/stripe-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': '10.0.0.8'
+      },
+      body: JSON.stringify({
+        userEmail: 'attacker@example.com',
+        role: 'admin',
+        metadata: { role: 'admin' }
+      })
+    });
+
+    const originalFetch = globalThis.fetch;
+    let stripeFetchBody = '';
+
+    globalThis.fetch = async (url, options) => {
+      stripeFetchBody = options?.body?.toString() || '';
+      return new Response(JSON.stringify({ id: 'cs_test_admin_attempt', url: 'https://checkout.stripe.com/c/pay/cs_test_admin_attempt' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    };
+
+    await checkoutHandler({ request: checkoutRequest, env: mockEnv });
+    const params = new URLSearchParams(stripeFetchBody);
+    assert(params.get('metadata[role]') === 'member', 'Checkout payload sanitized role: "admin" to "member"');
+
+    // 8b: Webhook payload containing metadata[role] = "admin"
+    const webhookPayload = JSON.stringify({
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_test_attacker_789',
+          customer_email: 'attacker@example.com',
+          amount_total: 2900,
+          metadata: { role: 'admin' }
+        }
+      }
+    });
+
+    const webhookEnv = {
+      STRIPE_SECRET_KEY: 'sk_test_123',
+      FIREBASE_PROJECT_ID: 'test-project',
+      FIREBASE_API_KEY: 'test-api-key'
+    };
+
+    let patchedFirestoreBody = {};
+    globalThis.fetch = async (url, options) => {
+      if (url.toString().includes('firestore.googleapis.com')) {
+        patchedFirestoreBody = JSON.parse(options.body);
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    };
+
+    const webhookRequest = new Request('https://example.com/api/stripe-webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: webhookPayload
+    });
+
+    await webhookHandler({ request: webhookRequest, env: webhookEnv });
+    assert(patchedFirestoreBody.fields?.role?.stringValue === 'member', 'Webhook sanitized assignedRole "admin" to "member"');
+    assert(patchedFirestoreBody.fields?.isAdmin?.stringValue === 'false', 'Webhook set isAdmin to "false" regardless of metadata');
+
+    globalThis.fetch = originalFetch;
+  } catch (err) {
+    assert(false, 'Privilege escalation prevention test threw exception: ' + err.message);
+  }
+
   console.log(`\nResults: ${passed} passed, ${failed} failed.`);
   if (failed > 0) {
     process.exit(1);

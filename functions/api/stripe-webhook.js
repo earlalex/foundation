@@ -233,8 +233,9 @@ export async function onRequestPost(context) {
       case 'checkout.session.completed': {
         const session = event.data.object;
         const customerEmail = session.customer_email || session.customer_details?.email;
-        let assignedRole = session.metadata?.role || 'member';
-        if (assignedRole === 'subscriber') {
+        let assignedRole = String(session.metadata?.role || 'member').toLowerCase();
+        // Security: Prevent privilege escalation. Purchases never grant admin or editor access.
+        if (['admin', 'editor', 'subscriber'].includes(assignedRole)) {
           assignedRole = 'member';
         }
         const affiliateId = session.metadata?.affiliateId;
@@ -248,7 +249,7 @@ export async function onRequestPost(context) {
           }
         } else {
           // 1. Auto-elevate user role from subscriber to member in Firestore/contentDB & set isAdmin accordingly
-          const isAdminValue = assignedRole === 'admin' ? 'true' : 'false';
+          const isAdminValue = 'false';
           const userPatch = {
             role: assignedRole,
             paymentStatus: 'Active',
