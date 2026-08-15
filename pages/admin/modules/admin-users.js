@@ -1,6 +1,44 @@
 // pages/admin/modules/admin-users.js
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
+import { syncGoogleContactRole } from '../../../core/google-services.js';
+
+/**
+ * Synchronize all valid directory users to Google Contacts API.
+ * Sanitizes and filters records before iteration and handles individual record failures safely.
+ */
+export async function syncAllToGoogleContacts() {
+  const allUsers = await contentDB.getAllUsers();
+
+  // Filter out null, undefined, or empty user objects
+  const validUsers = (allUsers || []).filter(u => u && typeof u === 'object' && (u.email || u.uid || u.profile?.email));
+
+  let syncedCount = 0;
+
+  for (const user of validUsers) {
+    try {
+      // Safe optional chaining for role and profile properties
+      const userRole = user.role || user.profile?.role || 'subscriber';
+      const userEmail = (user.email || user.profile?.email || '').toLowerCase().trim();
+      const userName = user.displayName || user.name || user.profile?.name || userEmail.split('@')[0] || 'User';
+
+      if (!userEmail) continue;
+
+      // Proceed with Google Contacts API sync payload...
+      const success = await syncGoogleContactRole({
+        ...user,
+        role: userRole,
+        email: userEmail,
+        name: userName
+      });
+      if (success) syncedCount++;
+    } catch (err) {
+      console.warn(`[syncAllToGoogleContacts] Failed to sync individual contact for ${user?.email || user?.uid}:`, err);
+    }
+  }
+
+  return syncedCount;
+}
 
 /**
  * Deduplicate user directory records by normalized email.

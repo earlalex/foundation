@@ -259,13 +259,20 @@ export async function createGoogleContact(contact) {
 }
 
 export async function syncGoogleContactRole(user) {
+  if (!user || typeof user !== 'object') return false;
+
+  const userEmail = (user.email || user.profile?.email || '').toLowerCase().trim();
+  if (!userEmail) return false;
+
   const token = await getAccessToken(true);
   if (!token) return false;
 
-  const roleLabel = user.role === 'affiliate' ? 'Affiliate Member' : user.role === 'member' ? 'Member' : 'Subscriber';
+  const userRole = user.role || user.profile?.role || 'subscriber';
+  const roleLabel = userRole === 'affiliate' ? 'Affiliate Member' : userRole === 'member' ? 'Member' : 'Subscriber';
+  const userName = user.displayName || user.name || user.profile?.name || userEmail.split('@')[0] || 'User';
 
   try {
-    const searchRes = await fetch(`https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(user.email)}&readMask=names,emailAddresses,userDefined`, {
+    const searchRes = await fetch(`https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(userEmail)}&readMask=names,emailAddresses,userDefined`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const searchData = await searchRes.json();
@@ -292,7 +299,7 @@ export async function syncGoogleContactRole(user) {
         body: JSON.stringify({ etag, userDefined })
       });
     } else {
-      await createGoogleContact({ name: user.name, email: user.email, role: roleLabel });
+      await createGoogleContact({ name: userName, email: userEmail, role: roleLabel });
     }
     return true;
   } catch (err) {
