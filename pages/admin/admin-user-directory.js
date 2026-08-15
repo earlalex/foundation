@@ -9,7 +9,7 @@ import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
-import { deduplicateUserDirectory } from './modules/admin-users.js';
+import { deduplicateUserDirectory, syncAllToGoogleContacts } from './modules/admin-users.js';
 
 const MONTHLY_MEMBERSHIP_FEE = 29.00;
 const REFERRAL_COMMISSION_RATE = 0.10;
@@ -262,8 +262,8 @@ export function initUserDirectoryTab() {
     }
 
     try {
-      await syncGoogleContactRole();
-      toast.success('Google Contacts synced successfully.');
+      const count = await syncAllToGoogleContacts();
+      toast.success(`Google Contacts synced successfully (${count} accounts).`);
       renderUsersList();
     } catch (err) {
       errorHandler.handleError(err, 'Admin User Directory - Sync Contacts');

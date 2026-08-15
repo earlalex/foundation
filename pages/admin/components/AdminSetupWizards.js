@@ -511,42 +511,42 @@ export class MasterSetupWizard extends HTMLElement {
     const currentGlobal = configManager.current || {};
     this.config = {
       ...this.config,
-      ...currentGlobal,
-      siteTitle: currentGlobal.siteTitle || this.config.siteTitle,
-      siteDomain: currentGlobal.siteDomain || this.config.siteDomain,
-      adminEmail: (currentGlobal.adminEmails && currentGlobal.adminEmails[0]) || this.config.adminEmail,
-      supportEmail: currentGlobal.businessProfile?.supportEmail || this.config.supportEmail,
-      firebaseApiKey: currentGlobal.firebase?.apiKey || this.config.firebaseApiKey,
-      firebaseProjectId: currentGlobal.firebase?.projectId || this.config.firebaseProjectId,
-      googleClientId: currentGlobal.google?.clientId || this.config.googleClientId,
-      googleClientSecret: currentGlobal.google?.clientSecret || this.config.googleClientSecret,
-      googleServiceAccountToken: currentGlobal.google?.serviceAccountToken || this.config.googleServiceAccountToken,
-      geminiApiKey: currentGlobal.aiConfig?.geminiApiKey || this.config.geminiApiKey,
-      openaiApiKey: currentGlobal.aiConfig?.openaiApiKey || this.config.openaiApiKey,
-      preferredModel: currentGlobal.aiConfig?.preferredModel || this.config.preferredModel,
-      voiceModel: currentGlobal.chatbot?.voiceModel || this.config.voiceModel,
-      stripeSecretKey: currentGlobal.stripe?.secretKey || this.config.stripeSecretKey,
-      stripePublishableKey: currentGlobal.stripe?.publishableKey || this.config.stripePublishableKey,
-      stripeWebhookSecret: currentGlobal.stripe?.webhookSecret || this.config.stripeWebhookSecret,
-      stripeMembershipPriceId: currentGlobal.stripe?.priceId || this.config.stripeMembershipPriceId,
-      wiseApiKey: currentGlobal.wise?.apiKey || this.config.wiseApiKey,
-      wiseProfileId: currentGlobal.wise?.profileId || this.config.wiseProfileId,
-      telnyxApiKey: currentGlobal.chatbot?.telnyxApiKey || this.config.telnyxApiKey,
-      telnyxPhoneNumber: currentGlobal.chatbot?.telnyxPhoneNumber || this.config.telnyxPhoneNumber,
-      twilioAccountSid: currentGlobal.chatbot?.twilioAccountSid || this.config.twilioAccountSid,
-      twilioAuthToken: currentGlobal.chatbot?.twilioAuthToken || this.config.twilioAuthToken,
-      twilioPhoneNumber: currentGlobal.chatbot?.twilioPhoneNumber || this.config.twilioPhoneNumber,
-      vtApiKey: currentGlobal.virustotal?.apiKey || this.config.vtApiKey,
-      zapEndpoint: currentGlobal.security?.zapApiUrl || this.config.zapEndpoint,
-      lastpassCid: currentGlobal.lastpass?.companyId || this.config.lastpassCid,
-      lastpassHash: currentGlobal.lastpass?.provisioningHash || this.config.lastpassHash,
-      ga4Id: currentGlobal.analytics?.googleAnalyticsId || this.config.ga4Id,
-      lookerUrl: currentGlobal.thirdParty?.lookerStudioEmbedUrl || this.config.lookerUrl,
-      googlePlaceId: currentGlobal.thirdParty?.googlePlaceId || this.config.googlePlaceId,
-      adsensePub: currentGlobal.thirdParty?.adsensePublisherId || this.config.adsensePub,
+      ...(currentGlobal || {}),
+      siteTitle: currentGlobal?.siteTitle || this.config.siteTitle,
+      siteDomain: currentGlobal?.siteDomain || this.config.siteDomain,
+      adminEmail: (currentGlobal?.adminEmails && currentGlobal?.adminEmails[0]) || currentGlobal?.adminEmail || this.config.adminEmail,
+      supportEmail: currentGlobal?.businessProfile?.supportEmail || currentGlobal?.supportEmail || this.config.supportEmail,
+      firebaseApiKey: currentGlobal?.firebase?.apiKey || this.config.firebaseApiKey,
+      firebaseProjectId: currentGlobal?.firebase?.projectId || this.config.firebaseProjectId,
+      googleClientId: currentGlobal?.google?.clientId || this.config.googleClientId,
+      googleClientSecret: currentGlobal?.google?.clientSecret || this.config.googleClientSecret,
+      googleServiceAccountToken: currentGlobal?.google?.serviceAccountToken || this.config.googleServiceAccountToken,
+      geminiApiKey: currentGlobal?.aiConfig?.geminiApiKey || this.config.geminiApiKey,
+      openaiApiKey: currentGlobal?.aiConfig?.openaiApiKey || this.config.openaiApiKey,
+      preferredModel: currentGlobal?.aiConfig?.preferredModel || this.config.preferredModel,
+      voiceModel: currentGlobal?.chatbot?.voiceModel || this.config.voiceModel,
+      stripeSecretKey: currentGlobal?.stripe?.secretKey || this.config.stripeSecretKey,
+      stripePublishableKey: currentGlobal?.stripe?.publishableKey || this.config.stripePublishableKey,
+      stripeWebhookSecret: currentGlobal?.stripe?.webhookSecret || this.config.stripeWebhookSecret,
+      stripeMembershipPriceId: currentGlobal?.stripe?.priceId || this.config.stripeMembershipPriceId,
+      wiseApiKey: currentGlobal?.wise?.apiKey || this.config.wiseApiKey,
+      wiseProfileId: currentGlobal?.wise?.profileId || this.config.wiseProfileId,
+      telnyxApiKey: currentGlobal?.chatbot?.telnyxApiKey || this.config.telnyxApiKey,
+      telnyxPhoneNumber: currentGlobal?.chatbot?.telnyxPhoneNumber || this.config.telnyxPhoneNumber,
+      twilioAccountSid: currentGlobal?.chatbot?.twilioAccountSid || this.config.twilioAccountSid,
+      twilioAuthToken: currentGlobal?.chatbot?.twilioAuthToken || this.config.twilioAuthToken,
+      twilioPhoneNumber: currentGlobal?.chatbot?.twilioPhoneNumber || this.config.twilioPhoneNumber,
+      vtApiKey: currentGlobal?.virustotal?.apiKey || this.config.vtApiKey,
+      zapEndpoint: currentGlobal?.security?.zapApiUrl || this.config.zapEndpoint,
+      lastpassCid: currentGlobal?.lastpass?.companyId || this.config.lastpassCid,
+      lastpassHash: currentGlobal?.lastpass?.provisioningHash || this.config.lastpassHash,
+      ga4Id: currentGlobal?.analytics?.googleAnalyticsId || this.config.ga4Id,
+      lookerUrl: currentGlobal?.thirdParty?.lookerStudioEmbedUrl || this.config.lookerUrl,
+      googlePlaceId: currentGlobal?.thirdParty?.googlePlaceId || this.config.googlePlaceId,
+      adsensePub: currentGlobal?.thirdParty?.adsensePublisherId || this.config.adsensePub,
       features: {
-        ...this.config.features,
-        ...(currentGlobal.features || {})
+        ...(this.config.features || {}),
+        ...(currentGlobal?.features || {})
       }
     };
 
@@ -1372,10 +1372,6 @@ export class MasterSetupWizard extends HTMLElement {
         if (emailHelpPanel) emailHelpPanel.style.display = 'none';
       };
     }
-    this.querySelector('.help-close-btn').onclick = (e) => {
-      e.preventDefault();
-      emailHelpPanel.style.display = 'none';
-    };
 
     // Cancel / Exit Onboarding
     this.querySelector('#cancel-wizard-btn').onclick = (e) => {
@@ -1396,19 +1392,20 @@ export class MasterSetupWizard extends HTMLElement {
   }
 
   async finishSetup() {
+    const currentGlobal = configManager.current || {};
     const finalConfig = {
-      ...configManager.current,
-      siteTitle: this.config.siteTitle,
-      siteDomain: this.config.siteDomain,
-      adminEmails: [this.config.adminEmail],
+      ...currentGlobal,
+      siteTitle: this.config.siteTitle || "Foundation Framework",
+      siteDomain: this.config.siteDomain || window.location.origin,
+      adminEmails: [this.config.adminEmail || "admin@earlalex.com"],
       isInstalled: true,
       site: {
-        companyName: this.config.siteTitle,
-        siteName: this.config.siteTitle,
+        companyName: this.config.siteTitle || "Foundation Framework",
+        siteName: this.config.siteTitle || "Foundation Framework",
         isConfigured: true
       },
       businessProfile: {
-        ...(configManager.current.businessProfile || {}),
+        ...(currentGlobal?.businessProfile || {}),
         supportEmail: this.config.supportEmail,
         email: this.config.supportEmail,
         isConfigured: true
@@ -1485,7 +1482,21 @@ export class MasterSetupWizard extends HTMLElement {
 
     try {
       // 1. Save all credentials to LocalStorage and commit payload to Cloud Firestore
-      const saveResult = await configManager.saveToFirebase(finalConfig);
+      let saveResult = false;
+      try {
+        saveResult = await configManager.saveToFirebase(finalConfig);
+      } catch (err) {
+        console.warn("[MasterSetupWizard] Remote config save deferred/offline:", err);
+      }
+
+      // Always write fallback to LocalStorage directly so setup is never blocked by remote timeouts
+      try {
+        localStorage.setItem('foundation_config', JSON.stringify(finalConfig));
+        saveResult = true;
+      } catch (lsErr) {
+        console.warn("[MasterSetupWizard] LocalStorage fallback write issue:", lsErr);
+      }
+
       if (!saveResult) {
         throw new Error("Local and Firestore sync failed.");
       }

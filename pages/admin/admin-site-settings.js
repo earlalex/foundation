@@ -167,9 +167,21 @@ export function initSiteSettingsTab() {
       const newBtn = btnReconfig.cloneNode(true);
       btnReconfig.parentNode.replaceChild(newBtn, btnReconfig);
       newBtn.addEventListener('click', () => {
-        import('./components/AdminSetupWizards.js').then(m => {
-          m.AdminSetupWizards.launch();
-        });
+        try {
+          import('./components/AdminSetupWizards.js').then(m => {
+            if (m && m.AdminSetupWizards) {
+              m.AdminSetupWizards.launch();
+            }
+          }).catch(err => {
+            console.warn('[Re-configure Wizard] Dynamic import error, falling back:', err);
+            const wizard = document.createElement('master-setup-wizard');
+            wizard.setAttribute('mode', 'modal');
+            document.body.appendChild(wizard);
+          });
+        } catch (err) {
+          console.warn('[Re-configure Wizard Launch Error]:', err);
+          toast.error('Unable to launch setup wizard: ' + err.message);
+        }
       });
     }
 
