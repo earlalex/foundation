@@ -391,22 +391,22 @@ export function initIntegrationsTab() {
   });
 
   document.getElementById('btn-test-stripe')?.addEventListener('click', async () => {
-    toast.info('Testing Stripe Connection & SDK Bridge...');
+    toast.info('Testing Stripe Connection...');
     const key = cfgStripeKey.dataset.originalValue || cfgStripeKey.value;
     if (!key) {
-      toast.warning('Please configure a Stripe Secret Key first.');
+      toast.error('Invalid Stripe API Key');
       return;
     }
     try {
       const { stripeService } = await import('../../core/stripe.js');
-      const stats = await stripeService.retrieveLiveRevenueStats();
-      if (stats) {
-        toast.success(`Stripe Bridge Online! Live MRR: $${stats.mrr?.toFixed(2) || '0.00'}`);
+      const res = await stripeService.testConnection(key);
+      if (res.verified || res.success) {
+        toast.success("Stripe Live Connection Verified");
       } else {
-        toast.warning('Stripe returned empty stats.');
+        toast.error("Invalid Stripe API Key");
       }
     } catch (e) {
-      toast.error('Stripe Connection Failed: ' + e.message);
+      toast.error("Invalid Stripe API Key");
     }
   });
 

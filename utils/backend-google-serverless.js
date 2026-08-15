@@ -145,6 +145,150 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
 }
 
 /**
+ * Uploads a report or payment receipt to Google Drive from Cloudflare Pages Environment:
+ * [Site Name] / Reports / YYYY / MM /
+ */
+export async function uploadReportToDrive(token, siteName, fileName, content) {
+  if (!token) {
+    console.error('[Drive Upload Error]: Google access token not provided');
+    return null;
+  }
+
+  try {
+    // 1. Search or create the Root siteName folder
+    let folderId = null;
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const searchData = await searchRes.json();
+
+    if (searchData.files && searchData.files.length > 0) {
+      folderId = searchData.files[0].id;
+    } else {
+      const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: siteName,
+          mimeType: 'application/vnd.google-apps.folder'
+        })
+      });
+      const folderData = await createRes.json();
+      folderId = folderData.id;
+    }
+
+    // 2. Search or create "Reports" child folder
+    let reportsFolderId = null;
+    const reportsSearchUrl = `https://www.googleapis.com/drive/v3/files?q=name='Reports' and '${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const reportsSearchRes = await fetch(reportsSearchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const reportsSearchData = await reportsSearchRes.json();
+
+    if (reportsSearchData.files && reportsSearchData.files.length > 0) {
+      reportsFolderId = reportsSearchData.files[0].id;
+    } else {
+      const createReportsRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: 'Reports',
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [folderId]
+        })
+      });
+      const reportsFolderData = await createReportsRes.json();
+      reportsFolderId = reportsFolderData.id;
+    }
+
+    // 3. Search or create "YYYY" year child folder
+    const year = String(new Date().getFullYear());
+    let yearFolderId = null;
+    const yearSearchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${year}' and '${reportsFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const yearSearchRes = await fetch(yearSearchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const yearSearchData = await yearSearchRes.json();
+
+    if (yearSearchData.files && yearSearchData.files.length > 0) {
+      yearFolderId = yearSearchData.files[0].id;
+    } else {
+      const createYearRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: year,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [reportsFolderId]
+        })
+      });
+      const yearFolderData = await createYearRes.json();
+      yearFolderId = yearFolderData.id;
+    }
+
+    // 4. Search or create "MM" month child folder
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    let monthFolderId = null;
+    const monthSearchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${month}' and '${yearFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const monthSearchRes = await fetch(monthSearchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const monthSearchData = await monthSearchRes.json();
+
+    if (monthSearchData.files && monthSearchData.files.length > 0) {
+      monthFolderId = monthSearchData.files[0].id;
+    } else {
+      const createMonthRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: month,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [yearFolderId]
+        })
+      });
+      const monthFolderData = await createMonthRes.json();
+      monthFolderId = monthFolderData.id;
+    }
+
+    // 5. Upload the file
+    const metadata = {
+      name: fileName,
+      mimeType: fileName.endsWith('.html') ? 'text/html' : 'application/json',
+      parents: [monthFolderId]
+    };
+
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', new Blob([content], { type: metadata.mimeType }));
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+
+    return await response.json();
+  } catch (err) {
+    console.error('[Drive Upload Error]:', err);
+    return null;
+  }
+}
+
+/**
  * Creates or updates Google Contacts during communication interactions
  */
 export async function syncGoogleContactCommunication({ phone, name, type, timestamp, token }) {
@@ -199,7 +343,7 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(contactPayload)
+        body: JSON.stringify({ contactPayload })
       });
     }
     return true;

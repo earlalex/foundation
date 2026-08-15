@@ -37,6 +37,31 @@ export class StripeService {
   }
 
   /**
+   * Test Stripe API Connection against /v1/balance
+   */
+  async testConnection(secretKey) {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch('/api/stripe-proxy', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'test_connection',
+          secretKey
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Invalid Stripe API Key');
+      }
+      return await response.json();
+    } catch (err) {
+      errorHandler.handleError(err, 'Stripe Connection Test');
+      throw err;
+    }
+  }
+
+  /**
    * Create a Stripe customer
    * @param {Object} customerData - Customer details
    * @returns {Promise<Object>} Customer object
@@ -180,10 +205,9 @@ export class StripeService {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to auto-register product on Stripe');
       }
-      return await response.json(); // returns { productId, priceId }
+      return await response.json();
     } catch (err) {
       errorHandler.handleError(err, 'Stripe Product/Price Auto-Registration');
-      // Return beautiful mock simulation fallback so unconfigured environments never crash
       const mockId = Date.now();
       return {
         productId: `prod_sim_${mockId}`,
@@ -229,9 +253,6 @@ export class StripeService {
 
   // --- Client-Side REST Bridge Proxy Wrappers ---
 
-  /**
-   * Expose intuitive wrapper to create Stripe Customer
-   */
   async createStripeCustomer(userData) {
     try {
       const headers = await this.getAuthHeaders();
@@ -256,9 +277,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Expose intuitive wrapper to create and send Stripe invoice with hosted billing page
-   */
   async createAndSendInvoice(customerId, lineItems, options = {}) {
     try {
       const headers = await this.getAuthHeaders();
@@ -283,9 +301,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Expose intuitive wrapper to retrieve all invoices of a customer
-   */
   async listCustomerInvoices(customerId) {
     try {
       const headers = await this.getAuthHeaders();
@@ -309,9 +324,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Expose intuitive wrapper to void or finalize a specific invoice
-   */
   async voidOrFinalizeInvoice(invoiceId, action) {
     try {
       const headers = await this.getAuthHeaders();
@@ -335,9 +347,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Expose intuitive wrapper to fetch live revenue dashboard analytics
-   */
   async retrieveLiveRevenueStats() {
     try {
       const headers = await this.getAuthHeaders();
@@ -359,10 +368,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Get the publishable key for frontend use
-   * @returns {string} Stripe publishable key
-   */
   getPublishableKey() {
     return this.publishableKey;
   }
