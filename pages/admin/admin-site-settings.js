@@ -332,6 +332,188 @@ export function initSiteSettingsTab() {
   initNavigationEditor();
   initFooterLayoutEditor();
   initFeatureTogglesEditor();
+  initEmailRoutingSettings();
+
+  // Google Workspace Drive Directories Hub
+  const tabSite = document.getElementById('tab-site');
+  if (tabSite) {
+    let driveCard = document.getElementById('google-drive-directories-card');
+    if (!driveCard) {
+      driveCard = document.createElement('div');
+      driveCard.id = 'google-drive-directories-card';
+      driveCard.style.cssText = `
+        background: var(--theme-color-surface, #ffffff);
+        border: 1px solid var(--theme-color-border, #e2e8f0);
+        padding: 1.5rem;
+        border-radius: var(--theme-layout-border-radius, 8px);
+        margin-top: 1.5rem;
+      `;
+      const resetWrapper = document.getElementById('factory-reset-section-wrapper');
+      if (resetWrapper && resetWrapper.parentNode === tabSite) {
+        tabSite.insertBefore(driveCard, resetWrapper);
+      } else {
+        tabSite.appendChild(driveCard);
+      }
+    }
+    renderDriveDirectoriesHub(driveCard);
+  }
+
+  // Site Snapshots & Backups Card
+  if (tabSite) {
+    let snapshotsCard = document.getElementById('site-snapshots-card');
+    if (!snapshotsCard) {
+      snapshotsCard = document.createElement('div');
+      snapshotsCard.id = 'site-snapshots-card';
+      snapshotsCard.style.cssText = `
+        background: var(--theme-color-surface, #ffffff);
+        border: 1px solid var(--theme-color-border, #e2e8f0);
+        padding: 1.5rem;
+        border-radius: var(--theme-layout-border-radius, 8px);
+        margin-top: 1.5rem;
+      `;
+      const resetWrapper = document.getElementById('factory-reset-section-wrapper');
+      if (resetWrapper && resetWrapper.parentNode === tabSite) {
+        tabSite.insertBefore(snapshotsCard, resetWrapper);
+      } else {
+        tabSite.appendChild(snapshotsCard);
+      }
+    }
+
+    // Render Snapshots Card Content
+    const savedDay = currentCfg.monthlySnapshotDay || 1;
+    let optionsHtml = '';
+    for (let i = 1; i <= 28; i++) {
+      const isSelected = i === Number(savedDay) ? 'selected' : '';
+      optionsHtml += `<option value="${i}" ${isSelected}>${i}${getOrdinalSuffix(i)} of every month</option>`;
+    }
+
+    snapshotsCard.innerHTML = `
+      <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 0.5rem;">
+        <span>↺</span> Site Snapshots & State Rollbacks
+      </h2>
+      <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+        Create system-wide snapshots, schedule automated monthly backups, and cleanly roll back entire configuration or database states.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: var(--theme-color-background, #f7fafc); padding: 1rem; border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0);">
+        <div>
+          <label for="monthly-snapshot-day" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Monthly Automated Snapshot Day:</label>
+          <select id="monthly-snapshot-day" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box; background: white;">
+            ${optionsHtml}
+          </select>
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+          <button type="button" id="btn-create-manual-snapshot" class="btn-primary" style="padding: 10px 18px; font-weight: bold; width: 100%;">
+            📸 Generate Manual State Snapshot
+          </button>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--theme-color-border, #e2e8f0); color: var(--theme-color-text-secondary, #4a5568); font-weight: bold;">
+              <th style="padding: 8px;">Date Created</th>
+              <th style="padding: 8px;">Label</th>
+              <th style="padding: 8px;">Author</th>
+              <th style="padding: 8px;">Size</th>
+              <th style="padding: 8px; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="snapshots-list-tbody">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Bind change handler for Monthly snapshot day
+    const selectDay = document.getElementById('monthly-snapshot-day');
+    if (selectDay) {
+      selectDay.onchange = async () => {
+        const val = parseInt(selectDay.value, 10);
+        try {
+          const updatedConfig = {
+            ...configManager.current,
+            monthlySnapshotDay: val
+          };
+          const success = await configManager.saveToFirebase(updatedConfig);
+          if (success) {
+            toast.success(`Monthly automated snapshot scheduled for the ${val}${getOrdinalSuffix(val)} of every month.`);
+          }
+        } catch (err) {
+          toast.error('Failed to save automated backup schedule.');
+        }
+      };
+    }
+
+    // Render function for snapshots list
+    const renderSnapshotsTable = () => {
+      const tbody = document.getElementById('snapshots-list-tbody');
+      if (!tbody) return;
+
+      const list = JSON.parse(localStorage.getItem('foundation_snapshots') || '[]');
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary, #cbd5e0); padding: 1.5rem;">No saved site state snapshots found.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = list.map((snap) => {
+        const formattedDate = new Date(snap.timestamp).toLocaleString();
+        return `
+          <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+            <td style="padding: 8px; font-weight: bold; color: var(--theme-color-text-primary);">${formattedDate}</td>
+            <td style="padding: 8px; color: var(--theme-color-text-secondary);">${snap.label || 'Manual Backup'}</td>
+            <td style="padding: 8px; color: var(--theme-color-text-secondary);">${snap.author || 'admin@earlalex.com'}</td>
+            <td style="padding: 8px; color: var(--theme-color-text-secondary);"><span style="background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${snap.size}</span></td>
+            <td style="padding: 8px; text-align: right;">
+              <button type="button" class="btn-snapshot-rollback btn-primary" data-id="${snap.id}" style="padding: 4px 10px; font-size: 0.75rem; background: var(--theme-color-accent, #38a169); border: none; font-weight: bold; cursor: pointer; border-radius: 4px;">
+                Rollback
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Bind rollback buttons
+      tbody.querySelectorAll('.btn-snapshot-rollback').forEach(btn => {
+        btn.onclick = (e) => {
+          const id = e.target.dataset.id;
+          const snap = list.find(x => x.id === id);
+          if (snap) {
+            launchRollbackConfirmationModal(snap);
+          }
+        };
+      });
+    };
+
+    // Bind create manual snapshot button
+    const btnCreateManual = document.getElementById('btn-create-manual-snapshot');
+    if (btnCreateManual) {
+      btnCreateManual.onclick = async () => {
+        btnCreateManual.disabled = true;
+        btnCreateManual.textContent = 'Generating Snapshot...';
+        try {
+          const { createSiteSnapshot } = await import('../../utils/snapshotEngine.js');
+          await createSiteSnapshot('Manual Backup');
+          toast.success('Site state snapshot saved and securely archived!');
+          renderSnapshotsTable();
+        } catch (err) {
+          toast.error('Failed to create manual state snapshot.');
+        } finally {
+          btnCreateManual.disabled = false;
+          btnCreateManual.textContent = '📸 Generate Manual State Snapshot';
+        }
+      };
+    }
+
+    // Load list initially
+    renderSnapshotsTable();
+  }
 
   // Bind RSS & SEO Indexing "Ping Search Engines" button
   const btnPing = document.getElementById('btn-ping-search-engines');
@@ -781,6 +963,194 @@ function initIconSetManager() {
   });
 }
 
+function initEmailRoutingSettings() {
+  const tabSite = document.getElementById('tab-site');
+  if (!tabSite) return;
+
+  let emailCard = document.getElementById('email-routing-settings-card');
+  if (!emailCard) {
+    emailCard = document.createElement('div');
+    emailCard.id = 'email-routing-settings-card';
+    emailCard.style.cssText = `
+      background: var(--theme-color-surface, #ffffff);
+      border: 1px solid var(--theme-color-border, #e2e8f0);
+      padding: 1.5rem;
+      border-radius: var(--theme-layout-border-radius, 8px);
+      margin-top: 1.5rem;
+    `;
+
+    // Insert before the factory reset card if present, or just append
+    const resetWrapper = document.getElementById('factory-reset-section-wrapper');
+    if (resetWrapper && resetWrapper.parentNode === tabSite) {
+      tabSite.insertBefore(emailCard, resetWrapper);
+    } else {
+      tabSite.appendChild(emailCard);
+    }
+  }
+
+  const currentCfg = configManager.current || {};
+  const emailCfg = currentCfg.email || {
+    defaultFromEmail: "noreply@earlalex.com",
+    primaryProvider: "MailChannels (Free Cloudflare)",
+    inboundForwardingTarget: "admin@earlalex.com",
+    isConfigured: false
+  };
+
+  emailCard.innerHTML = `
+    <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--theme-color-primary, #2b6cb0); display: flex; align-items: center; gap: 0.5rem;">
+      <span>✉️</span> Email Routing & MailChannels Settings
+    </h2>
+    <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+      Configure transactional outbound email dispatches and inbound email forwarding rules using MailChannels, Cloudflare Email Routing, and Google Workspace.
+    </p>
+    <form id="email-routing-settings-form" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+        <div>
+          <label for="email-cfg-default-from" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Default System From-Email:</label>
+          <input type="email" id="email-cfg-default-from" value="${emailCfg.defaultFromEmail || 'noreply@yourdomain.com'}" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+        </div>
+        <div>
+          <label for="email-cfg-primary-provider" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Primary Sender Provider:</label>
+          <select id="email-cfg-primary-provider" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;">
+            <option value="MailChannels (Free Cloudflare)" ${emailCfg.primaryProvider === "MailChannels (Free Cloudflare)" ? 'selected' : ''}>MailChannels (Free Cloudflare)</option>
+            <option value="Google Workspace / Gmail API" ${emailCfg.primaryProvider === "Google Workspace / Gmail API" ? 'selected' : ''}>Google Workspace / Gmail API</option>
+          </select>
+        </div>
+        <div>
+          <label for="email-cfg-forwarding-target" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.25rem;">Inbound Forwarding Target:</label>
+          <input type="email" id="email-cfg-forwarding-target" value="${emailCfg.inboundForwardingTarget || 'admin@yourdomain.com'}" required style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; box-sizing: border-box;" />
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+        <button type="submit" class="btn-primary" style="padding: 10px 18px; font-weight: bold; margin-top: 0;">
+          Save Email Routing Settings
+        </button>
+        <button type="button" id="btn-show-email-dns-guide" class="btn-primary" style="padding: 10px 18px; font-weight: bold; background: var(--theme-color-accent, #38a169); border: none; margin-top: 0;">
+          ❓ How to set up Free Emails
+        </button>
+      </div>
+    </form>
+  `;
+
+  // Bind Submit event
+  document.getElementById('email-routing-settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = e.target.querySelector('button[type="submit"]');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const updatedEmailConfig = {
+        defaultFromEmail: document.getElementById('email-cfg-default-from').value.trim(),
+        primaryProvider: document.getElementById('email-cfg-primary-provider').value,
+        inboundForwardingTarget: document.getElementById('email-cfg-forwarding-target').value.trim(),
+        isConfigured: true
+      };
+
+      const success = await configManager.saveToFirebase({
+        ...configManager.current,
+        email: updatedEmailConfig
+      });
+
+      if (success) {
+        toast.success("Email Routing & MailChannels Settings saved successfully!");
+      } else {
+        toast.error("Failed to save Email Routing Settings.");
+      }
+    } catch (err) {
+      toast.error(`Error saving Email Routing Settings: ${err.message}`);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Email Routing Settings';
+      }
+    }
+  });
+
+  // Bind guide button
+  document.getElementById('btn-show-email-dns-guide').addEventListener('click', (e) => {
+    e.preventDefault();
+    launchDnsGuideModal();
+  });
+}
+
+export function launchDnsGuideModal() {
+  const modal = document.createElement('div');
+  modal.id = 'free-email-dns-guide-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100006;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 550px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.25); position: relative; color: #1a202c; text-align: left;">
+      <h3 style="margin-top: 0; font-size: 1.4rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0); border-bottom: 2px solid #edf2f7; padding-bottom: 0.75rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>✉️</span> Free Email DNS Setup Guide
+      </h3>
+      <p style="color: #4a5568; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.25rem;">
+        To activate free outbound transactional email sending via MailChannels and inbound email forwarding via Cloudflare Email Routing, configure these exact DNS records on your domain registrar:
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; line-height: 1.5; margin-bottom: 1.5rem; max-height: 300px; overflow-y: auto; padding-right: 5px;">
+        <div style="background: #f7fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <strong style="color: #2b6cb0; display: block; margin-bottom: 2px;">1. SPF Record (TXT)</strong>
+          <div>Allows MailChannels relays to authorize send on behalf of your domain.</div>
+          <div style="font-family: monospace; font-weight: bold; background: #edf2f7; padding: 4px 8px; border-radius: 4px; margin-top: 4px; word-break: break-all;">v=spf1 include:relay.mailchannels.net ~all</div>
+        </div>
+
+        <div style="background: #f7fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <strong style="color: #2b6cb0; display: block; margin-bottom: 2px;">2. MailChannels Domain Lockdown (TXT)</strong>
+          <div>Prevents spoofing and restricts sending to your specific Cloudflare Pages app.</div>
+          <div style="font-weight: bold; margin-top: 4px;">Host / Name:</div>
+          <div style="font-family: monospace; background: #edf2f7; padding: 4px 8px; border-radius: 4px; word-break: break-all;">_mailchannels</div>
+          <div style="font-weight: bold; margin-top: 4px;">Value:</div>
+          <div style="font-family: monospace; background: #edf2f7; padding: 4px 8px; border-radius: 4px; word-break: break-all;">v=mc1 cfid=&lt;your-pages-subdomain&gt;.pages.dev</div>
+        </div>
+
+        <div style="background: #f7fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <strong style="color: #2b6cb0; display: block; margin-bottom: 2px;">3. DMARC Record (TXT)</strong>
+          <div>Secures your domain with DKIM/SPF verification policies.</div>
+          <div style="font-weight: bold; margin-top: 4px;">Host / Name:</div>
+          <div style="font-family: monospace; background: #edf2f7; padding: 4px 8px; border-radius: 4px; word-break: break-all;">_dmarc</div>
+          <div style="font-weight: bold; margin-top: 4px;">Value:</div>
+          <div style="font-family: monospace; background: #edf2f7; padding: 4px 8px; border-radius: 4px; word-break: break-all;">v=DMARC1; p=none; rua=mailto:admin@yourdomain.com</div>
+        </div>
+
+        <div style="background: #f7fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <strong style="color: #2b6cb0; display: block; margin-bottom: 2px;">4. Cloudflare Inbound MX Records</strong>
+          <div>Route inbound emails through Cloudflare Email Routing for personal forwarding.</div>
+          <div style="font-family: monospace; font-weight: bold; background: #edf2f7; padding: 4px 8px; border-radius: 4px; margin-top: 4px;">isaac.mx.cloudflare.net</div>
+          <div style="font-family: monospace; font-weight: bold; background: #edf2f7; padding: 4px 8px; border-radius: 4px; margin-top: 4px;">linda.mx.cloudflare.net</div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; border-top: 1px solid #edf2f7; padding-top: 1rem;">
+        <button id="btn-dns-guide-close" class="btn-primary" style="background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 6px; padding: 8px 20px; font-weight: bold; cursor: pointer; margin-top: 0;">
+          Got it!
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.querySelector('#btn-dns-guide-close').addEventListener('click', () => {
+    modal.remove();
+  });
+
+  document.body.appendChild(modal);
+}
+
 function initThemeEngine() {
   const themeJsonInput = document.getElementById('theme-json-input');
   const themeForm = document.getElementById('theme-json-form');
@@ -1030,6 +1400,171 @@ function launchFactoryResetModal() {
 
   document.body.appendChild(modal);
   renderModalContent();
+}
+
+export async function renderDriveDirectoriesHub(container) {
+  const siteName = configManager.current.siteTitle || 'Foundation';
+  container.innerHTML = `
+    <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
+      <span>📁</span> Google Workspace Drive Directories
+    </h3>
+    <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+      Access your secure Google Workspace cloud folders. Buttons will resolve to direct folder URLs if authenticated, or query fallbacks otherwise.
+    </p>
+    <div id="drive-dirs-buttons-container" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <span style="color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">Resolving directories...</span>
+    </div>
+  `;
+
+  // Fallback direct Search queries
+  const fallbacks = {
+    'Communication Logs': `https://drive.google.com/drive/search?q=${encodeURIComponent(`name='Communication Logs' and mimeType='application/vnd.google-apps.folder'`)}`,
+    'Reports': `https://drive.google.com/drive/search?q=${encodeURIComponent(`name='Reports' and mimeType='application/vnd.google-apps.folder'`)}`,
+    'VAs': `https://drive.google.com/drive/search?q=${encodeURIComponent(`name='VAs' and mimeType='application/vnd.google-apps.folder'`)}`,
+    'Backups': `https://drive.google.com/drive/search?q=${encodeURIComponent(`name='Backups' and mimeType='application/vnd.google-apps.folder'`)}`
+  };
+
+  const labels = {
+    'Communication Logs': 'Communication Logs Folder',
+    'Reports': 'Financial & Audit Reports Folder',
+    'VAs': 'Virtual Assistant Staffing Folders',
+    'Backups': 'Site Backups & Snapshots Folder'
+  };
+
+  const icons = {
+    'Communication Logs': '📞',
+    'Reports': '📊',
+    'VAs': '👥',
+    'Backups': '💾'
+  };
+
+  const btnContainer = container.querySelector('#drive-dirs-buttons-container');
+  if (!btnContainer) return;
+
+  const renderButtons = (urls) => {
+    btnContainer.innerHTML = Object.entries(urls).map(([key, url]) => `
+      <a href="${url}" target="_blank" rel="noopener" class="btn-primary" style="
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        background: var(--theme-color-primary, #2b6cb0);
+        color: white;
+        border-radius: var(--theme-layout-border-radius, 8px);
+        font-weight: bold;
+        transition: opacity 0.2s;
+      ">
+        <span>${icons[key]}</span> ${labels[key]}
+      </a>
+    `).join('');
+  };
+
+  try {
+    const { getGoogleAccessToken } = await import('../../core/google-services.js');
+    const token = await getGoogleAccessToken(false);
+    if (token) {
+      const { fetchDriveSystemFolders } = await import('../../utils/backend-google.js');
+      const folders = await fetchDriveSystemFolders(token, siteName);
+      if (folders && folders.length > 0) {
+        const resolvedUrls = { ...fallbacks };
+        folders.forEach(f => {
+          if (fallbacks[f.name] && f.webViewLink) {
+            resolvedUrls[f.name] = f.webViewLink;
+          }
+        });
+        renderButtons(resolvedUrls);
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('[Drive Hub Card]: Failed to fetch active drive directories cleanly. Using fallbacks.', err);
+  }
+
+  // If offline, missing token, or empty folders, render fallbacks
+  renderButtons(fallbacks);
+}
+
+export function getOrdinalSuffix(day) {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1:  return "st";
+    case 2:  return "nd";
+    case 3:  return "rd";
+    default: return "th";
+  }
+}
+
+function launchRollbackConfirmationModal(snap) {
+  const modal = document.createElement('div');
+  modal.id = 'snapshot-rollback-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 100003;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; color: #1a202c; text-align: left;">
+      <h3 style="margin-top: 0; font-size: 1.4rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0); border-bottom: 2px solid #edf2f7; padding-bottom: 0.75rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>↺</span> Confirm State Rollback
+      </h3>
+      <p style="color: #4a5568; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;">
+        You are about to roll back the entire platform to the following snapshot version:
+      </p>
+      <div style="background: #f7fafc; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e0; margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.6;">
+        <div><strong>Date Created:</strong> ${new Date(snap.timestamp).toLocaleString()}</div>
+        <div><strong>Label:</strong> ${snap.label || 'Manual Backup'}</div>
+        <div><strong>Author:</strong> ${snap.author || 'admin@earlalex.com'}</div>
+        <div><strong>Size:</strong> ${snap.size}</div>
+      </div>
+      <p style="color: var(--theme-color-danger, #ef4444); font-size: 0.85rem; font-weight: bold; line-height: 1.5; margin-bottom: 1.5rem; background: #fff5f5; border: 1px solid #fed7d7; padding: 10px; border-radius: 6px;">
+        ⚠️ Safeguard Notice: The engine will automatically generate a temporary "Pre-Rollback Backup" snapshot first, so you can reverse this action if needed. Overwriting state triggers a clean reload.
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid #edf2f7; padding-top: 1.25rem;">
+        <button id="btn-rollback-cancel" style="background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; color: #4a5568;">
+          Cancel
+        </button>
+        <button id="btn-rollback-confirm" style="background: #38a169; color: white; border: none; border-radius: 6px; padding: 8px 20px; font-weight: bold; cursor: pointer;">
+          Confirm Rollback
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.querySelector('#btn-rollback-cancel').addEventListener('click', () => {
+    modal.remove();
+  });
+
+  modal.querySelector('#btn-rollback-confirm').addEventListener('click', async () => {
+    const btn = modal.querySelector('#btn-rollback-confirm');
+    btn.disabled = true;
+    btn.textContent = 'Rolling Back...';
+    try {
+      const { restoreSiteSnapshot } = await import('../../utils/snapshotEngine.js');
+      await restoreSiteSnapshot(snap);
+      toast.success('State successfully rolled back!');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      toast.error('Rollback failed: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = 'Confirm Rollback';
+    }
+  });
+
+  document.body.appendChild(modal);
 }
 
 function initFeatureTogglesEditor() {

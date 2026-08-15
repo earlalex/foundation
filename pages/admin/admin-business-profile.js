@@ -4,6 +4,7 @@ import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { renderDriveDirectoriesHub } from './admin-site-settings.js';
 
 export function initBusinessProfileTab() {
   const currentCfg = configManager.current || {};
@@ -410,5 +411,25 @@ ${kpis.map(k => `- ${k}`).join('\n')}
         btnGenerateWorksheet.textContent = 'Generate & Save Foundation Worksheet to Corporate Binder';
       }
     });
+  }
+
+  // Google Workspace Drive Directories Hub inside Business Profile
+  const tabBusiness = document.getElementById('tab-business');
+  if (tabBusiness) {
+    let driveCard = document.getElementById('google-drive-directories-business-card');
+    if (!driveCard) {
+      driveCard = document.createElement('div');
+      driveCard.id = 'google-drive-directories-business-card';
+      driveCard.style.cssText = `
+        background: var(--theme-color-surface, #ffffff);
+        border: 1px solid var(--theme-color-border, #e2e8f0);
+        padding: 1.5rem;
+        border-radius: var(--theme-layout-border-radius, 8px);
+        margin-top: 1.5rem;
+      `;
+      // Append to the bottom of the tab-business panel
+      tabBusiness.appendChild(driveCard);
+    }
+    renderDriveDirectoriesHub(driveCard);
   }
 }

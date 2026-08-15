@@ -116,7 +116,10 @@ export function initNavbar() {
           <span style="font-size: 0.75rem; background: var(--theme-color-border, #cbd5e1); color: var(--theme-color-text-secondary, #4a5568); padding: 1px 6px; border-radius: 4px; font-weight: 500;">Network OK</span>
         </div>
         <!-- Right Group -->
-        <div class="utility-right">
+        <div class="utility-right" style="display: flex; align-items: center; gap: 1rem;">
+          <!-- Real-Time Notification Bell Dropdown -->
+          <notification-center></notification-center>
+
           <!-- Accessible High-Contrast Toggle -->
           <button id="nav-high-contrast-toggle" class="nav-link" style="background: transparent; border: none; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.85rem;" aria-label="Toggle High Contrast Mode">
             🌓 Contrast
@@ -165,7 +168,7 @@ export function initNavbar() {
 
           <!-- Navigation Links -->
           <div id="nav-menu" class="nav-menu">
-            ${(configManager.current?.navigation || [
+            ${((configManager.current?.navigation && configManager.current.navigation.length > 0) ? configManager.current.navigation : [
               { label: "Home", url: "/home", target: "_self", requiredRole: "public" },
               { label: "Documentation", url: "/docs", target: "_self", requiredRole: "public" },
               { label: "Shop", url: "/shop", target: "_self", requiredRole: "public" },
@@ -398,7 +401,23 @@ export function initNavbar() {
         mobileAuthBtnElement.textContent = state.user ? 'Sign Out' : 'Sign In';
       }
 
+      const features = configManager.current.features || {};
+
       document.querySelectorAll('.dynamic-nav-link').forEach(link => {
+        const path = link.getAttribute('data-path');
+        if (path === '/videos' && features.videoPortal === false) {
+          link.style.display = 'none';
+          return;
+        }
+        if (path === '/gallery' && features.photoGallery === false) {
+          link.style.display = 'none';
+          return;
+        }
+        if (path === '/podcast' && features.webRadioPlayer === false) {
+          link.style.display = 'none';
+          return;
+        }
+
         const requiredRole = link.getAttribute('data-role');
         if (!requiredRole || requiredRole === 'public') {
           link.style.display = 'inline-block';

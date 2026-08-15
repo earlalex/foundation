@@ -7,8 +7,10 @@ import { themeEngine } from './core/theme.js';
 import { logger } from './core/logger.js';
 import { configManager } from './core/config.js';
 import { initNavbar } from './core/navbar.js';
+import { triggerPagePromoModals } from './utils/modal.js';
 
 // Critical Web Components
+import './components/global/NotificationCenter.js';
 import './components/global/ContentCard.js';
 import './components/global/AuthorCard.js';
 import './components/global/HeroBanner.js';
@@ -185,6 +187,11 @@ async function boot() {
 
   // 1. Initialize Master Configuration (reads LocalStorage / Firestore)
   const isInstalled = await configManager.init();
+
+  // Trigger automated monthly snapshot check silently in the background
+  if (isInstalled) {
+    import('./utils/snapshotEngine.js').then(m => m.checkAndTriggerMonthlySnapshot()).catch(() => {});
+  }
 
   // 2. Boot Test Suites in Dev Mode
   if (store.state.devMode) {
@@ -393,6 +400,9 @@ window.addEventListener('pageLoaded', (e) => {
 
   // Re-evaluate simulation badge visibility on path transition
   updateSimulationBadgeVisibility(store.state);
+
+  // Trigger page custom promotional/discount modals dynamically
+  triggerPagePromoModals(e.detail.path);
 
   // Re-translate page items dynamically on transition
   setTimeout(async () => {

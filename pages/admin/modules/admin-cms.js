@@ -55,11 +55,30 @@ export function initAdminCms() {
     cmsTab.appendChild(heroConfigCard);
   }
 
+  // 2.5 Create or ensure the Custom Popup & Promo Modals card is present (Directive 2)
+  let promoModalsCard = document.getElementById('cms-promo-modals-card');
+  if (!promoModalsCard) {
+    console.log('[CMS Module]: Creating #cms-promo-modals-card dynamically...');
+    promoModalsCard = document.createElement('div');
+    promoModalsCard.id = 'cms-promo-modals-card';
+    promoModalsCard.style.cssText = `
+      background: var(--theme-color-surface, #ffffff);
+      border: 1px solid var(--theme-color-border, #e2e8f0);
+      padding: 1.5rem;
+      border-radius: var(--theme-layout-border-radius, 8px);
+      margin-top: 1.5rem;
+    `;
+    cmsTab.appendChild(promoModalsCard);
+  }
+
   // 3. Render Categories & Items List
   renderContentManager(managerCard);
 
   // 4. Render Public Site & Page Manager panel (Directive 4)
   renderHeroConfigurator(heroConfigCard);
+
+  // 4.5 Render Custom Popup & Promo Modals builder (Directive 2)
+  renderPromoModalsBuilder(promoModalsCard);
 
   // Hook into form submit of #cms-form to reset editing state and refresh lists
   if (cmsForm) {
@@ -469,6 +488,312 @@ function renderAICmsGenerator(container) {
       btn.textContent = '✨ Generate AI Test Blogs';
     }
   });
+}
+
+/**
+ * Render the Custom Promotional Pop-ups and Modals Builder (Directive 2)
+ * @param {HTMLElement} container
+ */
+export async function renderPromoModalsBuilder(container) {
+  let promoEditingItem = null;
+
+  const renderFormAndList = async () => {
+    let allContent = [];
+    try {
+      allContent = await contentDB.getAllContent();
+    } catch (err) {
+      console.warn('[Promo Builder]: Failed to fetch content library:', err.message);
+    }
+
+    const promoModals = allContent.filter(item => item.type === 'custom_modal');
+
+    container.innerHTML = `
+      <h3 style="margin-top: 0; font-size: 1.15rem; color: var(--theme-color-primary, #2b6cb0); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+        <span>📢</span> Custom Pop-ups & Promotional Modals
+      </h3>
+      <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+        Design, configure, and schedule custom modal popups for newsletter signups, merch spotlights, podcast drops, and discount vouchers. Persisted in contentDB.
+      </p>
+
+      <form id="promo-builder-form" style="display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.25rem; border-radius: 8px; background: var(--theme-color-surface-alt, #f8fafc); margin-bottom: 1.5rem;">
+        <h4 id="promo-form-title" style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-text-primary);">Create Custom Promotional Modal</h4>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="promo-slug" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Unique Slug ID:</label>
+            <input type="text" id="promo-slug" required placeholder="promo-winter-sale" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+          <div>
+            <label for="promo-title" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Modal Header Title:</label>
+            <input type="text" id="promo-title" required placeholder="Exclusive Winter Offer!" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="promo-modal-type" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Modal Type Slot:</label>
+            <select id="promo-modal-type" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-weight: bold;">
+              <option value="newsletter">Newsletter Signup & Lead Magnet</option>
+              <option value="product">Featured Product & Merch Spotlight</option>
+              <option value="announcement">New Content & Podcast Announcement</option>
+              <option value="discount">Limited-Time Discount Banner</option>
+            </select>
+          </div>
+          <div>
+            <label for="promo-trigger-type" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Display Trigger:</label>
+            <select id="promo-trigger-type" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-weight: bold;">
+              <option value="immediate">Immediate on load</option>
+              <option value="delay">Time Delay (Seconds)</option>
+              <option value="scroll">Scroll Depth %</option>
+              <option value="exit">Exit Intent (Mouseout)</option>
+            </select>
+          </div>
+          <div>
+            <label for="promo-trigger-value" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Trigger Value (Optional):</label>
+            <input type="number" id="promo-trigger-value" placeholder="e.g. 5 seconds or 50%" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="promo-target-pages" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Target Pages Visibility:</label>
+            <select id="promo-target-pages" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; font-weight: bold;">
+              <option value="all">All Pages</option>
+              <option value="home">Homepage Only</option>
+              <option value="shop">Shop Only</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 1.25rem;">
+            <input type="checkbox" id="promo-is-active" checked style="cursor: pointer; transform: scale(1.1);" />
+            <label for="promo-is-active" style="font-weight: bold; font-size: 0.85rem; cursor: pointer; margin-bottom: 0;">Is Active / Enabled</label>
+          </div>
+        </div>
+
+        <div>
+          <label for="promo-html" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Body Copy / Custom Content HTML:</label>
+          <textarea id="promo-html" placeholder="Describe the announcement or paste simple custom HTML..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; min-height: 80px; font-family: sans-serif;"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="promo-image-url" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Header Image URL (Optional):</label>
+            <input type="url" id="promo-image-url" placeholder="https://images.unsplash.com/..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+          <div>
+            <label for="promo-cta-text" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">CTA Button Text (Optional):</label>
+            <input type="text" id="promo-cta-text" placeholder="Buy Now / Read More" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+          <div>
+            <label for="promo-cta-url" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">CTA Destination Link (Optional):</label>
+            <input type="text" id="promo-cta-url" placeholder="/shop or /detail?id=..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label for="promo-discount-code" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Discount Coupon Code (Optional):</label>
+            <input type="text" id="promo-discount-code" placeholder="WINTER20" style="width: 100%; padding: 8px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px;" />
+          </div>
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: flex-end;">
+            <button type="button" id="btn-promo-reset" class="btn-secondary" style="padding: 10px 16px; font-weight: bold; height: 38px;">Cancel / Reset</button>
+            <button type="submit" id="btn-promo-submit" class="btn-primary" style="padding: 10px 18px; font-weight: bold; height: 38px;">Save Modal Definition</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Active Promotional Modals Table List -->
+      <h4 style="margin: 1.5rem 0 0.5rem 0; font-size: 1rem; font-weight: bold; color: var(--theme-color-primary);">Saved Custom Promotional Modals</h4>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--theme-color-border, #edf2f7); color: var(--theme-color-text-secondary, #4a5568); font-weight: bold;">
+              <th style="padding: 10px;">ID Slug</th>
+              <th style="padding: 10px;">Modal Title</th>
+              <th style="padding: 10px;">Modal Type</th>
+              <th style="padding: 10px;">Trigger Style</th>
+              <th style="padding: 10px;">Target Route</th>
+              <th style="padding: 10px;">Status</th>
+              <th style="padding: 10px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${promoModals.length === 0 ? `
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--theme-color-text-secondary, #cbd5e0); padding: 2rem;">No custom promotional modals created yet.</td>
+              </tr>
+            ` : promoModals.map(m => `
+              <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
+                <td style="padding: 10px; font-family: monospace; font-size: 0.8rem; color: var(--theme-color-text-secondary);">${m.id}</td>
+                <td style="padding: 10px; font-weight: bold; color: var(--theme-color-text-primary);">${m.title}</td>
+                <td style="padding: 10px;"><span style="background: #edf2f7; border: 1px solid #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase;">${m.modalType}</span></td>
+                <td style="padding: 10px; font-family: monospace; font-size: 0.8rem;">${m.triggerType} (${m.triggerValue || '0'})</td>
+                <td style="padding: 10px; font-weight: 500; color: #4a5568;">${m.targetPages === 'all' ? 'All Pages' : m.targetPages === 'home' ? 'Homepage Only' : 'Shop Only'}</td>
+                <td style="padding: 10px;">
+                  <span style="font-weight: bold; color: ${m.isActive !== false ? '#38a169' : '#e53e3e'};">
+                    ${m.isActive !== false ? 'Active 🟢' : 'Disabled 🔴'}
+                  </span>
+                </td>
+                <td style="padding: 10px; text-align: right;">
+                  <div style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center;">
+                    <button class="btn-promo-edit btn-primary" data-id="${m.id}" style="padding: 4px 8px; font-size: 0.75rem; background: var(--theme-color-primary, #2b6cb0);">Edit</button>
+                    <button class="btn-promo-test" data-id="${m.id}" style="padding: 4px 8px; font-size: 0.75rem; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">🚀 Test</button>
+                    <button class="btn-promo-copy" data-id="${m.id}" style="padding: 4px 8px; font-size: 0.75rem; background: #319795; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Copy</button>
+                    <button class="btn-promo-delete" data-id="${m.id}" style="padding: 4px 8px; font-size: 0.75rem; background: #ef4444; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Bind form submit
+    const form = container.querySelector('#promo-builder-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const slugInput = container.querySelector('#promo-slug');
+      const titleInput = container.querySelector('#promo-title');
+      const typeSelect = container.querySelector('#promo-modal-type');
+      const triggerSelect = container.querySelector('#promo-trigger-type');
+      const valInput = container.querySelector('#promo-trigger-value');
+      const pagesSelect = container.querySelector('#promo-target-pages');
+      const activeCheck = container.querySelector('#promo-is-active');
+      const htmlInput = container.querySelector('#promo-html');
+      const imgInput = container.querySelector('#promo-image-url');
+      const ctaTextInput = container.querySelector('#promo-cta-text');
+      const ctaUrlInput = container.querySelector('#promo-cta-url');
+      const discountInput = container.querySelector('#promo-discount-code');
+
+      const payload = {
+        type: 'custom_modal',
+        id: slugInput.value.trim(),
+        title: titleInput.value.trim(),
+        modalType: typeSelect.value,
+        triggerType: triggerSelect.value,
+        triggerValue: parseFloat(valInput.value) || 0,
+        targetPages: pagesSelect.value,
+        isActive: activeCheck.checked,
+        contentHtml: htmlInput.value.trim(),
+        imageUrl: imgInput.value.trim(),
+        ctaText: ctaTextInput.value.trim(),
+        ctaUrl: ctaUrlInput.value.trim(),
+        discountCode: discountInput.value.trim()
+      };
+
+      try {
+        await contentDB.saveContent(payload);
+        toast.success(`Promotional custom modal "${payload.title}" saved successfully!`);
+        promoEditingItem = null;
+        renderFormAndList();
+      } catch (err) {
+        toast.error(`Save Failed: ${err.message}`);
+      }
+    });
+
+    // Bind Reset
+    container.querySelector('#btn-promo-reset').addEventListener('click', () => {
+      promoEditingItem = null;
+      renderFormAndList();
+    });
+
+    // Bind Actions
+    container.querySelectorAll('.btn-promo-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        const item = promoModals.find(x => x.id === id);
+        if (!item) return;
+
+        promoEditingItem = item;
+
+        // Load into form
+        container.querySelector('#promo-slug').value = item.id;
+        container.querySelector('#promo-slug').readOnly = true;
+        container.querySelector('#promo-title').value = item.title;
+        container.querySelector('#promo-modal-type').value = item.modalType || 'newsletter';
+        container.querySelector('#promo-trigger-type').value = item.triggerType || 'immediate';
+        container.querySelector('#promo-trigger-value').value = item.triggerValue || '';
+        container.querySelector('#promo-target-pages').value = item.targetPages || 'all';
+        container.querySelector('#promo-is-active').checked = item.isActive !== false;
+        container.querySelector('#promo-html').value = item.contentHtml || '';
+        container.querySelector('#promo-image-url').value = item.imageUrl || '';
+        container.querySelector('#promo-cta-text').value = item.ctaText || '';
+        container.querySelector('#promo-cta-url').value = item.ctaUrl || '';
+        container.querySelector('#promo-discount-code').value = item.discountCode || '';
+
+        container.querySelector('#promo-form-title').textContent = `Editing Custom Promotional Modal: "${item.title}"`;
+        container.querySelector('#btn-promo-submit').textContent = 'Update Modal Definition';
+
+        form.scrollIntoView({ behavior: 'smooth' });
+        toast.info(`Loaded "${item.title}" definition into promotional workspace.`);
+      });
+    });
+
+    // Bind Test
+    container.querySelectorAll('.btn-promo-test').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.dataset.id;
+        const item = promoModals.find(x => x.id === id);
+        if (!item) return;
+
+        toast.info(`Launching interactive test preview of "${item.title}" on screen...`);
+        try {
+          const mod = await import('../../../utils/modal.js');
+          mod.showPromoModal(item);
+        } catch (err) {
+          console.error('[Promo Test Error]:', err);
+          toast.error("Failed to load modal display helper.");
+        }
+      });
+    });
+
+    // Bind Copy
+    container.querySelectorAll('.btn-promo-copy').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.dataset.id;
+        const item = promoModals.find(x => x.id === id);
+        if (!item) return;
+
+        const clonedId = `${item.id}-copy-${Math.random().toString(36).substring(2, 5)}`;
+        const clonedTitle = `${item.title} (Copy)`;
+
+        const cloned = {
+          ...item,
+          id: clonedId,
+          title: clonedTitle
+        };
+
+        try {
+          await contentDB.saveContent(cloned);
+          toast.success(`Duplicated "${item.title}" successfully!`);
+          renderFormAndList();
+        } catch (err) {
+          toast.error(`Duplication failed: ${err.message}`);
+        }
+      });
+    });
+
+    // Bind Delete
+    container.querySelectorAll('.btn-promo-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.dataset.id;
+        const item = promoModals.find(x => x.id === id);
+        if (!item) return;
+
+        if (confirm(`Are you sure you want to permanently delete promotional modal definition "${item.title}"?`)) {
+          try {
+            await contentDB.deleteContent(id);
+            toast.success(`Deleted promotional modal "${item.title}" successfully.`);
+            renderFormAndList();
+          } catch (err) {
+            toast.error(`Delete Failed: ${err.message}`);
+          }
+        }
+      });
+    });
+  };
+
+  await renderFormAndList();
 }
 
 async function renderContentManager(container) {

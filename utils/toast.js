@@ -2,6 +2,7 @@
 export class ToastManager {
   constructor() {
     this.container = null;
+    this.lastToastTimes = new Map();
     this.init();
   }
 
@@ -21,7 +22,58 @@ export class ToastManager {
     document.body.appendChild(this.container);
   }
 
+  saveToNotificationHistory(message, type) {
+    try {
+      const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+
+      // Categorize cleanly by System Alerts, Orders & Payments, Audit Logs
+      let category = 'Audit Logs';
+      const lowercaseMsg = message.toLowerCase();
+      if (type === 'error' || type === 'warning' || lowercaseMsg.includes('fail') || lowercaseMsg.includes('error')) {
+        category = 'System Alerts';
+      } else if (type === 'success' || lowercaseMsg.includes('order') || lowercaseMsg.includes('payment') || lowercaseMsg.includes('purchas') || lowercaseMsg.includes('payout') || lowercaseMsg.includes('wise') || lowercaseMsg.includes('checkout') || lowercaseMsg.includes('subscribe')) {
+        category = 'Orders & Payments';
+      }
+
+      const newNotif = {
+        id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+        message,
+        type, // 'success', 'error', 'warning', 'info'
+        category,
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
+
+      history.unshift(newNotif);
+
+      // Limit to 100 entries max to prevent local storage bloatedness
+      localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+
+      // Dispatch real-time custom event
+      window.dispatchEvent(new CustomEvent('notification-received', { detail: newNotif }));
+    } catch (err) {
+      console.warn('[Toast History Error]:', err);
+    }
+  }
+
   show(message, type = 'info', duration = 4000) {
+    if (!this.lastToastTimes) {
+      this.lastToastTimes = new Map();
+    }
+
+    const now = Date.now();
+    const lastTime = this.lastToastTimes.get(message) || 0;
+
+    // Direct all toasts (both screen-suppressed and shown) to the local notification center history
+    this.saveToNotificationHistory(message, type);
+
+    // Apply 5-second quiet/deduplication window for identical on-screen toasts
+    if (now - lastTime < 5000) {
+      console.log(`[Toast quiet mode]: Redirected duplicate notification to notification feed: "${message}"`);
+      return null;
+    }
+    this.lastToastTimes.set(message, now);
+
     const toast = document.createElement('div');
     const colors = {
       success: { bg: '#38a169', border: '#2f855a' },

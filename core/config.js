@@ -11,6 +11,7 @@ export const defaultConfig = {
   siteDomain: typeof window !== 'undefined' ? window.location.origin : '',
   isInstalled: false,
   adminEmails: ['admin@earlalex.com'],
+  monthlySnapshotDay: 1,
   features: {
     imagenAiGenerator: true
   },
@@ -131,6 +132,12 @@ export const defaultConfig = {
     webhookSecret: "",
     achFee: 500, // flat $5.00 fee in cents
     enableAch: false,
+    isConfigured: false
+  },
+  email: {
+    defaultFromEmail: "noreply@earlalex.com",
+    primaryProvider: "MailChannels (Free Cloudflare)",
+    inboundForwardingTarget: "admin@earlalex.com",
     isConfigured: false
   },
   google: {

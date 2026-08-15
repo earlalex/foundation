@@ -429,6 +429,115 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
 }
 
 /**
+ * Queries Google Drive folders named Communication Logs, Reports, VAs, and Backups under the siteName
+ * @param {string} token - Google OAuth access token
+ * @param {string} siteName - Site name/title
+ * @returns {Promise<Array>} Array of found folder file objects
+ */
+export async function fetchDriveSystemFolders(token, siteName) {
+  if (!token) return null;
+  try {
+    const q = `mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,webViewLink,parents)`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.files || [];
+  } catch (err) {
+    errorHandler.handleError(err, 'Fetch Drive Folders');
+    return null;
+  }
+}
+
+/**
+ * Uploads a site state snapshot JSON to Google Drive under:
+ * [Site Name] / Backups / YYYY-MM-DD_snapshot.json
+ */
+export async function uploadBackupToDrive(token, siteName, fileName, content) {
+  if (!token) {
+    console.warn('[uploadBackupToDrive]: Access token missing.');
+    return null;
+  }
+  try {
+    // 1. Search or create the Root siteName folder
+    let folderId = null;
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const searchData = await searchRes.json();
+
+    if (searchData.files && searchData.files.length > 0) {
+      folderId = searchData.files[0].id;
+    } else {
+      const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: siteName,
+          mimeType: 'application/vnd.google-apps.folder'
+        })
+      });
+      const folderData = await createRes.json();
+      folderId = folderData.id;
+    }
+
+    // 2. Search or create "Backups" child folder
+    let backupsFolderId = null;
+    const backupsSearchUrl = `https://www.googleapis.com/drive/v3/files?q=name='Backups' and '${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const backupsSearchRes = await fetch(backupsSearchUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const backupsSearchData = await backupsSearchRes.json();
+
+    if (backupsSearchData.files && backupsSearchData.files.length > 0) {
+      backupsFolderId = backupsSearchData.files[0].id;
+    } else {
+      const createBackupsRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: 'Backups',
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [folderId]
+        })
+      });
+      const backupsFolderData = await createBackupsRes.json();
+      backupsFolderId = backupsFolderData.id;
+    }
+
+    // 3. Upload the backup json file itself (Private by default)
+    const metadata = {
+      name: fileName,
+      mimeType: 'application/json',
+      parents: [backupsFolderId]
+    };
+
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', new Blob([content], { type: 'application/json' }));
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+
+    return await response.json();
+  } catch (err) {
+    errorHandler.handleError(err, 'Upload Backup Drive');
+    return null;
+  }
+}
+
+/**
  * Sync buyer contact and write immutable detailed purchase note
  * @param {Object} customerData - Customer contact & purchase metrics
  * @param {string} [token] - Google OAuth access token

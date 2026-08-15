@@ -3,15 +3,20 @@
 export async function onRequestPost(context) {
   try {
     let callText = "";
-    let provider = "unknown";
+    let isTelnyx = false;
+    let isTwilio = false;
+    let isVapi = false;
+    let fromNumber = "";
+    let body = null;
 
     // 1. Parse incoming Voice Webhook parameters (e.g. Vapi.ai payload or Telnyx/Twilio HTTP events)
     const contentType = context.request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
-      const body = await context.request.json();
+      body = await context.request.json();
 
       // Check if it is a Telnyx Call Control Webhook Event
-      const isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
+      isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
+      
       if (isTelnyx) {
         const eventType = body.data.event_type;
         const callControlId = body.data.payload.call_control_id;
@@ -53,7 +58,7 @@ export async function onRequestPost(context) {
               const callerPhone = body.data.payload.from || 'Unknown Caller';
               const duration = body.data.payload.duration_seconds || body.data.payload.duration || 0;
               const occurredAt = body.data.occurred_at || new Date().toISOString();
-              const siteName = "Foundation Framework";
+              const siteName = env.SITE_NAME || "Foundation Framework";
               const fileName = `telnyx_voice_log_${Date.now()}.md`;
 
               const mdTranscript = `## Telnyx Voice Session\n\n- **Date/Time**: ${new Date(occurredAt).toLocaleString()}\n- **Event**: ${eventType}\n- **Caller**: ${callerPhone}\n- **Duration**: ${duration} seconds\n- **Call Control ID**: ${callControlId}\n- **Hangup Reason**: ${body.data.payload.hangup_reason || 'N/A'}`;
@@ -87,19 +92,19 @@ export async function onRequestPost(context) {
         });
       }
 
-      provider = "json";
-      // Vapi.ai / generic voice webhook parameters
+      // Vapi.ai / generic voice webhook parameters fallback
+      isVapi = true;
       callText = body.message?.toolCalls?.[0]?.function?.arguments || body.message?.text || body.text || "";
+      fromNumber = body.message?.customer?.number || "";
     } else {
-      provider = "form";
-      const text = await context.request.text();
-      const params = new URLSearchParams(text);
-      // Twilio / Telnyx voice events standard field
-      callText = params.get("SpeechResult") || params.get("TranscriptionText") || "";
+      isTwilio = true;
+      // Twilio Form fallback
+      const formData = await context.request.formData();
+      callText = formData.get("SpeechResult") || formData.get("TranscriptionText") || "";
+      fromNumber = formData.get("From") || "";
     }
 
     // 2. Resolve Credentials & Preference
-    // Unified Environment Variable Law: strictly read GEMINI_API_KEY and OPENAI_API_KEY
     const geminiKey = context.env.GEMINI_API_KEY;
     const openAiKey = context.env.OPENAI_API_KEY;
     const preferredProvider = context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
@@ -134,7 +139,6 @@ export async function onRequestPost(context) {
 
       if (!response.ok) {
         console.warn('[Voice Webhook]: Primary Gemini model failed, trying fallback');
-        // Fallback to gemini-2.5-flash-lite
         const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`;
         const fallbackRes = await fetch(fallbackUrl, {
           method: "POST",
@@ -228,30 +232,12 @@ export async function onRequestPost(context) {
     }
 
     // 3. Perform Google Workspace Integrations dynamically using context helper credentials
-    // Unified Environment Variable Law: strictly read GOOGLE_SERVICE_ACCOUNT_TOKEN
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
     if (serviceToken && callText) {
       try {
         const { uploadCommunicationLogToDrive, syncGoogleContactCommunication, sendCommunicationSummaryEmail } = await import('../../utils/backend-google-serverless.js');
 
-        // Create Transcript Markdown
-        const siteName = "Foundation Framework";
-        const fileName = `voice_log_session_${Date.now()}.md`;
-        const mdTranscript = `## Voice Telephony Session\n\n- **Date**: ${new Date().toLocaleString()}\n\n### Transcription Transcript:\n- **User**: ${callText}\n- **AI**: ${responseSpeech}`;
-
-        // Save Transcript to Google Drive
-        await uploadCommunicationLogToDrive(serviceToken, siteName, fileName, mdTranscript);
-
-        // Record interaction under Google Contacts
-        await syncGoogleContactCommunication({
-          phone: "Voice session",
-          name: "Voice Call Customer",
-          type: "voice",
-          timestamp: new Date().toISOString(),
-          token: serviceToken
-        });
-
-        // Get Summary
+        // Get Summary first
         let summaryText = "Voice support conversation session completed.";
         try {
           if (geminiKey) {
@@ -291,6 +277,23 @@ export async function onRequestPost(context) {
           }
         } catch (e) {}
 
+        // Create Transcript Markdown
+        const siteName = context.env.SITE_NAME || "Foundation Framework";
+        const fileName = `voice_log_session_${Date.now()}.md`;
+        const mdTranscript = `## Voice Telephony Session\n\n- **Date**: ${new Date().toLocaleString()}\n- **Summary**: ${summaryText}\n\n### Transcription Transcript:\n- **User**: ${callText}\n- **AI**: ${responseSpeech}`;
+
+        // Save Transcript to Google Drive under [Site Name] / Communication Logs / YYYY / MM /
+        await uploadCommunicationLogToDrive(serviceToken, siteName, fileName, mdTranscript);
+
+        // Record interaction under Google Contacts
+        await syncGoogleContactCommunication({
+          phone: fromNumber || "Voice session",
+          name: fromNumber ? `Voice Call Customer (${fromNumber})` : "Voice Call Customer",
+          type: "voice",
+          timestamp: new Date().toISOString(),
+          token: serviceToken
+        });
+
         // Email summary dispatch via Gmail
         const adminEmail = context.env.ADMIN_EMAIL || "admin@foundation.dev";
         await sendCommunicationSummaryEmail({
@@ -307,16 +310,16 @@ export async function onRequestPost(context) {
       }
     }
 
-    // 4. Return response based on provider requirements. Standard XML TwiML/TeXML or JSON instructions.
-    if (provider === "form") {
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${responseSpeech}</Say><Gather input="speech" timeout="3" action="/api/voice-webhook"></Gather></Response>`;
+    // 4. Return response based on provider requirements. Standard XML TwiML or JSON instructions.
+    if (isTwilio) {
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say>${responseSpeech}</Say><Gather input="speech" timeout="3" action="/api/voice-webhook"></Gather></Response>`;
       return new Response(twiml, {
         status: 200,
         headers: { "Content-Type": "text/xml" }
       });
     }
 
-    // Vapi.ai JSON call response layout
+    // Vapi.ai / generic JSON call response layout fallback
     return new Response(JSON.stringify({
       conversation: [
         { role: "assistant", content: responseSpeech }

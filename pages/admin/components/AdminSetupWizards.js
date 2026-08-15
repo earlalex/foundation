@@ -1,20 +1,25 @@
 /**
  * pages/admin/components/AdminSetupWizards.js
  * Implements interactive, step-by-step setup modals for the Single Unified Master Onboarding Wizard.
+ * Centered around a Conversational AI-First Prompt Flow (Mode A) with a Traditional Blueprint Form (Mode B) fallback.
+ * Employs a house foundation structural analogy with a Live Blueprint Preview Sidebar.
  */
 import { configManager } from '../../../core/config.js';
 import { toast } from '../../../utils/toast.js';
 import { store } from '../../../core/store.js';
-import {
-  writeTempCredentialsVault,
-  readTempCredentialsVault,
-  deleteTempCredentialsVault
-} from '../../../core/drive-upload.js';
 import { contentDB } from '../../../core/db.js';
-import { sendGmailNotification } from '../../../core/google-services.js';
-import { FRAMEWORK_AFFILIATES } from '../../../core/affiliates.js';
+import { generateHeroBackground, generateProductMockup } from '../../../utils/ai-imagen.js';
 
 export class AdminSetupWizards {
+  /**
+   * Launch the Free Email DNS Guide Modal.
+   */
+  static launchDnsGuideModal() {
+    import('../admin-site-settings.js').then(m => {
+      m.launchDnsGuideModal();
+    });
+  }
+
   /**
    * Helper to retrieve current onboarding sequence progress
    */
@@ -95,11 +100,11 @@ export class AdminSetupWizards {
           </div>
           <div>
             <label for="wz-home-sections" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Featured Section Order (comma separated):</label>
-            <input type="text" id="wz-home-sections" aria-label="Featured Section Order (comma separated)" value="${prefilledSections}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <input type="text" id="wz-home-sections" aria-label="Featured Section Order" value="${prefilledSections}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
             <label for="wz-home-cta" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Primary CTA Buttons (comma separated):</label>
-            <input type="text" id="wz-home-cta" aria-label="Primary CTA Buttons (comma separated)" value="${prefilledCta}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <input type="text" id="wz-home-cta" aria-label="Primary CTA Buttons" value="${prefilledCta}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
         </div>
       `;
@@ -163,7 +168,7 @@ export class AdminSetupWizards {
           </div>
           <div>
             <label for="wz-about-timeline" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Milestones Timeline (comma separated Year:Event):</label>
-            <input type="text" id="wz-about-timeline" aria-label="Milestones Timeline (comma separated Year:Event)" value="${prefilledTimeline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
+            <input type="text" id="wz-about-timeline" aria-label="Milestones Timeline" value="${prefilledTimeline}" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" />
           </div>
           <div>
             <label for="wz-about-bio" style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.25rem;">Executive Bio:</label>
@@ -440,198 +445,1035 @@ export class AdminSetupWizards {
 export class MasterSetupWizard extends HTMLElement {
   constructor() {
     super();
-    this.currentStep = 1;
-    this.totalSteps = 7;
+    this.currentMode = 'A'; // Mode A: Conversational AI, Mode B: Traditional multi-step
+    this.traditionalStep = 1;
+    this.totalTraditionalSteps = 7;
+
+    // Core state structure synchronizing both Mode A and Mode B configurations on-the-fly
+    this.config = {
+      siteTitle: "Foundation Framework",
+      siteDomain: window.location.origin,
+      adminEmail: "admin@earlalex.com",
+      supportEmail: "support@earlalex.com",
+      firebaseApiKey: "AIzaSy_fb_mock_key_992",
+      firebaseProjectId: "demo-proj-id",
+      googleClientId: "g_client_id_01",
+      googleClientSecret: "g_secret_99",
+      googleServiceAccountToken: '{"type": "service_account"}',
+      geminiApiKey: "gemini_api_key_101",
+      openaiApiKey: "openai_api_key_mock",
+      preferredModel: "gemini",
+      voiceModel: "alloy",
+      stripeSecretKey: "sk_test_123",
+      stripePublishableKey: "pk_test_456",
+      stripeWebhookSecret: "whsec_mock",
+      stripeMembershipPriceId: "price_abc",
+      wiseApiKey: "wise_api_key_mock",
+      wiseProfileId: "wise_profile_id_mock",
+      telnyxApiKey: "telnyx_api_key_mock",
+      telnyxPhoneNumber: "+18005550199",
+      twilioAccountSid: "AC_twilio_sid_mock",
+      twilioAuthToken: "twilio_token_mock",
+      twilioPhoneNumber: "+18005550100",
+      vtApiKey: "vt_api_mock_token",
+      zapEndpoint: "https://wwtesw.zaproxy.org/",
+      lastpassCid: "lp_cid_mock",
+      lastpassHash: "lp_hash_mock",
+      ga4Id: "G-987654321",
+      lookerUrl: "https://lookerstudio.google.com/embed/reporting/123",
+      googlePlaceId: "place_id_mock",
+      adsensePub: "ca-pub-123456789",
+      features: {
+        chatWidget: true,
+        webRadioPlayer: true,
+        videoPortal: true,
+        photoGallery: true,
+        aiSparkAgent: true,
+        dummyDataGenerator: true,
+        adSenseUnits: false,
+        web3CryptoCheckout: true
+      },
+      heroBannerUrl: ""
+    };
+
+    // Chat mode active turns:
+    // Turn 1: Laying the Concrete / Identity
+    // Turn 2: Installing Utility Lines / API Connections
+    // Turn 3: Pouring Framework / Feature Toggles
+    this.chatTurn = 1;
+    this.chatHistory = [];
   }
 
   connectedCallback() {
     this.isModal = this.getAttribute('mode') === 'modal';
+
+    // Fetch and populate configuration if pre-existing
+    const currentGlobal = configManager.current || {};
+    this.config = {
+      ...this.config,
+      ...currentGlobal,
+      siteTitle: currentGlobal.siteTitle || this.config.siteTitle,
+      siteDomain: currentGlobal.siteDomain || this.config.siteDomain,
+      adminEmail: (currentGlobal.adminEmails && currentGlobal.adminEmails[0]) || this.config.adminEmail,
+      supportEmail: currentGlobal.businessProfile?.supportEmail || this.config.supportEmail,
+      firebaseApiKey: currentGlobal.firebase?.apiKey || this.config.firebaseApiKey,
+      firebaseProjectId: currentGlobal.firebase?.projectId || this.config.firebaseProjectId,
+      googleClientId: currentGlobal.google?.clientId || this.config.googleClientId,
+      googleClientSecret: currentGlobal.google?.clientSecret || this.config.googleClientSecret,
+      googleServiceAccountToken: currentGlobal.google?.serviceAccountToken || this.config.googleServiceAccountToken,
+      geminiApiKey: currentGlobal.aiConfig?.geminiApiKey || this.config.geminiApiKey,
+      openaiApiKey: currentGlobal.aiConfig?.openaiApiKey || this.config.openaiApiKey,
+      preferredModel: currentGlobal.aiConfig?.preferredModel || this.config.preferredModel,
+      voiceModel: currentGlobal.chatbot?.voiceModel || this.config.voiceModel,
+      stripeSecretKey: currentGlobal.stripe?.secretKey || this.config.stripeSecretKey,
+      stripePublishableKey: currentGlobal.stripe?.publishableKey || this.config.stripePublishableKey,
+      stripeWebhookSecret: currentGlobal.stripe?.webhookSecret || this.config.stripeWebhookSecret,
+      stripeMembershipPriceId: currentGlobal.stripe?.priceId || this.config.stripeMembershipPriceId,
+      wiseApiKey: currentGlobal.wise?.apiKey || this.config.wiseApiKey,
+      wiseProfileId: currentGlobal.wise?.profileId || this.config.wiseProfileId,
+      telnyxApiKey: currentGlobal.chatbot?.telnyxApiKey || this.config.telnyxApiKey,
+      telnyxPhoneNumber: currentGlobal.chatbot?.telnyxPhoneNumber || this.config.telnyxPhoneNumber,
+      twilioAccountSid: currentGlobal.chatbot?.twilioAccountSid || this.config.twilioAccountSid,
+      twilioAuthToken: currentGlobal.chatbot?.twilioAuthToken || this.config.twilioAuthToken,
+      twilioPhoneNumber: currentGlobal.chatbot?.twilioPhoneNumber || this.config.twilioPhoneNumber,
+      vtApiKey: currentGlobal.virustotal?.apiKey || this.config.vtApiKey,
+      zapEndpoint: currentGlobal.security?.zapApiUrl || this.config.zapEndpoint,
+      lastpassCid: currentGlobal.lastpass?.companyId || this.config.lastpassCid,
+      lastpassHash: currentGlobal.lastpass?.provisioningHash || this.config.lastpassHash,
+      ga4Id: currentGlobal.analytics?.googleAnalyticsId || this.config.ga4Id,
+      lookerUrl: currentGlobal.thirdParty?.lookerStudioEmbedUrl || this.config.lookerUrl,
+      googlePlaceId: currentGlobal.thirdParty?.googlePlaceId || this.config.googlePlaceId,
+      adsensePub: currentGlobal.thirdParty?.adsensePublisherId || this.config.adsensePub,
+      features: {
+        ...this.config.features,
+        ...(currentGlobal.features || {})
+      }
+    };
+
+    // Initialize Chat History
+    this.addContractorMessage("✨ Conversational AI Architect", "Before you build the rooms and roof of your digital enterprise, we must lay a solid, reinforced foundation. Let's start by laying the concrete! What is the name of your enterprise or brand, and what primary domain or niche are we building on?");
+
     this.render();
-    this.showStep(this.currentStep);
-    this.bindEvents();
+    this.updateActiveModeDisplay();
+    this.setupCommonListeners();
   }
 
-  showStep(stepNum) {
-    this.querySelectorAll('.step-pane').forEach(pane => {
-      pane.style.display = parseInt(pane.getAttribute('data-step'), 10) === stepNum ? 'block' : 'none';
-    });
-    const progressFill = this.querySelector('.progress-fill');
-    if (progressFill) {
-      progressFill.style.width = `${(stepNum / this.totalSteps) * 100}%`;
-    }
-    const stepNumLabel = this.querySelector('.current-step-num');
-    if (stepNumLabel) {
-      stepNumLabel.textContent = stepNum;
-    }
-
-    // Button states
-    const backBtn = this.querySelector('.btn-back');
-    const nextBtn = this.querySelector('.btn-next');
-    if (backBtn) {
-      backBtn.style.display = stepNum === 1 ? 'none' : 'block';
-    }
-    if (nextBtn) {
-      if (stepNum === this.totalSteps) {
-        nextBtn.textContent = 'Finish Installation & Lock State';
-        nextBtn.className = 'btn-nav btn-next btn-finish';
-      } else {
-        nextBtn.textContent = 'Next Step';
-        nextBtn.className = 'btn-nav btn-next';
-      }
-    }
-  }
-
-  validateStep(stepNum) {
-    const pane = this.querySelector(`.step-pane[data-step="${stepNum}"]`);
-    if (!pane) return true;
-    const inputs = pane.querySelectorAll('input, select, textarea');
-    let valid = true;
-    inputs.forEach(input => {
-      if (input.hasAttribute('required') && !input.value.trim()) {
-        valid = false;
-        input.style.border = '2px solid #e53e3e';
-      } else {
-        input.style.border = '1px solid #cbd5e0';
-      }
-    });
-
-    // Custom check: AdSense Publisher ID in Step 7 must start with ca-pub-
-    if (stepNum === 7) {
-      const adsense = this.querySelector('#m-adsense-pub');
-      if (adsense && adsense.value && !adsense.value.trim().startsWith('ca-pub-')) {
-        valid = false;
-        adsense.style.border = '2px solid #e53e3e';
-        toast.error("AdSense Publisher ID must start with 'ca-pub-'");
-      }
-    }
-
-    if (!valid) {
-      toast.warning("Please fill out all required fields on this step.");
-    }
-    return valid;
-  }
-
-  bindEvents() {
-    const backBtn = this.querySelector('.btn-back');
-    const nextBtn = this.querySelector('.btn-next');
-    const cancelBtn = this.querySelector('.btn-cancel-modal');
-
-    if (backBtn) {
-      backBtn.onclick = (e) => {
-        e.preventDefault();
-        if (this.currentStep > 1) {
-          this.currentStep--;
-          this.showStep(this.currentStep);
-        }
+  logWizardNotification(message, category = 'System Alerts') {
+    try {
+      const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+      const newNotif = {
+        id: 'notif_wizard_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+        message,
+        type: 'info',
+        category,
+        timestamp: new Date().toISOString(),
+        isRead: false
       };
+      history.unshift(newNotif);
+      localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+      window.dispatchEvent(new CustomEvent('notification-received', { detail: newNotif }));
+      console.log('[Wizard Notification Handled Silently]:', message);
+    } catch (err) {
+      console.warn('Failed to route wizard notification:', err);
+    }
+  }
+
+  addContractorMessage(sender, text) {
+    this.chatHistory.push({ sender, text, isAI: true });
+    this.logWizardNotification(`AI Contractor: ${text.substring(0, 80)}...`);
+  }
+
+  addUserMessage(text) {
+    this.chatHistory.push({ sender: "You", text, isAI: false });
+  }
+
+  render() {
+    this.innerHTML = `
+      <div class="setup-wizard-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 100005; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box;">
+
+        <div class="wizard-card" style="background: white; border-radius: 12px; width: 100%; max-width: 900px; height: 600px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+
+          <!-- Header and Mode Toggle -->
+          <div style="background: var(--theme-color-surface-alt, #f8fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">🏗️</span>
+              <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin: 0;">Foundation Architect Onboarding</h2>
+            </div>
+
+            <!-- Dual-Mode Toggle Buttons -->
+            <div style="background: #edf2f7; padding: 3px; border-radius: 8px; display: flex; gap: 4px;">
+              <button id="toggle-mode-a" class="toggle-mode-btn" style="border: none; background: white; padding: 6px 14px; font-size: 0.8rem; font-weight: bold; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                ✨ Conversational AI Architect
+              </button>
+              <button id="toggle-mode-b" class="toggle-mode-btn" style="border: none; background: transparent; padding: 6px 14px; font-size: 0.8rem; font-weight: bold; border-radius: 6px; color: #718096; cursor: pointer; transition: all 0.2s;">
+                📋 Traditional Blueprint Form
+              </button>
+            </div>
+          </div>
+
+          <!-- Wizard Body: Main Workspace & Blueprint Sidebar -->
+          <div style="display: flex; flex: 1; overflow: hidden;">
+
+            <!-- Left Workspace Pane -->
+            <div id="wizard-workspace" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--theme-color-border, #e2e8f0);">
+
+              <!-- Mode A Layout (Conversational Prompt Flow) -->
+              <div id="mode-a-pane" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+                <div class="chat-history-container" id="chat-history" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; background: #fdfdfd;">
+                  <!-- Rendered dynamically -->
+                </div>
+
+                <!-- Chat Input area with helper triggers -->
+                <div style="padding: 1rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); background: #f8fafc; display: flex; flex-direction: column; gap: 0.5rem;">
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="help-btn-guide" data-target="help-m-free-email" style="background: #ebf8ff; border: 1px solid #bee3f8; color: #2b6cb0; border-radius: 12px; padding: 3px 10px; font-size: 0.72rem; font-weight: bold; cursor: pointer;">
+                      [❓ How to set up Free Emails]
+                    </button>
+                    <button id="ai-gen-hero-trigger" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 3px 10px; font-size: 0.72rem; font-weight: bold; cursor: pointer;">
+                      ✨ Generate AI Brand Hero with Imagen
+                    </button>
+                  </div>
+
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="chat-input-field" placeholder="Reply to Digital Contractor..." style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 0.9rem;" />
+                    <button id="chat-send-btn" class="btn-primary" style="padding: 10px 20px; border-radius: 8px;">Send</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode B Layout (Traditional Form Flow) -->
+              <div id="mode-b-pane" style="display: none; flex-direction: column; height: 100%; overflow: hidden; background: white;">
+
+                <div class="wizard-step-body" id="traditional-form-pane" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
+                  <!-- Dynamically populated fields -->
+                </div>
+
+                <!-- Traditional Step Navigation Controls -->
+                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.8rem; font-weight: bold; color: #718096;" id="traditional-step-indicator">
+                    Step 1 of 7
+                  </span>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button id="trad-back-btn" class="btn-secondary" style="padding: 6px 14px; font-size: 0.85rem;">Back</button>
+                    <button id="trad-next-btn" class="btn-primary" style="padding: 6px 18px; font-size: 0.85rem;">Next Step</button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Right Site Blueprint Preview Sidebar -->
+            <div id="wizard-sidebar" style="width: 300px; display: flex; flex-direction: column; background: #0f172a; color: #e2e8f0; padding: 1.5rem; overflow-y: auto; box-sizing: border-box;">
+              <h3 style="color: #60a5fa; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📋</span> Site Blueprint Preview
+              </h3>
+
+              <!-- House Analogy Blueprint Graphic (SVG representation) -->
+              <div style="display: flex; justify-content: center; margin-bottom: 1.5rem; background: #1e293b; border-radius: 8px; padding: 1rem;">
+                <svg id="house-blueprint-svg" viewBox="0 0 160 140" width="100%" height="130" style="display: block;">
+                  <!-- Foundation Concrete Slab -->
+                  <rect id="blueprint-slab" x="20" y="100" width="120" height="20" rx="3" fill="#334155" stroke="#475569" stroke-width="2" style="transition: all 0.3s;" />
+                  <text x="80" y="113" fill="#cbd5e1" font-size="7" font-weight="bold" text-anchor="middle">CONCRETE SLAB</text>
+
+                  <!-- Utility Lines -->
+                  <!-- Yellow: Database/Auth -->
+                  <path id="blueprint-line-db" d="M 40 100 L 40 60" stroke="#334155" stroke-width="2" stroke-dasharray="2,2" style="transition: all 0.3s;" />
+                  <!-- Blue: Stripe -->
+                  <path id="blueprint-line-stripe" d="M 80 100 L 80 60" stroke="#334155" stroke-width="2" stroke-dasharray="2,2" style="transition: all 0.3s;" />
+                  <!-- Green: Comms/Twilio -->
+                  <path id="blueprint-line-twilio" d="M 120 100 L 120 60" stroke="#334155" stroke-width="2" stroke-dasharray="2,2" style="transition: all 0.3s;" />
+
+                  <!-- Framework Roof / Walls -->
+                  <polygon id="blueprint-roof" points="15,45 80,10 145,45" fill="none" stroke="#334155" stroke-width="2" style="transition: all 0.3s;" />
+                  <line id="blueprint-wall-l" x1="25" y1="45" x2="25" y2="100" stroke="#334155" stroke-width="2" style="transition: all 0.3s;" />
+                  <line id="blueprint-wall-r" x1="135" y1="45" x2="135" y2="100" stroke="#334155" stroke-width="2" style="transition: all 0.3s;" />
+                </svg>
+              </div>
+
+              <!-- Parameter extraction checks -->
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.8rem;">
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;" id="bp-check-slab">
+                  <span class="bp-icon" style="color: #64748b;">⚪</span>
+                  <div>
+                    <strong style="display: block; color: #f1f5f9;">Concrete Base / Identity</strong>
+                    <span class="bp-detail" style="color: #94a3b8; font-size: 0.72rem;">Brand Title, Canonical Domain</span>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;" id="bp-check-utilities">
+                  <span class="bp-icon" style="color: #64748b;">⚪</span>
+                  <div>
+                    <strong style="display: block; color: #f1f5f9;">Utility API Connections</strong>
+                    <span class="bp-detail" style="color: #94a3b8; font-size: 0.72rem;">Firebase & Stripe integrations</span>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;" id="bp-check-framework">
+                  <span class="bp-icon" style="color: #64748b;">⚪</span>
+                  <div>
+                    <strong style="display: block; color: #f1f5f9;">Operational Framework</strong>
+                    <span class="bp-detail" style="color: #94a3b8; font-size: 0.72rem;">Enabled Modules (Radio, Videos, etc.)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Extracted variables summaries -->
+              <div style="margin-top: 1.5rem; border-top: 1px solid #1e293b; padding-top: 1rem; font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="color: #94a3b8; font-weight: bold;">EXTRACTED BLUEPRINT STATE:</div>
+                <div>🏷️ Title: <span id="val-bp-title" style="color: #38bdf8; font-weight: bold;">Pending...</span></div>
+                <div>🌐 Domain: <span id="val-bp-domain" style="color: #38bdf8;">Pending...</span></div>
+                <div>🔑 Firebase: <span id="val-bp-firebase" style="color: #94a3b8;">Pending...</span></div>
+                <div>💳 Stripe: <span id="val-bp-stripe" style="color: #94a3b8;">Pending...</span></div>
+                <div>📞 Telephony: <span id="val-bp-phone" style="color: #94a3b8;">Pending...</span></div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Helper step guides modal/panel panels -->
+          <div id="help-m-free-email" class="help-guide-panel" style="display: none; position: absolute; bottom: 80px; left: 20px; right: 20px; background: white; border: 2px solid #bbf7d0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; padding: 1.25rem; z-index: 100010; color: #1a202c; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px;">
+              <strong style="color: #166534; font-size: 0.9rem;">Free Email DNS Configuration Guide:</strong>
+              <button class="help-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #a0aec0;">&times;</button>
+            </div>
+            <p style="font-size: 0.78rem; color: #2d3748; line-height: 1.4; margin-bottom: 0;">
+              To dispatch free outbound transactional emails with high deliverability via MailChannels and receive free inbound forwarding via Cloudflare Email Routing, configure these DNS records on your domain registrar:
+            </p>
+            <ul style="margin: 5px 0; padding-left: 15px; font-size: 0.75rem; color: #4a5568;">
+              <li><strong>SPF Record (TXT):</strong> Value: <code>v=spf1 include:relay.mailchannels.net ~all</code></li>
+              <li><strong>MailChannels Domain Lockdown (TXT):</strong> Name: <code>_mailchannels</code>, Value: <code>v=mc1 cfid=your-pages-subdomain.pages.dev</code></li>
+              <li><strong>DMARC Record (TXT):</strong> Name: <code>_dmarc</code>, Value: <code>v=DMARC1; p=none; rua=mailto:admin@yourdomain.com</code></li>
+            </ul>
+          </div>
+
+          <!-- Footer Action Bar -->
+          <div style="background: var(--theme-color-surface-alt, #f8fafc); border-top: 1px solid var(--theme-color-border, #e2e8f0); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+            <button id="cancel-wizard-btn" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border: 1px solid #cbd5e0;">
+              Cancel Installation
+            </button>
+            <button id="master-finish-btn" class="btn-primary" style="padding: 10px 24px; font-size: 0.9rem; font-weight: bold; background: #38a169; border-color: #2f855a; display: none;">
+              ✨ Finish Installation & Lock State
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    this.renderChatHistory();
+    this.updateBlueprintDisplay();
+  }
+
+  updateActiveModeDisplay() {
+    const modeA = this.querySelector('#mode-a-pane');
+    const modeB = this.querySelector('#mode-b-pane');
+    const btnA = this.querySelector('#toggle-mode-a');
+    const btnB = this.querySelector('#toggle-mode-b');
+
+    if (this.currentMode === 'A') {
+      modeA.style.display = 'flex';
+      modeB.style.display = 'none';
+      btnA.style.background = 'white';
+      btnA.style.color = 'var(--theme-color-text-primary)';
+      btnB.style.background = 'transparent';
+      btnB.style.color = '#718096';
+    } else {
+      modeA.style.display = 'none';
+      modeB.style.display = 'flex';
+      btnB.style.background = 'white';
+      btnB.style.color = 'var(--theme-color-text-primary)';
+      btnA.style.background = 'transparent';
+      btnA.style.color = '#718096';
+      this.renderTraditionalStep();
+    }
+  }
+
+  renderChatHistory() {
+    const chatHistEl = this.querySelector('#chat-history');
+    if (!chatHistEl) return;
+
+    chatHistEl.innerHTML = this.chatHistory.map(msg => `
+      <div style="display: flex; flex-direction: column; align-items: ${msg.isAI ? 'flex-start' : 'flex-end'}; max-width: 85%; align-self: ${msg.isAI ? 'flex-start' : 'flex-end'};">
+        <span style="font-size: 0.72rem; color: #718096; font-weight: bold; margin-bottom: 2px;">${msg.sender}</span>
+        <div style="padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.4; background: ${msg.isAI ? '#ebf8ff' : 'var(--theme-color-primary, #2b6cb0)'}; color: ${msg.isAI ? '#2b6cb0' : 'white'}; border-top-${msg.isAI ? 'left' : 'right'}-radius: 2px; text-align: left;">
+          ${msg.text}
+        </div>
+      </div>
+    `).join('');
+
+    // If chatTurn is 3, append operational chips directly within the chat body for interactive toggling
+    if (this.chatTurn === 3 && this.currentMode === 'A') {
+      const chipsEl = document.createElement('div');
+      chipsEl.style.cssText = "display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; align-self: flex-start; max-width: 100%;";
+
+      const modules = [
+        { key: 'chatWidget', label: '💬 AI Chat Widget' },
+        { key: 'webRadioPlayer', label: '📻 Web Radio Player' },
+        { key: 'videoPortal', label: '📹 Video Portal' },
+        { key: 'aiSparkAgent', label: '✨ AI Spark COO' }
+      ];
+
+      chipsEl.innerHTML = modules.map(m => {
+        const active = this.config.features[m.key];
+        return `
+          <button class="toggle-chip-btn" data-key="${m.key}" style="border: 1px solid ${active ? '#38a169' : '#cbd5e0'}; background: ${active ? '#f0fdf4' : 'white'}; color: ${active ? '#166534' : '#4a5568'}; padding: 6px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">
+            ${m.label} ${active ? '✓' : '✗'}
+          </button>
+        `;
+      }).join('');
+
+      chipsEl.querySelectorAll('.toggle-chip-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          const key = btn.dataset.key;
+          this.config.features[key] = !this.config.features[key];
+          this.logWizardNotification(`Toggled Module framework wall: ${key} = ${this.config.features[key]}`);
+          this.renderChatHistory();
+          this.updateBlueprintDisplay();
+        };
+      });
+
+      chatHistEl.appendChild(chipsEl);
     }
 
-    if (nextBtn) {
-      nextBtn.onclick = async (e) => {
-        e.preventDefault();
-        if (this.validateStep(this.currentStep)) {
-          if (this.currentStep < this.totalSteps) {
-            this.currentStep++;
-            this.showStep(this.currentStep);
-          } else {
-            nextBtn.disabled = true;
-            nextBtn.textContent = "Writing System Locks...";
-            await this.finishSetup();
+    // Scroll to bottom
+    chatHistEl.scrollTop = chatHistEl.scrollHeight;
+  }
+
+  updateBlueprintDisplay() {
+    const slab = this.querySelector('#blueprint-slab');
+    const lineDb = this.querySelector('#blueprint-line-db');
+    const lineStripe = this.querySelector('#blueprint-line-stripe');
+    const lineTwilio = this.querySelector('#blueprint-line-twilio');
+    const roof = this.querySelector('#blueprint-roof');
+    const wallL = this.querySelector('#blueprint-wall-l');
+    const wallR = this.querySelector('#blueprint-wall-r');
+
+    // Values Elements
+    const valTitle = this.querySelector('#val-bp-title');
+    const valDomain = this.querySelector('#val-bp-domain');
+    const valFirebase = this.querySelector('#val-bp-firebase');
+    const valStripe = this.querySelector('#val-bp-stripe');
+    const valPhone = this.querySelector('#val-bp-phone');
+
+    // Check items elements
+    const iconSlab = this.querySelector('#bp-check-slab .bp-icon');
+    const iconUtil = this.querySelector('#bp-check-utilities .bp-icon');
+    const iconFrame = this.querySelector('#bp-check-framework .bp-icon');
+
+    // Turn 1 Checks (Concrete Slab)
+    const isSlabSet = this.config.siteTitle && this.config.siteDomain;
+    if (isSlabSet) {
+      if (slab) slab.setAttribute('fill', '#475569');
+      if (iconSlab) {
+        iconSlab.textContent = '🟢';
+        iconSlab.style.color = '#10b981';
+      }
+      if (valTitle) {
+        valTitle.textContent = this.config.siteTitle;
+        valTitle.style.color = '#38bdf8';
+      }
+      if (valDomain) {
+        valDomain.textContent = this.config.siteDomain;
+        valDomain.style.color = '#38bdf8';
+      }
+    } else {
+      if (slab) slab.setAttribute('fill', '#334155');
+      if (iconSlab) iconSlab.textContent = '⚪';
+    }
+
+    // Turn 2 Checks (Utilities Connecting)
+    const isFirebaseSet = this.config.firebaseApiKey && this.config.firebaseProjectId;
+    const isStripeSet = this.config.stripeSecretKey && this.config.stripePublishableKey;
+    const isTelephonySet = this.config.telnyxApiKey || this.config.twilioAccountSid;
+
+    if (isFirebaseSet) {
+      if (lineDb) lineDb.setAttribute('stroke', '#eab308'); // Neon Yellow
+      if (valFirebase) {
+        valFirebase.textContent = this.config.firebaseProjectId;
+        valFirebase.style.color = '#f59e0b';
+      }
+    } else {
+      if (lineDb) lineDb.setAttribute('stroke', '#334155');
+    }
+
+    if (isStripeSet) {
+      if (lineStripe) lineStripe.setAttribute('stroke', '#3b82f6'); // Neon Blue
+      if (valStripe) {
+        valStripe.textContent = "Connected";
+        valStripe.style.color = '#3b82f6';
+      }
+    } else {
+      if (lineStripe) lineStripe.setAttribute('stroke', '#334155');
+    }
+
+    if (isTelephonySet) {
+      if (lineTwilio) lineTwilio.setAttribute('stroke', '#22c55e'); // Neon Green
+      if (valPhone) {
+        valPhone.textContent = this.config.telnyxPhoneNumber || this.config.twilioPhoneNumber;
+        valPhone.style.color = '#22c55e';
+      }
+    } else {
+      if (lineTwilio) lineTwilio.setAttribute('stroke', '#334155');
+    }
+
+    const isUtilitiesConfigured = isFirebaseSet && isStripeSet;
+    if (isUtilitiesConfigured) {
+      if (iconUtil) {
+        iconUtil.textContent = '🟢';
+        iconUtil.style.color = '#10b981';
+      }
+    } else {
+      if (iconUtil) iconUtil.textContent = '⚪';
+    }
+
+    // Turn 3 Checks (Framework Walls Raising Up)
+    const activeFeatures = Object.values(this.config.features).filter(Boolean).length;
+    if (activeFeatures >= 3) {
+      if (roof) roof.setAttribute('stroke', '#f97316'); // Orange studs
+      if (wallL) wallL.setAttribute('stroke', '#f97316');
+      if (wallR) wallR.setAttribute('stroke', '#f97316');
+      if (iconFrame) {
+        iconFrame.textContent = '🟢';
+        iconFrame.style.color = '#10b981';
+      }
+    } else {
+      if (roof) roof.setAttribute('stroke', '#334155');
+      if (wallL) wallL.setAttribute('stroke', '#334155');
+      if (wallR) wallR.setAttribute('stroke', '#334155');
+      if (iconFrame) iconFrame.textContent = '⚪';
+    }
+
+    // Show or hide final lock installation button
+    const finishBtn = this.querySelector('#master-finish-btn');
+    if (isSlabSet && isUtilitiesConfigured && finishBtn) {
+      finishBtn.style.display = 'block';
+    } else if (finishBtn) {
+      finishBtn.style.display = 'none';
+    }
+  }
+
+  processConversationalTurn(userText) {
+    const rawLower = userText.toLowerCase().trim();
+    if (!rawLower) return;
+
+    this.addUserMessage(userText);
+
+    if (this.chatTurn === 1) {
+      // Heuristically extract site identity parameters
+      let foundTitle = "";
+      let foundDomain = "";
+
+      // Look for title quotes e.g. "My Brand"
+      const titleQuotesMatch = userText.match(/"([^"]+)"/);
+      if (titleQuotesMatch && titleQuotesMatch[1]) {
+        foundTitle = titleQuotesMatch[1].trim();
+      } else {
+        const titleIntroMatch = userText.match(/(?:brand|name|enterprise|site)\s+(?:is|called)?\s+([A-Za-z0-9\s]+)/i);
+        if (titleIntroMatch && titleIntroMatch[1]) {
+          foundTitle = titleIntroMatch[1].trim();
+        } else {
+          // Fallback to first few capitalised words
+          const caps = userText.match(/[A-Z][a-z]+/g);
+          if (caps && caps.length > 0) {
+            foundTitle = caps.slice(0, 3).join(' ');
           }
         }
+      }
+
+      // Look for URL/domain
+      const domainMatch = userText.match(/https?:\/\/[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+/);
+      if (domainMatch) {
+        foundDomain = domainMatch[0].trim();
+        if (!foundDomain.startsWith('http')) {
+          foundDomain = 'https://' + foundDomain;
+        }
+      }
+
+      if (foundTitle) this.config.siteTitle = foundTitle;
+      if (foundDomain) this.config.siteDomain = foundDomain;
+
+      // Autogenerate Local SEO Microdata & Tagline
+      let seoCategory = "Enterprise Solutions";
+      if (rawLower.includes('wellness') || rawLower.includes('health') || rawLower.includes('spa')) {
+        seoCategory = "Wellness & Sovereign Health Studio";
+        this.config.siteTagline = "Cultivating health excellence & modern holistic vitality.";
+      } else if (rawLower.includes('shop') || rawLower.includes('commerce') || rawLower.includes('store')) {
+        seoCategory = "Premium Retail & Logistics";
+        this.config.siteTagline = "Sovereign custom products delivered with transactional integrity.";
+      } else if (rawLower.includes('radio') || rawLower.includes('stream') || rawLower.includes('media') || rawLower.includes('audio')) {
+        seoCategory = "Decentralized Audio & Broadcast Media Hub";
+        this.config.siteTagline = "Continuous secure sovereign stream broadcasts and communication pods.";
+      }
+
+      this.config.businessProfile = {
+        category: seoCategory,
+        niche: seoCategory,
+        isConfigured: true
       };
+
+      this.chatTurn = 2;
+      this.addContractorMessage(
+        "✨ Conversational AI Architect",
+        `Wonderful! Concrete is poured for <strong>"${this.config.siteTitle}"</strong> at domain <code>${this.config.siteDomain}</code>. We have autogenerated sovereign <strong>"${seoCategory}"</strong> local SEO schemas!<br><br>Let's install the utility lines. Paste your Stripe, Telnyx, Twilio, Firebase, or Google keys, or describe what cloud services you want enabled!`
+      );
+
+    } else if (this.chatTurn === 2) {
+      // Extract credentials and API connections
+      let firebaseApiKey = userText.match(/AIzaSy[A-Za-z0-9_-]+/)?.[0];
+      let stripeSecret = userText.match(/sk_(?:test|live)_[A-Za-z0-9]+/)?.[0];
+      let stripePublishable = userText.match(/pk_(?:test|live)_[A-Za-z0-9]+/)?.[0];
+      let twilioSid = userText.match(/AC[a-f0-9]{32}/i)?.[0];
+      let twilioToken = userText.match(/[a-f0-9]{32}/i)?.[0]; // 32 chars hex
+      let preferredModel = rawLower.includes('openai') || rawLower.includes('gpt') ? 'openai' : 'gemini';
+
+      if (firebaseApiKey) this.config.firebaseApiKey = firebaseApiKey;
+      if (stripeSecret) this.config.stripeSecretKey = stripeSecret;
+      if (stripePublishable) this.config.stripePublishableKey = stripePublishable;
+      if (twilioSid) this.config.twilioAccountSid = twilioSid;
+      if (twilioToken && twilioToken !== twilioSid) this.config.twilioAuthToken = twilioToken;
+      this.config.preferredModel = preferredModel;
+
+      const hasStripe = this.config.stripeSecretKey && this.config.stripePublishableKey;
+      const hasFirebase = this.config.firebaseApiKey && this.config.firebaseProjectId;
+
+      this.chatTurn = 3;
+      this.addContractorMessage(
+        "✨ Conversational AI Architect",
+        `Perfect! Connected water lines (Stripe: ${hasStripe ? '✓ Live' : 'Fallback Active'}), power utilities (Firebase: ${hasFirebase ? '✓ Live' : 'Fallback Active'}), and voice/SMS communication links (Preferred model: <code>${preferredModel}</code>).<br><br>Now, let's raise the operational framework. Which modular features belong on your floorplan? Choose by clicking the chips below, or typing your choices!`
+      );
+
+    } else {
+      // Toggle toggles based on text description
+      if (rawLower.includes('radio') || rawLower.includes('music')) this.config.features.webRadioPlayer = true;
+      if (rawLower.includes('video') || rawLower.includes('stream')) this.config.features.videoPortal = true;
+      if (rawLower.includes('chat') || rawLower.includes('assistant')) this.config.features.chatWidget = true;
+      if (rawLower.includes('spark') || rawLower.includes('coo')) this.config.features.aiSparkAgent = true;
+
+      this.addContractorMessage(
+        "✨ Conversational AI Architect",
+        "Our structural blueprint parameters look beautifully locked in! Click the green button below to pour the final concrete layers and lock state!"
+      );
     }
 
-    if (cancelBtn) {
-      cancelBtn.onclick = (e) => {
+    this.renderChatHistory();
+    this.updateBlueprintDisplay();
+  }
+
+  renderTraditionalStep() {
+    const pane = this.querySelector('#traditional-form-pane');
+    if (!pane) return;
+
+    const stepIndicator = this.querySelector('#traditional-step-indicator');
+    if (stepIndicator) {
+      stepIndicator.textContent = `Step ${this.traditionalStep} of 7`;
+    }
+
+    let formContent = '';
+
+    if (this.traditionalStep === 1) {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">🏠 Step 1: Site Identity Base</h3>
+          <p style="font-size:0.8rem; color:#718096; margin-bottom:0.5rem;">"Configures core branding, metadata headers, and canonical URLs."</p>
+          <div>
+            <label for="m-site-title" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Website Title *</label>
+            <input type="text" id="m-site-title" value="${this.config.siteTitle}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-site-domain" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Base Domain *</label>
+            <input type="url" id="m-site-domain" value="${this.config.siteDomain}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-admin-email" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Primary Admin Email *</label>
+            <input type="email" id="m-admin-email" value="${this.config.adminEmail}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-support-email" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Support Email *</label>
+            <input type="email" id="m-support-email" value="${this.config.supportEmail}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+        </div>
+      `;
+    } else if (this.traditionalStep === 2) {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">⚡ Step 2: Real-time NoSQL Database & Google Authentication</h3>
+          <p style="font-size:0.8rem; color:#718096; margin-bottom:0.5rem;">"Connect firestore connections and SSO logins."</p>
+          <div>
+            <label for="m-fb-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Firebase API Key *</label>
+            <input type="text" id="m-fb-key" value="${this.config.firebaseApiKey}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-fb-project" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Firebase Project ID *</label>
+            <input type="text" id="m-fb-project" value="${this.config.firebaseProjectId}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-google-id" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Google Client ID *</label>
+            <input type="text" id="m-google-id" value="${this.config.googleClientId}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-google-secret" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Google Client Secret *</label>
+            <input type="password" id="m-google-secret" value="${this.config.googleClientSecret}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-google-service-token" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Google Service Account Token *</label>
+            <textarea id="m-google-service-token" required style="width:100%; height:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box; font-family:monospace;">${this.config.googleServiceAccountToken}</textarea>
+          </div>
+        </div>
+      `;
+    } else if (this.traditionalStep === 3) {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">🧠 Step 3: AI Intelligence Models</h3>
+          <div>
+            <label for="m-gemini-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Gemini API Key</label>
+            <input type="password" id="m-gemini-key" value="${this.config.geminiApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-openai-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">OpenAI API Key</label>
+            <input type="password" id="m-openai-key" value="${this.config.openaiApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-preferred-model" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Preferred Model</label>
+            <select id="m-preferred-model" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;">
+              <option value="gemini" ${this.config.preferredModel === 'gemini' ? 'selected' : ''}>Google Gemini</option>
+              <option value="openai" ${this.config.preferredModel === 'openai' ? 'selected' : ''}>OpenAI GPT-4</option>
+            </select>
+          </div>
+        </div>
+      `;
+    } else if (this.traditionalStep === 4) {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">💳 Step 4: E-Commerce & Payouts</h3>
+          <div>
+            <label for="m-stripe-sec" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Secret Key</label>
+            <input type="password" id="m-stripe-sec" value="${this.config.stripeSecretKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-stripe-pub" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Publishable Key</label>
+            <input type="text" id="m-stripe-pub" value="${this.config.stripePublishableKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-stripe-webhook" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Webhook Secret</label>
+            <input type="password" id="m-stripe-webhook" value="${this.config.stripeWebhookSecret}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-stripe-price" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Price ID</label>
+            <input type="text" id="m-stripe-price" value="${this.config.stripeMembershipPriceId}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+        </div>
+      `;
+    } else if (this.traditionalStep === 5) {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">📞 Step 5: Comms & Telephony</h3>
+          <div>
+            <label for="m-telnyx-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Telnyx API Key</label>
+            <input type="password" id="m-telnyx-key" value="${this.config.telnyxApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-telnyx-phone" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Telnyx Phone Number</label>
+            <input type="text" id="m-telnyx-phone" value="${this.config.telnyxPhoneNumber}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-twilio-sid" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Twilio SID</label>
+            <input type="text" id="m-twilio-sid" value="${this.config.twilioAccountSid}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-twilio-token" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Twilio Auth Token</label>
+            <input type="password" id="m-twilio-token" value="${this.config.twilioAuthToken}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+        </div>
+      `;
+    } else if (this.traditionalStep === 6) {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">🛡️ Step 6: Cyber Security Vault</h3>
+          <div>
+            <label for="m-vt-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">VirusTotal API Key</label>
+            <input type="password" id="m-vt-key" value="${this.config.vtApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-zap-endpoint" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">OWASP ZAP Endpoint</label>
+            <input type="url" id="m-zap-endpoint" value="${this.config.zapEndpoint}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+        </div>
+      `;
+    } else {
+      formContent = `
+        <div class="form-group-set" style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">📊 Step 7: Analytics & SEO Settings</h3>
+          <div>
+            <label for="m-ga4-id" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">GA4 Measurement ID</label>
+            <input type="text" id="m-ga4-id" value="${this.config.ga4Id}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="m-looker-url" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Looker Studio Embed URL</label>
+            <input type="url" id="m-looker-url" value="${this.config.lookerUrl}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+        </div>
+      `;
+    }
+
+    pane.innerHTML = formContent;
+    this.setupTraditionalInputBindings();
+  }
+
+  setupTraditionalInputBindings() {
+    // Bind change/input handlers to instantly sync traditional fields with this.config state object
+    const fieldsToMap = {
+      'm-site-title': 'siteTitle',
+      'm-site-domain': 'siteDomain',
+      'm-admin-email': 'adminEmail',
+      'm-support-email': 'supportEmail',
+      'm-fb-key': 'firebaseApiKey',
+      'm-fb-project': 'firebaseProjectId',
+      'm-google-id': 'googleClientId',
+      'm-google-secret': 'googleClientSecret',
+      'm-google-service-token': 'googleServiceAccountToken',
+      'm-gemini-key': 'geminiApiKey',
+      'm-openai-key': 'openaiApiKey',
+      'm-preferred-model': 'preferredModel',
+      'm-stripe-sec': 'stripeSecretKey',
+      'm-stripe-pub': 'stripePublishableKey',
+      'm-stripe-webhook': 'stripeWebhookSecret',
+      'm-stripe-price': 'stripeMembershipPriceId',
+      'm-telnyx-key': 'telnyxApiKey',
+      'm-telnyx-phone': 'telnyxPhoneNumber',
+      'm-twilio-sid': 'twilioAccountSid',
+      'm-twilio-token': 'twilioAuthToken',
+      'm-vt-key': 'vtApiKey',
+      'm-zap-endpoint': 'zapEndpoint',
+      'm-ga4-id': 'ga4Id',
+      'm-looker-url': 'lookerUrl'
+    };
+
+    Object.entries(fieldsToMap).forEach(([elId, configKey]) => {
+      const el = this.querySelector(`#${elId}`);
+      if (el) {
+        el.oninput = () => {
+          this.config[configKey] = el.value.trim();
+          this.updateBlueprintDisplay();
+        };
+      }
+    });
+  }
+
+  setupCommonListeners() {
+    const toggleA = this.querySelector('#toggle-mode-a');
+    const toggleB = this.querySelector('#toggle-mode-b');
+
+    toggleA.onclick = (e) => {
+      e.preventDefault();
+      this.currentMode = 'A';
+      this.updateActiveModeDisplay();
+    };
+
+    toggleB.onclick = (e) => {
+      e.preventDefault();
+      this.currentMode = 'B';
+      this.updateActiveModeDisplay();
+    };
+
+    // Chat Send message
+    const sendBtn = this.querySelector('#chat-send-btn');
+    const inputField = this.querySelector('#chat-input-field');
+
+    const handleSend = () => {
+      const txt = inputField.value.trim();
+      if (!txt) return;
+      inputField.value = '';
+      this.processConversationalTurn(txt);
+    };
+
+    sendBtn.onclick = (e) => {
+      e.preventDefault();
+      handleSend();
+    };
+
+    inputField.onkeydown = (e) => {
+      if (e.key === 'Enter') {
         e.preventDefault();
-        this.remove();
+        handleSend();
+      }
+    };
+
+    // Traditional step navigation buttons
+    const tradBack = this.querySelector('#trad-back-btn');
+    const tradNext = this.querySelector('#trad-next-btn');
+
+    tradBack.onclick = (e) => {
+      e.preventDefault();
+      if (this.traditionalStep > 1) {
+        this.traditionalStep--;
+        this.renderTraditionalStep();
+      }
+    };
+
+    tradNext.onclick = (e) => {
+      e.preventDefault();
+      if (this.traditionalStep < this.totalTraditionalSteps) {
+        this.traditionalStep++;
+        this.renderTraditionalStep();
+      } else {
+        toast.info("Traditional setup steps complete! Click complete setup at bottom right.");
+      }
+    };
+
+    // AI asset generation button inside prompt workspace
+    const aiGenHeroBtn = this.querySelector('#ai-gen-hero-trigger');
+    aiGenHeroBtn.onclick = async (e) => {
+      e.preventDefault();
+      aiGenHeroBtn.disabled = true;
+      aiGenHeroBtn.textContent = 'Generating...';
+      try {
+        const url = await generateHeroBackground(this.config.siteTitle);
+        this.config.heroBannerUrl = url;
+        this.addContractorMessage("✨ Conversational AI Architect", `Generated a high impact 16:9 modern hero background! <br><img src="${url}" style="width:100%; border-radius:6px; margin-top:8px; aspect-ratio:16/9; object-fit:cover;"/>`);
+        this.renderChatHistory();
+        this.updateBlueprintDisplay();
+        this.logWizardNotification('Generated professional brand hero visual assets');
+      } catch (err) {
+        toast.error('AI asset generation offline.');
+      } finally {
+        aiGenHeroBtn.disabled = false;
+        aiGenHeroBtn.textContent = '✨ Generate AI Brand Hero with Imagen';
+      }
+    };
+
+// Email DNS guide close & toggle handling
+    const emailHelpPanel = this.querySelector('#help-m-free-email');
+    this.querySelectorAll('.help-btn-guide').forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetId = btn.getAttribute('data-target');
+        const panel = this.querySelector(`#${targetId}`);
+        if (panel) {
+          const isCollapsed = panel.style.display === 'none';
+          panel.style.display = isCollapsed ? 'block' : 'none';
+
+          const originalText = btn.getAttribute('data-label') || btn.textContent;
+          if (!btn.getAttribute('data-label')) {
+            btn.setAttribute('data-label', originalText);
+          }
+          btn.textContent = isCollapsed ? '[❌ Hide Guide]' : originalText;
+        }
+      };
+    });
+
+    const helpCloseBtn = this.querySelector('.help-close-btn');
+    if (helpCloseBtn) {
+      helpCloseBtn.onclick = (e) => {
+        e.preventDefault();
+        if (emailHelpPanel) emailHelpPanel.style.display = 'none';
       };
     }
+    this.querySelector('.help-close-btn').onclick = (e) => {
+      e.preventDefault();
+      emailHelpPanel.style.display = 'none';
+    };
+
+    // Cancel / Exit Onboarding
+    this.querySelector('#cancel-wizard-btn').onclick = (e) => {
+      e.preventDefault();
+      if (confirm('Are you sure you want to exit? All unsaved credentials might be lost.')) {
+        this.remove();
+      }
+    };
+
+    // Complete setup / Lock State trigger
+    const finishBtn = this.querySelector('#master-finish-btn');
+    finishBtn.onclick = async (e) => {
+      e.preventDefault();
+      finishBtn.disabled = true;
+      finishBtn.textContent = 'Writing System Locks...';
+      await this.finishSetup();
+    };
   }
 
   async finishSetup() {
     const finalConfig = {
       ...configManager.current,
-      siteTitle: this.querySelector('#m-site-title').value.trim(),
-      siteDomain: this.querySelector('#m-site-domain').value.trim(),
-      adminEmails: [this.querySelector('#m-admin-email').value.trim()],
+      siteTitle: this.config.siteTitle,
+      siteDomain: this.config.siteDomain,
+      adminEmails: [this.config.adminEmail],
       isInstalled: true,
       site: {
-        companyName: this.querySelector('#m-site-title').value.trim(),
-        siteName: this.querySelector('#m-site-title').value.trim(),
+        companyName: this.config.siteTitle,
+        siteName: this.config.siteTitle,
         isConfigured: true
       },
       businessProfile: {
         ...(configManager.current.businessProfile || {}),
-        supportEmail: this.querySelector('#m-support-email').value.trim(),
-        email: this.querySelector('#m-support-email').value.trim(),
+        supportEmail: this.config.supportEmail,
+        email: this.config.supportEmail,
         isConfigured: true
       },
       firebase: {
-        apiKey: this.querySelector('#m-fb-key').value.trim(),
-        projectId: this.querySelector('#m-fb-project').value.trim(),
-        authDomain: `${this.querySelector('#m-fb-project').value.trim()}.firebaseapp.com`,
+        apiKey: this.config.firebaseApiKey,
+        projectId: this.config.firebaseProjectId,
+        authDomain: `${this.config.firebaseProjectId}.firebaseapp.com`,
         databaseRulesInitialized: true
       },
       google: {
-        clientId: this.querySelector('#m-google-id').value.trim(),
-        clientSecret: this.querySelector('#m-google-secret').value.trim(),
-        serviceAccountToken: this.querySelector('#m-google-service-token').value.trim(),
-        ownerEmail: this.querySelector('#m-admin-email').value.trim(),
+        clientId: this.config.googleClientId,
+        clientSecret: this.config.googleClientSecret,
+        serviceAccountToken: this.config.googleServiceAccountToken,
+        ownerEmail: this.config.adminEmail,
         consentScreenCompleted: true
       },
       aiConfig: {
-        geminiApiKey: this.querySelector('#m-gemini-key').value.trim(),
-        openaiApiKey: this.querySelector('#m-openai-key').value.trim(),
-        preferredProvider: this.querySelector('#m-preferred-model').value.trim()
+        geminiApiKey: this.config.geminiApiKey,
+        openaiApiKey: this.config.openaiApiKey,
+        preferredProvider: this.config.preferredModel
       },
       chatbot: {
         ...(configManager.current.chatbot || {}),
         enabled: true,
-        openaiApiKey: this.querySelector('#m-openai-key').value.trim(),
-        telnyxApiKey: this.querySelector('#m-telnyx-key').value.trim(),
-        telnyxPhoneNumber: this.querySelector('#m-telnyx-phone').value.trim(),
-        twilioAccountSid: this.querySelector('#m-twilio-sid').value.trim(),
-        twilioAuthToken: this.querySelector('#m-twilio-token').value.trim(),
-        twilioPhoneNumber: this.querySelector('#m-twilio-phone').value.trim()
+        openaiApiKey: this.config.openaiApiKey,
+        telnyxApiKey: this.config.telnyxApiKey,
+        telnyxPhoneNumber: this.config.telnyxPhoneNumber,
+        twilioAccountSid: this.config.twilioAccountSid,
+        twilioAuthToken: this.config.twilioAuthToken,
+        twilioPhoneNumber: this.config.twilioPhoneNumber
       },
       stripe: {
         ...(configManager.current.stripe || {}),
-        secretKey: this.querySelector('#m-stripe-sec').value.trim(),
-        publishableKey: this.querySelector('#m-stripe-pub').value.trim(),
-        webhookSecret: this.querySelector('#m-stripe-webhook').value.trim(),
-        priceId: this.querySelector('#m-stripe-price').value.trim(),
+        secretKey: this.config.stripeSecretKey,
+        publishableKey: this.config.stripePublishableKey,
+        webhookSecret: this.config.stripeWebhookSecret,
+        priceId: this.config.stripeMembershipPriceId,
         isConfigured: true
       },
       wise: {
-        apiKey: this.querySelector('#m-wise-key').value.trim(),
-        profileId: this.querySelector('#m-wise-profile').value.trim(),
+        apiKey: this.config.wiseApiKey,
+        profileId: this.config.wiseProfileId,
         sandbox: true
       },
       virustotal: {
-        apiKey: this.querySelector('#m-vt-key').value.trim()
+        apiKey: this.config.vtApiKey
       },
       security: {
         ...(configManager.current.security || {}),
-        zapApiUrl: this.querySelector('#m-zap-endpoint').value.trim(),
-        isConfigured: true
-      },
-      lastpass: {
-        ...(configManager.current.lastpass || {}),
-        companyId: this.querySelector('#m-lastpass-cid').value.trim(),
-        provisioningHash: this.querySelector('#m-lastpass-hash').value.trim(),
+        zapApiUrl: this.config.zapEndpoint,
         isConfigured: true
       },
       analytics: {
-        googleAnalyticsId: this.querySelector('#m-ga4-id').value.trim()
+        googleAnalyticsId: this.config.ga4Id
       },
       thirdParty: {
         ...(configManager.current.thirdParty || {}),
-        ga4PropertyId: this.querySelector('#m-ga4-id').value.trim(),
-        lookerStudioEmbedUrl: this.querySelector('#m-looker-url').value.trim(),
-        googlePlaceId: this.querySelector('#m-google-place').value.trim(),
-        adsensePublisherId: this.querySelector('#m-adsense-pub').value.trim()
+        ga4PropertyId: this.config.ga4Id,
+        lookerStudioEmbedUrl: this.config.lookerUrl,
+        googlePlaceId: this.config.googlePlaceId,
+        adsensePublisherId: this.config.adsensePub
+      },
+      features: {
+        ...this.config.features
       },
       sectionWizards: {
         section1: true,
@@ -656,10 +1498,19 @@ export class MasterSetupWizard extends HTMLElement {
           body: JSON.stringify({ isInstalled: true, siteTitle: finalConfig.siteTitle })
         });
       } catch (err) {
-        console.warn("Failed to post to server API endpoint:", err.message);
+        console.warn("Failed to post setup completion to edge API endpoint:", err.message);
       }
 
-      // 3. Dispatch store SET_DEV_MODE to false and re-evaluate auth states
+      // 3. Create the Initial Blueprint Snapshot (Directly satisfies Directive 3.1)
+      try {
+        const { createSiteSnapshot } = await import('../../../utils/snapshotEngine.js');
+        await createSiteSnapshot('Initial House Blueprint');
+        this.logWizardNotification('Created Initial House Blueprint system state snapshot successfully', 'System Alerts');
+      } catch (snapshotErr) {
+        console.warn('Initial Blueprint snapshot creation deferred or offline:', snapshotErr.message);
+      }
+
+      // 4. Dispatch store SET_DEV_MODE to false and re-evaluate auth states
       store.dispatch('SET_DEV_MODE', false);
 
       toast.success("Platform master onboarding completed successfully!");
@@ -669,7 +1520,7 @@ export class MasterSetupWizard extends HTMLElement {
         this.onCompleteCallback();
       }
 
-      // 4. Force-load homepage and refresh DOM cleanly
+      // 5. Clean reload
       if (this.isModal) {
         this.remove();
         window.location.reload();
@@ -681,325 +1532,11 @@ export class MasterSetupWizard extends HTMLElement {
       }
     } catch (err) {
       toast.error("Failed to complete platform setup: " + err.message);
-      const nextBtn = this.querySelector('.btn-next');
-      if (nextBtn) {
-        nextBtn.disabled = false;
-        nextBtn.textContent = 'Finish Installation & Lock State';
+      const finishBtn = this.querySelector('#master-finish-btn');
+      if (finishBtn) {
+        finishBtn.disabled = false;
+        finishBtn.textContent = '✨ Finish Installation & Lock State';
       }
-    }
-  }
-
-  render() {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com';
-    const cardHtml = `
-      <div class="wizard-card" style="background: white; border-radius: 12px; width: 100%; max-width: 650px; padding: 2.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.15); box-sizing: border-box; text-align: left;">
-        <div class="wizard-header">
-          <h2>🚀 Foundation Master Onboarding</h2>
-          <div class="wizard-progress">
-            <div class="progress-fill"></div>
-          </div>
-          <div class="wizard-step-info">
-            Step <span class="current-step-num">1</span> of 7
-          </div>
-        </div>
-
-        <form id="master-wizard-form" style="margin-bottom: 1.5rem;">
-
-          <!-- Step 1: Site Identity -->
-          <div class="step-pane" data-step="1">
-            <div class="instruction-callout">
-              "Configures core branding, metadata headers, canonical URLs, and primary administrator access rights across the platform."
-            </div>
-            <div class="form-group">
-              <label for="m-site-title">Website Title *</label>
-              <input type="text" id="m-site-title" aria-label="Website Title" value="Foundation Framework" required />
-            </div>
-            <div class="form-group">
-              <label for="m-site-domain">Base Domain *</label>
-              <input type="url" id="m-site-domain" aria-label="Base Domain" value="${origin}" required />
-            </div>
-            <div class="form-group">
-              <label for="m-admin-email">Primary Admin Email *</label>
-              <input type="email" id="m-admin-email" aria-label="Primary Admin Email" value="admin@earlalex.com" required />
-            </div>
-            <div class="form-group">
-              <label for="m-support-email">Support Email *</label>
-              <input type="email" id="m-support-email" aria-label="Support Email" value="support@earlalex.com" required />
-            </div>
-          </div>
-
-          <!-- Step 2: Database & Authentication -->
-          <div class="step-pane" data-step="2">
-            <div class="instruction-callout">
-              "Powers real-time NoSQL storage via Cloud Firestore, user profile persistence, and 1-Click Google OAuth SSO authentication. Retrieve these from the Firebase Console and Google Cloud API Console."
-            </div>
-            <div class="form-group">
-              <label for="m-fb-key">Firebase API Key *</label>
-              <input type="text" id="m-fb-key" aria-label="Firebase API Key" value="AIzaSy_fb_mock_key_992" required />
-            </div>
-            <div class="form-group">
-              <label for="m-fb-project">Firebase Project ID *</label>
-              <input type="text" id="m-fb-project" aria-label="Firebase Project ID" value="demo-proj-id" required />
-            </div>
-            <div class="form-group">
-              <label for="m-google-id">Google Client ID *</label>
-              <input type="text" id="m-google-id" aria-label="Google Client ID" value="g_client_id_01" required />
-            </div>
-            <div class="form-group">
-              <label for="m-google-secret">Google Client Secret *</label>
-              <input type="password" id="m-google-secret" aria-label="Google Client Secret" value="g_secret_99" required />
-            </div>
-            <div class="form-group">
-              <label for="m-google-service-token">Google Service Account Token *</label>
-              <textarea id="m-google-service-token" aria-label="Google Service Account Token" style="height: 60px;" required>{"type": "service_account"}</textarea>
-            </div>
-          </div>
-
-          <!-- Step 3: AI Intelligence -->
-          <div class="step-pane" data-step="3">
-            <div class="instruction-callout">
-              "Enables the site chatbot, Gemini Spark COO autonomous agent, background marketing copywriting, and automated voice telephony responses."
-            </div>
-            <div class="form-group">
-              <label for="m-gemini-key">Gemini API Key *</label>
-              <input type="password" id="m-gemini-key" aria-label="Gemini API Key" value="gemini_api_key_101" required />
-            </div>
-            <div class="form-group">
-              <label for="m-openai-key">OpenAI API Key *</label>
-              <input type="password" id="m-openai-key" aria-label="OpenAI API Key" value="openai_api_key_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-preferred-model">Preferred Model *</label>
-              <select id="m-preferred-model" aria-label="Preferred Model" required>
-                <option value="gemini" selected>Google Gemini</option>
-                <option value="openai">OpenAI GPT-4</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="m-voice-model">Default Voice Model *</label>
-              <select id="m-voice-model" aria-label="Default Voice Model" required>
-                <option value="alloy" selected>Alloy</option>
-                <option value="echo">Echo</option>
-                <option value="fable">Fable</option>
-                <option value="onyx">Onyx</option>
-                <option value="nova">Nova</option>
-                <option value="shimmer">Shimmer</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Step 4: E-Commerce & Payouts -->
-          <div class="step-pane" data-step="4">
-            <div class="instruction-callout">
-              "Enables credit card processing, $29/mo member paywall subscriptions, ACH bank transfers, and automated international Virtual Assistant payroll disbursements via Wise Business API."
-            </div>
-            <div class="form-group">
-              <label for="m-stripe-sec">Stripe Secret Key *</label>
-              <input type="password" id="m-stripe-sec" aria-label="Stripe Secret Key" value="sk_test_123" required />
-            </div>
-            <div class="form-group">
-              <label for="m-stripe-pub">Stripe Publishable Key *</label>
-              <input type="text" id="m-stripe-pub" aria-label="Stripe Publishable Key" value="pk_test_456" required />
-            </div>
-            <div class="form-group">
-              <label for="m-stripe-webhook">Stripe Webhook Secret *</label>
-              <input type="password" id="m-stripe-webhook" aria-label="Stripe Webhook Secret" value="whsec_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-stripe-price">Stripe Membership Price ID *</label>
-              <input type="text" id="m-stripe-price" aria-label="Stripe Membership Price ID" value="price_abc" required />
-            </div>
-            <div class="form-group">
-              <label for="m-wise-key">Wise API Token *</label>
-              <input type="password" id="m-wise-key" aria-label="Wise API Token" value="wise_api_key_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-wise-profile">Wise Profile ID *</label>
-              <input type="text" id="m-wise-profile" aria-label="Wise Profile ID" value="wise_profile_id_mock" required />
-            </div>
-          </div>
-
-          <!-- Step 5: Telephony & Comms -->
-          <div class="step-pane" data-step="5">
-            <div class="instruction-callout">
-              "Enables automated SMS notifications, appointment confirmation texts, and two-way AI voice call interactions."
-            </div>
-            <div class="form-group">
-              <label for="m-telnyx-key">Telnyx API Key *</label>
-              <input type="password" id="m-telnyx-key" aria-label="Telnyx API Key" value="telnyx_api_key_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-telnyx-phone">Telnyx Phone Number *</label>
-              <input type="text" id="m-telnyx-phone" aria-label="Telnyx Phone Number" value="+18005550199" required />
-            </div>
-            <div class="form-group">
-              <label for="m-twilio-sid">Twilio Account SID *</label>
-              <input type="text" id="m-twilio-sid" aria-label="Twilio Account SID" value="AC_twilio_sid_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-twilio-token">Twilio Auth Token *</label>
-              <input type="password" id="m-twilio-token" aria-label="Twilio Auth Token" value="twilio_token_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-twilio-phone">Twilio Phone Number *</label>
-              <input type="text" id="m-twilio-phone" aria-label="Twilio Phone Number" value="+18005550100" required />
-            </div>
-          </div>
-
-          <!-- Step 6: Cyber & Vault -->
-          <div class="step-pane" data-step="6">
-            <div class="instruction-callout">
-              "Powers automated background malware signature scanning on uploads, OWASP ZAP penetration testing, and secure credential vault synchronization."
-            </div>
-            <div class="form-group">
-              <label for="m-vt-key">VirusTotal API Key *</label>
-              <input type="password" id="m-vt-key" aria-label="VirusTotal API Key" value="vt_api_mock_token" required />
-            </div>
-            <div class="form-group">
-              <label for="m-zap-endpoint">OWASP ZAP Endpoint *</label>
-              <input type="url" id="m-zap-endpoint" aria-label="OWASP ZAP Endpoint" value="https://wwtesw.zaproxy.org/" required />
-            </div>
-            <div class="form-group">
-              <label for="m-lastpass-cid">LastPass CID *</label>
-              <input type="text" id="m-lastpass-cid" aria-label="LastPass CID" value="lp_cid_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-lastpass-hash">LastPass Master Hash *</label>
-              <input type="password" id="m-lastpass-hash" aria-label="LastPass Master Hash" value="lp_hash_mock" required />
-            </div>
-          </div>
-
-          <!-- Step 7: Analytics & Local SEO -->
-          <div class="step-pane" data-step="7">
-            <div class="instruction-callout">
-              "Injects Google Analytics 4 tracking tags, populates executive Looker Studio dashboards, renders live Google Maps reviews, and activates AdSense units for non-paying visitors."
-            </div>
-            <div class="form-group">
-              <label for="m-ga4-id">GA4 Measurement ID *</label>
-              <input type="text" id="m-ga4-id" aria-label="GA4 Measurement ID" value="G-987654321" required />
-            </div>
-            <div class="form-group">
-              <label for="m-looker-url">Looker Studio Embed URL *</label>
-              <input type="url" id="m-looker-url" aria-label="Looker Studio Embed URL" value="https://lookerstudio.google.com/embed/reporting/123" required />
-            </div>
-            <div class="form-group">
-              <label for="m-google-place">Google Place ID *</label>
-              <input type="text" id="m-google-place" aria-label="Google Place ID" value="place_id_mock" required />
-            </div>
-            <div class="form-group">
-              <label for="m-adsense-pub">Google AdSense Publisher ID *</label>
-              <input type="text" id="m-adsense-pub" aria-label="Google AdSense Publisher ID" value="ca-pub-123456789" required />
-            </div>
-          </div>
-
-        </form>
-
-        <div class="wizard-footer" style="display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #edf2f7; padding-top: 1.5rem; box-sizing: border-box;">
-          <div>
-            ${this.isModal ? `
-              <button class="btn-nav btn-cancel-modal" style="background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px 20px; font-weight: 600; cursor: pointer; font-size: 0.95rem; color: #4a5568;">
-                Cancel
-              </button>
-            ` : ''}
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn-nav btn-back" style="background: #edf2f7; border: none; border-radius: 6px; padding: 10px 20px; font-weight: 600; cursor: pointer; font-size: 0.95rem; color: #4a5568; display: none;">
-              Back
-            </button>
-            <button class="btn-nav btn-next" style="background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 6px; padding: 10px 24px; font-weight: bold; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 6px rgba(43, 108, 176, 0.2);">
-              Next Step
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Inject styles scoped inside the element
-    const styleHtml = `
-      <style>
-        master-setup-wizard {
-          display: flex !important;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          width: 100%;
-          background: #f7fafc;
-          padding: 2rem;
-          box-sizing: border-box;
-        }
-        .wizard-progress {
-          height: 8px;
-          background: #edf2f7;
-          border-radius: 4px;
-          margin: 1.25rem 0;
-          overflow: hidden;
-        }
-        .progress-fill {
-          height: 100%;
-          background: var(--theme-color-primary, #2b6cb0);
-          width: 14.28%;
-          transition: width 0.3s ease;
-        }
-        .wizard-step-info {
-          font-size: 0.85rem;
-          font-weight: bold;
-          color: #718096;
-          text-align: right;
-        }
-        .instruction-callout {
-          background: #ebf8ff;
-          border-left: 4px solid #3182ce;
-          color: #2b6cb0;
-          padding: 1rem;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          margin-bottom: 1.5rem;
-          line-height: 1.5;
-          font-style: italic;
-        }
-        .form-group {
-          margin-bottom: 1.25rem;
-        }
-        .form-group label {
-          display: block;
-          font-weight: bold;
-          font-size: 0.85rem;
-          margin-bottom: 0.35rem;
-          color: #2d3748;
-        }
-        .form-group input, .form-group select, .form-group textarea {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #cbd5e0;
-          border-radius: 6px;
-          box-sizing: border-box;
-          font-size: 0.9rem;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-          outline: none;
-          border-color: var(--theme-color-primary, #2b6cb0);
-          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
-        }
-        .btn-finish {
-          background: #38a169 !important;
-          box-shadow: 0 4px 6px rgba(56, 161, 105, 0.2) !important;
-        }
-      </style>
-    `;
-
-    if (this.isModal) {
-      this.innerHTML = `
-        <div class="modal-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 100005; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box;">
-          ${cardHtml}
-        </div>
-        ${styleHtml}
-      `;
-    } else {
-      this.innerHTML = `
-        ${cardHtml}
-        ${styleHtml}
-      `;
     }
   }
 }

@@ -1635,6 +1635,22 @@ export async function syncOutboxToFirestore() {
       try {
         await batch.commit();
         console.log('[Outbox Sync]: Successfully committed batch-write of pending payloads.');
+
+        // Route success sync logs to bell dropdown silently
+        try {
+          const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+          history.unshift({
+            id: 'notif_outbox_sync_' + Date.now(),
+            message: `Outbox Sync: Synchronized offline payloads to Firestore.`,
+            type: 'success',
+            category: 'Orders & Payments',
+            timestamp: new Date().toISOString(),
+            isRead: false
+          });
+          localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+          window.dispatchEvent(new CustomEvent('notification-received'));
+        } catch (notifErr) {}
+
         localStorage.removeItem('foundation_outbox');
         flushSensitiveLocalData();
       } catch (err) {
