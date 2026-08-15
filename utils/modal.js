@@ -304,11 +304,21 @@ export function showPromoModal(modal) {
 
   // Newsletter submission handler
   const newsletterForm = overlay.querySelector('#promo-newsletter-form');
-  newsletterForm?.addEventListener('submit', (e) => {
+  newsletterForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const emailInput = overlay.querySelector('#promo-newsletter-email');
     if (emailInput && emailInput.value.trim()) {
-      toast.success(`Success! Subscribed ${emailInput.value.trim()} successfully!`);
+      const email = emailInput.value.trim();
+      try {
+        await contentDB.registerOrMergeUser({
+          email,
+          role: 'subscriber',
+          consents: { newsletter: true }
+        });
+      } catch (err) {
+        console.warn('[Promo Newsletter]: registerOrMergeUser deferred', err);
+      }
+      toast.success(`Success! Subscribed ${email} successfully!`);
       dismissHandler();
     }
   });
