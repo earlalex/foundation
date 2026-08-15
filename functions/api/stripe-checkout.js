@@ -35,13 +35,19 @@ export async function onRequestPost(context) {
 
   if (!stripeSecretKey) {
     console.error('[Stripe Checkout]: Stripe API key not configured');
-    return new Response(JSON.stringify({ error: 'Stripe API key unconfigured' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Stripe Secret Key is not configured. Please enter your Stripe API key in Admin Settings.' }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 
   try {
     const body = await request.json();
     const {
       email,
+      userEmail,
+      userId,
+      userUid,
       role,
       action,
       productId,
@@ -51,7 +57,8 @@ export async function onRequestPost(context) {
       priceId,
       mode,
       affiliateId,
-      successUrl
+      successUrl,
+      cancelUrl
     } = body;
 
     const domain = new URL(request.url).origin;
@@ -60,8 +67,11 @@ export async function onRequestPost(context) {
       // Create Customer Portal Link
       try {
         const params = new URLSearchParams();
-        params.append('customer', email);
-        params.append('return_url', `${domain}/admin`);
+        const targetEmail = userEmail || email;
+        if (targetEmail) {
+          params.append('customer', targetEmail);
+        }
+        params.append('return_url', `${domain}/account`);
 
         const res = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
           method: 'POST',
@@ -75,24 +85,34 @@ export async function onRequestPost(context) {
         if (!res.ok) {
           const errorData = await res.json();
           console.error('[Stripe Checkout]: Portal session creation failed:', errorData);
-          return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to create portal session' }), { status: res.status });
+          return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to create portal session' }), {
+            status: res.status,
+            headers: { "Content-Type": "application/json" }
+          });
         }
         
         const session = await res.json();
-        return new Response(JSON.stringify({ url: session.url }), { status: 200 });
+        return new Response(JSON.stringify({ url: session.url }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
       } catch (portalErr) {
         console.error('[Stripe Checkout]: Portal request error:', portalErr);
-        return new Response(JSON.stringify({ error: 'Portal request failed' }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'Portal request failed: ' + portalErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
       }
     }
 
-    // Determine Mode & Line Items
+    // Determine Mode & Line Items for Checkout Session
     const params = new URLSearchParams();
     const finalMode = mode || (enableAch || productId ? 'payment' : 'subscription');
     params.append('mode', finalMode);
 
-    if (email) {
-      params.append('customer_email', email);
+    const targetEmail = userEmail || email;
+    if (targetEmail) {
+      params.append('customer_email', targetEmail);
     }
 
     // Process lineItems array if passed from dynamic cart
@@ -118,18 +138,27 @@ export async function onRequestPost(context) {
       params.append('line_items[0][quantity]', '1');
     } else {
       // Default: Create Checkout Session for membership price
-      // Unified Environment Variable Law: strictly read STRIPE_MEMBERSHIP_PRICE_ID
-      const fallbackPriceId = env.STRIPE_MEMBERSHIP_PRICE_ID || 'price_1234567890';
+      const fallbackPriceId = env.STRIPE_PRICE_ID || env.STRIPE_MEMBERSHIP_PRICE_ID || 'price_1234567890';
       params.append('line_items[0][price]', fallbackPriceId);
       params.append('line_items[0][quantity]', '1');
     }
 
-    const finalSuccessUrl = successUrl || `${domain}/home?session_id={CHECKOUT_SESSION_ID}`;
+    const finalSuccessUrl = successUrl || `${domain}/account?session_id={CHECKOUT_SESSION_ID}&payment=success`;
+    const finalCancelUrl = cancelUrl || `${domain}/account?payment=cancelled`;
     params.append('success_url', finalSuccessUrl);
-    params.append('cancel_url', `${domain}/contact`);
+    params.append('cancel_url', finalCancelUrl);
 
     // Add Metadata
-    params.append('metadata[role]', role || 'member');
+    const uid = userId || userUid || '';
+    if (uid) {
+      params.append('metadata[userUid]', uid);
+    }
+    // Security: Sanitize role to prevent privilege escalation to admin/editor via checkout
+    let requestedRole = String(role || 'member').toLowerCase();
+    if (['admin', 'editor'].includes(requestedRole)) {
+      requestedRole = 'member';
+    }
+    params.append('metadata[role]', requestedRole);
     if (productId) {
       params.append('metadata[productId]', productId);
     }
@@ -141,6 +170,9 @@ export async function onRequestPost(context) {
     }
     if (body.metadata && typeof body.metadata === 'object') {
       for (const [mKey, mVal] of Object.entries(body.metadata)) {
+        if (mKey === 'role' && ['admin', 'editor'].includes(String(mVal).toLowerCase())) {
+          continue; // Block privilege escalation attempts via custom metadata object
+        }
         params.append(`metadata[${mKey}]`, String(mVal));
       }
     }
@@ -174,19 +206,31 @@ export async function onRequestPost(context) {
     if (!res.ok) {
       const errorData = await res.json();
       console.error('[Stripe Checkout]: Session creation failed:', errorData);
-      return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to create checkout session' }), { status: res.status });
+      return new Response(JSON.stringify({ error: errorData.error?.message || 'Failed to create checkout session' }), {
+        status: res.status,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     const session = await res.json();
 
     if (session.error) {
       console.error('[Stripe Checkout Error]:', session.error);
-      return new Response(JSON.stringify({ error: session.error.message }), { status: 400 });
+      return new Response(JSON.stringify({ error: session.error.message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
-    return new Response(JSON.stringify({ url: session.url }), { status: 200 });
+    return new Response(JSON.stringify({ url: session.url }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
     console.error('[Stripe Endpoint Exception]:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
