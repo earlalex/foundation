@@ -11,9 +11,9 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
   }
 
   try {
-    // 1. Search or create the Root siteName folder
+    // 1. Search or create the Root siteName folder (constrained to 'root' in parents)
     let folderId = null;
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and 'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
     const searchRes = await fetch(searchUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -155,9 +155,9 @@ export async function uploadReportToDrive(token, siteName, fileName, content) {
   }
 
   try {
-    // 1. Search or create the Root siteName folder
+    // 1. Search or create the Root siteName folder (constrained to 'root' in parents)
     let folderId = null;
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and 'root' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
     const searchRes = await fetch(searchUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -343,7 +343,7 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ contactPayload })
+        body: JSON.stringify(contactPayload)
       });
     }
     return true;
