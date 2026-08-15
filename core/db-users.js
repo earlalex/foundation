@@ -52,6 +52,63 @@ export async function saveUser(userData) {
   }
 }
 
+export async function queryUsersByEmail(email) {
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  if (!normalizedEmail) return [];
+  const allUsers = await getAllUsers();
+  return allUsers.filter(u => (u.email || '').toLowerCase().trim() === normalizedEmail);
+}
+
+export async function updateUserRecord(id, userData) {
+  return await saveUser({ ...userData, id });
+}
+
+export async function createNewUserRecord(userData) {
+  return await saveUser(userData);
+}
+
+export async function registerOrMergeUser(userData) {
+  const normalizedEmail = (userData.email || '').toLowerCase().trim();
+  if (!normalizedEmail) return null;
+
+  // Query existing user record by normalized email
+  const existingUsers = await queryUsersByEmail(normalizedEmail);
+
+  if (existingUsers && existingUsers.length > 0) {
+    // Existing user found -> Merge properties without downgrading roles
+    const primaryUser = existingUsers[0];
+
+    // Preserve elevated roles (Admin/Editor > Member > Subscriber > Prospect)
+    const roleHierarchy = { 'admin': 4, 'editor': 3, 'member': 2, 'subscriber': 1, 'prospect': 0 };
+    const currentRank = roleHierarchy[primaryUser.role] || 0;
+    const newRank = roleHierarchy[userData.role] || 0;
+    const finalRole = newRank > currentRank ? userData.role : primaryUser.role;
+
+    // Merge arrays (newsletter tags, registered events, purchased products)
+    const mergedConsents = { ...(primaryUser.consents || {}), ...(userData.consents || {}) };
+    const mergedEvents = Array.from(new Set([...(primaryUser.registeredEvents || []), ...(userData.registeredEvents || [])]));
+    const mergedProducts = Array.from(new Set([...(primaryUser.purchasedProducts || []), ...(userData.purchasedProducts || [])]));
+
+    const updatedUser = {
+      ...primaryUser,
+      ...userData,
+      role: finalRole,
+      isAdmin: primaryUser.isAdmin || userData.isAdmin || false,
+      consents: mergedConsents,
+      registeredEvents: mergedEvents,
+      purchasedProducts: mergedProducts,
+      updatedAt: new Date().toISOString()
+    };
+
+    await updateUserRecord(primaryUser.id, updatedUser);
+    console.log(`[Identity Recon]: Successfully merged guest action into primary account: ${normalizedEmail}`);
+    return updatedUser;
+  }
+
+  // No existing user found -> Create new user record
+  return await createNewUserRecord({ ...userData, email: normalizedEmail });
+}
+
 export async function getUser(userId) {
   const users = await getAllUsers();
   return users.find(u => u.id === userId || u.email === userId) || null;

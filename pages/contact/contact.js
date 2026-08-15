@@ -119,6 +119,7 @@ export async function initContactPage() {
     const body = (document.getElementById('contact-body') || document.getElementById('msg-body')).value;
 
     try {
+      await contentDB.registerOrMergeUser({ name, email, role: 'prospect' });
       await createGoogleContact({ name, email });
       await sendGmailNotification({
         toEmail: email,
@@ -254,6 +255,8 @@ export async function initContactPage() {
         createdAt: new Date().toISOString()
       };
 
+      await contentDB.registerOrMergeUser({ name, email, role: 'prospect' });
+
       // Call Google Calendar API service with conferenceData enabled to generate a Google Meet link
       const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });
       bookingData.meetUrl = res?.meetUrl || 'https://meet.google.com/mock-meet';
@@ -337,6 +340,8 @@ async function finalizeAppointmentBookingAfterPayment(sessionId) {
         notes,
         createdAt: new Date().toISOString()
       };
+
+      await contentDB.registerOrMergeUser({ name, email, role: 'prospect' });
 
       // Call Google Calendar API service with conferenceData enabled to generate a Google Meet link
       const res = await bookAppointmentSlot({ name, email, date, timeSlot, notes });

@@ -9,6 +9,7 @@ import { configManager } from '../../core/config.js';
 import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { deduplicateUserDirectory } from './modules/admin-users.js';
 
 const MONTHLY_MEMBERSHIP_FEE = 29.00;
 const REFERRAL_COMMISSION_RATE = 0.10;
@@ -28,6 +29,7 @@ export function initUserDirectoryTab() {
   const tbody = document.getElementById('user-directory-tbody');
   const refreshBtn = document.getElementById('btn-refresh-users');
   const syncContactsBtn = document.getElementById('btn-sync-google-contacts');
+  const dedupeUsersBtn = document.getElementById('btn-dedupe-users');
   const convertLateBtn = document.getElementById('btn-convert-late-users');
   const massEmailForm = document.getElementById('mass-email-form');
   let cachedUsers = [];
@@ -229,6 +231,27 @@ export function initUserDirectoryTab() {
   refreshBtn?.addEventListener('click', () => {
     renderUsersList();
     toast.info('User directory refreshed.');
+  });
+
+  // Deduplicate Users Engine
+  dedupeUsersBtn?.addEventListener('click', async () => {
+    if (dedupeUsersBtn) {
+      dedupeUsersBtn.disabled = true;
+      dedupeUsersBtn.textContent = 'Deduplicating...';
+    }
+
+    try {
+      await deduplicateUserDirectory();
+      await renderUsersList();
+    } catch (err) {
+      errorHandler.handleError(err, 'Admin User Directory - Deduplicate Users');
+      toast.error(`Failed to deduplicate users: ${err.message}`);
+    } finally {
+      if (dedupeUsersBtn) {
+        dedupeUsersBtn.disabled = false;
+        dedupeUsersBtn.textContent = '🧹 Deduplicate Accounts';
+      }
+    }
   });
 
   // Sync Google Contacts

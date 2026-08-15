@@ -124,6 +124,27 @@ export async function saveRegistration(regData) {
   const id = regData.id || `reg_${Date.now()}`;
   const payload = { ...regData, id, updatedAt: new Date().toISOString() };
 
+  if (payload.email) {
+    try {
+      const { registerOrMergeUser } = await import('./db-users.js');
+      let eventIds = [];
+      if (payload.eventId) eventIds.push(payload.eventId);
+      try {
+        const cart = JSON.parse(payload.cartItems || '[]');
+        cart.forEach(item => { if (item.id) eventIds.push(item.id); });
+      } catch (e) {}
+
+      await registerOrMergeUser({
+        email: payload.email,
+        name: payload.name || payload.email.split('@')[0],
+        role: 'member',
+        registeredEvents: eventIds
+      });
+    } catch (reconErr) {
+      console.warn('[saveRegistration]: registerOrMergeUser deferred', reconErr);
+    }
+  }
+
   try {
     const local = JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
     const index = local.findIndex(r => r.id === id);
@@ -226,6 +247,19 @@ export async function saveAppointment(apptData) {
   const db = getFirestoreDB();
   const id = apptData.id || `appt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const payload = { ...apptData, id, updatedAt: new Date().toISOString() };
+
+  if (payload.email) {
+    try {
+      const { registerOrMergeUser } = await import('./db-users.js');
+      await registerOrMergeUser({
+        email: payload.email,
+        name: payload.name || payload.email.split('@')[0],
+        role: 'prospect'
+      });
+    } catch (reconErr) {
+      console.warn('[saveAppointment]: registerOrMergeUser deferred', reconErr);
+    }
+  }
 
   try {
     const local = JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');

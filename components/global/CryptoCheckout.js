@@ -129,16 +129,18 @@ class CryptoCheckout extends HTMLElement {
       localStorage.setItem('foundation_local_purchases', JSON.stringify(localPurchases));
 
       // 2. Perform user access adjustments
+      let purchasedProducts = [];
+      if (this.productId) purchasedProducts.push(this.productId);
+
+      const updatedUser = await contentDB.registerOrMergeUser({
+        email,
+        role: this.checkoutType === 'membership' ? 'member' : 'subscriber',
+        paymentStatus: 'Active',
+        purchasedProducts
+      });
+
       if (this.checkoutType === 'membership') {
-        const updatedUser = {
-          ...(store.state.user || {}),
-          uid: uid,
-          email: email,
-          role: 'member',
-          paymentStatus: 'Active'
-        };
-        await contentDB.saveUser(updatedUser);
-        store.dispatch('SET_USER', updatedUser);
+        if (updatedUser) store.dispatch('SET_USER', updatedUser);
         toast.success('Decentralized crypto settlement complete! Persona upgraded to Paid Member (Ad-Free).');
       } else if (this.checkoutType === 'event') {
         // Register event ticket

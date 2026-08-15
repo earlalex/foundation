@@ -40,7 +40,8 @@ import {
 
 import {
   getAllUsers, saveUser, getUser, deleteUser,
-  saveUserCourseProgress, getUserCourseProgress, getUserAllProgress
+  saveUserCourseProgress, getUserCourseProgress, getUserAllProgress,
+  queryUsersByEmail, updateUserRecord, createNewUserRecord, registerOrMergeUser
 } from './db-users.js';
 
 import {
@@ -151,6 +152,10 @@ export class ContentDB {
   async saveUser(data) { return saveUser(data); }
   async getUser(id) { return getUser(id); }
   async deleteUser(id) { return deleteUser(id); }
+  async queryUsersByEmail(email) { return queryUsersByEmail(email); }
+  async updateUserRecord(id, data) { return updateUserRecord(id, data); }
+  async createNewUserRecord(data) { return createNewUserRecord(data); }
+  async registerOrMergeUser(data) { return registerOrMergeUser(data); }
   async getUserPurchases(userId) {
     const allInvoices = await this.getAllInvoices();
     return allInvoices.filter(inv => inv.userId === userId || inv.customerEmail === userId);

@@ -248,6 +248,12 @@ export class AppFooter extends HTMLElement {
         if (!email) return;
 
         try {
+          const { contentDB } = await import('../../core/db.js');
+          await contentDB.registerOrMergeUser({
+            email,
+            role: 'subscriber',
+            consents: { newsletter: true }
+          });
           const { toast } = await import('../../utils/toast.js');
           toast.success(`Successfully subscribed ${email} to our newsletter!`);
           form.reset();
