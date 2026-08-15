@@ -13,16 +13,89 @@ export async function onRequestPost(context) {
     const contentType = context.request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       body = await context.request.json();
-      // Telnyx Call Control / Voice event extraction
-      if (body.data?.payload?.call_control_id) {
-        isTelnyx = true;
-        callText = body.data?.payload?.speech_result || body.data?.payload?.text || "";
-        fromNumber = body.data?.payload?.from || "";
-      } else {
-        isVapi = true;
-        callText = body.message?.toolCalls?.[0]?.function?.arguments || body.message?.text || body.text || "";
-        fromNumber = body.message?.customer?.number || "";
+
+      // Check if it is a Telnyx Call Control Webhook Event
+      isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
+      
+      if (isTelnyx) {
+        const eventType = body.data.event_type;
+        const callControlId = body.data.payload.call_control_id;
+        const env = context.env || {};
+        const telnyxApiKey = env.TELNYX_API_KEY;
+
+        const handleTelnyxBackground = async () => {
+          try {
+            if (eventType === 'call.initiated') {
+              // Answer the incoming call automatically via Telnyx Call Control API
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${telnyxApiKey}`
+                }
+              });
+            } else if (eventType === 'call.answered') {
+              // Speak initial AI greeting to caller
+              await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${telnyxApiKey}`
+                },
+                body: JSON.stringify({
+                  payload: "Hello! Thank you for calling Foundation support. How can I help you today?",
+                  voice: "female",
+                  language: "en-US"
+                })
+              });
+            }
+
+            // Google Workspace Telephony Log Integration
+            const serviceToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
+            if (serviceToken && (eventType === 'call.hangup' || eventType === 'call.speak.ended' || eventType === 'call.answered')) {
+              const { uploadCommunicationLogToDrive, syncGoogleContactCommunication } = await import('../../utils/backend-google-serverless.js');
+
+              const callerPhone = body.data.payload.from || 'Unknown Caller';
+              const duration = body.data.payload.duration_seconds || body.data.payload.duration || 0;
+              const occurredAt = body.data.occurred_at || new Date().toISOString();
+              const siteName = env.SITE_NAME || "Foundation Framework";
+              const fileName = `telnyx_voice_log_${Date.now()}.md`;
+
+              const mdTranscript = `## Telnyx Voice Session\n\n- **Date/Time**: ${new Date(occurredAt).toLocaleString()}\n- **Event**: ${eventType}\n- **Caller**: ${callerPhone}\n- **Duration**: ${duration} seconds\n- **Call Control ID**: ${callControlId}\n- **Hangup Reason**: ${body.data.payload.hangup_reason || 'N/A'}`;
+
+              // Save Transcript to Google Drive
+              await uploadCommunicationLogToDrive(serviceToken, siteName, fileName, mdTranscript);
+
+              // Record interaction under Google Contacts
+              await syncGoogleContactCommunication({
+                phone: callerPhone,
+                name: `Caller (${callerPhone})`,
+                type: 'voice',
+                timestamp: occurredAt,
+                token: serviceToken
+              });
+            }
+          } catch (bgErr) {
+            console.error('[Telnyx Webhook Background Error]:', bgErr);
+          }
+        };
+
+        if (context.waitUntil) {
+          context.waitUntil(handleTelnyxBackground());
+        } else {
+          handleTelnyxBackground();
+        }
+
+        return new Response("OK", {
+          status: 200,
+          headers: { "Content-Type": "text/plain" }
+        });
       }
+
+      // Vapi.ai / generic voice webhook parameters fallback
+      isVapi = true;
+      callText = body.message?.toolCalls?.[0]?.function?.arguments || body.message?.text || body.text || "";
+      fromNumber = body.message?.customer?.number || "";
     } else {
       isTwilio = true;
       // Twilio Form fallback
@@ -32,7 +105,6 @@ export async function onRequestPost(context) {
     }
 
     // 2. Resolve Credentials & Preference
-    // Unified Environment Variable Law: strictly read GEMINI_API_KEY and OPENAI_API_KEY
     const geminiKey = context.env.GEMINI_API_KEY;
     const openAiKey = context.env.OPENAI_API_KEY;
     const preferredProvider = context.env.PREFERRED_PROVIDER || (geminiKey ? "gemini" : "openai");
@@ -67,7 +139,6 @@ export async function onRequestPost(context) {
 
       if (!response.ok) {
         console.warn('[Voice Webhook]: Primary Gemini model failed, trying fallback');
-        // Fallback to gemini-2.5-flash-lite
         const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`;
         const fallbackRes = await fetch(fallbackUrl, {
           method: "POST",
@@ -161,7 +232,6 @@ export async function onRequestPost(context) {
     }
 
     // 3. Perform Google Workspace Integrations dynamically using context helper credentials
-    // Unified Environment Variable Law: strictly read GOOGLE_SERVICE_ACCOUNT_TOKEN
     const serviceToken = context.env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
     if (serviceToken && callText) {
       try {
@@ -240,7 +310,7 @@ export async function onRequestPost(context) {
       }
     }
 
-    // 4. Return response based on provider requirements. Standard XML TwiML/TeXML or JSON instructions.
+    // 4. Return response based on provider requirements. Standard XML TwiML or JSON instructions.
     if (isTwilio) {
       const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say>${responseSpeech}</Say><Gather input="speech" timeout="3" action="/api/voice-webhook"></Gather></Response>`;
       return new Response(twiml, {
@@ -249,17 +319,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    if (isTelnyx) {
-      return new Response(JSON.stringify({
-        action: "speak",
-        text: responseSpeech
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    // Vapi.ai/generic JSON call response layout fallback
+    // Vapi.ai / generic JSON call response layout fallback
     return new Response(JSON.stringify({
       conversation: [
         { role: "assistant", content: responseSpeech }
