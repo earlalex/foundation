@@ -95,6 +95,33 @@ function setupDynamicRowAdding() {
   document.getElementById('btn-admin-add-sponsor-row')?.addEventListener('click', () => {
     addSponsorRow();
   });
+
+  // Top-Level Event Delegation for dynamic rows
+  ['admin-ticket-list', 'admin-vendor-list', 'admin-sponsor-list'].forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (container && !container.dataset.delegated) {
+      container.dataset.delegated = 'true';
+      container.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.btn-remove-row');
+        if (removeBtn) {
+          const row = removeBtn.closest('.admin-ticket-row, .admin-vendor-row, .admin-sponsor-row');
+          if (row) row.remove();
+          return;
+        }
+
+        const copyBtn = e.target.closest('.btn-copy-stripe-id');
+        if (copyBtn) {
+          e.preventDefault();
+          const textToCopy = copyBtn.dataset.copy;
+          if (textToCopy) {
+            navigator.clipboard.writeText(textToCopy);
+            toast.success(`Copied Stripe Price ID: ${textToCopy}`);
+          }
+          return;
+        }
+      });
+    }
+  });
 }
 
 function addTicketRow(data = {}) {
@@ -128,15 +155,6 @@ function addTicketRow(data = {}) {
     <button type="button" class="btn-remove-row" style="background: transparent; border: none; color: #e53e3e; font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
   `;
 
-  row.querySelector('.btn-remove-row').onclick = () => row.remove();
-  const copyBtn = row.querySelector('.btn-copy-stripe-id');
-  if (copyBtn) {
-    copyBtn.onclick = (e) => {
-      e.preventDefault();
-      navigator.clipboard.writeText(copyBtn.dataset.copy);
-      toast.success(`Copied Stripe Price ID: ${copyBtn.dataset.copy}`);
-    };
-  }
   container.appendChild(row);
 }
 
@@ -174,15 +192,6 @@ function addVendorRow(data = {}) {
     <button type="button" class="btn-remove-row" style="background: transparent; border: none; color: #e53e3e; font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
   `;
 
-  row.querySelector('.btn-remove-row').onclick = () => row.remove();
-  const copyBtn = row.querySelector('.btn-copy-stripe-id');
-  if (copyBtn) {
-    copyBtn.onclick = (e) => {
-      e.preventDefault();
-      navigator.clipboard.writeText(copyBtn.dataset.copy);
-      toast.success(`Copied Stripe Price ID: ${copyBtn.dataset.copy}`);
-    };
-  }
   container.appendChild(row);
 }
 
@@ -218,15 +227,6 @@ function addSponsorRow(data = {}) {
     <button type="button" class="btn-remove-row" style="background: transparent; border: none; color: #e53e3e; font-size: 1.25rem; font-weight: bold; cursor: pointer;">&times;</button>
   `;
 
-  row.querySelector('.btn-remove-row').onclick = () => row.remove();
-  const copyBtn = row.querySelector('.btn-copy-stripe-id');
-  if (copyBtn) {
-    copyBtn.onclick = (e) => {
-      e.preventDefault();
-      navigator.clipboard.writeText(copyBtn.dataset.copy);
-      toast.success(`Copied Stripe Price ID: ${copyBtn.dataset.copy}`);
-    };
-  }
   container.appendChild(row);
 }
 

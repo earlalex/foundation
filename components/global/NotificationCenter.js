@@ -12,19 +12,35 @@ export class NotificationCenter extends HTMLElement {
     this.render();
     this.setupEventListeners();
 
+    // Ensure persistent presence in document body if not present
+    this.ensurePersistentMount();
+
     // Listen for real-time notification received events
     this.onNotificationReceived = (e) => {
       console.log('[NotificationCenter]: Real-time alert received:', e.detail);
       this.loadNotifications();
       this.render();
+      this.setupEventListeners();
     };
     window.addEventListener('notification-received', this.onNotificationReceived);
 
-    // Click outside handler to auto-close dropdown
+    // Global click listener for triggers and click-outside dismissal
     this.onDocumentClick = (e) => {
-      if (!this.contains(e.target)) {
-        this.isOpen = false;
+      const bellTrigger = e.target.closest('#utility-notification-bell, #notif-bell-trigger, [data-toggle="notif-drawer"]');
+      if (bellTrigger) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.isOpen = !this.isOpen;
         this.updateDropdownVisibility();
+        return;
+      }
+
+      if (this.isOpen) {
+        const dropdown = this.querySelector('#notif-dropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+          this.isOpen = false;
+          this.updateDropdownVisibility();
+        }
       }
     };
     document.addEventListener('click', this.onDocumentClick);
@@ -33,6 +49,13 @@ export class NotificationCenter extends HTMLElement {
   disconnectedCallback() {
     window.removeEventListener('notification-received', this.onNotificationReceived);
     document.removeEventListener('click', this.onDocumentClick);
+  }
+
+  ensurePersistentMount() {
+    // If not already inside document body or navbar, ensure a root instance exists
+    if (!document.body.contains(this) && !document.querySelector('notification-center')) {
+      document.body.appendChild(this);
+    }
   }
 
   loadNotifications() {
@@ -60,12 +83,14 @@ export class NotificationCenter extends HTMLElement {
     this.notifications.forEach(n => n.isRead = true);
     this.saveNotifications();
     this.render();
+    this.setupEventListeners();
   }
 
   clearAll() {
     this.notifications = [];
     this.saveNotifications();
     this.render();
+    this.setupEventListeners();
   }
 
   markAsRead(id) {
@@ -74,13 +99,25 @@ export class NotificationCenter extends HTMLElement {
       notif.isRead = true;
       this.saveNotifications();
       this.render();
+      this.setupEventListeners();
     }
   }
 
   updateDropdownVisibility() {
     const dropdown = this.querySelector('#notif-dropdown');
-    if (dropdown) {
-      dropdown.style.display = this.isOpen ? 'flex' : 'none';
+    if (!dropdown) return;
+
+    if (this.isOpen) {
+      const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger') || this;
+      const rect = trigger.getBoundingClientRect();
+
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = `${rect.bottom > 0 ? rect.bottom + 6 : 42}px`;
+      dropdown.style.right = `${rect.right > 0 ? Math.max(12, window.innerWidth - rect.right) : 20}px`;
+      dropdown.style.zIndex = '100020';
+      dropdown.style.display = 'flex';
+    } else {
+      dropdown.style.display = 'none';
     }
   }
 
@@ -136,18 +173,18 @@ export class NotificationCenter extends HTMLElement {
           box-shadow: 0 0 0 2px var(--theme-color-surface-alt, #f8fafc);
         }
         .notif-dropdown {
-          position: absolute;
-          top: 38px;
-          right: 0;
+          position: fixed;
+          top: 42px;
+          right: 20px;
           width: 360px;
           max-height: 480px;
           background: var(--theme-color-surface, #ffffff);
           border: 1px solid ${border};
           border-radius: 8px;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
           display: none;
           flex-direction: column;
-          z-index: 10005;
+          z-index: 100020;
           overflow: hidden;
         }
         .notif-header {
@@ -226,7 +263,7 @@ export class NotificationCenter extends HTMLElement {
         }
       </style>
 
-      <button id="notif-bell-trigger" class="notif-bell-btn" aria-label="Notifications Dropdown">
+      <button id="utility-notification-bell" class="notif-bell-btn" aria-label="Notifications Dropdown">
         <span>🔔</span>
         ${unreadCount > 0 ? `<span class="notif-badge">${unreadCount}</span>` : ''}
       </button>
@@ -273,15 +310,8 @@ export class NotificationCenter extends HTMLElement {
   }
 
   setupEventListeners() {
-    const trigger = this.querySelector('#notif-bell-trigger');
     const readAll = this.querySelector('#btn-notif-read-all');
     const clear = this.querySelector('#btn-notif-clear');
-
-    trigger?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.isOpen = !this.isOpen;
-      this.updateDropdownVisibility();
-    });
 
     readAll?.addEventListener('click', (e) => {
       e.stopPropagation();
