@@ -489,6 +489,10 @@ export class VideoStreamPlayer extends HTMLElement {
     const currentUrl = encodeURIComponent(window.location.origin + '/videos?id=' + this.videoId);
     const videoTitleEncoded = encodeURIComponent(this.videoTitle);
 
+    // Stream URL protection: Non-members only receive stream URL if teaser duration > 0 and only while unexpired, or if a dedicated preview clip is defined.
+    // Full raw video source URL is withheld from unauthenticated DOM if not entitled.
+    const activeStreamUrl = isPremium ? this.videoUrl : '';
+
     this.innerHTML = `
       <style>
         .player-wrapper {
@@ -656,8 +660,8 @@ export class VideoStreamPlayer extends HTMLElement {
           <button class="btn-primary" id="btn-paywall-upgrade" style="padding: 10px 24px; font-weight: bold; font-size: 0.9rem;">Upgrade Instantly</button>
         </div>
 
-        <video class="html5-video" id="video-core">
-          <source src="${this.videoUrl}" type="video/mp4">
+        <video class="html5-video" id="video-core" ${isPremium ? '' : 'controlsList="nodownload"'}>
+          ${activeStreamUrl ? `<source src="${activeStreamUrl}" type="video/mp4">` : ''}
           Your browser does not support HTML5 video playback.
         </video>
 
@@ -748,14 +752,31 @@ export class VideoStreamPlayer extends HTMLElement {
       });
     }
 
+    // Stream loading & preview gating:
+    // Non-members only receive media source element upon user play intent, preventing automatic stream harvesting in raw HTML
+    const ensureStreamLoadedForPreview = () => {
+      if (!video.querySelector('source') && this.videoUrl) {
+        const source = document.createElement('source');
+        source.src = this.videoUrl;
+        source.type = 'video/mp4';
+        video.appendChild(source);
+        video.load();
+      }
+    };
+
     // Toggle Play/Pause
     const togglePlay = () => {
+      if (!isPremium && video.currentTime >= teaserLimit) {
+        if (paywall) paywall.style.display = 'flex';
+        return;
+      }
+      ensureStreamLoadedForPreview();
       if (video.paused) {
-        video.play();
-        btnPlayPause.textContent = '⏸️';
+        video.play().catch(() => {});
+        if (btnPlayPause) btnPlayPause.textContent = '⏸️';
       } else {
         video.pause();
-        btnPlayPause.textContent = '▶️';
+        if (btnPlayPause) btnPlayPause.textContent = '▶️';
       }
     };
 
