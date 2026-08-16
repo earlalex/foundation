@@ -480,11 +480,16 @@ export function initNavbar() {
       } catch (e) {}
     }, 100);
 
-    const onLangChanged = () => {
-      initNavbar();
-    };
-    window.addEventListener('language-changed', onLangChanged);
-    window.addEventListener('languageChanged', onLangChanged);
+    if (!window.__NAVBAR_LANG_LISTENERS_BOUND__) {
+      window.__NAVBAR_LANG_LISTENERS_BOUND__ = true;
+      const onLangChanged = async () => {
+        try {
+          const { i18n } = await import('../../core/i18n.js');
+          i18n.translatePage();
+        } catch (e) {}
+      };
+      window.addEventListener('language-changed', onLangChanged);
+    }
 
     updateActiveLink(window.location.pathname);
     syncNavbarVisibility(store.state);
