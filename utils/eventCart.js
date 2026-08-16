@@ -16,7 +16,7 @@ class UniversalCart {
       }
       if (data) {
         const parsed = JSON.parse(data);
-        const items = Array.isArray(parsed.items) ? parsed.items : [];
+        const items = Array.isArray(parsed.items) ? parsed.items.map(i => ({ ...i })) : [];
         const eventIds = [...new Set(items.map(i => i.eventId).filter(Boolean))];
         return {
           eventId: eventIds.length > 0 ? eventIds[0] : (parsed.eventId || null),
@@ -38,8 +38,12 @@ class UniversalCart {
     try {
       sessionStorage.setItem(this.storageKey, JSON.stringify(this.cart));
       sessionStorage.setItem(this.legacyStorageKey, JSON.stringify(this.cart));
-      // Sync with global store state
-      store.dispatch('SET_CART', { ...this.cart });
+      // Sync with global store state (creating a fresh mutable copy before DeepFreeze)
+      store.dispatch('SET_CART', {
+        eventId: this.cart.eventId,
+        eventIds: [...(this.cart.eventIds || [])],
+        items: this.cart.items.map(i => ({ ...i }))
+      });
       // Trigger custom window event for active views
       window.dispatchEvent(new CustomEvent('cart_updated', { detail: this.cart }));
     } catch (e) {
@@ -47,25 +51,74 @@ class UniversalCart {
     }
   }
 
-  addItem(eventId, itemType, itemId, quantity = 1, price = 0, name = '', stripePriceId = null) {
+  addItem(eventId, itemType, itemId, quantity = 1, price = 0, name = '', stripePriceId = null, image = null) {
     const validTypes = ['product', 'book', 'education', 'event', 'ticket', 'vendor_booth', 'sponsorship', 'consultation'];
-    const resolvedType = validTypes.includes(itemType) ? itemType : 'product';
-    const resolvedEventId = eventId || null;
 
-    const existing = this.cart.items.find(i => i.id === itemId && i.type === resolvedType && i.eventId === resolvedEventId);
+    let resolvedEventId = null;
+    let resolvedType = 'product';
+    let resolvedId = null;
+    let resolvedQty = 1;
+    let resolvedPrice = 0;
+    let resolvedName = '';
+    let resolvedStripePriceId = null;
+    let resolvedImage = null;
+
+    if (typeof eventId === 'object' && eventId !== null) {
+      // Object parameter payload style
+      const opts = eventId;
+      resolvedId = opts.id || opts.itemId;
+      resolvedType = validTypes.includes(opts.type) ? opts.type : 'product';
+      resolvedQty = Number(opts.quantity) || 1;
+      resolvedPrice = Number(opts.price) || 0;
+      resolvedName = opts.name || '';
+      resolvedStripePriceId = opts.stripePriceId || null;
+      resolvedImage = opts.image || null;
+      resolvedEventId = opts.eventId || null;
+    } else if (validTypes.includes(eventId)) {
+      // First arg is itemType (e.g., addItem('product', id, name, price, qty, ...))
+      resolvedType = eventId;
+      resolvedId = itemType;
+      resolvedName = itemId || '';
+      resolvedPrice = Number(quantity) || 0;
+      resolvedQty = Number(price) || 1;
+      resolvedStripePriceId = name || null;
+      resolvedImage = stripePriceId || null;
+      resolvedEventId = null;
+    } else {
+      // Standard positional arguments: (eventId, itemType, itemId, quantity, price, name, stripePriceId, image)
+      resolvedEventId = eventId || null;
+      resolvedType = validTypes.includes(itemType) ? itemType : 'product';
+      resolvedId = itemId;
+      resolvedQty = Number(quantity) || 1;
+      resolvedPrice = Number(price) || 0;
+      resolvedName = name || '';
+      resolvedStripePriceId = stripePriceId || null;
+      resolvedImage = image || null;
+    }
+
+    if (!resolvedId) return;
+
+    // Ensure mutable array of mutable objects
+    this.cart.items = this.cart.items.map(i => ({ ...i }));
+
+    const existing = this.cart.items.find(i =>
+      i.id === resolvedId &&
+      i.type === resolvedType &&
+      (i.eventId || null) === (resolvedEventId || null)
+    );
     if (existing) {
-      existing.quantity += Number(quantity);
-      if (stripePriceId) {
-        existing.stripePriceId = stripePriceId;
-      }
+      existing.quantity += Number(resolvedQty);
+      if (resolvedStripePriceId) existing.stripePriceId = resolvedStripePriceId;
+      if (resolvedImage) existing.image = resolvedImage;
     } else {
       this.cart.items.push({
-        id: itemId,
+        id: resolvedId,
         type: resolvedType,
-        name,
-        price: Number(price),
-        quantity: Number(quantity),
-        stripePriceId: stripePriceId || null,
+        name: resolvedName,
+        price: Number(resolvedPrice),
+        quantity: Number(resolvedQty),
+        stripePriceId: resolvedStripePriceId,
+        image: resolvedImage,
         eventId: resolvedEventId
       });
     }
@@ -77,8 +130,46 @@ class UniversalCart {
     this.saveCart();
   }
 
-  removeItem(itemId) {
-    this.cart.items = this.cart.items.filter(i => i.id !== itemId);
+  updateItemQuantity(itemId, itemType, newQuantity, eventId = null) {
+    let resolvedType = itemType;
+    let resolvedQty = newQuantity;
+    let resolvedEventId = eventId;
+
+    // Handle 2-argument signature: updateItemQuantity(itemId, newQuantity)
+    if (typeof itemType === 'number' || (typeof itemType === 'string' && !isNaN(Number(itemType)) && newQuantity === undefined)) {
+      resolvedQty = Number(itemType);
+      resolvedType = null;
+      resolvedEventId = null;
+    }
+
+    const qty = Number(resolvedQty);
+    if (isNaN(qty) || qty <= 0) {
+      this.removeItem(itemId, resolvedType, resolvedEventId);
+      return;
+    }
+
+    this.cart.items = this.cart.items.map(i => ({ ...i }));
+    const item = this.cart.items.find(i =>
+      i.id === itemId &&
+      (!resolvedType || i.type === resolvedType) &&
+      (resolvedEventId === null || (i.eventId || null) === (resolvedEventId || null))
+    );
+    if (item) {
+      item.quantity = qty;
+      const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
+      this.cart.eventId = eventIds.length > 0 ? eventIds[0] : null;
+      this.cart.eventIds = eventIds;
+      this.saveCart();
+    }
+  }
+
+  removeItem(itemId, itemType, eventId = null) {
+    this.cart.items = this.cart.items.filter(i => {
+      if (i.id !== itemId) return true;
+      if (itemType && i.type !== itemType) return true;
+      if (eventId !== null && (i.eventId || null) !== (eventId || null)) return true;
+      return false;
+    });
     const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
     this.cart.eventId = eventIds.length > 0 ? eventIds[0] : null;
     this.cart.eventIds = eventIds;
@@ -86,13 +177,30 @@ class UniversalCart {
   }
 
   getCartSummary() {
-    const subtotal = this.cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const taxRate = 0.0825; // 8.25% tax
-    const serviceFeePerItem = 1.50; // $1.50 service fee per item
-    const serviceFee = this.cart.items.reduce((sum, item) => sum + (serviceFeePerItem * item.quantity), 0);
-    const tax = subtotal * taxRate;
-    const total = subtotal + tax + serviceFee;
+    let subtotal = 0;
+    let taxableSubtotal = 0;
+    let serviceFee = 0;
 
+    const eventTypes = ['event', 'ticket', 'vendor_booth', 'sponsorship'];
+    const taxableTypes = ['product', 'event', 'ticket', 'vendor_booth', 'sponsorship', 'book'];
+
+    for (const item of this.cart.items) {
+      const lineSubtotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
+      subtotal += lineSubtotal;
+
+      // Service fee ($1.50) applied only to event items
+      if (eventTypes.includes(item.type)) {
+        serviceFee += 1.50 * (Number(item.quantity) || 1);
+      }
+
+      // Estimated tax (8.25%) applied to taxable items (product, event, book)
+      if (taxableTypes.includes(item.type)) {
+        taxableSubtotal += lineSubtotal;
+      }
+    }
+
+    const tax = taxableSubtotal * 0.0825;
+    const total = subtotal + tax + serviceFee;
     const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
 
     return {

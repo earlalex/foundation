@@ -45,6 +45,7 @@ export async function onRequestPost(context) {
     const body = await request.json();
     const {
       email,
+      customerEmail,
       userEmail,
       userId,
       userUid,
@@ -58,7 +59,9 @@ export async function onRequestPost(context) {
       mode,
       affiliateId,
       successUrl,
-      cancelUrl
+      cancelUrl,
+      items,
+      lineItems: requestLineItems
     } = body;
 
     const domain = new URL(request.url).origin;
@@ -67,7 +70,7 @@ export async function onRequestPost(context) {
       // Create Customer Portal Link
       try {
         const params = new URLSearchParams();
-        const targetEmail = userEmail || email;
+        const targetEmail = customerEmail || userEmail || email;
         if (targetEmail) {
           params.append('customer', targetEmail);
         }
@@ -110,22 +113,99 @@ export async function onRequestPost(context) {
     const finalMode = mode || (enableAch || productId ? 'payment' : 'subscription');
     params.append('mode', finalMode);
 
-    const targetEmail = userEmail || email;
+    const targetEmail = customerEmail || userEmail || email;
     if (targetEmail) {
       params.append('customer_email', targetEmail);
     }
 
-    // Process lineItems array if passed from dynamic cart
-    if (body.lineItems && Array.isArray(body.lineItems) && body.lineItems.length > 0) {
-      body.lineItems.forEach((item, index) => {
-        if (item.priceId) {
-          params.append(`line_items[${index}][price]`, item.priceId);
-          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
+    // Process items or lineItems payload from request (prioritize requestLineItems which includes calculated tax/fees)
+    const rawItems = (Array.isArray(requestLineItems) && requestLineItems.length > 0)
+      ? requestLineItems
+      : (Array.isArray(items) && items.length > 0)
+        ? items
+        : null;
+
+    if (rawItems) {
+      // Optional Catalog Lookup for Server-Side Price Verification against Firestore
+      const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+      const firestoreApiKey = env.FIRESTORE_API_KEY;
+      let catalogEventsMap = {};
+
+      if (firebaseProjectId && firestoreApiKey) {
+        try {
+          const eventsRes = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/events?key=${firestoreApiKey}&pageSize=100`);
+          if (eventsRes.ok) {
+            const eventsData = await eventsRes.json();
+            if (eventsData.documents) {
+              eventsData.documents.forEach(doc => {
+                const docId = doc.name.split('/').pop();
+                const fields = doc.fields || {};
+                catalogEventsMap[docId] = fields;
+              });
+            }
+          }
+        } catch (catErr) {
+          console.warn('[Stripe Checkout]: Catalog price verification query failed, continuing with request price validation:', catErr);
+        }
+      }
+
+      rawItems.forEach((item, index) => {
+        const itemPriceId = item.stripePriceId || item.priceId || null;
+        const itemQty = String(item.quantity || 1);
+
+        if (itemPriceId) {
+          params.append(`line_items[${index}][price]`, itemPriceId);
+          params.append(`line_items[${index}][quantity]`, itemQty);
         } else {
-          params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
-          params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
-          params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
-          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
+          let calculatedPrice = item.price !== undefined ? Number(item.price) : (item.amount ? Number(item.amount) / 100 : 0);
+
+          // If catalog data exists for event item, verify server price
+          if (item.eventId && catalogEventsMap[item.eventId]) {
+            const evtFields = catalogEventsMap[item.eventId];
+            const tickets = evtFields.ticketTypes?.arrayValue?.values || [];
+            const vendors = evtFields.vendorPackages?.arrayValue?.values || [];
+            const sponsors = evtFields.sponsorshipPackages?.arrayValue?.values || [];
+
+            let foundCatalogPrice = null;
+            const searchArray = (arr) => {
+              for (const v of arr) {
+                const m = v.mapValue?.fields || {};
+                const name = m.name?.stringValue || m.tier?.stringValue || '';
+                const id = m.id?.stringValue || '';
+                if ((id && id === item.id) || (name && item.name && name.toLowerCase() === item.name.toLowerCase())) {
+                  const p = m.price?.doubleValue ?? m.price?.integerValue ?? m.price?.stringValue;
+                  if (p !== undefined) return Number(p);
+                }
+              }
+              return null;
+            };
+
+            foundCatalogPrice = searchArray(tickets) ?? searchArray(vendors) ?? searchArray(sponsors);
+            if (foundCatalogPrice !== null && !isNaN(foundCatalogPrice) && foundCatalogPrice > 0) {
+              // Strictly enforce catalog price if submitted price is lower than server record
+              if (calculatedPrice < foundCatalogPrice) {
+                console.warn(`[Stripe Checkout]: Submitted price ($${calculatedPrice}) is lower than catalog price ($${foundCatalogPrice}) for item ${item.name}. Overriding with catalog price.`);
+                calculatedPrice = foundCatalogPrice;
+              }
+            }
+          }
+
+          let unitAmountCents = item.price !== undefined
+            ? Math.round(calculatedPrice * 100)
+            : Math.round(Number(item.amount) || 0);
+
+          // Prevent negative or zero unit amounts unless explicitly free
+          if (isNaN(unitAmountCents) || unitAmountCents < 0) {
+            unitAmountCents = 0;
+          }
+
+          const itemCurrency = (item.currency || currency || 'USD').toLowerCase();
+          const itemName = item.name || productId || 'Purchased Item';
+
+          params.append(`line_items[${index}][price_data][unit_amount]`, String(unitAmountCents));
+          params.append(`line_items[${index}][price_data][currency]`, itemCurrency);
+          params.append(`line_items[${index}][price_data][product_data][name]`, itemName);
+          params.append(`line_items[${index}][quantity]`, itemQty);
         }
       });
     } else if (priceId) {
