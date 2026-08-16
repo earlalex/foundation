@@ -182,7 +182,11 @@ export async function onRequestPost(context) {
 
             foundCatalogPrice = searchArray(tickets) ?? searchArray(vendors) ?? searchArray(sponsors);
             if (foundCatalogPrice !== null && !isNaN(foundCatalogPrice) && foundCatalogPrice > 0) {
-              calculatedPrice = foundCatalogPrice;
+              // Strictly enforce catalog price if submitted price is lower than server record
+              if (calculatedPrice < foundCatalogPrice) {
+                console.warn(`[Stripe Checkout]: Submitted price ($${calculatedPrice}) is lower than catalog price ($${foundCatalogPrice}) for item ${item.name}. Overriding with catalog price.`);
+                calculatedPrice = foundCatalogPrice;
+              }
             }
           }
 
