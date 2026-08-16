@@ -16,9 +16,12 @@ class UniversalCart {
       }
       if (data) {
         const parsed = JSON.parse(data);
+        const items = Array.isArray(parsed.items) ? parsed.items : [];
+        const eventIds = [...new Set(items.map(i => i.eventId).filter(Boolean))];
         return {
-          eventId: parsed.eventId || null,
-          items: Array.isArray(parsed.items) ? parsed.items : []
+          eventId: eventIds.length > 0 ? eventIds[0] : (parsed.eventId || null),
+          eventIds,
+          items
         };
       }
     } catch (e) {
@@ -26,6 +29,7 @@ class UniversalCart {
     }
     return {
       eventId: null,
+      eventIds: [],
       items: []
     };
   }
@@ -44,14 +48,11 @@ class UniversalCart {
   }
 
   addItem(eventId, itemType, itemId, quantity = 1, price = 0, name = '', stripePriceId = null) {
-    if (eventId) {
-      this.cart.eventId = eventId;
-    }
-
     const validTypes = ['product', 'book', 'education', 'event', 'ticket', 'vendor_booth', 'sponsorship', 'consultation'];
     const resolvedType = validTypes.includes(itemType) ? itemType : 'product';
+    const resolvedEventId = eventId || null;
 
-    const existing = this.cart.items.find(i => i.id === itemId && i.type === resolvedType);
+    const existing = this.cart.items.find(i => i.id === itemId && i.type === resolvedType && i.eventId === resolvedEventId);
     if (existing) {
       existing.quantity += Number(quantity);
       if (stripePriceId) {
@@ -65,18 +66,22 @@ class UniversalCart {
         price: Number(price),
         quantity: Number(quantity),
         stripePriceId: stripePriceId || null,
-        eventId: eventId || null
+        eventId: resolvedEventId
       });
     }
+
+    const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
+    this.cart.eventId = eventIds.length > 0 ? eventIds[0] : null;
+    this.cart.eventIds = eventIds;
 
     this.saveCart();
   }
 
   removeItem(itemId) {
     this.cart.items = this.cart.items.filter(i => i.id !== itemId);
-    if (this.cart.items.length === 0) {
-      this.cart.eventId = null;
-    }
+    const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
+    this.cart.eventId = eventIds.length > 0 ? eventIds[0] : null;
+    this.cart.eventIds = eventIds;
     this.saveCart();
   }
 
@@ -88,8 +93,11 @@ class UniversalCart {
     const tax = subtotal * taxRate;
     const total = subtotal + tax + serviceFee;
 
+    const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
+
     return {
-      eventId: this.cart.eventId,
+      eventId: eventIds.length > 0 ? eventIds[0] : null,
+      eventIds,
       items: this.cart.items,
       subtotal: Number(subtotal.toFixed(2)),
       tax: Number(tax.toFixed(2)),
@@ -101,6 +109,7 @@ class UniversalCart {
   clearCart() {
     this.cart = {
       eventId: null,
+      eventIds: [],
       items: []
     };
     this.saveCart();
