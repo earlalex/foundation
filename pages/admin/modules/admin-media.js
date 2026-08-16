@@ -1,6 +1,7 @@
 // pages/admin/modules/admin-media.js
 import { configManager } from '../../../core/config.js';
 import { contentDB } from '../../../core/db.js';
+import { radioCoordinator } from '../../../core/radio.js';
 import { toast } from '../../../utils/toast.js';
 
 export async function initAdminMedia() {
