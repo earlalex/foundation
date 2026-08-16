@@ -559,11 +559,11 @@ function renderCart() {
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
           <div style="display: flex; align-items: center; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; overflow: hidden; background: white;">
-            <button class="btn-cart-qty-minus" data-id="${item.id}" data-type="${item.type}" data-qty="${item.quantity}" style="background: #edf2f7; border: none; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; outline: none;">-</button>
+            <button class="btn-cart-qty-minus" data-id="${item.id}" data-type="${item.type}" data-event-id="${item.eventId || ''}" data-qty="${item.quantity}" style="background: #edf2f7; border: none; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; outline: none;">-</button>
             <span class="cart-item-qty-badge" style="width: 32px; text-align: center; font-weight: bold; font-size: 0.85rem; display: inline-block;">${item.quantity}</span>
-            <button class="btn-cart-qty-plus" data-id="${item.id}" data-type="${item.type}" data-qty="${item.quantity}" style="background: #edf2f7; border: none; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; outline: none;">+</button>
+            <button class="btn-cart-qty-plus" data-id="${item.id}" data-type="${item.type}" data-event-id="${item.eventId || ''}" data-qty="${item.quantity}" style="background: #edf2f7; border: none; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; outline: none;">+</button>
           </div>
-          <button class="btn-cart-remove" data-id="${item.id}" data-type="${item.type}" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 0.8rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 2px; padding: 4px 8px; border-radius: 4px; transition: background 0.15s;">
+          <button class="btn-cart-remove" data-id="${item.id}" data-type="${item.type}" data-event-id="${item.eventId || ''}" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 0.8rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 2px; padding: 4px 8px; border-radius: 4px; transition: background 0.15s;">
             🗑️ Remove
           </button>
         </div>
@@ -621,8 +621,9 @@ function setupEventListeners() {
       if (plusBtn) {
         const id = plusBtn.getAttribute('data-id');
         const type = plusBtn.getAttribute('data-type');
+        const eventId = plusBtn.getAttribute('data-event-id') || null;
         const currentQty = Number(plusBtn.getAttribute('data-qty'));
-        eventCart.updateItemQuantity(id, type, currentQty + 1);
+        eventCart.updateItemQuantity(id, type, currentQty + 1, eventId);
         return;
       }
 
@@ -630,8 +631,9 @@ function setupEventListeners() {
       if (minusBtn) {
         const id = minusBtn.getAttribute('data-id');
         const type = minusBtn.getAttribute('data-type');
+        const eventId = minusBtn.getAttribute('data-event-id') || null;
         const currentQty = Number(minusBtn.getAttribute('data-qty'));
-        eventCart.updateItemQuantity(id, type, currentQty - 1);
+        eventCart.updateItemQuantity(id, type, currentQty - 1, eventId);
         return;
       }
 
@@ -639,7 +641,8 @@ function setupEventListeners() {
       if (removeBtn) {
         const id = removeBtn.getAttribute('data-id');
         const type = removeBtn.getAttribute('data-type');
-        eventCart.removeItem(id, type);
+        const eventId = removeBtn.getAttribute('data-event-id') || null;
+        eventCart.removeItem(id, type, eventId);
         toast.info('Item removed from cart');
         return;
       }

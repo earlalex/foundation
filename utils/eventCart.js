@@ -101,7 +101,11 @@ class UniversalCart {
     // Ensure mutable array of mutable objects
     this.cart.items = this.cart.items.map(i => ({ ...i }));
 
-    const existing = this.cart.items.find(i => i.id === resolvedId && i.type === resolvedType);
+    const existing = this.cart.items.find(i =>
+      i.id === resolvedId &&
+      i.type === resolvedType &&
+      (i.eventId || null) === (resolvedEventId || null)
+    );
     if (existing) {
       existing.quantity += Number(resolvedQty);
       if (resolvedStripePriceId) existing.stripePriceId = resolvedStripePriceId;
@@ -126,15 +130,19 @@ class UniversalCart {
     this.saveCart();
   }
 
-  updateItemQuantity(itemId, itemType, newQuantity) {
+  updateItemQuantity(itemId, itemType, newQuantity, eventId = null) {
     const qty = Number(newQuantity);
     if (isNaN(qty) || qty <= 0) {
-      this.removeItem(itemId, itemType);
+      this.removeItem(itemId, itemType, eventId);
       return;
     }
 
     this.cart.items = this.cart.items.map(i => ({ ...i }));
-    const item = this.cart.items.find(i => i.id === itemId && (!itemType || i.type === itemType));
+    const item = this.cart.items.find(i =>
+      i.id === itemId &&
+      (!itemType || i.type === itemType) &&
+      (eventId === null || (i.eventId || null) === (eventId || null))
+    );
     if (item) {
       item.quantity = qty;
       const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
@@ -144,10 +152,11 @@ class UniversalCart {
     }
   }
 
-  removeItem(itemId, itemType) {
+  removeItem(itemId, itemType, eventId = null) {
     this.cart.items = this.cart.items.filter(i => {
       if (i.id !== itemId) return true;
       if (itemType && i.type !== itemType) return true;
+      if (eventId !== null && (i.eventId || null) !== (eventId || null)) return true;
       return false;
     });
     const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
