@@ -11,35 +11,13 @@ export class VideoLibrary extends HTMLElement {
     this.activeVideo = null;
   }
 
-  async connectedCallback() {
-    await this.loadVideos();
+  connectedCallback() {
+    this.loadVideos();
     this.render();
   }
 
-  async loadVideos() {
-    try {
-      const { contentDB } = await import('../../core/db.js');
-      const dbVideos = await contentDB.getContentByType('video');
-      if (Array.isArray(dbVideos) && dbVideos.length > 0) {
-        this.videos = dbVideos.map(v => ({
-          id: v.id,
-          title: v.title,
-          description: v.description || '',
-          url: v.url || v.streamUrl || '',
-          category: v.category || 'General',
-          duration: v.duration || '00:00',
-          views: v.views || 0,
-          thumbnail: v.poster || v.thumbnail || 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800',
-          isLive: v.isLive || false
-        }));
-        this.activeVideo = this.videos[0];
-        return;
-      }
-    } catch (e) {
-      console.warn('[VideoLibrary]: Failed to fetch videos from contentDB', e);
-    }
-
-    // Check if there are configured videos or fall back to beautiful seed content
+  loadVideos() {
+    // Check if there are configured videos or fall back to seed content if unconfigured
     const customVideos = configManager.current.media?.videos;
     if (Array.isArray(customVideos)) {
       this.videos = customVideos;
@@ -689,7 +667,7 @@ export class VideoStreamPlayer extends HTMLElement {
         <div class="paywall-overlay" id="paywall-gate">
           <div class="paywall-lock">🔒</div>
           <div class="paywall-prompt">Preview Time Limit Reached</div>
-          <div class="paywall-subtext">Upgrade to Member ($27/mo) to unlock the full video stream, including live event feeds and masterminds.</div>
+          <div class="paywall-subtext">Upgrade to Member ($29/mo) to unlock the full video stream, including live event feeds and masterminds.</div>
           <button class="btn-primary" id="btn-paywall-upgrade" style="padding: 10px 24px; font-weight: bold; font-size: 0.9rem;">Upgrade Instantly</button>
         </div>
 

@@ -146,13 +146,13 @@ export function renderContent(contentData) {
           </h2>
           <p style="color: #a0aec0; margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; font-size: 0.95rem; line-height: 1.5;">
             ${visibility === 'paid' 
-              ? 'This publication is reserved exclusively for active paid Members and Affiliate Members ($27/mo).'
+              ? 'This publication is reserved exclusively for active paid Members and Affiliate Members ($29/mo).'
               : 'Please log in to your account to unlock full access.'}
           </p>
           <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
             ${visibility === 'paid' ? `
               <button id="btn-paywall-subscribe" class="btn-primary" style="padding: 12px 24px; font-size: 1rem; background: #38a169; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-                Upgrade Membership ($27/mo)
+                Upgrade Membership ($29/mo)
               </button>
             ` : ''}
             <button id="btn-paywall-login" class="btn-primary" style="padding: 12px 24px; font-size: 1rem; background: #3182ce; color: #ffffff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
