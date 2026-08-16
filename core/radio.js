@@ -20,18 +20,25 @@ export class RadioCoordinator {
   async getRadioPlaylist() {
     const defaultMockPlaylist = [
       {
-        id: 'radio-track-1',
-        title: 'Sovereign Mindset & Technical Deep Dive',
-        artist: 'EarlAlex',
-        src: 'https://ice6.securenetsystems.net/DEMOSTN',
-        cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200'
+        id: 'track-1',
+        title: 'Sovereign Beats & Lo-Fi',
+        artist: 'Foundation Audio Network',
+        src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80'
       },
       {
-        id: 'radio-track-2',
-        title: 'Zero-Build Engineering Ep. 42',
-        artist: 'Jane Doe',
-        src: 'https://ice6.securenetsystems.net/DEMOSTN',
-        cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200'
+        id: 'track-2',
+        title: 'Zero-Build Deep Dives',
+        artist: 'EarlAlex Tech Stream',
+        src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80'
+      },
+      {
+        id: 'track-3',
+        title: 'Edge Computing Ambient',
+        artist: 'Sovereign Radio Network',
+        src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+        cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80'
       }
     ];
 
@@ -47,8 +54,8 @@ export class RadioCoordinator {
         id: item.id || `radio-track-${Math.random().toString(36).substr(2, 9)}`,
         title: item.title || 'Untitled Stream Track',
         artist: item.author || 'Foundation Resident',
-        src: item.audioUrl || 'https://ice6.securenetsystems.net/DEMOSTN', // robust fallback compliant with media-src CSP
-        cover: item.preview?.featuredImage?.src || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200'
+        src: item.audioUrl || item.audio?.src || item.src || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        cover: item.cover || item.preview?.featuredImage?.src || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80'
       }));
     } catch (e) {
       // Catches permission-denied ([code=permission-denied]), timeout, network errors
