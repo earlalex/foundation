@@ -23,14 +23,14 @@ export class RadioCoordinator {
         id: 'radio-track-1',
         title: 'Sovereign Mindset & Technical Deep Dive',
         artist: 'EarlAlex',
-        src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        src: 'https://ice6.securenetsystems.net/DEMOSTN',
         cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200'
       },
       {
         id: 'radio-track-2',
         title: 'Zero-Build Engineering Ep. 42',
         artist: 'Jane Doe',
-        src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        src: 'https://ice6.securenetsystems.net/DEMOSTN',
         cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200'
       }
     ];
@@ -47,7 +47,7 @@ export class RadioCoordinator {
         id: item.id || `radio-track-${Math.random().toString(36).substr(2, 9)}`,
         title: item.title || 'Untitled Stream Track',
         artist: item.author || 'Foundation Resident',
-        src: item.audioUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', // robust fallback
+        src: item.audioUrl || 'https://ice6.securenetsystems.net/DEMOSTN', // robust fallback compliant with media-src CSP
         cover: item.preview?.featuredImage?.src || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200'
       }));
     } catch (e) {
