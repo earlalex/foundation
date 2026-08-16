@@ -321,7 +321,7 @@ export async function initShopPage() {
                   <span style="font-size: 1.4rem; font-weight: 900; color: var(--theme-color-text-primary, #1a202c);">$${price.toFixed(2)}</span>
 
                   <div style="display: flex; gap: 0.5rem; width: 100%; margin-top: 0.5rem;">
-                    <button class="btn-primary btn-add-product-cart" data-id="${id}" data-price="${price}" data-name="${title}"
+                    <button class="btn-primary btn-add-product-cart" data-id="${id}" data-price="${price}" data-name="${title}" data-stripe-price-id="${item.pricing?.stripePriceId || item.stripePriceId || ''}"
                             style="flex: 1; padding: 10px 12px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; cursor: pointer; transition: background 0.2s;">
                       [ Add to Cart ]
                     </button>
@@ -346,11 +346,16 @@ export async function initShopPage() {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           const id = e.target.getAttribute('data-id');
-          const name = e.target.getAttribute('data-name');
-          const price = parseFloat(e.target.getAttribute('data-price') || '0');
+          const targetItem = catalog.find(p => p.id === id);
+
+          const name = targetItem?.title || e.target.getAttribute('data-name') || 'Product';
+          const price = targetItem
+            ? (targetItem.pricing?.basePrice || targetItem.price || 0) / 100
+            : parseFloat(e.target.getAttribute('data-price') || '0');
+          const stripePriceId = targetItem?.pricing?.stripePriceId || targetItem?.stripePriceId || e.target.getAttribute('data-stripe-price-id') || null;
 
           const { universalCart } = await import('../../utils/eventCart.js');
-          universalCart.addItem(null, 'product', id, 1, price, name);
+          universalCart.addItem(null, 'product', id, 1, price, name, stripePriceId);
 
           toast.success(`Successfully added "${name}" to your shopping cart!`);
         });
