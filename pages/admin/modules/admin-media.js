@@ -441,15 +441,15 @@ function loadVideoCatalogLedger() {
           })
         });
 
-        // Since it's a simulated edge endpoint trigger, we handle fallback gracefully if not deployed
-        if (response.ok || response.status === 404) {
-          toast.success(`[Cross-Post Success]: Successfully dispatched metadata for "${vid.title}" to YouTube Data API, Meta Graph API (IG/FB), TikTok API, and X API!`);
+        if (response.ok) {
+          toast.success(`[Cross-Post Success]: Successfully dispatched metadata for "${vid.title}" to social media platforms!`);
         } else {
-          throw new Error('Serverless dispatcher error');
+          const errData = await response.json().catch(() => ({}));
+          const msg = errData.error || errData.message || `Server responded with status ${response.status}`;
+          toast.error(`[Cross-Post Failed]: Could not publish "${vid.title}". ${msg}`);
         }
       } catch (err) {
-        // Fallback simulation success message
-        toast.success(`[Cross-Post Success]: Successfully dispatched metadata for "${vid.title}" to YouTube Data API, Meta Graph API (IG/FB), TikTok API, and X API!`);
+        toast.error(`[Cross-Post Error]: Network or dispatch error while cross-posting "${vid.title}". ${err.message || err}`);
       } finally {
         btn.textContent = 'Cross-Post';
         btn.disabled = false;
