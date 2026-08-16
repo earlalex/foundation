@@ -8,7 +8,7 @@ export class PhotoGallery extends HTMLElement {
     this.images = [];
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     // Read list of images from attributes or let page controller supply them
     const imagesAttr = this.getAttribute('images');
     if (imagesAttr) {
@@ -18,6 +18,29 @@ export class PhotoGallery extends HTMLElement {
         console.error('[PhotoGallery]: Invalid images attribute', e);
       }
     } else {
+      try {
+        const { contentDB } = await import('../../core/db.js');
+        const dbGallery = await contentDB.getContentByType('gallery');
+        if (Array.isArray(dbGallery) && dbGallery.length > 0) {
+          this.images = dbGallery.map(g => ({
+            id: g.id,
+            src: g.src || g.url || '',
+            title: g.title,
+            caption: g.caption || g.description || '',
+            author: g.author || 'Foundation Resident',
+            authorAvatar: g.authorAvatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+            date: g.date || '',
+            category: g.category || 'General',
+            likes: g.likes || 0,
+            views: g.views || 0
+          }));
+          this.render();
+          return;
+        }
+      } catch (e) {
+        console.warn('[PhotoGallery]: Failed to fetch gallery from contentDB', e);
+      }
+
       // Fallback Seed Images
       this.images = [
         {

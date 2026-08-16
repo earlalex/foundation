@@ -99,7 +99,7 @@ export async function onRequestPost(context) {
         const siteName = env.SITE_NAME || 'Foundation Framework';
         const customerEmail = session.customer_email || session.customer_details?.email || 'unknown';
         const fileName = `Receipt_${session.id || Date.now()}.html`;
-        const amountPaid = ((session.amount_total || 2900) / 100).toFixed(2);
+        const amountPaid = ((session.amount_total || 2700) / 100).toFixed(2);
 
         const htmlContent = `<!DOCTYPE html>
 <html>
@@ -411,7 +411,7 @@ export async function onRequestPost(context) {
           assignedRole = 'member';
         }
         const affiliateId = session.metadata?.affiliateId;
-        const amountPaid = (session.amount_total || 2900) / 100;
+        const amountPaid = (session.amount_total || 2700) / 100;
 
         if (session.metadata?.type === 'event_registration') {
           // Event Registration Flow

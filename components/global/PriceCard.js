@@ -2,7 +2,7 @@
 export class PriceCard extends HTMLElement {
   connectedCallback() {
     const title = this.getAttribute('title') || 'Pro Plan';
-    const price = this.getAttribute('price') || '$29/mo';
+    const price = this.getAttribute('price') || '$27/mo';
     const description = this.getAttribute('description') || 'Unlock full learning credentials and courses.';
     const buttonText = this.getAttribute('button-text') || 'Subscribe Now';
     const productId = this.getAttribute('product-id') || 'member_subscription';
@@ -53,7 +53,7 @@ export class PriceCard extends HTMLElement {
           body: JSON.stringify({
             email: user.email,
             productId: productId,
-            amount: 2900,
+            amount: 2700,
             currency: 'USD',
             mode: 'subscription'
           })

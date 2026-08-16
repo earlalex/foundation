@@ -475,14 +475,37 @@ function renderCart() {
   }
 
   // Update line total elements
-  document.getElementById('cart-lbl-subtotal').textContent = `$${summary.subtotal.toFixed(2)}`;
-  document.getElementById('cart-lbl-tax').textContent = `$${summary.tax.toFixed(2)}`;
-  document.getElementById('cart-lbl-fee').textContent = `$${summary.serviceFee.toFixed(2)}`;
-  document.getElementById('cart-lbl-total').textContent = `$${summary.total.toFixed(2)}`;
+  const subtotalEl = document.getElementById('cart-lbl-subtotal');
+  const taxEl = document.getElementById('cart-lbl-tax');
+  const feeEl = document.getElementById('cart-lbl-fee');
+  const totalEl = document.getElementById('cart-lbl-total');
+
+  if (subtotalEl) subtotalEl.textContent = `$${summary.subtotal.toFixed(2)}`;
+  if (taxEl) taxEl.textContent = `$${summary.tax.toFixed(2)}`;
+  if (feeEl) feeEl.textContent = `$${summary.serviceFee.toFixed(2)}`;
+  if (totalEl) totalEl.textContent = `$${summary.total.toFixed(2)}`;
 
   if (items.length === 0) {
-    const emptyTxt = i18n.translateText("Your Shopping Cart is Empty");
-    container.innerHTML = `<p style="color: #a0aec0; text-align: center; margin-top: 3rem; font-style: italic;">${emptyTxt}</p>`;
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🛍️</div>
+        <p style="color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 1rem; margin: 0 0 1rem 0;">Your shopping cart is empty</p>
+        <button id="btn-browse-catalog-drawer" class="btn-primary" style="padding: 8px 16px; font-size: 0.875rem; font-weight: bold; border-radius: 6px; cursor: pointer;">
+          🛍️ Browse Catalog
+        </button>
+      </div>
+    `;
+    const browseBtn = container.querySelector('#btn-browse-catalog-drawer');
+    if (browseBtn) {
+      browseBtn.addEventListener('click', () => {
+        closeCartSidebar();
+        if (window.router?.navigateTo) {
+          window.router.navigateTo('/shop');
+        } else {
+          window.location.href = '/shop';
+        }
+      });
+    }
     return;
   }
 
@@ -518,33 +541,35 @@ function renderCart() {
     }
 
     return `
-      <div style="border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-        <div style="flex: 1;">
-          <span style="font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: ${labelColor}; background: ${labelBg}; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">
-            ${typeLabel}
-          </span>
-          <h5 style="margin: 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-text-primary, #2d3748);">${item.name}</h5>
-          <div style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); margin-top: 2px;">
-            ${item.quantity}x @ $${item.price.toFixed(2)} each
+      <div style="border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+          <div style="flex: 1;">
+            <span style="font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: ${labelColor}; background: ${labelBg}; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">
+              ${typeLabel}
+            </span>
+            <h5 style="margin: 0; font-size: 0.95rem; font-weight: bold; color: var(--theme-color-text-primary, #2d3748);">${item.name}</h5>
+            <div style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); margin-top: 2px;">
+              $${item.price.toFixed(2)} each
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <strong style="font-size: 0.95rem; color: var(--theme-color-text-primary, #1a202c);">$${(item.price * item.quantity).toFixed(2)}</strong>
           </div>
         </div>
-        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem;">
-          <strong style="font-size: 0.95rem; color: var(--theme-color-text-primary, #1a202c);">$${(item.price * item.quantity).toFixed(2)}</strong>
-          <button class="btn-remove-cart-item" data-id="${item.id}" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;">Remove</button>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
+          <div style="display: flex; align-items: center; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: 4px; overflow: hidden; background: white;">
+            <button class="btn-cart-qty-minus" data-id="${item.id}" data-type="${item.type}" data-event-id="${item.eventId || ''}" data-qty="${item.quantity}" style="background: #edf2f7; border: none; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; outline: none;">-</button>
+            <span class="cart-item-qty-badge" style="width: 32px; text-align: center; font-weight: bold; font-size: 0.85rem; display: inline-block;">${item.quantity}</span>
+            <button class="btn-cart-qty-plus" data-id="${item.id}" data-type="${item.type}" data-event-id="${item.eventId || ''}" data-qty="${item.quantity}" style="background: #edf2f7; border: none; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; outline: none;">+</button>
+          </div>
+          <button class="btn-cart-remove" data-id="${item.id}" data-type="${item.type}" data-event-id="${item.eventId || ''}" style="background: transparent; border: none; color: var(--theme-color-danger, #e53e3e); font-size: 0.8rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 2px; padding: 4px 8px; border-radius: 4px; transition: background 0.15s;">
+            🗑️ Remove
+          </button>
         </div>
       </div>
     `;
   }).join('');
-
-  // Wire remove button actions
-  container.querySelectorAll('.btn-remove-cart-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = e.target.getAttribute('data-id');
-      eventCart.removeItem(id);
-      renderCart();
-      toast.info('Item removed from registration cart.');
-    });
-  });
 }
 
 function openCartSidebar() {
@@ -585,6 +610,48 @@ function setupEventListeners() {
         panel.style.display = panel.id === `booking-sec-${tabCode}` ? 'block' : 'none';
       });
     });
+  });
+
+  // Event delegation on cart items container for quantity adjustments and removals
+  const cartContainer = document.getElementById('cart-items-container');
+  if (cartContainer && !cartContainer.__DELEGATED_BOUND__) {
+    cartContainer.__DELEGATED_BOUND__ = true;
+    cartContainer.addEventListener('click', (e) => {
+      const plusBtn = e.target.closest('.btn-cart-qty-plus');
+      if (plusBtn) {
+        const id = plusBtn.getAttribute('data-id');
+        const type = plusBtn.getAttribute('data-type');
+        const eventId = plusBtn.getAttribute('data-event-id') || null;
+        const currentQty = Number(plusBtn.getAttribute('data-qty'));
+        eventCart.updateItemQuantity(id, type, currentQty + 1, eventId);
+        return;
+      }
+
+      const minusBtn = e.target.closest('.btn-cart-qty-minus');
+      if (minusBtn) {
+        const id = minusBtn.getAttribute('data-id');
+        const type = minusBtn.getAttribute('data-type');
+        const eventId = minusBtn.getAttribute('data-event-id') || null;
+        const currentQty = Number(minusBtn.getAttribute('data-qty'));
+        eventCart.updateItemQuantity(id, type, currentQty - 1, eventId);
+        return;
+      }
+
+      const removeBtn = e.target.closest('.btn-cart-remove');
+      if (removeBtn) {
+        const id = removeBtn.getAttribute('data-id');
+        const type = removeBtn.getAttribute('data-type');
+        const eventId = removeBtn.getAttribute('data-event-id') || null;
+        eventCart.removeItem(id, type, eventId);
+        toast.info('Item removed from cart');
+        return;
+      }
+    });
+  }
+
+  // Listen for cart_updated custom event to re-render drawer
+  window.addEventListener('cart_updated', () => {
+    renderCart();
   });
 
   // Floating Cart Button click toggles sidebar
@@ -670,6 +737,7 @@ function setupEventListeners() {
           role: store.state.simulatedUserTier || user?.role || 'subscriber',
           productId: currentActiveEvent?.title || 'Event Registration',
           lineItems,
+          items: summary.items,
           currency: 'USD',
           affiliateId: refId,
           mode: 'payment',

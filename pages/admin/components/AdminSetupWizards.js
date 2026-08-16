@@ -1161,8 +1161,8 @@ export class MasterSetupWizard extends HTMLElement {
             <input type="password" id="m-stripe-webhook" value="${this.config.stripeWebhookSecret}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
-            <label for="m-stripe-price" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Price ID</label>
-            <input type="text" id="m-stripe-price" value="${this.config.stripeMembershipPriceId}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <label for="m-stripe-price" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Price ID <span style="font-weight:normal; font-size:0.75rem; color:#718096;">(Recurring $27/mo subscription product ID)</span></label>
+            <input type="text" id="m-stripe-price" value="${this.config.stripeMembershipPriceId}" placeholder="price_1..." style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
         </div>
       `;
