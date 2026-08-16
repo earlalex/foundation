@@ -302,7 +302,7 @@ export class RadioStreamPlayer extends HTMLElement {
         <!-- Paywall trigger overlay inside the player bar -->
         <div class="radio-paywall-gate" id="radio-paywall-gate">
           <span>📻 Teaser Limit Reached. Subscribe to unlock 24/7 Live Radio!</span>
-          <button class="radio-paywall-upgrade-btn" id="btn-radio-upgrade">Upgrade ($27/mo)</button>
+          <button class="radio-paywall-upgrade-btn" id="btn-radio-upgrade">Upgrade ($29/mo)</button>
         </div>
 
         <div class="radio-left">

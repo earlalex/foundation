@@ -61,43 +61,6 @@ class SchemaRegistry {
     this.register('podcast', PodcastSchema);
     this.register('portfolio', PortfolioSchema);
     this.register('sponsor', SponsorSchema);
-    this.register('video', {
-      type: Type.string,
-      id: Type.string,
-      title: Type.string,
-      description: Type.optional(Type.string),
-      url: Type.optional(Type.string),
-      streamUrl: Type.optional(Type.string),
-      poster: Type.optional(Type.string),
-      thumbnail: Type.optional(Type.string),
-      category: Type.optional(Type.string),
-      duration: Type.optional(Type.string),
-      views: Type.optional(Type.number),
-      isLive: Type.optional(Type.boolean),
-      author: Type.optional(Type.string),
-      date: Type.optional(Type.string),
-      access: Type.optional(AccessSchema),
-      preview: Type.optional(PreviewSchema),
-      tags: Type.optional(Type.array)
-    });
-    this.register('gallery', {
-      type: Type.string,
-      id: Type.string,
-      title: Type.string,
-      caption: Type.optional(Type.string),
-      description: Type.optional(Type.string),
-      src: Type.optional(Type.string),
-      url: Type.optional(Type.string),
-      author: Type.optional(Type.string),
-      authorAvatar: Type.optional(Type.string),
-      date: Type.optional(Type.string),
-      category: Type.optional(Type.string),
-      likes: Type.optional(Type.number),
-      views: Type.optional(Type.number),
-      access: Type.optional(AccessSchema),
-      preview: Type.optional(PreviewSchema),
-      tags: Type.optional(Type.array)
-    });
     this.register('event', EventSchema);
     this.register('product', ProductSchema);
     this.register('page', PageSchema);

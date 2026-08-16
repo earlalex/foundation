@@ -78,7 +78,7 @@ export class StripeService {
    */
   async createInvoice(customerId, invoiceData) {
     const lineItems = invoiceData.lineItems || [{
-      amount: invoiceData.amount || 2700,
+      amount: invoiceData.amount || 2900,
       name: invoiceData.description || 'Invoice Charge',
       quantity: 1
     }];

@@ -2,7 +2,6 @@
 import { store } from '../../core/store.js';
 import { configManager } from '../../core/config.js';
 import { i18n } from '../../core/i18n.js';
-import { eventCart } from '../../utils/eventCart.js';
 
 export class AppNavbar extends HTMLElement {
   constructor() {
@@ -347,8 +346,7 @@ export class AppNavbar extends HTMLElement {
     // Reactive Cart Badge update
     const countBadge = this.querySelector('#cart-count-badge');
     if (countBadge) {
-      const summary = eventCart.getCartSummary();
-      const items = summary.items || state.cart?.items || [];
+      const items = state.cart?.items || [];
       const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
       countBadge.textContent = totalCount;

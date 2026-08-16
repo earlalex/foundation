@@ -217,7 +217,7 @@ async function boot() {
     '/docs': {
       template: './pages/docs/docs.html',
       controller: './pages/docs/docs.js',
-      title: 'Platform Documentation & Setup Guide | Foundation',
+      title: 'Platform Documentation & Setup Guide',
       viewPath: './pages/docs/docs.html'
     },
     '/about': {
@@ -286,17 +286,17 @@ async function boot() {
       viewPath: './pages/tag/tag.html'
     },
     '/privacy': {
-      title: 'Privacy Policy | Foundation',
+      title: 'Privacy Policy',
       description: 'Platform Privacy Policy and Data Safeguards.',
       viewPath: './pages/legal/privacy.html'
     },
     '/terms': {
-      title: 'Terms of Service | Foundation',
+      title: 'Terms of Service',
       description: 'Platform Terms of Service and Usage Agreement.',
       viewPath: './pages/legal/terms.html'
     },
     '/cookies': {
-      title: 'Cookie Settings & Preferences | Foundation',
+      title: 'Cookie Settings & Preferences',
       description: 'Manage cookie preferences and tracking consent.',
       viewPath: './pages/legal/cookies.html'
     },
