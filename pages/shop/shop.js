@@ -57,7 +57,7 @@ export async function initShopPage() {
     const products = await contentDB.getContentByType('product', 50);
 
     // Dynamic schema aggregation + fallback static mock list covering all required categories
-    const catalog = (products && products.length > 0) ? products : [
+    const defaultCatalog = [
       {
         id: 'handmade-artisan-mug',
         title: 'Handmade Artisan Mug',
@@ -143,6 +143,19 @@ export async function initShopPage() {
         image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=400'
       }
     ];
+
+    // Merge fetched DB products with default catalog seed entries (deduplicated by product id)
+    const catalogMap = new Map();
+
+    // First populate defaults
+    defaultCatalog.forEach(item => catalogMap.set(item.id, item));
+
+    // Overwrite / append with custom DB products
+    if (Array.isArray(products)) {
+      products.forEach(item => catalogMap.set(item.id, item));
+    }
+
+    const catalog = Array.from(catalogMap.values());
 
     // Current filter states
     let activeCategory = 'all';
