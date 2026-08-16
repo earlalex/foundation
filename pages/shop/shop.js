@@ -3,6 +3,31 @@ import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { lazyLoader } from '../../utils/lazyLoader.js';
 
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function sanitizeUrl(url) {
+  if (!url) return '';
+  const trimmed = String(url).trim();
+  if (
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('data:image/')
+  ) {
+    return escapeHTML(trimmed);
+  }
+  return '';
+}
+
 export async function initShopPage() {
   console.log('[Shop Page]: Initializing storefront...');
 
@@ -258,18 +283,22 @@ export async function initShopPage() {
 
       // 5. Render products
       container.innerHTML = filtered.map(item => {
-        const id = item.id;
-        const title = item.title || 'Product Item';
-        const description = item.description || '';
+        const id = escapeHTML(item.id || '');
+        const title = escapeHTML(item.title || 'Product Item');
+        const description = escapeHTML(item.description || '');
+        const category = escapeHTML(item.category || '');
         const price = (item.pricing?.basePrice || item.price || 1500) / 100;
         const tags = item.tags || ['Zero-Build'];
         const rating = item.rating || 4.8;
         const defaultImg = 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=400';
-        const imgUrl = item.image || item.preview?.featuredImage?.src || defaultImg;
+        const rawImgUrl = item.image || item.preview?.featuredImage?.src || defaultImg;
+        const imgUrl = sanitizeUrl(rawImgUrl);
+        const stripePriceId = escapeHTML(item.pricing?.stripePriceId || item.stripePriceId || '');
 
-        const tagsHtml = tags.map(t => `
-          <a href="/tag/${t}" style="background: #e6fffa; color: #319795; font-size: 0.72rem; font-weight: bold; text-decoration: none; padding: 2px 6px; border-radius: 4px;" class="tag-chip">🏷️ ${t}</a>
-        `).join(' ');
+        const tagsHtml = tags.map(t => {
+          const safeTag = escapeHTML(t);
+          return `<a href="/tag/${safeTag}" style="background: #e6fffa; color: #319795; font-size: 0.72rem; font-weight: bold; text-decoration: none; padding: 2px 6px; border-radius: 4px;" class="tag-chip">🏷️ ${safeTag}</a>`;
+        }).join(' ');
 
         // Determine stock availability badge details gracefully
         let stockQty = 12;
@@ -311,7 +340,7 @@ export async function initShopPage() {
             <div style="padding: 1.25rem; display: flex; flex-direction: column; flex-grow: 1;">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
                 <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--theme-color-primary, #2b6cb0); letter-spacing: 0.5px; background: #ebf8ff; padding: 2px 8px; border-radius: 12px;">
-                  ${item.category}
+                  ${category}
                 </span>
                 <div>${alertBadge}</div>
               </div>
@@ -334,7 +363,7 @@ export async function initShopPage() {
                   <span style="font-size: 1.4rem; font-weight: 900; color: var(--theme-color-text-primary, #1a202c);">$${price.toFixed(2)}</span>
 
                   <div style="display: flex; gap: 0.5rem; width: 100%; margin-top: 0.5rem;">
-                    <button class="btn-primary btn-add-product-cart" data-id="${id}" data-price="${price}" data-name="${title}" data-stripe-price-id="${item.pricing?.stripePriceId || item.stripePriceId || ''}"
+                    <button class="btn-primary btn-add-product-cart" data-id="${id}" data-price="${price}" data-name="${title}" data-stripe-price-id="${stripePriceId}"
                             style="flex: 1; padding: 10px 12px; font-size: 0.85rem; font-weight: bold; border-radius: 6px; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; cursor: pointer; transition: background 0.2s;">
                       [ Add to Cart ]
                     </button>
