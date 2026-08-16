@@ -1,9 +1,10 @@
 // pages/events/events.js
 import { contentDB } from '../../core/db.js';
-import { eventCart } from '../../utils/eventCart.js';
+import { eventCart, universalCart } from '../../utils/eventCart.js';
 import { store } from '../../core/store.js';
 import { toast } from '../../utils/toast.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { i18n } from '../../core/i18n.js';
 
 let currentActiveEvent = null;
 
@@ -480,7 +481,8 @@ function renderCart() {
   document.getElementById('cart-lbl-total').textContent = `$${summary.total.toFixed(2)}`;
 
   if (items.length === 0) {
-    container.innerHTML = `<p style="color: #a0aec0; text-align: center; margin-top: 3rem; font-style: italic;">Your registration cart is empty.</p>`;
+    const emptyTxt = i18n.translateText("Your Shopping Cart is Empty");
+    container.innerHTML = `<p style="color: #a0aec0; text-align: center; margin-top: 3rem; font-style: italic;">${emptyTxt}</p>`;
     return;
   }
 
@@ -489,7 +491,19 @@ function renderCart() {
     let labelColor = 'var(--theme-color-primary, #2b6cb0)';
     let labelBg = '#ebf8ff';
 
-    if (item.type === 'vendor_booth') {
+    if (item.type === 'product') {
+      typeLabel = 'Product';
+      labelColor = '#2b6cb0';
+      labelBg = '#ebf8ff';
+    } else if (item.type === 'book') {
+      typeLabel = 'Book';
+      labelColor = '#d69e2e';
+      labelBg = '#fefcbf';
+    } else if (item.type === 'education') {
+      typeLabel = 'Course';
+      labelColor = '#3182ce';
+      labelBg = '#ebf8ff';
+    } else if (item.type === 'vendor_booth') {
       typeLabel = 'Exhibitor Space';
       labelColor = '#319795';
       labelBg = '#e6fffa';
@@ -497,6 +511,10 @@ function renderCart() {
       typeLabel = 'Sponsor Tier';
       labelColor = '#805ad5';
       labelBg = '#faf5ff';
+    } else if (item.type === 'consultation') {
+      typeLabel = 'Consultation';
+      labelColor = '#dd6b20';
+      labelBg = '#feebc8';
     }
 
     return `
@@ -588,7 +606,7 @@ function setupEventListeners() {
   document.getElementById('btn-cart-checkout')?.addEventListener('click', async () => {
     const summary = eventCart.getCartSummary();
     if (summary.items.length === 0) {
-      toast.warning('Your registration cart is empty!');
+      toast.warning(i18n.translateText('Your Shopping Cart is Empty'));
       return;
     }
 
@@ -627,7 +645,7 @@ function setupEventListeners() {
       if (summary.tax > 0) {
         lineItems.push({
           amount: Math.round(summary.tax * 100),
-          name: 'Event Tax (8.25%)',
+          name: i18n.translateText('Estimated Tax'),
           quantity: 1,
           currency: 'USD'
         });
@@ -636,7 +654,7 @@ function setupEventListeners() {
       if (summary.serviceFee > 0) {
         lineItems.push({
           amount: Math.round(summary.serviceFee * 100),
-          name: 'Processing Fee',
+          name: i18n.translateText('Platform Service Fee'),
           quantity: 1,
           currency: 'USD'
         });

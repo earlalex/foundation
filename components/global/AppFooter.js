@@ -1,10 +1,25 @@
 // components/global/AppFooter.js - Custom Web Component for Global Website Footer
 import { configManager } from '../../core/config.js';
 import { FRAMEWORK_AFFILIATES } from '../../core/affiliates.js';
+import { i18n } from '../../core/i18n.js';
 
 export class AppFooter extends HTMLElement {
+  constructor() {
+    super();
+    this.onLangChange = () => {
+      this.render();
+    };
+  }
+
   connectedCallback() {
+    window.addEventListener('language-changed', this.onLangChange);
+    window.addEventListener('languageChanged', this.onLangChange);
     this.render();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener('language-changed', this.onLangChange);
+    window.removeEventListener('languageChanged', this.onLangChange);
   }
 
   render() {
@@ -16,6 +31,17 @@ export class AppFooter extends HTMLElement {
     const cloudflareUrl = FRAMEWORK_AFFILIATES.cloudflare?.url || 'https://pages.cloudflare.com/';
     const stripeUrl = FRAMEWORK_AFFILIATES.stripe?.url || 'https://stripe.com/';
     const googleUrl = FRAMEWORK_AFFILIATES.googleWorkspace?.url || 'https://workspace.google.com/';
+
+    // Translated strings
+    const legalPoliciesTxt = i18n.translateText("Legal & Policies");
+    const termsTxt = i18n.translateText("Terms of Use");
+    const privacyTxt = i18n.translateText("Privacy Policy");
+    const cookieTxt = i18n.translateText("Cookie Settings");
+    const newsletterTitleTxt = i18n.translateText("Subscribe to our newsletter");
+    const newsletterSubtitleTxt = i18n.translateText("Subscribe to our newsletter for exclusive updates.");
+    const emailPlaceholderTxt = i18n.translateText("Your Email Address");
+    const subscribeBtnTxt = i18n.translateText("Subscribe");
+    const followUsTxt = i18n.translateText("Follow Us");
 
     this.innerHTML = `
       <style>
@@ -140,24 +166,24 @@ export class AppFooter extends HTMLElement {
 
           <!-- Column 2: Legal & Policies -->
           <div class="footer-col">
-            <h5 class="footer-col-title">Legal & Policies</h5>
+            <h5 class="footer-col-title">${legalPoliciesTxt}</h5>
             <ul class="footer-links-list">
-              <li><a href="${footerCfg.termsUrl || '/terms'}" data-link>Terms of Use</a></li>
-              <li><a href="${footerCfg.privacyUrl || '/privacy'}" data-link>Privacy Policy</a></li>
-              <li><a href="${footerCfg.cookiesUrl || '/cookies'}" data-link>Cookie Settings</a></li>
+              <li><a href="${footerCfg.termsUrl || '/terms'}" data-link>${termsTxt}</a></li>
+              <li><a href="${footerCfg.privacyUrl || '/privacy'}" data-link>${privacyTxt}</a></li>
+              <li><a href="${footerCfg.cookiesUrl || '/cookies'}" data-link>${cookieTxt}</a></li>
             </ul>
           </div>
 
           <!-- Column 3: Newsletter Subscription -->
           <div class="footer-col">
-            <h5 class="footer-col-title">Newsletter</h5>
-            <p class="footer-text">Subscribe to our newsletter for exclusive updates.</p>
+            <h5 class="footer-col-title">${newsletterTitleTxt}</h5>
+            <p class="footer-text">${newsletterSubtitleTxt}</p>
             <form id="footer-newsletter-form" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
               <div style="display: flex; gap: 0.25rem;">
                 <input 
                   type="email" 
                   id="footer-newsletter-email" 
-                  placeholder="Your Email Address" 
+                  placeholder="${emailPlaceholderTxt}"
                   required 
                   style="flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--theme-color-border, #cbd5e0); border-radius: var(--theme-layout-border-radius, 6px); font-size: 0.85rem; color: var(--theme-color-text-primary, #1a202c);" 
                 />
@@ -167,7 +193,7 @@ export class AppFooter extends HTMLElement {
                   disabled 
                   style="padding: 10px 16px; background: var(--theme-color-primary, #2b6cb0); color: #ffffff; border: none; border-radius: var(--theme-layout-border-radius, 6px); font-weight: bold; font-size: 0.85rem; cursor: not-allowed; opacity: 0.5; transition: all 0.2s;"
                 >
-                  Subscribe
+                  ${subscribeBtnTxt}
                 </button>
               </div>
               <label style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.75rem; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); line-height: 1.3;">
@@ -179,7 +205,7 @@ export class AppFooter extends HTMLElement {
 
           <!-- Column 4: Social Media Links -->
           <div class="footer-col">
-            <h5 class="footer-col-title">Follow Us</h5>
+            <h5 class="footer-col-title">${followUsTxt}</h5>
             <div class="social-links-row">
               <a href="https://x.com" target="_blank" class="social-icon-btn" aria-label="Twitter/X">
                 <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 7.75 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.285L1.254 2.25h6.81l4.7 6.223zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>

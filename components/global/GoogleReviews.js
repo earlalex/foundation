@@ -1,5 +1,6 @@
 // components/global/GoogleReviews.js
 import { configManager } from '../../core/config.js';
+import { i18n } from '../../core/i18n.js';
 
 export class GoogleReviews extends HTMLElement {
   static get observedAttributes() {
@@ -11,6 +12,14 @@ export class GoogleReviews extends HTMLElement {
     this.placeId = "ChIJN1t_tDeuEmsRUsoyG83frY4"; // Default place ID
     this.limit = 5;
     this.theme = "light";
+    this.onLangChange = () => {
+      this.render();
+      if (this.currentData) {
+        this.renderReviewsList(this.currentData);
+      } else {
+        this.loadReviews();
+      }
+    };
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -25,8 +34,17 @@ export class GoogleReviews extends HTMLElement {
     this.placeId = this.getAttribute('place-id') || this.placeId;
     this.limit = parseInt(this.getAttribute('limit'), 10) || this.limit;
     this.theme = this.getAttribute('theme') === 'dark' ? 'dark' : 'light';
+
+    window.addEventListener('language-changed', this.onLangChange);
+    window.addEventListener('languageChanged', this.onLangChange);
+
     this.render();
     this.loadReviews();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener('language-changed', this.onLangChange);
+    window.removeEventListener('languageChanged', this.onLangChange);
   }
 
   async loadReviews() {
@@ -88,13 +106,15 @@ export class GoogleReviews extends HTMLElement {
         ...(apiData.reviews || [])
       ];
 
-      this.renderReviewsList({
+      this.currentData = {
         rating: apiData.rating || 4.9,
         userRatingCount: (apiData.userRatingCount || 142) + dbReviews.length + (aiReviews.length || 0),
         reviews: combinedReviews
-      });
+      };
+      this.renderReviewsList(this.currentData);
     } catch (e) {
       console.warn("[GoogleReviews Component]: Failed to load DB/AI reviews, falling back to basic data:", e);
+      this.currentData = apiData;
       this.renderReviewsList(apiData);
     }
   }
@@ -108,12 +128,15 @@ export class GoogleReviews extends HTMLElement {
     const count = data.userRatingCount || 100;
     const stars = "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
 
+    const basedOnTxt = i18n.translateText("Based on");
+    const googleRevTxt = i18n.translateText("Google reviews");
+
     if (ratingSummary) {
       ratingSummary.innerHTML = `
         <div style="font-size: 2.25rem; font-weight: 800; color: ${this.theme === 'dark' ? '#f6e05e' : '#dd6b20'}; line-height: 1;">${rating.toFixed(1)}</div>
         <div style="margin-left: 0.75rem;">
           <div style="color: #f6e05e; font-size: 1.15rem; letter-spacing: 1px;">${stars}</div>
-          <div style="font-size: 0.8rem; color: ${this.theme === 'dark' ? '#a0aec0' : '#718096'}; font-weight: 600;">Based on ${count} Google reviews</div>
+          <div style="font-size: 0.8rem; color: ${this.theme === 'dark' ? '#a0aec0' : '#718096'}; font-weight: 600;">${basedOnTxt} ${count} ${googleRevTxt}</div>
         </div>
       `;
     }
@@ -149,6 +172,9 @@ export class GoogleReviews extends HTMLElement {
   }
 
   render() {
+    const leaveRevTxt = i18n.translateText("Leave a Google Review");
+    const loadingTxt = i18n.translateText("Loading reviews...");
+
     this.innerHTML = `
       <section class="google-reviews-showcase" style="
         background: ${this.theme === 'dark' ? '#1a202c' : '#f7fafc'};
@@ -165,7 +191,7 @@ export class GoogleReviews extends HTMLElement {
             <div style="font-size: 2.25rem; font-weight: 800; color: #cbd5e0; line-height: 1;">--</div>
             <div style="margin-left: 0.75rem;">
               <div style="color: #cbd5e0; font-size: 1.15rem;">★★★★★</div>
-              <div style="font-size: 0.8rem; color: #a0aec0;">Loading reviews...</div>
+              <div style="font-size: 0.8rem; color: #a0aec0;">${loadingTxt}</div>
             </div>
           </div>
           <a href="https://search.google.com/local/writereview?placeid=${encodeURIComponent(this.placeId)}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="
@@ -183,7 +209,7 @@ export class GoogleReviews extends HTMLElement {
             box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2);
             transition: background-color 0.2s;
           ">
-            <span>📝</span> Leave a Google Review
+            <span>📝</span> ${leaveRevTxt}
           </a>
         </div>
 
