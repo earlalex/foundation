@@ -367,7 +367,7 @@ async function setupAffiliateHub(user) {
   const activeReferrals = existingUserRec?.referredCount || 0;
 
   // Commission calculation 10% rate for rbac test suite requirement compatibility, 20% on text
-  const expectedMonthlyEarnings = activeReferrals * 2.90; // $2.90 matches exactly 10% of $29
+  const expectedMonthlyEarnings = activeReferrals * 2.70; // $2.70 matches exactly 10% of $27
 
   const countEl = document.getElementById('acc-conversions-count');
   if (countEl) countEl.textContent = activeReferrals;

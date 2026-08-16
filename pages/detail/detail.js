@@ -279,7 +279,7 @@ async function initializeCurriculumPlayer(course, resumeParam) {
             This lesson is restricted to active <strong>${lesson.requiredRole.toUpperCase()}</strong> users. Upgrade your membership tier to immediately unlock this content pathway.
           </p>
           <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button id="btn-upgrade-lesson-gate" class="btn-primary" style="padding: 10px 24px; font-weight: bold; background: #38a169;">Upgrade Plan ($29/mo)</button>
+            <button id="btn-upgrade-lesson-gate" class="btn-primary" style="padding: 10px 24px; font-weight: bold; background: #38a169;">Upgrade Plan ($27/mo)</button>
             <button id="btn-login-lesson-gate" class="btn-secondary" style="padding: 10px 24px; border: 1px solid #cbd5e0; background: white; cursor: pointer; border-radius: 6px; font-weight: bold;">Sign In</button>
           </div>
         </div>

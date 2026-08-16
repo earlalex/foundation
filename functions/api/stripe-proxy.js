@@ -417,14 +417,14 @@ function handleSimulatedAction(action, body) {
         id: `in_sim_${Date.now()}`,
         object: 'invoice',
         customer: body.customerId || 'cus_sim_123',
-        amount_due: 2900,
-        amount_paid: 2900,
+        amount_due: 2700,
+        amount_paid: 2700,
         currency: 'usd',
         status: 'paid',
         invoice_pdf: 'https://stripe.com/invoice.pdf',
         hosted_invoice_url: 'https://stripe.com/invoice-link',
         collection_method: 'send_invoice',
-        lines: { data: [{ amount: 2900, description: 'Simulated Charge' }] }
+        lines: { data: [{ amount: 2700, description: 'Simulated Charge' }] }
       }), { headers: { 'Content-Type': 'application/json' } });
 
     case 'list_customer_invoices':
@@ -434,8 +434,8 @@ function handleSimulatedAction(action, body) {
           {
             id: 'in_sim_001',
             object: 'invoice',
-            total: 2900,
-            amount_paid: 2900,
+            total: 2700,
+            amount_paid: 2700,
             currency: 'usd',
             status: 'paid',
             invoice_pdf: 'https://stripe.com/invoice.pdf',
@@ -454,13 +454,13 @@ function handleSimulatedAction(action, body) {
 
     case 'retrieve_live_revenue_stats':
       return new Response(JSON.stringify({
-        totalGross: 145.00,
+        totalGross: 135.00,
         paidInvoicesCount: 5,
         pendingInvoicesCount: 2,
-        pendingAmount: 58.00,
+        pendingAmount: 54.00,
         failedPaymentsCount: 1,
-        failedAmount: 29.00,
-        mrr: 116.00
+        failedAmount: 27.00,
+        mrr: 108.00
       }), { headers: { 'Content-Type': 'application/json' } });
 
     case 'generic_relay':
