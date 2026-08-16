@@ -767,30 +767,8 @@ async function loadRoyaltySplitsDashboard(user) {
   tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">Loading royalty logs...</td></tr>`;
 
   try {
-    const { getAllEarnings, logRoyaltyEarning } = await import('../core/royalties.js');
-    let earnings = await getAllEarnings();
-
-    // Seed mock high fidelity earnings if list is empty, to provide a polished out-of-the-box experience
-    if (earnings.length === 0) {
-      // Create custom splits first for mock products
-      const { saveAssetSplits } = await import('../core/royalties.js');
-      const splitsMock = [
-        { userId: user.email, userEmail: user.email, role: 'Designer / Creator', percentage: 40 },
-        { userId: 'admin@earlalex.com', userEmail: 'admin@earlalex.com', role: 'Publisher', percentage: 60 }
-      ];
-      await saveAssetSplits('sovereign-botanical-oil', 'merchandise', splitsMock);
-
-      const splitsMock2 = [
-        { userId: user.email, userEmail: user.email, role: 'Editor / Producer', percentage: 30 },
-        { userId: 'admin@earlalex.com', userEmail: 'admin@earlalex.com', role: 'Publisher', percentage: 70 }
-      ];
-      await saveAssetSplits('foundation-merch-hoodie', 'merchandise', splitsMock2);
-
-      // Log mock earnings
-      await logRoyaltyEarning('sovereign-botanical-oil', 'merchandise', 120.00, 'Sales allocation batch #1');
-      await logRoyaltyEarning('foundation-merch-hoodie', 'merchandise', 85.00, 'Sales allocation batch #2');
-      earnings = await getAllEarnings();
-    }
+    const { getAllEarnings } = await import('../core/royalties.js');
+    const earnings = await getAllEarnings();
 
     // Filter allocations where user has split distribution matching user.email
     const userAllocations = [];

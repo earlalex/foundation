@@ -1,5 +1,6 @@
 // components/global/CryptoCheckout.js - Web3 Crypto Checkout Component
 import { store } from '../../core/store.js';
+import { configManager } from '../../core/config.js';
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
 import { detectWallets, connectEVMWallet, connectSolanaWallet, signMessage, formatAddress } from '../../core/crypto.js';
@@ -89,10 +90,39 @@ class CryptoCheckout extends HTMLElement {
       payButton.textContent = 'Processing Web3 Transfer...';
     }
 
-    // Simulate blockchain transaction latency
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    let txHash = null;
 
-    const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+    try {
+      // 1. Submit actual blockchain transfer if a Web3 wallet provider is connected
+      if (this.walletType === 'evm' && window.ethereum) {
+        // Request EVM eth_sendTransaction or ERC20 transfer
+        const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '0x0000000000000000000000000000000000000000';
+        const hexAmount = '0x' + Math.floor(parseFloat(this.cryptoEquivalent) * 1e18).toString(16);
+
+        txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: this.activeWallet,
+            to: recipient,
+            value: this.selectedCurrency === 'ETH' ? hexAmount : '0x0'
+          }]
+        });
+      } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
+        // Phantom transaction signature request
+        const res = await window.solana.signAndSendTransaction();
+        txHash = res.signature;
+      }
+    } catch (err) {
+      toast.error(`Blockchain transaction failed or rejected: ${err.message || err}`);
+      return;
+    }
+
+    // Require valid transaction hash returned from wallet provider
+    if (!txHash) {
+      toast.error('Transaction failed: No confirmed on-chain transaction signature returned by wallet provider.');
+      return;
+    }
+
     const email = this.buyerEmail || store.state.user?.email || 'web3_buyer_' + this.activeWallet.substring(2, 8) + '@example.com';
     const uid = store.state.user?.uid || 'guest_web3';
 

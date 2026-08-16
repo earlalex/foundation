@@ -422,10 +422,25 @@ window.addEventListener('pageLoaded', (e) => {
   const isConfigured = configManager.current.isInstalled === true;
   if (!isConfigured && !window.__FOUNDATION_DEV_BYPASS__) return;
 
+  // Execute active route cleanup if previously registered
+  if (window.__FOUNDATION_ROUTE_CLEANUP__) {
+    try {
+      window.__FOUNDATION_ROUTE_CLEANUP__();
+    } catch (cleanupErr) {
+      console.warn('[Router Cleanup Error]:', cleanupErr);
+    }
+    window.__FOUNDATION_ROUTE_CLEANUP__ = null;
+  }
+
   if (e.detail.path === '/home') {
     initHomePage();
   } else if (e.detail.path === '/docs') {
-    import('./pages/docs/docs.js').then(m => m.initDocsPage());
+    import('./pages/docs/docs.js').then(m => {
+      const cleanup = m.initDocsPage();
+      if (typeof cleanup === 'function') {
+        window.__FOUNDATION_ROUTE_CLEANUP__ = cleanup;
+      }
+    });
   } else if (e.detail.path === '/about') {
     import('./pages/about/about.js').then(m => m.initAboutPage());
   } else if (e.detail.path === '/gallery') {
