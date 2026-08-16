@@ -593,7 +593,7 @@ export class VideoStreamPlayer extends HTMLElement {
         <div class="paywall-overlay" id="paywall-gate">
           <div class="paywall-lock">🔒</div>
           <div class="paywall-prompt">Preview Time Limit Reached</div>
-          <div class="paywall-subtext">Upgrade to Member ($29/mo) to unlock the full video stream, including live event feeds and masterminds.</div>
+          <div class="paywall-subtext">Upgrade to Member ($27/mo) to unlock the full video stream, including live event feeds and masterminds.</div>
           <button class="btn-primary" id="btn-paywall-upgrade" style="padding: 10px 24px; font-weight: bold; font-size: 0.9rem;">Upgrade Instantly</button>
         </div>
 

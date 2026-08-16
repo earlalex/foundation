@@ -218,9 +218,18 @@ export async function onRequestPost(context) {
       params.append('line_items[0][quantity]', '1');
     } else {
       // Default: Create Checkout Session for membership price
-      const fallbackPriceId = env.STRIPE_PRICE_ID || env.STRIPE_MEMBERSHIP_PRICE_ID || 'price_1234567890';
-      params.append('line_items[0][price]', fallbackPriceId);
-      params.append('line_items[0][quantity]', '1');
+      const fallbackPriceId = env.STRIPE_PRICE_ID || env.STRIPE_MEMBERSHIP_PRICE_ID;
+      if (fallbackPriceId) {
+        params.append('line_items[0][price]', fallbackPriceId);
+        params.append('line_items[0][quantity]', '1');
+      } else {
+        // Default inline subscription pricing: 2700 ($27.00/mo in cents)
+        params.append('line_items[0][price_data][unit_amount]', '2700');
+        params.append('line_items[0][price_data][currency]', 'usd');
+        params.append('line_items[0][price_data][product_data][name]', 'Platform Monthly Membership');
+        params.append('line_items[0][price_data][recurring][interval]', 'month');
+        params.append('line_items[0][quantity]', '1');
+      }
     }
 
     const finalSuccessUrl = successUrl || `${domain}/account?session_id={CHECKOUT_SESSION_ID}&payment=success`;
