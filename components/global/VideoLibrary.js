@@ -73,12 +73,52 @@ export class VideoLibrary extends HTMLElement {
     this.activeVideo = this.videos[0];
   }
 
+  escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  sanitizeUrl(url) {
+    if (!url) return '';
+    const trimmed = String(url).trim();
+    if (
+      trimmed.startsWith('/') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('blob:') ||
+      trimmed.startsWith('data:image/')
+    ) {
+      return this.escapeHTML(trimmed);
+    }
+    return '';
+  }
+
   render() {
-    const categories = ['all', ...new Set(this.videos.map(v => v.category))];
+    const escapeHTML = this.escapeHTML;
+    const sanitizeUrl = this.sanitizeUrl.bind(this);
+
+    const categories = ['all', ...new Set(this.videos.map(v => v.category).filter(Boolean))];
 
     const filteredVideos = this.activeCategory === 'all'
       ? this.videos
       : this.videos.filter(v => v.category === this.activeCategory);
+
+    const activeVid = {
+      id: escapeHTML(this.activeVideo?.id || ''),
+      title: escapeHTML(this.activeVideo?.title || ''),
+      description: escapeHTML(this.activeVideo?.description || ''),
+      url: sanitizeUrl(this.activeVideo?.url || ''),
+      category: escapeHTML(this.activeVideo?.category || ''),
+      duration: escapeHTML(this.activeVideo?.duration || ''),
+      views: escapeHTML(this.activeVideo?.views || 0),
+      thumbnail: sanitizeUrl(this.activeVideo?.thumbnail || ''),
+      isLive: !!this.activeVideo?.isLive
+    };
 
     this.innerHTML = `
       <style>
@@ -281,39 +321,51 @@ export class VideoLibrary extends HTMLElement {
         <div>
           <!-- Custom Video Stream Player component -->
           <div class="spotlight-card">
-            <video-stream-player id="main-player" video-id="${this.activeVideo.id}" video-url="${this.activeVideo.url}" video-title="${this.activeVideo.title}"></video-stream-player>
+            <video-stream-player id="main-player" video-id="${activeVid.id}" video-url="${activeVid.url}" video-title="${activeVid.title}"></video-stream-player>
             <div class="spotlight-info">
-              <h2 class="spotlight-title">${this.activeVideo.title}</h2>
-              <p class="spotlight-desc">${this.activeVideo.description}</p>
+              <h2 class="spotlight-title">${activeVid.title}</h2>
+              <p class="spotlight-desc">${activeVid.description}</p>
             </div>
           </div>
 
           <!-- Category Filter Pills -->
           <div class="category-pills">
-            ${categories.map(cat => `
-              <button class="category-pill ${this.activeCategory === cat ? 'active' : ''}" data-category="${cat}">
-                ${cat.charAt(0).toUpperCase() + cat.slice(1)}
+            ${categories.map(cat => {
+              const safeCat = escapeHTML(cat);
+              const displayCat = safeCat.charAt(0).toUpperCase() + safeCat.slice(1);
+              return `
+              <button class="category-pill ${this.activeCategory === cat ? 'active' : ''}" data-category="${safeCat}">
+                ${displayCat}
               </button>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
 
           <!-- Filtered Video Feed -->
           <div class="video-grid">
-            ${filteredVideos.map(vid => `
-              <div class="video-card" data-id="${vid.id}">
+            ${filteredVideos.map(vid => {
+              const safeId = escapeHTML(vid.id || '');
+              const safeTitle = escapeHTML(vid.title || '');
+              const safeCategory = escapeHTML(vid.category || '');
+              const safeDuration = escapeHTML(vid.duration || '');
+              const safeViews = escapeHTML(vid.views || 0);
+              const safeThumb = sanitizeUrl(vid.thumbnail || '');
+              return `
+              <div class="video-card" data-id="${safeId}">
                 <div class="thumb-wrapper">
-                  <img class="thumb-img" src="${vid.thumbnail}" alt="${vid.title}" />
-                  ${vid.isLive ? `<span class="live-badge">Live</span>` : `<span class="duration-badge">${vid.duration}</span>`}
+                  <img class="thumb-img" src="${safeThumb}" alt="${safeTitle}" />
+                  ${vid.isLive ? `<span class="live-badge">Live</span>` : `<span class="duration-badge">${safeDuration}</span>`}
                 </div>
                 <div class="video-info">
-                  <h4 class="video-title">${vid.title}</h4>
+                  <h4 class="video-title">${safeTitle}</h4>
                   <div class="video-meta">
-                    <span>👁️ ${vid.views} Views</span>
-                    <span>${vid.category}</span>
+                    <span>👁️ ${safeViews} Views</span>
+                    <span>${safeCategory}</span>
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
 
@@ -321,18 +373,25 @@ export class VideoLibrary extends HTMLElement {
         <div class="sidebar-playlist">
           <h3 class="sidebar-playlist-title">Up Next</h3>
           <div class="playlist-items">
-            ${this.videos.map(vid => `
-              <div class="playlist-item ${this.activeVideo.id === vid.id ? 'active' : ''}" data-id="${vid.id}">
-                <img class="playlist-thumb" src="${vid.thumbnail}" alt="${vid.title}" />
+            ${this.videos.map(vid => {
+              const safeId = escapeHTML(vid.id || '');
+              const safeTitle = escapeHTML(vid.title || '');
+              const safeDuration = escapeHTML(vid.duration || '');
+              const safeViews = escapeHTML(vid.views || 0);
+              const safeThumb = sanitizeUrl(vid.thumbnail || '');
+              return `
+              <div class="playlist-item ${this.activeVideo?.id === vid.id ? 'active' : ''}" data-id="${safeId}">
+                <img class="playlist-thumb" src="${safeThumb}" alt="${safeTitle}" />
                 <div class="playlist-details">
-                  <h4 class="playlist-item-title">${vid.title}</h4>
+                  <h4 class="playlist-item-title">${safeTitle}</h4>
                   <div class="video-meta" style="font-size: 0.75rem;">
-                    <span>👁️ ${vid.views}</span>
-                    <span>${vid.isLive ? 'LIVE' : vid.duration}</span>
+                    <span>👁️ ${safeViews}</span>
+                    <span>${vid.isLive ? 'LIVE' : safeDuration}</span>
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
       </div>
