@@ -3,8 +3,8 @@ from playwright.sync_api import sync_playwright
 
 def run_cuj(page):
     # Ensure screenshots and videos directories exist
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
+    os.makedirs("verification/screenshots", exist_ok=True)
+    os.makedirs("verification/videos", exist_ok=True)
 
     page.on("console", lambda msg: print(f"[BROWSER] {msg.text}"))
     page.on("pageerror", lambda err: print(f"[BROWSER ERROR] {err}"))
@@ -54,7 +54,7 @@ def run_cuj(page):
         page.wait_for_timeout(1000)
 
         # Take screenshot of the navbar with Admin Dashboard visible
-        screenshot_path = "/home/jules/verification/screenshots/verification.png"
+        screenshot_path = "verification/screenshots/verification.png"
         page.screenshot(path=screenshot_path)
         print(f"Screenshot taken at {screenshot_path}")
         page.wait_for_timeout(1000)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir="verification/videos"
         )
         context.add_init_script("window.__FOUNDATION_DEV_BYPASS__ = true;")
         page = context.new_page()

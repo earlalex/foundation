@@ -52,7 +52,7 @@ def run_cuj(page, context):
 
     # Take screenshot of the contact page
     print("Taking Contact page screenshot...")
-    page.screenshot(path="/home/jules/verification/screenshots/verify_contact_page.png")
+    page.screenshot(path="verification/screenshots/verify_contact_page.png")
     page.wait_for_timeout(1000)
 
     print("Navigating to Admin SPA route...")
@@ -77,16 +77,16 @@ def run_cuj(page, context):
 
     # Take screenshot of the admin panel
     print("Taking Admin page screenshot...")
-    page.screenshot(path="/home/jules/verification/screenshots/verify_admin_configurator.png")
+    page.screenshot(path="verification/screenshots/verify_admin_configurator.png")
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs("verification/videos", exist_ok=True)
+    os.makedirs("verification/screenshots", exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir="verification/videos"
         )
         page = context.new_page()
         try:

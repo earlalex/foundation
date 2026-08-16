@@ -20,7 +20,7 @@ def run_cuj(page):
     else:
         print("Setup wizard not visible.")
 
-    page.screenshot(path="/home/jules/verification/screenshots/verification4.png")
+    page.screenshot(path="verification/screenshots/verification4.png")
 
 if __name__ == "__main__":
     with sync_playwright() as p:

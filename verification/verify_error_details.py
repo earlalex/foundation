@@ -1,4 +1,4 @@
-# /home/jules/verification/verify_error_details.py
+# verification/verify_error_details.py
 from playwright.sync_api import sync_playwright
 
 def run_cuj(page):

@@ -5,7 +5,7 @@ async def run_cuj():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir="verification/videos"
         )
         page = await context.new_page()
 
@@ -33,7 +33,7 @@ async def run_cuj():
                 await page.wait_for_timeout(800)
 
             # Take screenshot
-            await page.screenshot(path="/home/jules/verification/screenshots/verification.png")
+            await page.screenshot(path="verification/screenshots/verification.png")
             await page.wait_for_timeout(1000)
         finally:
             await context.close()
