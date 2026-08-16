@@ -17,9 +17,9 @@ export class VideoLibrary extends HTMLElement {
   }
 
   loadVideos() {
-    // Check if there are configured videos or fall back to beautiful seed content
+    // Check if there are configured videos or fall back to seed content if unconfigured
     const customVideos = configManager.current.media?.videos;
-    if (customVideos && customVideos.length > 0) {
+    if (Array.isArray(customVideos)) {
       this.videos = customVideos;
     } else {
       this.videos = [
@@ -70,7 +70,7 @@ export class VideoLibrary extends HTMLElement {
       ];
     }
 
-    this.activeVideo = this.videos[0];
+    this.activeVideo = this.videos.length > 0 ? this.videos[0] : null;
   }
 
   escapeHTML(str) {
@@ -101,6 +101,17 @@ export class VideoLibrary extends HTMLElement {
   render() {
     const escapeHTML = this.escapeHTML;
     const sanitizeUrl = this.sanitizeUrl.bind(this);
+
+    if (this.videos.length === 0) {
+      this.innerHTML = `
+        <div style="text-align: center; padding: 4rem 2rem; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 12px); margin-top: 1.5rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🎬</div>
+          <h3 style="font-size: 1.25rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 0.5rem 0;">No Videos Available</h3>
+          <p style="color: var(--theme-color-text-secondary, #718096); font-size: 0.95rem; margin: 0;">There are currently no videos published in the video library.</p>
+        </div>
+      `;
+      return;
+    }
 
     const categories = ['all', ...new Set(this.videos.map(v => v.category).filter(Boolean))];
 
