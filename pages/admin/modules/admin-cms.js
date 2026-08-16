@@ -1,7 +1,7 @@
 // pages/admin/modules/admin-cms.js
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
-import { getAssetSplits, saveAssetSplits } from '../../../core/royalties.js';
+import { getAssetSplits, saveAssetSplits, DEFAULT_ADMIN_SPLIT } from '../../../core/royalties.js';
 import { configManager } from '../../../core/config.js';
 
 let currentEditingItem = null;
