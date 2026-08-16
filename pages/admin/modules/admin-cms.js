@@ -825,6 +825,8 @@ async function renderContentManager(container) {
       { id: 'portfolio', label: 'Portfolio' },
       { id: 'sponsor', label: 'Sponsor' },
       { id: 'product', label: 'Product' },
+      { id: 'video', label: 'Video' },
+      { id: 'gallery', label: 'Gallery' },
       { id: 'page', label: 'Page' }
     ];
 

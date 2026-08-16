@@ -142,6 +142,28 @@ export class RadioStreamPlayer extends HTMLElement {
       this.isPlaying = false;
       this.updatePlayButton();
     });
+
+    this.audio.addEventListener('error', (e) => {
+      console.warn('[RadioStreamPlayer]: Audio element encountered an error loading source:', e);
+      this.isPlaying = false;
+      this.updatePlayButton();
+    });
+  }
+
+  async safePlay() {
+    if (this.audio) {
+      try {
+        await this.audio.play();
+        this.isPlaying = true;
+        this.updatePlayButton();
+      } catch (err) {
+        console.warn('[RadioStreamPlayer]: Playback failed or stream unreachable:', err.message || err);
+        this.isPlaying = false;
+        this.updatePlayButton();
+        const { toast } = await import('../../utils/toast.js');
+        toast.warning('Selected radio stream is currently offline or unreachable. Try another channel!');
+      }
+    }
   }
 
   render() {
@@ -360,12 +382,12 @@ export class RadioStreamPlayer extends HTMLElement {
     }
 
     if (playPauseBtn) {
-      playPauseBtn.onclick = () => {
+      playPauseBtn.onclick = async () => {
         if (!this.audio) return;
         if (this.isPlaying) {
           this.audio.pause();
         } else {
-          this.audio.play();
+          await this.safePlay();
         }
       };
     }
@@ -388,27 +410,27 @@ export class RadioStreamPlayer extends HTMLElement {
 
     if (playlistSelector) {
       playlistSelector.value = this.activeTrackIndex.toString();
-      playlistSelector.onchange = (e) => {
+      playlistSelector.onchange = async (e) => {
         this.activeTrackIndex = parseInt(e.target.value, 10);
         this.setupAudio();
-        this.audio.play();
+        await this.safePlay();
       };
     }
 
-    const selectNext = () => {
+    const selectNext = async () => {
       if (this.playlist.length === 0) return;
       this.activeTrackIndex = (this.activeTrackIndex + 1 + 1) % (this.playlist.length + 1) - 1;
       if (playlistSelector) playlistSelector.value = this.activeTrackIndex.toString();
       this.setupAudio();
-      this.audio.play();
+      await this.safePlay();
     };
 
-    const selectPrev = () => {
+    const selectPrev = async () => {
       if (this.playlist.length === 0) return;
       this.activeTrackIndex = (this.activeTrackIndex - 1 + this.playlist.length + 1) % (this.playlist.length + 1) - 1;
       if (playlistSelector) playlistSelector.value = this.activeTrackIndex.toString();
       this.setupAudio();
-      this.audio.play();
+      await this.safePlay();
     };
 
     if (nextBtn) nextBtn.onclick = selectNext;

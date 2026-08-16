@@ -11,12 +11,34 @@ export class VideoLibrary extends HTMLElement {
     this.activeVideo = null;
   }
 
-  connectedCallback() {
-    this.loadVideos();
+  async connectedCallback() {
+    await this.loadVideos();
     this.render();
   }
 
-  loadVideos() {
+  async loadVideos() {
+    try {
+      const { contentDB } = await import('../../core/db.js');
+      const dbVideos = await contentDB.getContentByType('video');
+      if (Array.isArray(dbVideos) && dbVideos.length > 0) {
+        this.videos = dbVideos.map(v => ({
+          id: v.id,
+          title: v.title,
+          description: v.description || '',
+          url: v.url || v.streamUrl || '',
+          category: v.category || 'General',
+          duration: v.duration || '00:00',
+          views: v.views || 0,
+          thumbnail: v.poster || v.thumbnail || 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800',
+          isLive: v.isLive || false
+        }));
+        this.activeVideo = this.videos[0];
+        return;
+      }
+    } catch (e) {
+      console.warn('[VideoLibrary]: Failed to fetch videos from contentDB', e);
+    }
+
     // Check if there are configured videos or fall back to beautiful seed content
     const customVideos = configManager.current.media?.videos;
     if (customVideos && customVideos.length > 0) {
