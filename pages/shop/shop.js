@@ -301,17 +301,18 @@ export async function initShopPage() {
         }).join(' ');
 
         // Determine stock availability badge details gracefully
-        let stockQty = 12;
-        let isTracked = true;
+        let stockQty = 0;
+        let isTracked = false;
         let isLowStock = false;
 
         if (typeof item.inventory === 'object' && item.inventory !== null) {
-          stockQty = item.inventory.stockQuantity !== undefined ? item.inventory.stockQuantity : 12;
-          isTracked = item.inventory.trackInventory !== false;
+          stockQty = item.inventory.stockQuantity !== undefined ? item.inventory.stockQuantity : 0;
+          isTracked = item.inventory.trackInventory === true;
           const threshold = item.inventory.lowStockThreshold || 3;
           isLowStock = isTracked && stockQty <= threshold;
         } else if (typeof item.inventory === 'number') {
           stockQty = item.inventory;
+          isTracked = true;
           isLowStock = stockQty <= 5;
         }
 
