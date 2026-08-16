@@ -118,11 +118,11 @@ export async function onRequestPost(context) {
       params.append('customer_email', targetEmail);
     }
 
-    // Process items or lineItems payload from request
-    const rawItems = (Array.isArray(items) && items.length > 0)
-      ? items
-      : (Array.isArray(requestLineItems) && requestLineItems.length > 0)
-        ? requestLineItems
+    // Process items or lineItems payload from request (prioritize requestLineItems which includes calculated tax/fees)
+    const rawItems = (Array.isArray(requestLineItems) && requestLineItems.length > 0)
+      ? requestLineItems
+      : (Array.isArray(items) && items.length > 0)
+        ? items
         : null;
 
     if (rawItems) {
