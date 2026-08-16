@@ -26,7 +26,12 @@ export class RadioStreamPlayer extends HTMLElement {
       return;
     }
     document.body.classList.add('has-sticky-player');
-    this.playlist = await radioCoordinator.getRadioPlaylist();
+    try {
+      this.playlist = await radioCoordinator.getRadioPlaylist();
+    } catch (err) {
+      console.warn('[RadioStreamPlayer]: Failed to load radio playlist on connect. Falling back to empty/cached list.', err?.message || err);
+      this.playlist = [];
+    }
     this.render();
     this.setupAudio();
 
@@ -39,7 +44,7 @@ export class RadioStreamPlayer extends HTMLElement {
   disconnectedCallback() {
     document.body.classList.remove('has-sticky-player');
     if (this.unsubscribe) this.unsubscribe();
-    this.clearTeaserTimer();
+    if (typeof this.clearTeaserTimer === 'function') this.clearTeaserTimer();
     if (this.audio) {
       this.audio.pause();
       this.audio = null;
