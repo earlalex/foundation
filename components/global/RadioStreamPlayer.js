@@ -34,7 +34,13 @@ export class RadioStreamPlayer extends HTMLElement {
     window.addEventListener('language-changed', this.onLangChange);
     window.addEventListener('languageChanged', this.onLangChange);
 
-    this.playlist = await radioCoordinator.getRadioPlaylist();
+    try {
+      this.playlist = await radioCoordinator.getRadioPlaylist();
+    } catch (err) {
+      console.warn('[RadioStreamPlayer]: Failed to load radio playlist on connect. Falling back to empty/cached list.', err?.message || err);
+      this.playlist = [];
+    }
+
     this.render();
     this.setupAudio();
 
@@ -50,7 +56,7 @@ export class RadioStreamPlayer extends HTMLElement {
     window.removeEventListener('languageChanged', this.onLangChange);
 
     if (this.unsubscribe) this.unsubscribe();
-    this.clearTeaserTimer();
+    if (typeof this.clearTeaserTimer === 'function') this.clearTeaserTimer();
     if (this.audio) {
       this.audio.pause();
       this.audio = null;
