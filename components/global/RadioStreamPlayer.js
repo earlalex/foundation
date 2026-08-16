@@ -2,7 +2,7 @@
 import { store } from '../../core/store.js';
 import { configManager } from '../../core/config.js';
 import { radioCoordinator } from '../../core/radio.js';
-import { toast } from '../../utils/toast.js';
+import { i18n } from '../../core/i18n.js';
 
 export class RadioStreamPlayer extends HTMLElement {
   constructor() {
@@ -17,6 +17,10 @@ export class RadioStreamPlayer extends HTMLElement {
     };
     this.playlist = [];
     this.activeTrackIndex = -1; // -1 means playing the live feed stream
+    this.onLangChange = () => {
+      this.render();
+      this.updateUI();
+    };
   }
 
   async connectedCallback() {
@@ -26,6 +30,10 @@ export class RadioStreamPlayer extends HTMLElement {
       return;
     }
     document.body.classList.add('has-sticky-player');
+
+    window.addEventListener('language-changed', this.onLangChange);
+    window.addEventListener('languageChanged', this.onLangChange);
+
     this.playlist = await radioCoordinator.getRadioPlaylist();
     this.render();
     this.setupAudio();
@@ -38,6 +46,9 @@ export class RadioStreamPlayer extends HTMLElement {
 
   disconnectedCallback() {
     document.body.classList.remove('has-sticky-player');
+    window.removeEventListener('language-changed', this.onLangChange);
+    window.removeEventListener('languageChanged', this.onLangChange);
+
     if (this.unsubscribe) this.unsubscribe();
     this.clearTeaserTimer();
     if (this.audio) {
@@ -45,6 +56,8 @@ export class RadioStreamPlayer extends HTMLElement {
       this.audio = null;
     }
   }
+
+  clearTeaserTimer() {}
 
   getCurrentUserRole() {
     const user = store.state.user;

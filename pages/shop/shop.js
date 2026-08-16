@@ -343,10 +343,16 @@ export async function initShopPage() {
 
       // Add cart handlers
       container.querySelectorAll('.btn-add-product-cart').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
           e.preventDefault();
+          const id = e.target.getAttribute('data-id');
           const name = e.target.getAttribute('data-name');
-          toast.success(`Successfully added "${name}" to your shopping basket!`);
+          const price = parseFloat(e.target.getAttribute('data-price') || '0');
+
+          const { universalCart } = await import('../../utils/eventCart.js');
+          universalCart.addItem(null, 'product', id, 1, price, name);
+
+          toast.success(`Successfully added "${name}" to your shopping cart!`);
         });
       });
 

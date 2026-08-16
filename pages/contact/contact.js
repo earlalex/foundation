@@ -101,13 +101,17 @@ export async function initContactPage() {
 
     prevBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      calendarCurrentMonthOffset--;
-      renderSchedulingCalendar();
+      if (calendarCurrentMonthOffset > 0) {
+        calendarCurrentMonthOffset--;
+        renderSchedulingCalendar();
+      }
     });
     nextBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      calendarCurrentMonthOffset++;
-      renderSchedulingCalendar();
+      if (calendarCurrentMonthOffset < 2) {
+        calendarCurrentMonthOffset++;
+        renderSchedulingCalendar();
+      }
     });
   }
 
@@ -373,6 +377,21 @@ async function renderSchedulingCalendar() {
   const container = document.getElementById('calendar-wrapper');
   if (!container) return;
 
+  const prevBtn = document.getElementById('btn-prev-month');
+  const nextBtn = document.getElementById('btn-next-month');
+
+  // Enforce 3-month window limit (offsets 0, 1, 2)
+  if (prevBtn) {
+    prevBtn.disabled = calendarCurrentMonthOffset <= 0;
+    prevBtn.style.opacity = calendarCurrentMonthOffset <= 0 ? '0.5' : '1';
+    prevBtn.style.cursor = calendarCurrentMonthOffset <= 0 ? 'not-allowed' : 'pointer';
+  }
+  if (nextBtn) {
+    nextBtn.disabled = calendarCurrentMonthOffset >= 2;
+    nextBtn.style.opacity = calendarCurrentMonthOffset >= 2 ? '0.5' : '1';
+    nextBtn.style.cursor = calendarCurrentMonthOffset >= 2 ? 'not-allowed' : 'pointer';
+  }
+
   const apptConfig = configManager.current?.appointments || {
     operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
     operatingHours: { start: "09:00", end: "17:00" },
@@ -384,14 +403,13 @@ async function renderSchedulingCalendar() {
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
 
-  // Detect Mobile width to render either 1 month (paginated) or 3 months (full desktop)
-  const isMobile = window.innerWidth < 768;
-  const totalMonthsToShow = isMobile ? 1 : 3;
+  // Display exactly 1 month at a time to prevent vertical layout clutter
+  const totalMonthsToShow = 1;
 
   const rangeStartDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset, 1);
-  const rangeEndDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset + totalMonthsToShow, 0);
+  const rangeEndDate = new Date(currentYear, currentMonth + calendarCurrentMonthOffset + 1, 0, 23, 59, 59);
 
-  // Fetch real-time Google Calendar freeBusy intervals across the 3-month range
+  // Fetch real-time Google Calendar freeBusy intervals for the displayed month
   let busyIntervals = [];
   try {
     busyIntervals = await getFreeBusyIntervalsForRange(rangeStartDate.toISOString(), rangeEndDate.toISOString());

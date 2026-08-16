@@ -2,6 +2,7 @@
 import { store } from '../../core/store.js';
 import { configManager } from '../../core/config.js';
 import { themeEngine } from '../../core/theme.js';
+import { i18n } from '../../core/i18n.js';
 
 /**
  * Initializes the global navigation header container (#global-header)
@@ -12,6 +13,13 @@ export function initNavbar() {
     if (!headerContainer) return;
 
     const siteTitle = configManager.current?.siteTitle || 'Foundation';
+
+    // Translations
+    const contrastTxt = i18n.translateText("Contrast");
+    const profileTxt = i18n.translateText("My Profile");
+    const adminTxt = i18n.translateText("Admin Dashboard");
+    const authTxt = store.state.user ? i18n.translateText("Sign Out") : i18n.translateText("Sign In");
+    const cartTxt = i18n.translateText("Cart");
 
     headerContainer.innerHTML = `
       <style>
@@ -122,7 +130,7 @@ export function initNavbar() {
 
           <!-- Accessible High-Contrast Toggle -->
           <button id="nav-high-contrast-toggle" class="nav-link" style="background: transparent; border: none; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.85rem;" aria-label="Toggle High Contrast Mode">
-            🌓 Contrast
+            🌓 ${contrastTxt}
           </button>
 
           <!-- Multi-Language Selector Dropdown -->
@@ -137,14 +145,14 @@ export function initNavbar() {
           </select>
 
           <!-- My Profile / Account Link -->
-          <a href="/account" id="nav-profile-link" class="nav-link" data-path="/account" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; display: none;">My Profile</a>
+          <a href="/account" id="nav-profile-link" class="nav-link" data-path="/account" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; display: none;">${profileTxt}</a>
 
           <!-- Admin Dashboard Link -->
-          <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; background: #ebf8ff; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">Admin Dashboard</a>
+          <a href="/admin" id="nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; background: #ebf8ff; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">${adminTxt}</a>
 
           <!-- Sign In / Sign Out Button -->
           <button id="nav-auth-btn" class="nav-link" style="color: var(--theme-color-primary, #2b6cb0); border: none; background: #edf2f7; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; cursor: pointer;">
-            Sign In
+            ${authTxt}
           </button>
         </div>
       </div>
@@ -180,12 +188,12 @@ export function initNavbar() {
               { label: "About", url: "/about", target: "_self", requiredRole: "public" },
               { label: "Contact", url: "/contact", target: "_self", requiredRole: "public" }
             ]).map(item => `
-              <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" data-role="${item.requiredRole || 'public'}" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${item.label}</a>
+              <a href="${item.url}" target="${item.target || '_self'}" class="nav-link dynamic-nav-link" data-path="${item.url}" data-role="${item.requiredRole || 'public'}" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">${i18n.translateText(item.label)}</a>
             `).join('')}
 
             <!-- Integrated Top Navigation Cart Button Toggle -->
             <button id="nav-cart-btn" class="nav-link" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; position: relative; outline: none;">
-              <span>🛒</span> <span class="nav-cart-text">Cart</span>
+              <span>🛒</span> <span class="nav-cart-text">${cartTxt}</span>
               <span id="cart-count-badge" style="background: var(--theme-color-danger, #e53e3e); color: white; font-size: 0.75rem; font-weight: bold; border-radius: 50%; min-width: 20px; height: 20px; display: none; align-items: center; justify-content: center; padding: 2px; position: absolute; top: -6px; right: -6px; transition: transform 0.15s ease-in-out;">0</span>
             </button>
 
@@ -193,19 +201,19 @@ export function initNavbar() {
             <hr class="mobile-utility-item" style="width: 100%; border: none; border-top: 1px solid var(--theme-color-border, #cbd5e1); margin: 0.5rem 0; display: none;" />
             <div class="mobile-utility-item" style="display: none; flex-direction: column; gap: 0.75rem; width: 100%;">
               <!-- My Profile / Account Link -->
-              <a href="/account" id="mobile-nav-profile-link" class="nav-link" data-path="/account" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 6px; background: var(--theme-color-background, #f7fafc);">My Profile</a>
+              <a href="/account" id="mobile-nav-profile-link" class="nav-link" data-path="/account" style="color: var(--theme-color-text-secondary, #4a5568); text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 6px; background: var(--theme-color-background, #f7fafc);">${profileTxt}</a>
 
               <!-- Admin Dashboard Link -->
-              <a href="/admin" id="mobile-nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; background: #ebf8ff; padding: 8px 12px; border-radius: 6px;">Admin Dashboard</a>
+              <a href="/admin" id="mobile-nav-admin-link" class="nav-link" data-path="/admin" style="display: none; color: var(--theme-color-primary, #2b6cb0); text-decoration: none; font-weight: bold; background: #ebf8ff; padding: 8px 12px; border-radius: 6px;">${adminTxt}</a>
 
               <!-- Sign In / Sign Out Button -->
               <button id="mobile-nav-auth-btn" class="nav-link" style="color: var(--theme-color-primary, #2b6cb0); border: none; background: #edf2f7; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; text-align: left; width: 100%;">
-                Sign In
+                ${authTxt}
               </button>
 
               <!-- Accessible High-Contrast Toggle -->
               <button id="mobile-nav-high-contrast-toggle" class="nav-link" style="background: transparent; border: none; cursor: pointer; color: var(--theme-color-text-secondary, #4a5568); font-weight: 600; font-size: 0.9rem; padding: 8px 12px; border-radius: 6px; background: var(--theme-color-background, #f7fafc); text-align: left;" aria-label="Toggle High Contrast Mode">
-                🌓 Contrast
+                🌓 ${contrastTxt}
               </button>
 
               <!-- Multi-Language Selector Dropdown -->
@@ -394,11 +402,11 @@ export function initNavbar() {
       // Auth Button text
       const authBtnElement = document.getElementById('nav-auth-btn');
       if (authBtnElement) {
-        authBtnElement.textContent = state.user ? 'Sign Out' : 'Sign In';
+        authBtnElement.textContent = state.user ? i18n.translateText('Sign Out') : i18n.translateText('Sign In');
       }
       const mobileAuthBtnElement = document.getElementById('mobile-nav-auth-btn');
       if (mobileAuthBtnElement) {
-        mobileAuthBtnElement.textContent = state.user ? 'Sign Out' : 'Sign In';
+        mobileAuthBtnElement.textContent = state.user ? i18n.translateText('Sign Out') : i18n.translateText('Sign In');
       }
 
       const features = configManager.current.features || {};
@@ -472,14 +480,11 @@ export function initNavbar() {
       } catch (e) {}
     }, 100);
 
-    window.addEventListener('languageChanged', () => {
-      setTimeout(async () => {
-        try {
-          const { i18n } = await import('../../core/i18n.js');
-          i18n.translatePage();
-        } catch (e) {}
-      }, 50);
-    });
+    const onLangChanged = () => {
+      initNavbar();
+    };
+    window.addEventListener('language-changed', onLangChanged);
+    window.addEventListener('languageChanged', onLangChanged);
 
     updateActiveLink(window.location.pathname);
     syncNavbarVisibility(store.state);
