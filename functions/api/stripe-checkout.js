@@ -45,6 +45,7 @@ export async function onRequestPost(context) {
     const body = await request.json();
     const {
       email,
+      customerEmail,
       userEmail,
       userId,
       userUid,
@@ -58,7 +59,9 @@ export async function onRequestPost(context) {
       mode,
       affiliateId,
       successUrl,
-      cancelUrl
+      cancelUrl,
+      items,
+      lineItems: requestLineItems
     } = body;
 
     const domain = new URL(request.url).origin;
@@ -67,7 +70,7 @@ export async function onRequestPost(context) {
       // Create Customer Portal Link
       try {
         const params = new URLSearchParams();
-        const targetEmail = userEmail || email;
+        const targetEmail = customerEmail || userEmail || email;
         if (targetEmail) {
           params.append('customer', targetEmail);
         }
@@ -110,22 +113,37 @@ export async function onRequestPost(context) {
     const finalMode = mode || (enableAch || productId ? 'payment' : 'subscription');
     params.append('mode', finalMode);
 
-    const targetEmail = userEmail || email;
+    const targetEmail = customerEmail || userEmail || email;
     if (targetEmail) {
       params.append('customer_email', targetEmail);
     }
 
-    // Process lineItems array if passed from dynamic cart
-    if (body.lineItems && Array.isArray(body.lineItems) && body.lineItems.length > 0) {
-      body.lineItems.forEach((item, index) => {
-        if (item.priceId) {
-          params.append(`line_items[${index}][price]`, item.priceId);
-          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
+    // Process items or lineItems payload from request
+    const rawItems = (Array.isArray(items) && items.length > 0)
+      ? items
+      : (Array.isArray(requestLineItems) && requestLineItems.length > 0)
+        ? requestLineItems
+        : null;
+
+    if (rawItems) {
+      rawItems.forEach((item, index) => {
+        const itemPriceId = item.stripePriceId || item.priceId || null;
+        const itemQty = String(item.quantity || 1);
+
+        if (itemPriceId) {
+          params.append(`line_items[${index}][price]`, itemPriceId);
+          params.append(`line_items[${index}][quantity]`, itemQty);
         } else {
-          params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
-          params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
-          params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
-          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
+          const unitAmountCents = item.price !== undefined
+            ? Math.round(Number(item.price) * 100)
+            : Math.round(Number(item.amount) || 0);
+          const itemCurrency = (item.currency || currency || 'USD').toLowerCase();
+          const itemName = item.name || productId || 'Purchased Item';
+
+          params.append(`line_items[${index}][price_data][unit_amount]`, String(unitAmountCents));
+          params.append(`line_items[${index}][price_data][currency]`, itemCurrency);
+          params.append(`line_items[${index}][price_data][product_data][name]`, itemName);
+          params.append(`line_items[${index}][quantity]`, itemQty);
         }
       });
     } else if (priceId) {
