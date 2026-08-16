@@ -55,6 +55,7 @@ if __name__ == "__main__":
             run_cuj(page)
         except Exception as e:
             print("Error running CUJ:", e)
+            raise
         finally:
             print("Closing browser and saving video...")
             context.close()
