@@ -131,17 +131,28 @@ class UniversalCart {
   }
 
   updateItemQuantity(itemId, itemType, newQuantity, eventId = null) {
-    const qty = Number(newQuantity);
+    let resolvedType = itemType;
+    let resolvedQty = newQuantity;
+    let resolvedEventId = eventId;
+
+    // Handle 2-argument signature: updateItemQuantity(itemId, newQuantity)
+    if (typeof itemType === 'number' || (typeof itemType === 'string' && !isNaN(Number(itemType)) && newQuantity === undefined)) {
+      resolvedQty = Number(itemType);
+      resolvedType = null;
+      resolvedEventId = null;
+    }
+
+    const qty = Number(resolvedQty);
     if (isNaN(qty) || qty <= 0) {
-      this.removeItem(itemId, itemType, eventId);
+      this.removeItem(itemId, resolvedType, resolvedEventId);
       return;
     }
 
     this.cart.items = this.cart.items.map(i => ({ ...i }));
     const item = this.cart.items.find(i =>
       i.id === itemId &&
-      (!itemType || i.type === itemType) &&
-      (eventId === null || (i.eventId || null) === (eventId || null))
+      (!resolvedType || i.type === resolvedType) &&
+      (resolvedEventId === null || (i.eventId || null) === (resolvedEventId || null))
     );
     if (item) {
       item.quantity = qty;

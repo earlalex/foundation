@@ -126,6 +126,29 @@ export async function onRequestPost(context) {
         : null;
 
     if (rawItems) {
+      // Optional Catalog Lookup for Server-Side Price Verification against Firestore
+      const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+      const firestoreApiKey = env.FIRESTORE_API_KEY;
+      let catalogEventsMap = {};
+
+      if (firebaseProjectId && firestoreApiKey) {
+        try {
+          const eventsRes = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/events?key=${firestoreApiKey}&pageSize=100`);
+          if (eventsRes.ok) {
+            const eventsData = await eventsRes.json();
+            if (eventsData.documents) {
+              eventsData.documents.forEach(doc => {
+                const docId = doc.name.split('/').pop();
+                const fields = doc.fields || {};
+                catalogEventsMap[docId] = fields;
+              });
+            }
+          }
+        } catch (catErr) {
+          console.warn('[Stripe Checkout]: Catalog price verification query failed, continuing with request price validation:', catErr);
+        }
+      }
+
       rawItems.forEach((item, index) => {
         const itemPriceId = item.stripePriceId || item.priceId || null;
         const itemQty = String(item.quantity || 1);
@@ -134,9 +157,44 @@ export async function onRequestPost(context) {
           params.append(`line_items[${index}][price]`, itemPriceId);
           params.append(`line_items[${index}][quantity]`, itemQty);
         } else {
-          const unitAmountCents = item.price !== undefined
-            ? Math.round(Number(item.price) * 100)
+          let calculatedPrice = item.price !== undefined ? Number(item.price) : (item.amount ? Number(item.amount) / 100 : 0);
+
+          // If catalog data exists for event item, verify server price
+          if (item.eventId && catalogEventsMap[item.eventId]) {
+            const evtFields = catalogEventsMap[item.eventId];
+            const tickets = evtFields.ticketTypes?.arrayValue?.values || [];
+            const vendors = evtFields.vendorPackages?.arrayValue?.values || [];
+            const sponsors = evtFields.sponsorshipPackages?.arrayValue?.values || [];
+
+            let foundCatalogPrice = null;
+            const searchArray = (arr) => {
+              for (const v of arr) {
+                const m = v.mapValue?.fields || {};
+                const name = m.name?.stringValue || m.tier?.stringValue || '';
+                const id = m.id?.stringValue || '';
+                if ((id && id === item.id) || (name && item.name && name.toLowerCase() === item.name.toLowerCase())) {
+                  const p = m.price?.doubleValue ?? m.price?.integerValue ?? m.price?.stringValue;
+                  if (p !== undefined) return Number(p);
+                }
+              }
+              return null;
+            };
+
+            foundCatalogPrice = searchArray(tickets) ?? searchArray(vendors) ?? searchArray(sponsors);
+            if (foundCatalogPrice !== null && !isNaN(foundCatalogPrice) && foundCatalogPrice > 0) {
+              calculatedPrice = foundCatalogPrice;
+            }
+          }
+
+          let unitAmountCents = item.price !== undefined
+            ? Math.round(calculatedPrice * 100)
             : Math.round(Number(item.amount) || 0);
+
+          // Prevent negative or zero unit amounts unless explicitly free
+          if (isNaN(unitAmountCents) || unitAmountCents < 0) {
+            unitAmountCents = 0;
+          }
+
           const itemCurrency = (item.currency || currency || 'USD').toLowerCase();
           const itemName = item.name || productId || 'Purchased Item';
 
