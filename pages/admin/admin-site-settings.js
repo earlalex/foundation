@@ -1689,19 +1689,36 @@ function initFeatureTogglesEditor() {
       if (success) {
         toast.success("Feature toggles and module bypass settings saved successfully!");
 
-        // Immediately apply state changes (e.g. remove radio player if disabled)
+        // Immediately apply state changes (e.g. mount or unmount radio player & chat widget)
         if (!updatedFeatures.webRadioPlayer) {
           const radioPlayer = document.querySelector('radio-stream-player');
           if (radioPlayer) {
             radioPlayer.style.display = 'none';
             radioPlayer.remove();
           }
+        } else {
+          let radioPlayer = document.querySelector('radio-stream-player');
+          if (!radioPlayer) {
+            radioPlayer = document.createElement('radio-stream-player');
+            document.body.appendChild(radioPlayer);
+          } else {
+            radioPlayer.style.display = 'block';
+          }
         }
+
         if (!updatedFeatures.chatWidget) {
           const chatWidget = document.querySelector('chat-widget');
           if (chatWidget) {
             chatWidget.style.display = 'none';
             chatWidget.remove();
+          }
+        } else {
+          let chatWidget = document.querySelector('chat-widget');
+          if (!chatWidget) {
+            chatWidget = document.createElement('chat-widget');
+            document.body.appendChild(chatWidget);
+          } else {
+            chatWidget.style.display = 'block';
           }
         }
       } else {
