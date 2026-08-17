@@ -3,6 +3,7 @@ import { decrementStock } from '../../utils/inventory.js';
 import { processCryptoCheckout } from '../../utils/backend-web3.js';
 import { toast } from '../../utils/toast.js';
 import { stripeService } from '../../core/stripe.js';
+import { configManager } from '../../core/config.js';
 
 /**
  * Renders the interactive e-commerce product storefront details panel
@@ -99,7 +100,7 @@ export function renderProductStorefront(product) {
         💳 Buy with Credit Card ($${priceUSD})
       </button>
 
-      ${product.enableCryptoPayment ? `
+      ${(product.enableCryptoPayment && configManager.current?.features?.web3CryptoCheckout !== false) ? `
         <button id="btn-buy-crypto" style="padding: 12px; font-size: 1rem; font-weight: bold; border-radius: 6px; width: 100%; cursor: pointer; background: #805ad5; color: white; border: none; transition: background 0.2s;">
           ⛓️ Buy with Crypto (MATIC / ETH)
         </button>

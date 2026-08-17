@@ -1671,6 +1671,7 @@ function initFeatureTogglesEditor() {
 
     try {
       const updatedFeatures = {
+        ...(configManager.current.features || {}),
         chatWidget: document.getElementById('toggle-feat-chat').checked,
         webRadioPlayer: document.getElementById('toggle-feat-radio').checked,
         videoPortal: document.getElementById('toggle-feat-video').checked,
