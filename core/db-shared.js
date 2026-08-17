@@ -131,7 +131,50 @@ export async function updateDoc(docRef, data) {
   }
 }
 
-export const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
+export async function deleteDoc(docRef) {
+  if (!docRef) {
+    console.warn('[DB Shared deleteDoc]: Called with null/undefined docRef. Bypassing write.');
+    return;
+  }
+  try {
+    await withTimeout(originalDeleteDoc(docRef));
+  } catch (err) {
+    console.warn('[DB Shared deleteDoc]: Delete failed or offline. Queueing deletion to outbox:', err.message);
+    try {
+      const pathParts = docRef && docRef.path ? docRef.path.split('/') : [];
+      const collectionName = pathParts[0] || 'unknown';
+      const docId = pathParts[1] || (docRef && docRef.id) || 'unknown';
+
+      const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+      const filtered = outbox.filter(item => !(item.collection === collectionName && item.docId === docId));
+      filtered.push({
+        id: `${collectionName}_${docId}_${Date.now()}`,
+        collection: collectionName,
+        docId: docId,
+        isDelete: true,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+      console.log(`[DB Shared deleteDoc]: Queued deletion for ${collectionName}/${docId} to /foundation_outbox.`);
+
+      try {
+        const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+        history.unshift({
+          id: 'notif_outbox_queue_' + Date.now(),
+          message: `Outbox Queue: Saved deletion for ${collectionName}/${docId} offline.`,
+          type: 'info',
+          category: 'System Alerts',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+        localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('notification-received'));
+      } catch (notifErr) {}
+    } catch (queueErr) {
+      console.error('[DB Shared deleteDoc]: Failed to queue deletion to outbox:', queueErr);
+    }
+  }
+}
 
 export function queryWith3SecTimeout(promise) {
   promise.catch((err) => {
