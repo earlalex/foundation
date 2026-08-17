@@ -3,6 +3,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/fir
 import { auth } from './auth.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { toast } from '../utils/toast.js';
 
 let googleAccessToken = null;
 
@@ -35,6 +36,7 @@ export async function authenticateGoogleServices() {
       errStr.includes('window.closed')
     ) {
       console.warn('[Google Services]: OAuth popup closed or COOP window notice suppressed silently.', err.message || err);
+      toast.warning('Google sign-in was closed or cancelled before completion.', 4000, { isActionable: true });
       return googleAccessToken || null;
     }
     errorHandler.handleError(new Error(`Google Services OAuth Failed: ${err.message}`));
