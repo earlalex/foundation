@@ -21,10 +21,22 @@ export async function authenticateGoogleServices() {
   try {
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    googleAccessToken = credential.accessToken;
+    googleAccessToken = credential?.accessToken || null;
     console.log('[Google Services]: Access token acquired successfully.');
     return googleAccessToken;
   } catch (err) {
+    const errStr = String(err?.message || err?.code || '').toLowerCase();
+    if (
+      errStr.includes('popup-closed-by-user') ||
+      errStr.includes('cancelled-popup-request') ||
+      errStr.includes('cross-origin-opener-policy') ||
+      errStr.includes('coop') ||
+      errStr.includes('window.close') ||
+      errStr.includes('window.closed')
+    ) {
+      console.warn('[Google Services]: OAuth popup closed or COOP window notice suppressed silently.', err.message || err);
+      return googleAccessToken || null;
+    }
     errorHandler.handleError(new Error(`Google Services OAuth Failed: ${err.message}`));
     return null;
   }

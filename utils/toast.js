@@ -30,6 +30,9 @@ export class ToastManager {
 
   saveToNotificationHistory(message, type) {
     try {
+      if (!message || typeof message !== 'string') {
+        return; // Suppress invalid or null notification payloads
+      }
       if (typeof localStorage === 'undefined') return;
       const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
 
@@ -95,6 +98,10 @@ export class ToastManager {
   }
 
   show(message, type = 'info', duration = 4000, options = {}) {
+    if (!message || typeof message !== 'string') {
+      return null; // Suppress invalid or null notification payloads
+    }
+
     if (!this.container) {
       this.init();
     }

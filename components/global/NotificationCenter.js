@@ -17,6 +17,9 @@ export class NotificationCenter extends HTMLElement {
 
     // Listen for real-time notification received events
     this.onNotificationReceived = (e) => {
+      if (!e || !e.detail || typeof e.detail !== 'object') {
+        return; // Suppress invalid or null event details
+      }
       console.log('[NotificationCenter]: Real-time alert received:', e.detail);
       this.loadNotifications();
       this.render();
