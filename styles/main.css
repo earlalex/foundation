@@ -353,8 +353,8 @@ label {
 
 /* Standard keyboard navigation focus ring for interactive elements */
 :focus-visible {
-  outline: 2px solid var(--theme-color-primary, #2b6cb0);
-  outline-offset: 2px;
+  outline: 2px solid var(--theme-color-primary, #2b6cb0) !important;
+  outline-offset: 2px !important;
 }
 
 /* --- ADMIN LAYOUTS & TABLES OVERRIDES --- */
