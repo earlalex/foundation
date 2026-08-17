@@ -1,7 +1,33 @@
 // functions/api/imagen.js
 
+// Simple in-memory rate limiting map for Cloudflare Worker isolate instance
+const ipRateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per IP per minute
+
 export async function onRequestPost(context) {
   try {
+    const clientIp = context.request.headers.get('cf-connecting-ip') ||
+                     context.request.headers.get('x-forwarded-for') ||
+                     'unknown-client';
+
+    // 1. Enforce simple rate limiting per client IP
+    const now = Date.now();
+    const clientUsage = ipRateLimitMap.get(clientIp) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
+    if (now > clientUsage.resetTime) {
+      clientUsage.count = 0;
+      clientUsage.resetTime = now + RATE_LIMIT_WINDOW_MS;
+    }
+    clientUsage.count += 1;
+    ipRateLimitMap.set(clientIp, clientUsage);
+
+    if (clientUsage.count > MAX_REQUESTS_PER_WINDOW) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a minute before making more image generation requests.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '60' }
+      });
+    }
+
     const { prompt, aspectRatio = '1:1', numberOfImages = 1 } = await context.request.json();
 
     if (!prompt) {
@@ -10,6 +36,9 @@ export async function onRequestPost(context) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // Strictly clamp numberOfImages to prevent quota exhaustion attacks
+    const sanitizedCount = Math.min(Math.max(1, parseInt(numberOfImages, 10) || 1), 4);
 
     // Resolve API Key from context.env
     const apiKey = context.env.GEMINI_API_KEY || context.env.GOOGLE_GENAI_API_KEY;
@@ -39,7 +68,7 @@ export async function onRequestPost(context) {
       const predictBody = {
         instances: [{ prompt }],
         parameters: {
-          sampleCount: numberOfImages,
+          sampleCount: sanitizedCount,
           aspectRatio: aspectRatio,
           outputMimeType: 'image/jpeg'
         }
@@ -73,7 +102,7 @@ export async function onRequestPost(context) {
         const generateUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`;
         const generateBody = {
           prompt,
-          numberOfImages: numberOfImages,
+          numberOfImages: sanitizedCount,
           aspectRatio: aspectRatio,
           outputMimeType: 'image/jpeg'
         };
