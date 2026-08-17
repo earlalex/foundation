@@ -30,16 +30,20 @@ export async function authenticateGoogleServices() {
     if (
       errStr.includes('popup-closed-by-user') ||
       errStr.includes('cancelled-popup-request') ||
-      errStr.includes('cross-origin-opener-policy') ||
+      errStr.includes('cross-origin') ||
       errStr.includes('coop') ||
+      errStr.includes('opener') ||
       errStr.includes('window.close') ||
-      errStr.includes('window.closed')
+      errStr.includes('window.closed') ||
+      errStr.includes('popup') ||
+      errStr.includes('blocked')
     ) {
-      console.warn('[Google Services]: OAuth popup closed or COOP window notice suppressed silently.', err.message || err);
-      toast.warning('Google sign-in was closed or cancelled before completion.', 4000, { isActionable: true });
+      console.warn('[Google Services]: OAuth popup closed, blocked, or COOP window notice handled:', err.message || err);
+      toast.warning('Google sign-in popup was closed, blocked, or interrupted. Please try again.', 5000, { isActionable: true });
       return googleAccessToken || null;
     }
-    errorHandler.handleError(new Error(`Google Services OAuth Failed: ${err.message}`));
+    console.error('[Google Services]: OAuth error:', err);
+    toast.error('Google authorization could not be completed. Please try again.', 5000, { isActionable: true });
     return null;
   }
 }
