@@ -3,6 +3,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/fir
 import { auth } from './auth.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { toast } from '../utils/toast.js';
 
 let googleAccessToken = null;
 
@@ -21,11 +22,28 @@ export async function authenticateGoogleServices() {
   try {
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    googleAccessToken = credential.accessToken;
+    googleAccessToken = credential?.accessToken || null;
     console.log('[Google Services]: Access token acquired successfully.');
     return googleAccessToken;
   } catch (err) {
-    errorHandler.handleError(new Error(`Google Services OAuth Failed: ${err.message}`));
+    const errStr = String(err?.message || err?.code || '').toLowerCase();
+    if (
+      errStr.includes('popup-closed-by-user') ||
+      errStr.includes('cancelled-popup-request') ||
+      errStr.includes('cross-origin') ||
+      errStr.includes('coop') ||
+      errStr.includes('opener') ||
+      errStr.includes('window.close') ||
+      errStr.includes('window.closed') ||
+      errStr.includes('popup') ||
+      errStr.includes('blocked')
+    ) {
+      console.warn('[Google Services]: OAuth popup closed, blocked, or COOP window notice handled:', err.message || err);
+      toast.warning('Google sign-in popup was closed, blocked, or interrupted. Please try again.', 5000, { isActionable: true });
+      return googleAccessToken || null;
+    }
+    console.error('[Google Services]: OAuth error:', err);
+    toast.error('Google authorization could not be completed. Please try again.', 5000, { isActionable: true });
     return null;
   }
 }

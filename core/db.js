@@ -1633,7 +1633,11 @@ export async function syncOutboxToFirestore() {
       for (const item of outbox) {
         const docRef = doc(db, item.collection, item.docId);
         if (docRef) {
-          batch.set(docRef, item.data, { merge: true });
+          if (item.isDelete) {
+            batch.delete(docRef);
+          } else {
+            batch.set(docRef, item.data, { merge: true });
+          }
         }
       }
 

@@ -6,6 +6,7 @@ import {
   getDoc as originalGetDoc,
   getDocs as originalGetDocs,
   setDoc as originalSetDoc,
+  updateDoc as originalUpdateDoc,
   deleteDoc as originalDeleteDoc,
   query,
   where,
@@ -58,6 +59,7 @@ export async function setDoc(docRef, data, options) {
         collection: collectionName,
         docId: docId,
         data: data,
+        options: options || null,
         timestamp: new Date().toISOString()
       });
       localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
@@ -80,10 +82,99 @@ export async function setDoc(docRef, data, options) {
     } catch (queueErr) {
       console.error('[DB Shared setDoc]: Failed to queue write to outbox:', queueErr);
     }
-    throw err;
   }
 }
-export const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
+
+export async function updateDoc(docRef, data) {
+  if (!docRef) {
+    console.warn('[DB Shared updateDoc]: Called with null/undefined docRef. Bypassing write.');
+    return;
+  }
+  try {
+    await withTimeout(originalUpdateDoc(docRef, data));
+  } catch (err) {
+    console.warn('[DB Shared updateDoc]: Write failed or offline. Queueing to outbox:', err.message);
+    try {
+      const pathParts = docRef && docRef.path ? docRef.path.split('/') : [];
+      const collectionName = pathParts[0] || 'unknown';
+      const docId = pathParts[1] || (docRef && docRef.id) || 'unknown';
+
+      const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+      const filtered = outbox.filter(item => !(item.collection === collectionName && item.docId === docId));
+      filtered.push({
+        id: `${collectionName}_${docId}_${Date.now()}`,
+        collection: collectionName,
+        docId: docId,
+        data: data,
+        isUpdate: true,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+      console.log(`[DB Shared updateDoc]: Queued ${collectionName}/${docId} to /foundation_outbox.`);
+
+      try {
+        const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+        history.unshift({
+          id: 'notif_outbox_queue_' + Date.now(),
+          message: `Outbox Queue: Saved changes for ${collectionName}/${docId} offline.`,
+          type: 'info',
+          category: 'System Alerts',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+        localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('notification-received'));
+      } catch (notifErr) {}
+    } catch (queueErr) {
+      console.error('[DB Shared updateDoc]: Failed to queue write to outbox:', queueErr);
+    }
+  }
+}
+
+export async function deleteDoc(docRef) {
+  if (!docRef) {
+    console.warn('[DB Shared deleteDoc]: Called with null/undefined docRef. Bypassing write.');
+    return;
+  }
+  try {
+    await withTimeout(originalDeleteDoc(docRef));
+  } catch (err) {
+    console.warn('[DB Shared deleteDoc]: Delete failed or offline. Queueing deletion to outbox:', err.message);
+    try {
+      const pathParts = docRef && docRef.path ? docRef.path.split('/') : [];
+      const collectionName = pathParts[0] || 'unknown';
+      const docId = pathParts[1] || (docRef && docRef.id) || 'unknown';
+
+      const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+      const filtered = outbox.filter(item => !(item.collection === collectionName && item.docId === docId));
+      filtered.push({
+        id: `${collectionName}_${docId}_${Date.now()}`,
+        collection: collectionName,
+        docId: docId,
+        isDelete: true,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+      console.log(`[DB Shared deleteDoc]: Queued deletion for ${collectionName}/${docId} to /foundation_outbox.`);
+
+      try {
+        const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+        history.unshift({
+          id: 'notif_outbox_queue_' + Date.now(),
+          message: `Outbox Queue: Saved deletion for ${collectionName}/${docId} offline.`,
+          type: 'info',
+          category: 'System Alerts',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+        localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('notification-received'));
+      } catch (notifErr) {}
+    } catch (queueErr) {
+      console.error('[DB Shared deleteDoc]: Failed to queue deletion to outbox:', queueErr);
+    }
+  }
+}
 
 export function queryWith3SecTimeout(promise) {
   promise.catch((err) => {
