@@ -504,7 +504,12 @@ export class Router {
       }
 
       this.updateMetadata(cleanPath);
-      this.appContainer.focus();
+      if (this.appContainer) {
+        if (this.appContainer.getAttribute('tabindex') !== '-1') {
+          this.appContainer.setAttribute('tabindex', '-1');
+        }
+        this.appContainer.focus();
+      }
 
       // Dispatch PUSH_HISTORY to store
       store.dispatch('PUSH_HISTORY', cleanPath);
@@ -538,6 +543,9 @@ export class Router {
         }
         const appContainer = document.getElementById('app');
         if (appContainer) {
+          if (appContainer.getAttribute('tabindex') !== '-1') {
+            appContainer.setAttribute('tabindex', '-1');
+          }
           appContainer.focus();
         }
       } catch (e) {
