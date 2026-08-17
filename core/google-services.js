@@ -3,6 +3,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/fir
 import { auth } from './auth.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { toast } from '../utils/toast.js';
 
 let googleAccessToken = null;
 
@@ -25,6 +26,12 @@ export async function authenticateGoogleServices() {
     console.log('[Google Services]: Access token acquired successfully.');
     return googleAccessToken;
   } catch (err) {
+    const isPopupClosed = err.code === 'auth/popup-closed-by-user' || err.message?.includes('popup') || err.message?.includes('closed');
+    if (isPopupClosed) {
+      toast.warning('Google sign-in popup was closed before authorization completed.');
+    } else {
+      toast.error('Google authorization failed: ' + (err.message || 'Unknown error'));
+    }
     errorHandler.handleError(new Error(`Google Services OAuth Failed: ${err.message}`));
     return null;
   }
