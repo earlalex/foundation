@@ -19,14 +19,14 @@ def run_cuj(page):
     page.wait_for_timeout(1000)
 
     # Take screenshot at the key moment
-    page.screenshot(path="verification/screenshots/polished_contact.png")
+    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'polished_contact.png'))
     page.wait_for_timeout(1000)  # Hold final state for the video
 
 if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
         )
         page = context.new_page()
         try:

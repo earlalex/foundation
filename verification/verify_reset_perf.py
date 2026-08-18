@@ -21,7 +21,7 @@ def run_cuj(page):
     print(f"Page Title: {page.title()}")
 
     # We take screenshot of the Admin Dashboard showing Factory Reset Platform button
-    page.screenshot(path="verification/screenshots/verification.png")
+    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification.png'))
     page.wait_for_timeout(1000)
 
     # Find the trigger button
@@ -33,19 +33,19 @@ def run_cuj(page):
         print("Clicking Factory Reset trigger...")
         page.click("#btn-factory-reset-trigger")
         page.wait_for_timeout(2000)
-        page.screenshot(path="verification/screenshots/reset_modal_step1.png")
+        page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'reset_modal_step1.png'))
 
         # Proceed to step 2
         print("Clicking next step...")
         page.click("#btn-reset-next")
         page.wait_for_timeout(2000)
-        page.screenshot(path="verification/screenshots/reset_modal_step2.png")
+        page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'reset_modal_step2.png'))
 
         # Type verification phrase
         print("Typing verification phrase...")
         page.fill("#input-confirm-phrase", "RESET-FOUNDATION")
         page.wait_for_timeout(2000)
-        page.screenshot(path="verification/screenshots/reset_modal_step2_typed.png")
+        page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'reset_modal_step2_typed.png'))
 
         # Cancel reset to keep settings intact for now
         print("Cancelling reset to keep settings intact...")
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
         )
         page = context.new_page()
         try:

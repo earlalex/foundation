@@ -1,3 +1,4 @@
+import os
 import sys
 from playwright.sync_api import sync_playwright
 
@@ -7,7 +8,7 @@ def run_verification():
         browser = p.chromium.launch(headless=True)
         # Record video
         context = browser.new_context(
-            record_video_dir="verification/videos",
+            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos'),
             viewport={"width": 1280, "height": 800}
         )
         page = context.new_page()
@@ -34,7 +35,7 @@ def run_verification():
 
         # Take screenshot of contact page to see reviews card and styling
         print("[Playwright]: Capturing screenshot...")
-        page.screenshot(path="verification/screenshots/verification.png")
+        page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification.png'))
         page.wait_for_timeout(1000)
 
         context.close()

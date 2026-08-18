@@ -1,4 +1,5 @@
-# verification/verify_clean_events.py
+import os
+# /home/jules/verification/verify_clean_events.py
 from playwright.sync_api import sync_playwright
 
 def run_cuj(page):
@@ -36,7 +37,7 @@ def run_cuj(page):
 
     # Take screenshot of the Event Page & Cart overlay
     print("7. Screenshotting Event Page & Cart Sidebar...")
-    page.screenshot(path="verification/screenshots/verification_events.png")
+    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_events.png'))
     page.wait_for_timeout(1000)
 
     # Navigate back to Admin tab-events
@@ -51,14 +52,14 @@ def run_cuj(page):
 
     # Take screenshot of the Admin Event Operations Dashboard
     print("10. Screenshotting Admin Dashboard...")
-    page.screenshot(path="verification/screenshots/verification_admin_events.png")
+    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_admin_events.png'))
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
         )
         page = context.new_page()
         try:

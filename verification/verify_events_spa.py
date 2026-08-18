@@ -1,4 +1,5 @@
-# verification/verify_events_spa.py
+import os
+# /home/jules/verification/verify_events_spa.py
 from playwright.sync_api import sync_playwright
 
 def run_cuj(page):
@@ -15,8 +16,8 @@ def run_cuj(page):
     page.wait_for_timeout(2000)
 
     # Take screenshot of events page
-    page.screenshot(path="verification/screenshots/verification_events.png")
-    print("Screenshot saved to verification/screenshots/verification_events.png")
+    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_events.png'))
+    print("Screenshot saved to /home/jules/verification/screenshots/verification_events.png")
 
 if __name__ == "__main__":
     with sync_playwright() as p:

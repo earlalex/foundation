@@ -3,13 +3,13 @@ import os
 from playwright.async_api import async_playwright
 
 async def run_verification():
-    os.makedirs("verification/videos", exist_ok=True)
-    os.makedirs("verification/screenshots", exist_ok=True)
+    os.makedirs("/home/jules/verification/videos", exist_ok=True)
+    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            record_video_dir="verification/videos",
+            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos'),
             viewport={"width": 1280, "height": 800}
         )
         page = await context.new_page()
@@ -114,7 +114,7 @@ async def run_verification():
         await page.wait_for_timeout(2000)
 
         # Take high-fidelity screenshot
-        screenshot_path = "verification/screenshots/verification.png"
+        screenshot_path = os.path.join(os.path.dirname(__file__), 'screenshots', 'verification.png')
         await page.screenshot(path=screenshot_path)
         print(f"Screenshot taken at {screenshot_path}")
 

@@ -3,13 +3,13 @@ import os
 from playwright.async_api import async_playwright
 
 async def run_cuj():
-    os.makedirs("verification/videos", exist_ok=True)
-    os.makedirs("verification/screenshots", exist_ok=True)
+    os.makedirs("/home/jules/verification/videos", exist_ok=True)
+    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            record_video_dir="verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
         )
         page = await context.new_page()
 
@@ -35,7 +35,7 @@ async def run_cuj():
                 await page.wait_for_timeout(1000)
 
             # Take screenshot
-            screenshot_path = "verification/screenshots/dedupe_verification.png"
+            screenshot_path = os.path.join(os.path.dirname(__file__), 'screenshots', 'dedupe_verification.png')
             await page.screenshot(path=screenshot_path)
             await page.wait_for_timeout(1000)
 
