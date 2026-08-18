@@ -1,3 +1,4 @@
+import os
 # /home/jules/verification/debug_events.py
 from playwright.sync_api import sync_playwright
 

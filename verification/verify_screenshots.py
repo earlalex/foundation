@@ -1,3 +1,4 @@
+import os
 # /home/jules/verification/verify_screenshots.py
 from playwright.sync_api import sync_playwright
 
