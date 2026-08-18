@@ -2055,10 +2055,10 @@ export class FoundationWorksheetWizard extends HTMLElement {
             console.warn('[FoundationWorksheetWizard] Drive backup deferred:', e.message);
           }
 
-          if (driveUploadRes) {
+          if (driveUploadRes && driveUploadRes.id) {
             toast.success("Semantic Brand Guide synthesized & archived to Google Drive (corporate-binder/Foundation_Worksheet.md)!");
           } else {
-            toast.info("Semantic Brand Guide synthesized & saved locally (Google Drive backup offline/unconfigured).");
+            toast.info("Semantic Brand Guide synthesized & saved locally (Google Drive backup offline or unconfigured).");
           }
 
           if (this.onCompleteCallback) {
