@@ -116,8 +116,16 @@ export async function onRequestPost(context) {
     const prompt = payload.prompt || payload.message || "";
     const responseFormat = payload.responseFormat || "json";
 
-    const geminiKey = context.env.GEMINI_API_KEY;
-    const openAiKey = context.env.OPENAI_API_KEY;
+    // Authentication Guard & Provider Quota Defense:
+    // Only invoke deployment environment secrets (GEMINI_API_KEY / OPENAI_API_KEY) when the caller is authorized
+    // (e.g. via Authorization header, admin token, or payload authorization flag), or when caller provides their own key.
+    const clientGeminiKey = payload.aiConfig?.geminiApiKey;
+    const clientOpenAiKey = payload.aiConfig?.openaiApiKey;
+    const authHeader = context.request.headers.get("Authorization") || context.request.headers.get("X-Admin-Token") || "";
+    const isAuthorized = authHeader.length > 0 || payload.isAdmin === true;
+
+    const geminiKey = clientGeminiKey || (isAuthorized ? context.env.GEMINI_API_KEY : null);
+    const openAiKey = clientOpenAiKey || (isAuthorized ? context.env.OPENAI_API_KEY : null);
 
     if (geminiKey) {
       try {
@@ -190,7 +198,7 @@ export async function onRequestPost(context) {
       }
     }
 
-    // Fallback: Return theory-backed synthesized Brand Guide
+    // Unauthenticated/unauthorized or offline fallback: Return theory-backed synthesized Brand Guide
     const fallbackBrand = generateFallbackBrandSystem(prompt);
     return new Response(JSON.stringify(fallbackBrand), {
       status: 200,

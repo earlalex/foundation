@@ -12,7 +12,8 @@ async def main():
         page.on("pageerror", lambda err: print(f"[Page Error]: {err}"))
 
         print("Navigating to local server...")
-        await page.goto("http://localhost:3000/admin", wait_until="networkidle")
+        await page.goto("http://localhost:3000/admin", wait_until="domcontentloaded")
+        await page.wait_for_timeout(1000)
 
         result = await page.evaluate("""async () => {
             const { synthesizeBrandFromWorksheet, FoundationWorksheetWizard } = await import('./pages/admin/components/AdminSetupWizards.js');
