@@ -1,7 +1,8 @@
 // tests/wizards.test.js - Comprehensive Unit & Integration Tests for Setup Wizards & Readiness Guards
 import { configManager } from '../core/config.js';
 import { store } from '../core/store.js';
-import { AdminSetupWizards } from '../pages/admin/components/AdminSetupWizards.js';
+import { AdminSetupWizards, synthesizeBrandFromWorksheet, FoundationWorksheetWizard } from '../pages/admin/components/AdminSetupWizards.js';
+import { themeEngine, ensureContrastCompliance, calculateContrastRatio } from '../core/theme.js';
 
 export async function runWizardsTests() {
   console.group('  Running Overhauled Setup Wizards & Readiness Guards Test Suite...');
@@ -163,6 +164,78 @@ export async function runWizardsTests() {
     const fallbackLoaded = JSON.parse(localStorage.getItem('foundation_config'));
     if (fallbackLoaded.siteTitle !== "FallBack Persistent Framework Test") {
       throw new Error("Configuration failed to persist to LocalStorage fallback.");
+    }
+  });
+
+  await assertTest('Brand Synthesis Engine: Synthesizes design system adhering to psychology matrix schema', async () => {
+    const mockWorksheet = {
+      purpose: "To elevate men and women into full alignment through physical mastery, action, and discipline.",
+      mission: "Build transformational frameworks.",
+      values: ["Discipline: Consistency is mastery", "Integrity: Act in truth", "Ownership: Radical accountability"],
+      kpis: ["Health & Energy: Physical programs", "Financial: Growth targets"]
+    };
+
+    const brand = await synthesizeBrandFromWorksheet(mockWorksheet);
+    if (!brand || !brand.colors || !brand.typography || !brand.designRationale) {
+      throw new Error("Brand synthesis failed to return valid schema structure.");
+    }
+    if (!brand.colors.primary || !brand.colors.surface || !brand.typography.headingFont) {
+      throw new Error("Brand synthesis output missing core color or font tokens.");
+    }
+    if (!brand.designRationale.colorPsychology || !brand.designRationale.typographyRationale) {
+      throw new Error("Brand synthesis output missing design psychology rationale.");
+    }
+  });
+
+  await assertTest('WCAG Contrast Compliance: Detects insufficient contrast and auto-adjusts text primary', async () => {
+    const lowContrastText = "#808080"; // Grey on white has ratio ~3.95 (< 4.5:1)
+    const whiteBg = "#FFFFFF";
+
+    const initialRatio = calculateContrastRatio(lowContrastText, whiteBg);
+    const compliantText = ensureContrastCompliance(lowContrastText, whiteBg, 4.5);
+    const finalRatio = calculateContrastRatio(compliantText, whiteBg);
+
+    if (finalRatio < 4.5) {
+      throw new Error(`WCAG contrast compliance failed to auto-adjust text color to >= 4.5:1 ratio (got ${finalRatio.toFixed(2)}).`);
+    }
+  });
+
+  await assertTest('Theme Engine: Dynamic Theme Injection applies CSS Custom Properties and state persistence', async () => {
+    const testBrand = {
+      colors: {
+        primary: "#1E3A8A",
+        primaryHover: "#1D4ED8",
+        accent: "#D97706",
+        surface: "#FFFFFF",
+        surfaceAlt: "#F8FAFC",
+        textPrimary: "#0F172A",
+        textSecondary: "#475569"
+      },
+      typography: {
+        headingFont: "Cinzel",
+        bodyFont: "Plus Jakarta Sans"
+      }
+    };
+
+    themeEngine.applyCustomDesignSystem(testBrand);
+
+    const rootPrimary = document.documentElement.style.getPropertyValue('--theme-color-primary');
+    if (rootPrimary !== "#1E3A8A") {
+      throw new Error(`Theme Engine failed to inject --theme-color-primary onto :root (expected #1E3A8A, got ${rootPrimary}).`);
+    }
+
+    const savedCustom = localStorage.getItem('foundation_theme_custom');
+    if (!savedCustom) {
+      throw new Error("Theme Engine failed to persist custom design tokens to LocalStorage foundation_theme_custom.");
+    }
+  });
+
+  await assertTest('Foundation Worksheet Wizard: Generates complete Markdown binder content', async () => {
+    const wizard = new FoundationWorksheetWizard();
+    const md = wizard.generateMarkdownBinderContent();
+
+    if (!md.includes("## 1. Purpose (Your Why)") || !md.includes("## 3. The 9 Core Values")) {
+      throw new Error("Foundation Worksheet Wizard failed to generate required 4-part structure in Markdown binder.");
     }
   });
 

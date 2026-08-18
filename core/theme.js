@@ -146,6 +146,53 @@ export const themePresets = {
   }
 };
 
+/**
+ * W3C Relative Luminance & WCAG 2.1 AA Contrast Compliance Helpers
+ */
+export function getRelativeLuminance(hex) {
+  if (!hex || typeof hex !== 'string') return 0;
+  let cleanHex = hex.replace('#', '').trim();
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map(c => c + c).join('');
+  }
+  const num = parseInt(cleanHex, 16);
+  if (isNaN(num)) return 0;
+
+  const r8 = (num >> 16) & 255;
+  const g8 = (num >> 8) & 255;
+  const b8 = num & 255;
+
+  const normalize = (c8) => {
+    const s = c8 / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+
+  const r = normalize(r8);
+  const g = normalize(g8);
+  const b = normalize(b8);
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function calculateContrastRatio(hex1, hex2) {
+  const l1 = getRelativeLuminance(hex1);
+  const l2 = getRelativeLuminance(hex2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function ensureContrastCompliance(textHex, bgHex, minRatio = 4.5) {
+  const ratio = calculateContrastRatio(textHex, bgHex);
+  if (ratio >= minRatio) {
+    return textHex;
+  }
+  const bgLuminance = getRelativeLuminance(bgHex);
+  const adjustedText = bgLuminance > 0.5 ? "#0F172A" : "#FFFFFF";
+  console.log(`[WCAG Contrast Compliance]: Adjusted ${textHex} against background ${bgHex} (ratio ${ratio.toFixed(2)}:1) -> ${adjustedText} (${calculateContrastRatio(adjustedText, bgHex).toFixed(2)}:1)`);
+  return adjustedText;
+}
+
 export class ThemeEngine {
   constructor() {
     this.init();
@@ -253,6 +300,66 @@ export class ThemeEngine {
     if (!isInitial || hasChanged) {
       this.syncThemeToFirestore(themeConfig);
     }
+  }
+
+  /**
+   * Dynamic Theme Engine Injection
+   * Injects CSS Custom Properties and loads Google Fonts for synthesized Brand Guide
+   */
+  applyCustomDesignSystem(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    const root = document.documentElement;
+
+    let brandGuide = payload;
+    let cssVarsMap = {};
+
+    if (payload.colors || payload.typography) {
+      const colors = payload.colors || {};
+      const typography = payload.typography || {};
+
+      const surface = colors.surface || "#ffffff";
+      let textPrimary = colors.textPrimary || "#1a202c";
+      textPrimary = ensureContrastCompliance(textPrimary, surface, 4.5);
+
+      cssVarsMap = {
+        '--theme-color-primary': colors.primary || '#2b6cb0',
+        '--theme-color-primary-hover': colors.primaryHover || '#2c5282',
+        '--theme-color-accent': colors.accent || '#38a169',
+        '--theme-color-surface': surface,
+        '--theme-color-surface-alt': colors.surfaceAlt || '#f8fafc',
+        '--theme-color-text-primary': textPrimary,
+        '--theme-color-text-secondary': colors.textSecondary || '#4a5568',
+        '--theme-font-family-heading': typography.headingFont || typography.primaryFont || 'system-ui',
+        '--theme-font-family-body': typography.bodyFont || typography.primaryFont || 'system-ui',
+        '--theme-font-primary': typography.headingFont || typography.primaryFont || 'system-ui',
+        '--theme-font-body': typography.bodyFont || 'system-ui'
+      };
+
+      this.loadGoogleFontIfNeeded(typography.headingFont);
+      this.loadGoogleFontIfNeeded(typography.bodyFont);
+    } else {
+      cssVarsMap = payload;
+      Object.entries(payload).forEach(([key, val]) => {
+        if (typeof val === 'string' && (key.includes('font') || key.includes('Family'))) {
+          this.loadGoogleFontIfNeeded(val);
+        }
+      });
+    }
+
+    Object.entries(cssVarsMap).forEach(([prop, val]) => {
+      if (val) root.style.setProperty(prop, val);
+    });
+
+    try {
+      localStorage.setItem('foundation_theme_custom', JSON.stringify(brandGuide));
+    } catch (e) {}
+
+    try {
+      store.dispatch('APPLY_THEME_JSON', brandGuide);
+    } catch (e) {}
+
+    this.syncThemeToFirestore(brandGuide);
+    console.log('[ThemeEngine]: Custom design system injected dynamically.');
   }
 
   loadGoogleFontIfNeeded(fontName) {

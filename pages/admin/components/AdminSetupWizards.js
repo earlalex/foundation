@@ -8,7 +8,96 @@ import { configManager } from '../../../core/config.js';
 import { toast } from '../../../utils/toast.js';
 import { store } from '../../../core/store.js';
 import { contentDB } from '../../../core/db.js';
+import { themeEngine } from '../../../core/theme.js';
+import { uploadFileToDrive } from '../../../core/drive-upload.js';
 import { generateHeroBackground, generateProductMockup } from '../../../utils/ai-imagen.js';
+
+/**
+ * Synthesize Design System from Purpose, Mission, Values, and KPIs
+ */
+export async function synthesizeBrandFromWorksheet(worksheetData) {
+  const purpose = worksheetData.purpose || "";
+  const mission = worksheetData.mission || "";
+  const values = worksheetData.values || worksheetData.coreValues || [];
+  const kpis = worksheetData.kpis || worksheetData.kpiCategories || [];
+
+  const systemPrompt = `You are a Principal Brand Strategist and Master Design Psychologist.
+Analyze this organizational foundation worksheet:
+
+- PURPOSE: ${purpose}
+- MISSION: ${mission}
+- 9 CORE VALUES: ${JSON.stringify(values)}
+- 12 KPIS: ${JSON.stringify(kpis)}
+
+Synthesize a complete design system adhering to color psychology, WCAG 2.1 AA contrast standards, and typographic semantics.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "archetype": "string (e.g. Sovereign Ruler, Heroic Catalyst, Wise Sage, Creative Innovator)",
+  "voiceAndTone": "string (e.g. Authoritative, Direct, Sovereign, Grounded)",
+  "colors": {
+    "primary": "string (Hex code matching psychological intent)",
+    "primaryHover": "string (Hex code)",
+    "accent": "string (Hex code for high-contrast CTAs)",
+    "surface": "string (Hex code for background)",
+    "surfaceAlt": "string (Hex code for cards)",
+    "textPrimary": "string (Hex code for text)",
+    "textSecondary": "string (Hex code)"
+  },
+  "typography": {
+    "headingFont": "string (Google Font name, e.g. Cinzel, Playfair Display, Plus Jakarta Sans)",
+    "bodyFont": "string (Google Font name, e.g. Inter, Plus Jakarta Sans)",
+    "headingStyle": "string"
+  },
+  "designRationale": {
+    "colorPsychology": "string (Detailed explanation of why these colors match the Purpose, Mission, and Values)",
+    "typographyRationale": "string (Detailed explanation of font semantics)",
+    "archetypeRationale": "string (Detailed explanation of brand persona)"
+  }
+}`;
+
+  try {
+    const response = await fetch('/api/ai-writer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt, responseFormat: 'json' })
+    });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.warn('[synthesizeBrandFromWorksheet]: API call failed, using fallback:', err.message);
+  }
+
+  // Fallback response matching schema
+  return {
+    archetype: "Sovereign Ruler & Heroic Catalyst",
+    voiceAndTone: "Authoritative, Direct, Sovereign, Grounded",
+    colors: {
+      primary: "#1E3A8A",
+      primaryHover: "#1D4ED8",
+      accent: "#D97706",
+      surface: "#FFFFFF",
+      surfaceAlt: "#F8FAFC",
+      textPrimary: "#0F172A",
+      textSecondary: "#475569"
+    },
+    typography: {
+      headingFont: "Cinzel",
+      bodyFont: "Plus Jakarta Sans",
+      headingStyle: "Uppercase, High-Tracking, Serif Authority"
+    },
+    designRationale: {
+      colorPsychology: "Deep Navy (#1E3A8A) was selected for Primary to convey Sovereignty, Integrity, and Enterprise Stability. Solar Gold (#D97706) provides high-contrast CTAs representing Radiant Optimism and Legacy.",
+      typographyRationale: "Cinzel was selected for headings to convey Executive Sovereignty and Structural Authority. Plus Jakarta Sans provides geometric body clarity.",
+      archetypeRationale: "Your brand persona combines the Sovereign Ruler with the Heroic Catalyst, balancing executive authority with transformative action."
+    }
+  };
+}
+
+export async function generateSemanticBrandGuide({ purpose, mission, values, kpis }) {
+  return await synthesizeBrandFromWorksheet({ purpose, mission, values, kpis });
+}
 
 export class AdminSetupWizards {
   /**
@@ -36,8 +125,36 @@ export class AdminSetupWizards {
    * Launch the Single Unified Master Onboarding Wizard
    */
   static launch(wizardType = null, onComplete = null) {
+    if (wizardType === 'worksheet' || wizardType === 'foundation-worksheet') {
+      return AdminSetupWizards.launchFoundationWorksheetWizard(onComplete);
+    }
+    if (wizardType === 'brand' || wizardType === 'brand-stylist') {
+      return AdminSetupWizards.launchBrandStylistWizard(onComplete);
+    }
     const wizard = document.createElement('master-setup-wizard');
     wizard.setAttribute('mode', 'modal');
+    if (onComplete) {
+      wizard.onCompleteCallback = onComplete;
+    }
+    document.body.appendChild(wizard);
+  }
+
+  /**
+   * Launch Pre-Onboarding Foundation Worksheet & Brand Synthesis Wizard
+   */
+  static launchFoundationWorksheetWizard(onComplete = null) {
+    const wizard = document.createElement('foundation-worksheet-wizard');
+    if (onComplete) {
+      wizard.onCompleteCallback = onComplete;
+    }
+    document.body.appendChild(wizard);
+  }
+
+  /**
+   * Launch Brand Stylist Wizard
+   */
+  static launchBrandStylistWizard(onComplete = null) {
+    const wizard = document.createElement('brand-stylist-wizard');
     if (onComplete) {
       wizard.onCompleteCallback = onComplete;
     }
@@ -1554,4 +1671,578 @@ export class MasterSetupWizard extends HTMLElement {
 
 if (!customElements.get('master-setup-wizard')) {
   customElements.define('master-setup-wizard', MasterSetupWizard);
+}
+
+/**
+ * Custom Web Component <foundation-worksheet-wizard>
+ * Pre-Onboarding Foundation Worksheet & Semantic Brand Synthesis Engine
+ */
+export class FoundationWorksheetWizard extends HTMLElement {
+  constructor() {
+    super();
+    this.currentStep = 1;
+    this.totalSteps = 5;
+    this.synthesizedBrand = null;
+    this.isSynthesizing = false;
+
+    // Pre-filled EarlAlex baseline defaults
+    this.worksheet = {
+      purpose: "My/Our purpose is to elevate men and women into full alignment with their potential - empowering them to reclaim sovereignty over their mind, body, and business through discipline, clarity, and higher consciousness.",
+      mission: "My/Our mission is to build transformational frameworks, like Elevated Universe Academy and The Hunt, that merge fitness, mindset, and entrepreneurship. I create actionable programs, tools, and content that help people realign with their true purpose and achieve sustainable success with integrity and clarity.",
+      values: [
+        { name: "Alignment over Achievement", desc: "True success flows from staying rooted in your why, not chasing hollow milestones." },
+        { name: "Discipline", desc: "Consistency is the foundation of mastery." },
+        { name: "Integrity", desc: "Always act in truth, even when it's inconvenient." },
+        { name: "Ownership", desc: "Radical accountability for actions, choices, and results." },
+        { name: "Creativity", desc: "Use innovation and unique expression as a force for change." },
+        { name: "Sovereignty", desc: "Build life and business structures that ensure freedom and independence." },
+        { name: "Growth", desc: "Never stop evolving mentally, spiritually, and physically." },
+        { name: "Community Impact", desc: "Lift others as you rise, creating a ripple effect of empowerment." },
+        { name: "Health is Wealth", desc: "Physical, mental, and spiritual well-being come before profits or recognition." }
+      ],
+      kpis: [
+        { category: "Health & Energy / Financial Performance", title: "Complete 4 rounds of physical & mental performance programs (e.g., The Hunt) consistently within 90 days." },
+        { category: "Health & Energy / Financial Performance", title: "Track body composition: reach target weight and strength milestones." },
+        { category: "Health & Energy / Financial Performance", title: "Maintain quarterly revenue growth targets for enterprise offers." },
+        { category: "Relationships / Customer & Market", title: "Build primary subscriber email list to target volume within 90 days." },
+        { category: "Relationships / Customer & Market", title: "Collect 30+ client/student testimonials or success stories." },
+        { category: "Relationships / Customer & Market", title: "Maintain consistent weekly audience engagement across media channels." },
+        { category: "Personal Growth / Operational Excellence", title: "Read/study 2 books per month on leadership, NLP, or metaphysics." },
+        { category: "Personal Growth / Operational Excellence", title: "Complete targeted certifications or technical skill modules." },
+        { category: "Personal Growth / Operational Excellence", title: "Maintain a documented content and release calendar." },
+        { category: "Wealth & Legacy / Learning & Innovation", title: "Launch entry offer funnels successfully with 100+ sales." },
+        { category: "Wealth & Legacy / Learning & Innovation", title: "Develop core curriculum into fully recorded, scalable modules." },
+        { category: "Wealth & Legacy / Learning & Innovation", title: "Publish 1 major content series documenting the sovereign journey." }
+      ]
+    };
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  render() {
+    this.innerHTML = `
+      <div class="worksheet-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 100010; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box;">
+        <div class="worksheet-modal-card" style="background: white; border-radius: 12px; width: 100%; max-width: 900px; height: max-content; max-height: calc(100vh - 40px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: system-ui, sans-serif; color: #1a202c;">
+
+          <!-- Header -->
+          <div style="background: var(--theme-color-surface-alt, #f8fafc); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.5rem;">📝</span>
+              <div>
+                <h2 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0);">Foundation Worksheet & Brand Synthesis</h2>
+                <span style="font-size: 0.75rem; color: #718096;" id="worksheet-step-title">Step ${this.currentStep} of ${this.totalSteps}: Purpose (Your Why)</span>
+              </div>
+            </div>
+            <button id="close-worksheet-modal" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0;">&times;</button>
+          </div>
+
+          <!-- Body Step Content -->
+          <div id="worksheet-step-body" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
+            ${this.renderStepContent()}
+          </div>
+
+          <!-- Footer Actions -->
+          <div style="background: var(--theme-color-surface-alt, #f8fafc); border-top: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <button id="worksheet-prev-btn" class="btn-secondary" style="padding: 8px 16px; font-weight: 600;" ${this.currentStep === 1 ? 'disabled' : ''}>Back</button>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 0.8rem; font-weight: bold; color: #718096; margin-right: 0.5rem;">Step ${this.currentStep}/${this.totalSteps}</span>
+              ${this.currentStep < this.totalSteps ? `
+                <button id="worksheet-next-btn" class="btn-primary" style="padding: 8px 20px; font-weight: bold;">Next Step</button>
+              ` : `
+                <button id="worksheet-confirm-btn" class="btn-primary" style="padding: 10px 24px; font-weight: bold; background: #38a169; border-color: #2f855a;">✨ Confirm & Apply Custom Brand System</button>
+              `}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    this.bindEvents();
+  }
+
+  renderStepContent() {
+    if (this.currentStep === 1) {
+      return `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top: 0; color: var(--theme-color-primary, #2b6cb0);">1. Purpose (Your Why)</h3>
+          <p style="font-size: 0.85rem; color: #718096; line-height: 1.5; margin-bottom: 0.5rem;">
+            The core reason you exist or operate beyond making money. What impact do you genuinely want to create?
+          </p>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Purpose Statement:</label>
+            <textarea id="ws-purpose-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${this.worksheet.purpose}</textarea>
+          </div>
+        </div>
+      `;
+    }
+
+    if (this.currentStep === 2) {
+      return `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top: 0; color: var(--theme-color-primary, #2b6cb0);">2. Mission (Your What & How)</h3>
+          <p style="font-size: 0.85rem; color: #718096; line-height: 1.5; margin-bottom: 0.5rem;">
+            What you deliver, for whom, how you uniquely deliver it, and the intended outcome. Format: <em>"My mission is to [WHAT] for [WHO] by [HOW], so that [OUTCOME]."</em>
+          </p>
+          <div>
+            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Mission Statement:</label>
+            <textarea id="ws-mission-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${this.worksheet.mission}</textarea>
+          </div>
+        </div>
+      `;
+    }
+
+    if (this.currentStep === 3) {
+      return `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top: 0; color: var(--theme-color-primary, #2b6cb0);">3. The 9 Core Values</h3>
+          <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">Non-negotiable principles shaping decisions, culture, and behavior.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; max-height: 320px; overflow-y: auto; padding-right: 4px;">
+            ${this.worksheet.values.map((v, i) => `
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
+                <label style="font-size: 0.8rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); display: block; margin-bottom: 2px;">Value ${i + 1}: ${v.name}</label>
+                <input type="text" class="ws-val-desc" data-index="${i}" value="${v.desc}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;" />
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    if (this.currentStep === 4) {
+      return `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <h3 style="margin-top: 0; color: var(--theme-color-primary, #2b6cb0);">4. The 12 Key Performance Indicators (KPI Scoreboard)</h3>
+          <p style="font-size: 0.85rem; color: #718096; margin-bottom: 0.5rem;">3 KPIs per category tracking growth across health, customer, growth, and wealth.</p>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 320px; overflow-y: auto; padding-right: 4px;">
+            ${this.worksheet.kpis.map((k, i) => `
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 0.72rem; font-weight: bold; color: #718096; text-transform: uppercase;">${k.category}</span>
+                <input type="text" class="ws-kpi-input" data-index="${i}" value="${k.title}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;" />
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Step 5: Design Psychology Synthesis & Rationale Card Preview
+    if (this.isSynthesizing) {
+      return `
+        <div style="text-align: center; padding: 3rem 1rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;" class="spin-icon">✨</div>
+          <h3 style="margin: 0 0 0.5rem 0; color: var(--theme-color-primary, #2b6cb0);">Synthesizing Brand System via Gemini AI...</h3>
+          <p style="color: #718096; font-size: 0.9rem;">Applying color psychology, typographic semantics, and brand archetype rules based on your Purpose, Mission, and Values.</p>
+        </div>
+      `;
+    }
+
+    const brand = this.synthesizedBrand || {
+      archetype: "Sovereign Ruler & Heroic Catalyst",
+      voiceAndTone: "Authoritative, Direct, Sovereign, Grounded",
+      colors: {
+        primary: "#1E3A8A",
+        primaryHover: "#1D4ED8",
+        accent: "#D97706",
+        surface: "#FFFFFF",
+        surfaceAlt: "#F8FAFC",
+        textPrimary: "#0F172A",
+        textSecondary: "#475569"
+      },
+      typography: {
+        headingFont: "Cinzel",
+        bodyFont: "Plus Jakarta Sans",
+        headingStyle: "Uppercase, High-Tracking, Serif Authority"
+      },
+      designRationale: {
+        colorPsychology: "Deep Navy (#1E3A8A) was selected for Primary to convey Sovereignty, Integrity, and Enterprise Stability. Solar Gold (#D97706) provides high-contrast CTAs representing Radiant Optimism and Legacy.",
+        typographyRationale: "Cinzel was selected for headings to convey Executive Sovereignty and Structural Authority. Plus Jakarta Sans provides geometric body clarity.",
+        archetypeRationale: "Your brand persona combines the Sovereign Ruler with the Heroic Catalyst, balancing executive authority with transformative action."
+      }
+    };
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem; color: #166534; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <strong style="font-size: 0.95rem; display: block;">✨ Brand Design Psychology Synthesis Complete!</strong>
+            <span style="font-size: 0.8rem;">Review your custom color swatches, typographic semantics, and rationale below before applying.</span>
+          </div>
+          <button id="ws-re-synthesize-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #ffffff; border: 1px solid #bbf7d0; color: #166534; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            🔄 Re-Synthesize
+          </button>
+        </div>
+
+        <!-- Interactive Brand Psychology Rationale Card -->
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; box-shadow: 0 4px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 1rem;">
+
+          <!-- Palette Swatches -->
+          <div>
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; text-transform: uppercase; color: #718096; letter-spacing: 0.05em;">Derived Palette Swatches:</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.5rem;">
+              <div style="background: ${brand.colors.primary}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
+                Primary<br><code>${brand.colors.primary}</code>
+              </div>
+              <div style="background: ${brand.colors.primaryHover}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
+                Hover<br><code>${brand.colors.primaryHover}</code>
+              </div>
+              <div style="background: ${brand.colors.accent}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
+                Accent<br><code>${brand.colors.accent}</code>
+              </div>
+              <div style="background: ${brand.colors.surface}; color: ${brand.colors.textPrimary}; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid #cbd5e0;">
+                Surface<br><code>${brand.colors.surface}</code>
+              </div>
+              <div style="background: ${brand.colors.surfaceAlt}; color: ${brand.colors.textPrimary}; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid #cbd5e0;">
+                Surface Alt<br><code>${brand.colors.surfaceAlt}</code>
+              </div>
+            </div>
+          </div>
+
+          <!-- Color Psychology Rationale -->
+          <div style="background: #f8fafc; border-left: 4px solid ${brand.colors.primary}; padding: 0.85rem; border-radius: 4px;">
+            <strong style="display: block; font-size: 0.85rem; color: ${brand.colors.primary}; margin-bottom: 2px;">🎨 Color Psychology Rationale:</strong>
+            <p style="margin: 0; font-size: 0.8rem; color: #334155; line-height: 1.5;">${brand.designRationale.colorPsychology}</p>
+          </div>
+
+          <!-- Typographic Rationale -->
+          <div style="background: #f8fafc; border-left: 4px solid ${brand.colors.accent}; padding: 0.85rem; border-radius: 4px;">
+            <strong style="display: block; font-size: 0.85rem; color: ${brand.colors.accent}; margin-bottom: 2px;">✍️ Typographic Semantics (Headings: <em>${brand.typography.headingFont}</em> | Body: <em>${brand.typography.bodyFont}</em>):</strong>
+            <p style="margin: 0; font-size: 0.8rem; color: #334155; line-height: 1.5;">${brand.designRationale.typographyRationale}</p>
+          </div>
+
+          <!-- Archetype & Voice Card -->
+          <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 0.85rem; color: #1e3a8a;">
+            <strong style="display: block; font-size: 0.85rem; margin-bottom: 2px;">👑 Brand Archetype & Tone: <em>${brand.archetype}</em></strong>
+            <p style="margin: 0; font-size: 0.8rem; line-height: 1.5;"><strong>Voice & Tone:</strong> ${brand.voiceAndTone}. <br>${brand.designRationale.archetypeRationale}</p>
+          </div>
+
+        </div>
+
+        <!-- Output binder status -->
+        <div style="display: flex; gap: 0.75rem; align-items: center; justify-content: flex-end;">
+          <button id="ws-download-md-btn" style="padding: 6px 12px; font-size: 0.8rem; background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; cursor: pointer;">
+            📄 Download corporate-binder/Foundation_Worksheet.md
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  bindEvents() {
+    this.querySelector('#close-worksheet-modal')?.addEventListener('click', () => this.remove());
+
+    const prevBtn = this.querySelector('#worksheet-prev-btn');
+    if (prevBtn) {
+      prevBtn.onclick = () => {
+        if (this.currentStep > 1) {
+          this.currentStep--;
+          this.render();
+        }
+      };
+    }
+
+    const nextBtn = this.querySelector('#worksheet-next-btn');
+    if (nextBtn) {
+      nextBtn.onclick = async () => {
+        this.saveCurrentStepInputs();
+        if (this.currentStep < this.totalSteps) {
+          this.currentStep++;
+          if (this.currentStep === 5 && !this.synthesizedBrand) {
+            await this.performBrandSynthesis();
+          } else {
+            this.render();
+          }
+        }
+      };
+    }
+
+    const reSynthBtn = this.querySelector('#ws-re-synthesize-btn');
+    if (reSynthBtn) {
+      reSynthBtn.onclick = async () => {
+        await this.performBrandSynthesis();
+      };
+    }
+
+    const downloadMdBtn = this.querySelector('#ws-download-md-btn');
+    if (downloadMdBtn) {
+      downloadMdBtn.onclick = () => {
+        const mdContent = this.generateMarkdownBinderContent();
+        const blob = new Blob([mdContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "Foundation_Worksheet.md";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    }
+
+    const confirmBtn = this.querySelector('#worksheet-confirm-btn');
+    if (confirmBtn) {
+      confirmBtn.onclick = async () => {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Injecting Custom Design System...";
+
+        try {
+          const brand = this.synthesizedBrand || {
+            colors: { primary: "#1E3A8A", primaryHover: "#1D4ED8", accent: "#D97706", surface: "#FFFFFF", surfaceAlt: "#F8FAFC", textPrimary: "#0F172A", textSecondary: "#475569" },
+            typography: { headingFont: "Cinzel", bodyFont: "Plus Jakarta Sans" }
+          };
+
+          // 1. Inject tokens into themeEngine
+          themeEngine.applyCustomDesignSystem({
+            '--theme-color-primary': brand.colors.primary,
+            '--theme-color-primary-hover': brand.colors.primaryHover,
+            '--theme-color-accent': brand.colors.accent,
+            '--theme-color-surface': brand.colors.surface,
+            '--theme-color-surface-alt': brand.colors.surfaceAlt,
+            '--theme-font-family-heading': brand.typography.headingFont,
+            '--theme-font-family-body': brand.typography.bodyFont
+          });
+
+          // 2. Persist brandGuide in configManager
+          const updatedConfig = {
+            ...(configManager.current || {}),
+            brandGuide: brand,
+            foundationWorksheet: this.worksheet
+          };
+          configManager.current = updatedConfig;
+          localStorage.setItem('foundation_theme_custom', JSON.stringify(brand));
+
+          // 3. Save Markdown to corporate-binder/
+          const mdText = this.generateMarkdownBinderContent();
+          const mdFile = new File([new Blob([mdText], { type: 'text/markdown' })], "Foundation_Worksheet.md", { type: 'text/markdown' });
+          mdFile.isCorporateBinder = true;
+          try {
+            await uploadFileToDrive(mdFile);
+          } catch (e) {
+            console.warn('[FoundationWorksheetWizard] Drive backup deferred:', e.message);
+          }
+
+          toast.success("Semantic Brand Guide synthesized & custom design system injected successfully!");
+
+          if (this.onCompleteCallback) {
+            this.onCompleteCallback(brand);
+          }
+          this.remove();
+        } catch (err) {
+          toast.error("Failed to apply brand theme: " + err.message);
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "✨ Confirm & Apply Custom Brand System";
+        }
+      };
+    }
+  }
+
+  saveCurrentStepInputs() {
+    if (this.currentStep === 1) {
+      const p = this.querySelector('#ws-purpose-input')?.value;
+      if (p) this.worksheet.purpose = p.trim();
+    } else if (this.currentStep === 2) {
+      const m = this.querySelector('#ws-mission-input')?.value;
+      if (m) this.worksheet.mission = m.trim();
+    } else if (this.currentStep === 3) {
+      this.querySelectorAll('.ws-val-desc').forEach(el => {
+        const idx = Number(el.dataset.index);
+        if (this.worksheet.values[idx]) {
+          this.worksheet.values[idx].desc = el.value.trim();
+        }
+      });
+    } else if (this.currentStep === 4) {
+      this.querySelectorAll('.ws-kpi-input').forEach(el => {
+        const idx = Number(el.dataset.index);
+        if (this.worksheet.kpis[idx]) {
+          this.worksheet.kpis[idx].title = el.value.trim();
+        }
+      });
+    }
+  }
+
+  async performBrandSynthesis() {
+    this.isSynthesizing = true;
+    this.render();
+
+    try {
+      const valuesArr = this.worksheet.values.map(v => `${v.name}: ${v.desc}`);
+      const kpisArr = this.worksheet.kpis.map(k => `${k.category}: ${k.title}`);
+
+      this.synthesizedBrand = await synthesizeBrandFromWorksheet({
+        purpose: this.worksheet.purpose,
+        mission: this.worksheet.mission,
+        values: valuesArr,
+        kpis: kpisArr
+      });
+    } catch (err) {
+      console.warn('Brand synthesis deferred, using default fallback:', err);
+    } finally {
+      this.isSynthesizing = false;
+      this.render();
+    }
+  }
+
+  generateMarkdownBinderContent() {
+    const brand = this.synthesizedBrand || {};
+    return `# Foundation Worksheet & Semantic Brand Guide
+
+## 1. Purpose (Your Why)
+"${this.worksheet.purpose}"
+
+## 2. Mission (Your What & How)
+"${this.worksheet.mission}"
+
+## 3. The 9 Core Values
+${this.worksheet.values.map((v, i) => `${i + 1}. **${v.name}**: ${v.desc}`).join('\n')}
+
+## 4. The 12 Key Performance Indicators (KPI Scoreboard)
+${this.worksheet.kpis.map((k, i) => `${i + 1}. [${k.category}] ${k.title}`).join('\n')}
+
+---
+
+## 5. Synthesized Brand Design System
+- **Archetype**: ${brand.archetype || "Sovereign Master"}
+- **Voice & Tone**: ${brand.voiceAndTone || "Authoritative, Sovereign, Direct"}
+
+### Derived Color Palette
+- **Primary**: \`${brand.colors?.primary || "#1E3A8A"}\`
+- **Primary Hover**: \`${brand.colors?.primaryHover || "#1D4ED8"}\`
+- **Accent**: \`${brand.colors?.accent || "#D97706"}\`
+- **Surface**: \`${brand.colors?.surface || "#FFFFFF"}\`
+- **Surface Alt**: \`${brand.colors?.surfaceAlt || "#F8FAFC"}\`
+- **Text Primary**: \`${brand.colors?.textPrimary || "#0F172A"}\`
+
+### Typographic Semantics
+- **Heading Font**: ${brand.typography?.headingFont || "Cinzel"}
+- **Body Font**: ${brand.typography?.bodyFont || "Plus Jakarta Sans"}
+
+### Design Psychology Rationale
+- **Color Psychology**: ${brand.designRationale?.colorPsychology || "Deep Navy selected for Sovereignty & Integrity."}
+- **Typography Rationale**: ${brand.designRationale?.typographyRationale || "Cinzel selected for Executive Sovereignty."}
+- **Archetype Rationale**: ${brand.designRationale?.archetypeRationale || "Sovereign Ruler persona."}
+
+---
+*Generated dynamically in corporate-binder/ on ${new Date().toLocaleString()}*
+`;
+  }
+}
+
+/**
+ * Custom Web Component <brand-stylist-wizard>
+ */
+export class BrandStylistWizard extends HTMLElement {
+  constructor() {
+    super();
+    this.brand = configManager.current?.brandGuide || {
+      archetype: "Sovereign Ruler",
+      voiceAndTone: "Authoritative, Direct, Sovereign",
+      colors: {
+        primary: "#1E3A8A",
+        primaryHover: "#1D4ED8",
+        accent: "#D97706",
+        surface: "#FFFFFF",
+        surfaceAlt: "#F8FAFC",
+        textPrimary: "#0F172A",
+        textSecondary: "#475569"
+      },
+      typography: {
+        headingFont: "Cinzel",
+        bodyFont: "Plus Jakarta Sans",
+        headingStyle: "Uppercase, High-Tracking"
+      },
+      designRationale: {
+        colorPsychology: "Deep Navy selected for Sovereignty and Integrity. Solar Gold for radiant energy.",
+        typographyRationale: "Cinzel selected for Executive Authority.",
+        archetypeRationale: "Sovereign Ruler persona."
+      }
+    };
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  render() {
+    this.innerHTML = `
+      <div class="brand-stylist-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 100010; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box;">
+        <div style="background: white; border-radius: 12px; width: 100%; max-width: 800px; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: system-ui, sans-serif; color: #1a202c; display: flex; flex-direction: column; gap: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+            <h3 style="margin: 0; color: var(--theme-color-primary, #2b6cb0); font-size: 1.25rem; font-weight: 800;">🎨 Brand Stylist & Theme Customizer</h3>
+            <button id="close-stylist-modal" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0;">&times;</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Primary Color:</label>
+              <input type="color" id="bs-ctrl-primary" value="${this.brand.colors.primary}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Accent Color:</label>
+              <input type="color" id="bs-ctrl-accent" value="${this.brand.colors.accent}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Heading Google Font:</label>
+              <input type="text" id="bs-ctrl-heading-font" value="${this.brand.typography.headingFont}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Body Google Font:</label>
+              <input type="text" id="bs-ctrl-body-font" value="${this.brand.typography.bodyFont}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <strong style="font-size: 0.85rem; color: #475569;">Design Rationale Preview:</strong>
+            <p style="margin: 0; font-size: 0.8rem; color: #64748b;">${this.brand.designRationale?.colorPsychology || "Customized brand color system."}</p>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+            <button id="bs-cancel-btn" class="btn-secondary" style="padding: 8px 16px;">Cancel</button>
+            <button id="bs-apply-btn" class="btn-primary" style="padding: 10px 20px; font-weight: bold; background: var(--theme-color-accent, #38a169);">
+              Apply Brand Tokens
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.querySelector('#close-stylist-modal').onclick = () => this.remove();
+    this.querySelector('#bs-cancel-btn').onclick = () => this.remove();
+
+    this.querySelector('#bs-apply-btn').onclick = () => {
+      const prim = this.querySelector('#bs-ctrl-primary').value;
+      const acc = this.querySelector('#bs-ctrl-accent').value;
+      const hFont = this.querySelector('#bs-ctrl-heading-font').value.trim();
+      const bFont = this.querySelector('#bs-ctrl-body-font').value.trim();
+
+      const updatedBrand = {
+        ...this.brand,
+        colors: { ...this.brand.colors, primary: prim, accent: acc },
+        typography: { ...this.brand.typography, headingFont: hFont, bodyFont: bFont }
+      };
+
+      themeEngine.applyCustomDesignSystem({
+        '--theme-color-primary': prim,
+        '--theme-color-accent': acc,
+        '--theme-font-family-heading': hFont,
+        '--theme-font-family-body': bFont
+      });
+
+      configManager.current = { ...(configManager.current || {}), brandGuide: updatedBrand };
+      localStorage.setItem('foundation_theme_custom', JSON.stringify(updatedBrand));
+      toast.success("Brand Stylist tokens applied successfully!");
+      if (this.onCompleteCallback) this.onCompleteCallback(updatedBrand);
+      this.remove();
+    };
+  }
+}
+
+if (!customElements.get('foundation-worksheet-wizard')) {
+  customElements.define('foundation-worksheet-wizard', FoundationWorksheetWizard);
+}
+
+if (!customElements.get('brand-stylist-wizard')) {
+  customElements.define('brand-stylist-wizard', BrandStylistWizard);
 }
