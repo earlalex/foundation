@@ -11,8 +11,22 @@ export async function onRequestPost(context) {
                      context.request.headers.get('x-forwarded-for') ||
                      'unknown-client';
 
-    // 1. Enforce simple rate limiting per client IP
+    // 1. Enforce simple rate limiting per client IP with map pruning & size bounding
     const now = Date.now();
+
+    // Periodically prune expired entries to prevent memory leak in worker isolate
+    if (ipRateLimitMap.size > 50) {
+      for (const [ip, record] of ipRateLimitMap.entries()) {
+        if (now > record.resetTime) {
+          ipRateLimitMap.delete(ip);
+        }
+      }
+    }
+    // Hard bound map capacity
+    if (ipRateLimitMap.size > 1000) {
+      ipRateLimitMap.clear();
+    }
+
     const clientUsage = ipRateLimitMap.get(clientIp) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
     if (now > clientUsage.resetTime) {
       clientUsage.count = 0;
