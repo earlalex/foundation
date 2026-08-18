@@ -1703,6 +1703,7 @@ function sanitizeCssHex(hex, fallback = "#1E3A8A") {
 export class FoundationWorksheetWizard extends HTMLElement {
   constructor() {
     super();
+    this.uid = 'fws_' + Math.random().toString(36).substring(2, 8);
     this.currentStep = 1;
     this.totalSteps = 5;
     this.synthesizedBrand = null;
@@ -1755,26 +1756,26 @@ export class FoundationWorksheetWizard extends HTMLElement {
               <span style="font-size: 1.5rem;">📝</span>
               <div>
                 <h2 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0);">Foundation Worksheet & Brand Synthesis</h2>
-                <span style="font-size: 0.75rem; color: #718096;" id="worksheet-step-title">Step ${this.currentStep} of ${this.totalSteps}: Purpose (Your Why)</span>
+                <span style="font-size: 0.75rem; color: #718096;" id="${this.uid}-step-title">Step ${this.currentStep} of ${this.totalSteps}: Purpose (Your Why)</span>
               </div>
             </div>
-            <button id="close-worksheet-modal" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0;">&times;</button>
+            <button id="${this.uid}-close-btn" class="close-worksheet-modal" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0;">&times;</button>
           </div>
 
           <!-- Body Step Content -->
-          <div id="worksheet-step-body" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
+          <div id="${this.uid}-step-body" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
             ${this.renderStepContent()}
           </div>
 
           <!-- Footer Actions -->
           <div style="background: var(--theme-color-surface-alt, #f8fafc); border-top: 1px solid var(--theme-color-border, #e2e8f0); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-            <button id="worksheet-prev-btn" class="btn-secondary" style="padding: 8px 16px; font-weight: 600;" ${this.currentStep === 1 ? 'disabled' : ''}>Back</button>
+            <button id="${this.uid}-prev-btn" class="btn-secondary" style="padding: 8px 16px; font-weight: 600;" ${this.currentStep === 1 ? 'disabled' : ''}>Back</button>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
               <span style="font-size: 0.8rem; font-weight: bold; color: #718096; margin-right: 0.5rem;">Step ${this.currentStep}/${this.totalSteps}</span>
               ${this.currentStep < this.totalSteps ? `
-                <button id="worksheet-next-btn" class="btn-primary" style="padding: 8px 20px; font-weight: bold;">Next Step</button>
+                <button id="${this.uid}-next-btn" class="btn-primary" style="padding: 8px 20px; font-weight: bold;">Next Step</button>
               ` : `
-                <button id="worksheet-confirm-btn" class="btn-primary" style="padding: 10px 24px; font-weight: bold; background: #38a169; border-color: #2f855a;">✨ Confirm & Apply Custom Brand System</button>
+                <button id="${this.uid}-confirm-btn" class="btn-primary" style="padding: 10px 24px; font-weight: bold; background: #38a169; border-color: #2f855a;">✨ Confirm & Apply Custom Brand System</button>
               `}
             </div>
           </div>
@@ -1795,8 +1796,8 @@ export class FoundationWorksheetWizard extends HTMLElement {
             The core reason you exist or operate beyond making money. What impact do you genuinely want to create?
           </p>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Purpose Statement:</label>
-            <textarea id="ws-purpose-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${escapeHTML(this.worksheet.purpose)}</textarea>
+            <label for="${this.uid}-purpose-input" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Purpose Statement:</label>
+            <textarea id="${this.uid}-purpose-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${escapeHTML(this.worksheet.purpose)}</textarea>
           </div>
         </div>
       `;
@@ -1810,8 +1811,8 @@ export class FoundationWorksheetWizard extends HTMLElement {
             What you deliver, for whom, how you uniquely deliver it, and the intended outcome. Format: <em>"My mission is to [WHAT] for [WHO] by [HOW], so that [OUTCOME]."</em>
           </p>
           <div>
-            <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Mission Statement:</label>
-            <textarea id="ws-mission-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${escapeHTML(this.worksheet.mission)}</textarea>
+            <label for="${this.uid}-mission-input" style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Mission Statement:</label>
+            <textarea id="${this.uid}-mission-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${escapeHTML(this.worksheet.mission)}</textarea>
           </div>
         </div>
       `;
@@ -1900,7 +1901,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
             <strong style="font-size: 0.95rem; display: block;">✨ Brand Design Psychology Synthesis Complete!</strong>
             <span style="font-size: 0.8rem;">Review your custom color swatches, typographic semantics, and rationale below before applying.</span>
           </div>
-          <button id="ws-re-synthesize-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #ffffff; border: 1px solid #bbf7d0; color: #166534; border-radius: 6px; font-weight: bold; cursor: pointer;">
+          <button id="${this.uid}-resynth-btn" class="ws-re-synthesize-btn" style="padding: 6px 12px; font-size: 0.8rem; background: #ffffff; border: 1px solid #bbf7d0; color: #166534; border-radius: 6px; font-weight: bold; cursor: pointer;">
             🔄 Re-Synthesize
           </button>
         </div>
@@ -1952,7 +1953,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
 
         <!-- Output binder status -->
         <div style="display: flex; gap: 0.75rem; align-items: center; justify-content: flex-end;">
-          <button id="ws-download-md-btn" style="padding: 6px 12px; font-size: 0.8rem; background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; cursor: pointer;">
+          <button id="${this.uid}-download-md-btn" class="ws-download-md-btn" style="padding: 6px 12px; font-size: 0.8rem; background: transparent; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; cursor: pointer;">
             📄 Download corporate-binder/Foundation_Worksheet.md
           </button>
         </div>
@@ -1961,9 +1962,9 @@ export class FoundationWorksheetWizard extends HTMLElement {
   }
 
   bindEvents() {
-    this.querySelector('#close-worksheet-modal')?.addEventListener('click', () => this.remove());
+    this.querySelector(`#${this.uid}-close-btn`)?.addEventListener('click', () => this.remove());
 
-    const prevBtn = this.querySelector('#worksheet-prev-btn');
+    const prevBtn = this.querySelector(`#${this.uid}-prev-btn`);
     if (prevBtn) {
       prevBtn.onclick = () => {
         if (this.currentStep > 1) {
@@ -1973,7 +1974,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
       };
     }
 
-    const nextBtn = this.querySelector('#worksheet-next-btn');
+    const nextBtn = this.querySelector(`#${this.uid}-next-btn`);
     if (nextBtn) {
       nextBtn.onclick = async () => {
         this.saveCurrentStepInputs();
@@ -1988,14 +1989,14 @@ export class FoundationWorksheetWizard extends HTMLElement {
       };
     }
 
-    const reSynthBtn = this.querySelector('#ws-re-synthesize-btn');
+    const reSynthBtn = this.querySelector(`#${this.uid}-resynth-btn`);
     if (reSynthBtn) {
       reSynthBtn.onclick = async () => {
         await this.performBrandSynthesis();
       };
     }
 
-    const downloadMdBtn = this.querySelector('#ws-download-md-btn');
+    const downloadMdBtn = this.querySelector(`#${this.uid}-download-md-btn`);
     if (downloadMdBtn) {
       downloadMdBtn.onclick = () => {
         const mdContent = this.generateMarkdownBinderContent();
@@ -2009,7 +2010,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
       };
     }
 
-    const confirmBtn = this.querySelector('#worksheet-confirm-btn');
+    const confirmBtn = this.querySelector(`#${this.uid}-confirm-btn`);
     if (confirmBtn) {
       confirmBtn.onclick = async () => {
         confirmBtn.disabled = true;
@@ -2073,10 +2074,10 @@ export class FoundationWorksheetWizard extends HTMLElement {
 
   saveCurrentStepInputs() {
     if (this.currentStep === 1) {
-      const p = this.querySelector('#ws-purpose-input')?.value;
+      const p = this.querySelector(`#${this.uid}-purpose-input`)?.value;
       if (p) this.worksheet.purpose = p.trim();
     } else if (this.currentStep === 2) {
-      const m = this.querySelector('#ws-mission-input')?.value;
+      const m = this.querySelector(`#${this.uid}-mission-input`)?.value;
       if (m) this.worksheet.mission = m.trim();
     } else if (this.currentStep === 3) {
       this.querySelectorAll('.ws-val-desc').forEach(el => {
@@ -2168,6 +2169,7 @@ ${this.worksheet.kpis.map((k, i) => `${i + 1}. [${k.category}] ${k.title}`).join
 export class BrandStylistWizard extends HTMLElement {
   constructor() {
     super();
+    this.uid = 'bs_' + Math.random().toString(36).substring(2, 8);
     this.brand = configManager.current?.brandGuide || {
       archetype: "Sovereign Ruler",
       voiceAndTone: "Authoritative, Direct, Sovereign",
@@ -2203,28 +2205,28 @@ export class BrandStylistWizard extends HTMLElement {
         <div style="background: white; border-radius: 12px; width: 100%; max-width: 800px; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: system-ui, sans-serif; color: #1a202c; display: flex; flex-direction: column; gap: 1rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
             <h3 style="margin: 0; color: var(--theme-color-primary, #2b6cb0); font-size: 1.25rem; font-weight: 800;">🎨 Brand Stylist & Theme Customizer</h3>
-            <button id="close-stylist-modal" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0;">&times;</button>
+            <button id="${this.uid}-close-btn" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0;">&times;</button>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Primary Color:</label>
-              <input type="color" id="bs-ctrl-primary" value="${escapeHTML(sanitizeCssHex(this.brand.colors?.primary, '#1E3A8A'))}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
+              <label for="${this.uid}-primary" style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Primary Color:</label>
+              <input type="color" id="${this.uid}-primary" value="${escapeHTML(sanitizeCssHex(this.brand.colors?.primary, '#1E3A8A'))}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
             </div>
             <div>
-              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Accent Color:</label>
-              <input type="color" id="bs-ctrl-accent" value="${escapeHTML(sanitizeCssHex(this.brand.colors?.accent, '#D97706'))}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
+              <label for="${this.uid}-accent" style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Accent Color:</label>
+              <input type="color" id="${this.uid}-accent" value="${escapeHTML(sanitizeCssHex(this.brand.colors?.accent, '#D97706'))}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
-              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Heading Google Font:</label>
-              <input type="text" id="bs-ctrl-heading-font" value="${escapeHTML(this.brand.typography?.headingFont)}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
+              <label for="${this.uid}-heading-font" style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Heading Google Font:</label>
+              <input type="text" id="${this.uid}-heading-font" value="${escapeHTML(this.brand.typography?.headingFont)}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
             <div>
-              <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Body Google Font:</label>
-              <input type="text" id="bs-ctrl-body-font" value="${escapeHTML(this.brand.typography?.bodyFont)}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
+              <label for="${this.uid}-body-font" style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Body Google Font:</label>
+              <input type="text" id="${this.uid}-body-font" value="${escapeHTML(this.brand.typography?.bodyFont)}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
           </div>
 
@@ -2234,8 +2236,8 @@ export class BrandStylistWizard extends HTMLElement {
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-            <button id="bs-cancel-btn" class="btn-secondary" style="padding: 8px 16px;">Cancel</button>
-            <button id="bs-apply-btn" class="btn-primary" style="padding: 10px 20px; font-weight: bold; background: var(--theme-color-accent, #38a169);">
+            <button id="${this.uid}-cancel-btn" class="btn-secondary" style="padding: 8px 16px;">Cancel</button>
+            <button id="${this.uid}-apply-btn" class="btn-primary" style="padding: 10px 20px; font-weight: bold; background: var(--theme-color-accent, #38a169);">
               Apply Brand Tokens
             </button>
           </div>
@@ -2243,14 +2245,14 @@ export class BrandStylistWizard extends HTMLElement {
       </div>
     `;
 
-    this.querySelector('#close-stylist-modal').onclick = () => this.remove();
-    this.querySelector('#bs-cancel-btn').onclick = () => this.remove();
+    this.querySelector(`#${this.uid}-close-btn`)?.addEventListener('click', () => this.remove());
+    this.querySelector(`#${this.uid}-cancel-btn`)?.addEventListener('click', () => this.remove());
 
-    this.querySelector('#bs-apply-btn').onclick = () => {
-      const prim = this.querySelector('#bs-ctrl-primary').value;
-      const acc = this.querySelector('#bs-ctrl-accent').value;
-      const hFont = this.querySelector('#bs-ctrl-heading-font').value.trim();
-      const bFont = this.querySelector('#bs-ctrl-body-font').value.trim();
+    this.querySelector(`#${this.uid}-apply-btn`)?.addEventListener('click', () => {
+      const prim = this.querySelector(`#${this.uid}-primary`).value;
+      const acc = this.querySelector(`#${this.uid}-accent`).value;
+      const hFont = this.querySelector(`#${this.uid}-heading-font`).value.trim();
+      const bFont = this.querySelector(`#${this.uid}-body-font`).value.trim();
 
       const updatedBrand = {
         ...this.brand,
