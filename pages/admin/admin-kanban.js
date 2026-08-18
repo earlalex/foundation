@@ -3,6 +3,8 @@ import { contentDB } from '../../core/db.js';
 import { store } from '../../core/store.js';
 import { toast } from '../../utils/toast.js';
 import { errorHandler } from '../../core/error-handler.js';
+import { configManager } from '../../core/config.js';
+import { getGoogleAccessToken } from '../../core/google-services.js';
 
 let tasks = [];
 let users = [];
@@ -92,8 +94,35 @@ function insertKanbanFilterToggle() {
   });
 }
 
+async function syncGoogleTasks() {
+  try {
+    const token = await getGoogleAccessToken(false);
+    if (!token) return;
+    const listId = configManager.current.google?.tasksListId;
+    if (!listId) return;
+
+    await contentDB.syncKanbanFromGoogleTasks(token, listId);
+  } catch (err) {
+    console.warn('[Admin Kanban]: Google Tasks sync error:', err.message);
+  }
+}
+
+async function pushTaskToGoogleTasks(task) {
+  try {
+    const token = await getGoogleAccessToken(false);
+    if (!token) return;
+    const listId = configManager.current.google?.tasksListId;
+    if (!listId) return;
+
+    await contentDB.pushKanbanToGoogleTasks(token, listId, task);
+  } catch (err) {
+    console.warn('[Admin Kanban]: Google Tasks push error:', err.message);
+  }
+}
+
 async function loadTasks() {
   try {
+    await syncGoogleTasks();
     tasks = await contentDB.getKanbanTasks();
     renderKanbanBoard();
   } catch (err) {
@@ -338,6 +367,7 @@ window.assignTaskToMe = async function(taskId) {
 
   try {
     await contentDB.saveKanbanTask(task);
+    await pushTaskToGoogleTasks(task);
     renderKanbanBoard();
     toast.success('Task self-assigned successfully!');
   } catch (err) {
@@ -356,6 +386,7 @@ async function updateTaskStatus(taskId, newStatus) {
       task.status = newStatus;
       task.updatedBy = currentUser?.id;
       task.updatedAt = new Date().toISOString();
+      await pushTaskToGoogleTasks(task);
       renderKanbanBoard();
       toast.success(`Task status updated to "${COLUMN_LABELS[newStatus]}"`);
     }
@@ -376,6 +407,7 @@ window.addCompletionNotesPrompt = async function(taskId) {
     task.completionNotes = notes;
     task.updatedAt = new Date().toISOString();
     await contentDB.saveKanbanTask(task);
+    await pushTaskToGoogleTasks(task);
     renderKanbanBoard();
     toast.success('Deliverables and progress updated successfully!');
   } catch (err) {
@@ -460,6 +492,7 @@ function setupTaskForm() {
 
     try {
       await contentDB.saveKanbanTask(newTask);
+      await pushTaskToGoogleTasks(newTask);
       tasks.push(newTask);
       renderKanbanBoard();
       form.reset();

@@ -834,3 +834,324 @@ export async function assignLastpassVaultAccess(vaultId, editorId) {
   cred.updatedAt = new Date().toISOString();
   return saveVaultCredential(cred);
 }
+
+/* -------------------------------------------------------------------------- */
+/*             GOOGLE SHEETS CMS & GOOGLE TASKS KANBAN SYNC ENGINE            */
+/* -------------------------------------------------------------------------- */
+
+function getLocalKanbanTasks() {
+  try {
+    return JSON.parse(localStorage.getItem('foundation_local_kanban_tasks') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveLocalKanbanTasks(tasks) {
+  try {
+    localStorage.setItem('foundation_local_kanban_tasks', JSON.stringify(tasks));
+  } catch (e) {
+    console.error('[DB]: Failed to save kanban tasks to localStorage', e);
+  }
+}
+
+export async function saveKanbanTask(task) {
+  const db = getFirestoreDB();
+  if (!db) {
+    const local = getLocalKanbanTasks();
+    local[task.id] = { ...task, updatedAt: new Date().toISOString() };
+    saveLocalKanbanTasks(local);
+    return task;
+  }
+
+  try {
+    const docRef = doc(db, KANBAN_TASKS_COLLECTION, task.id);
+    await setDoc(docRef, { ...task, updatedAt: new Date().toISOString() }, { merge: true });
+    return task;
+  } catch (err) {
+    console.warn('[DB]: Firestore kanban task save error. Falling back to LocalStorage.', err.message);
+    const local = getLocalKanbanTasks();
+    local[task.id] = { ...task, updatedAt: new Date().toISOString() };
+    saveLocalKanbanTasks(local);
+    return task;
+  }
+}
+
+export async function getKanbanTasks() {
+  const db = getFirestoreDB();
+  if (!db) {
+    const local = getLocalKanbanTasks();
+    return Object.values(local);
+  }
+
+  try {
+    const querySnapshot = await getDocs(collection(db, KANBAN_TASKS_COLLECTION));
+    return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (err) {
+    console.warn('[DB]: Firestore kanban tasks get error. Falling back to LocalStorage.', err.message);
+    const local = getLocalKanbanTasks();
+    return Object.values(local);
+  }
+}
+
+export async function deleteKanbanTask(taskId) {
+  const db = getFirestoreDB();
+  if (!db) {
+    const local = getLocalKanbanTasks();
+    delete local[taskId];
+    saveLocalKanbanTasks(local);
+    return true;
+  }
+
+  try {
+    const docRef = doc(db, KANBAN_TASKS_COLLECTION, taskId);
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.warn('[DB]: Firestore kanban task delete error. Falling back to LocalStorage.', err.message);
+    const local = getLocalKanbanTasks();
+    delete local[taskId];
+    saveLocalKanbanTasks(local);
+    return true;
+  }
+}
+
+export async function updateKanbanTaskStatus(taskId, columnId, editorId) {
+  const tasks = await getKanbanTasks();
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) {
+    throw new Error(`Kanban task with ID ${taskId} not found`);
+  }
+  task.status = columnId;
+  if (editorId) {
+    task.updatedBy = editorId;
+  }
+  task.updatedAt = new Date().toISOString();
+  return saveKanbanTask(task);
+}
+
+/**
+ * Synchronizes CMS content from Google Sheets workbook into local cache / Firestore
+ */
+export async function syncCmsFromGoogleSheets(token, spreadsheetId) {
+  if (!token || !spreadsheetId) return null;
+
+  try {
+    const { readFullCmsWorkbook } = await import('../utils/backend-google-sheets.js');
+    const fullData = await readFullCmsWorkbook(token, spreadsheetId);
+    if (!fullData) return null;
+
+    // 1. Site_Config
+    if (Array.isArray(fullData.Site_Config) && fullData.Site_Config.length > 0) {
+      const cfgUpdates = {};
+      fullData.Site_Config.forEach(row => {
+        if (row.Key) {
+          cfgUpdates[row.Key] = row.Value;
+        }
+      });
+      if (Object.keys(cfgUpdates).length > 0) {
+        configManager.current = {
+          ...configManager.current,
+          ...cfgUpdates
+        };
+        localStorage.setItem('foundation_config', JSON.stringify(configManager.current));
+      }
+    }
+
+    // 2. Pages_Layouts
+    if (Array.isArray(fullData.Pages_Layouts) && fullData.Pages_Layouts.length > 0) {
+      for (const pRow of fullData.Pages_Layouts) {
+        if (pRow.slug) {
+          let projectData = null;
+          try { projectData = pRow.projectDataJson ? JSON.parse(pRow.projectDataJson) : null; } catch (e) {}
+          await saveCustomPage({
+            id: pRow.slug,
+            slug: pRow.slug,
+            title: pRow.title || pRow.slug,
+            editorType: pRow.editorType || 'gjs',
+            compiledHtml: pRow.compiledHtml || '',
+            compiledCss: pRow.compiledCss || '',
+            projectData: projectData,
+            access: { visibility: pRow.visibility || 'public' }
+          });
+        }
+      }
+    }
+
+    // 3. Content_Articles
+    if (Array.isArray(fullData.Content_Articles) && fullData.Content_Articles.length > 0) {
+      for (const aRow of fullData.Content_Articles) {
+        if (aRow.id) {
+          let bodyPara = [];
+          try {
+            bodyPara = aRow.bodyParagraphs ? JSON.parse(aRow.bodyParagraphs) : [aRow.bodyParagraphs || ''];
+          } catch (e) {
+            bodyPara = [aRow.bodyParagraphs || ''];
+          }
+          await saveContent({
+            id: aRow.id,
+            type: aRow.type || 'blog',
+            title: aRow.title || 'Untitled',
+            headline: aRow.headline || '',
+            description: aRow.description || '',
+            longFormText: bodyPara,
+            author: aRow.author || 'Admin',
+            date: aRow.date || new Date().toISOString(),
+            access: { visibility: aRow.access || 'public' }
+          });
+        }
+      }
+    }
+
+    // 4. Products_Catalog
+    if (Array.isArray(fullData.Products_Catalog) && fullData.Products_Catalog.length > 0) {
+      for (const prodRow of fullData.Products_Catalog) {
+        if (prodRow.id) {
+          await saveContent({
+            id: prodRow.id,
+            type: 'product',
+            title: prodRow.title || 'Product Item',
+            description: prodRow.description || '',
+            category: prodRow.category || 'Merch',
+            priceUsd: parseFloat(prodRow.priceUsd || 0),
+            stockQty: parseInt(prodRow.stockQty || 0, 10),
+            enableNftCounterpart: prodRow.enableNftCounterpart === 'true' || prodRow.enableNftCounterpart === true
+          });
+        }
+      }
+    }
+
+    // 5. Media_Assets
+    if (Array.isArray(fullData.Media_Assets) && fullData.Media_Assets.length > 0) {
+      for (const mRow of fullData.Media_Assets) {
+        if (mRow.id) {
+          await saveContent({
+            id: mRow.id,
+            type: 'media',
+            filename: mRow.filename || 'asset.png',
+            category: mRow.category || 'Images',
+            driveCdnUrl: mRow.driveCdnUrl || '',
+            altText: mRow.altText || '',
+            aspectRatio: mRow.aspectRatio || '16:9',
+            uploadedAt: mRow.uploadedAt || new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    console.log('[Google Sheets CMS]: Full CMS sync completed from workbook ID:', spreadsheetId);
+    return fullData;
+  } catch (err) {
+    console.warn('[Google Sheets CMS]: Sync failed, degrading cleanly to local state:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Pushes CMS payload data to Google Sheets tab
+ */
+export async function pushCmsToGoogleSheets(token, spreadsheetId, tabName, payloadData) {
+  if (!token || !spreadsheetId || !tabName) return false;
+
+  try {
+    const { writeCmsTab } = await import('../utils/backend-google-sheets.js');
+    return await writeCmsTab(token, spreadsheetId, tabName, payloadData);
+  } catch (err) {
+    console.warn(`[Google Sheets CMS]: Push to tab "${tabName}" failed:`, err.message);
+    return false;
+  }
+}
+
+/**
+ * Synchronizes Kanban Board tasks from Google Tasks API
+ */
+export async function syncKanbanFromGoogleTasks(token, listId) {
+  if (!token || !listId) return [];
+
+  try {
+    const { fetchGoogleTasks, REVERSE_COLUMN_MAP } = await import('../utils/backend-google-tasks.js');
+    const gTasks = await fetchGoogleTasks(token, listId);
+    if (!Array.isArray(gTasks)) return [];
+
+    const existingKanban = await getKanbanTasks();
+    const existingMap = new Map(existingKanban.map(t => [t.googleTaskId || t.id, t]));
+
+    const syncedTasks = [];
+
+    for (const gt of gTasks) {
+      if (!gt.id || !gt.title) continue;
+
+      let status = 'backlog';
+      let cleanTitle = gt.title;
+
+      // Extract status from completion or title tag
+      if (gt.status === 'completed') {
+        status = 'completed';
+      } else {
+        const lowerTitle = gt.title.toLowerCase();
+        for (const [tag, col] of Object.entries(REVERSE_COLUMN_MAP)) {
+          if (lowerTitle.includes(tag)) {
+            status = col;
+            cleanTitle = gt.title.replace(new RegExp('\\' + tag.substring(0, tag.length - 1) + '\\]', 'gi'), '').trim();
+            break;
+          }
+        }
+      }
+
+      // Parse notes for assignee email
+      let desc = gt.notes || '';
+      let assigneeEmail = '';
+      if (desc.includes('Assignee:')) {
+        const parts = desc.split('Assignee:');
+        desc = parts[0].trim();
+        assigneeEmail = (parts[1] || '').trim();
+      }
+
+      const matchingExisting = Array.from(existingMap.values()).find(t => t.googleTaskId === gt.id || t.title === cleanTitle);
+      const taskId = matchingExisting ? matchingExisting.id : `task_gt_${gt.id}`;
+
+      const kanbanTask = {
+        id: taskId,
+        googleTaskId: gt.id,
+        title: cleanTitle,
+        description: desc,
+        priority: matchingExisting?.priority || 'Medium',
+        dueDate: gt.due ? gt.due.split('T')[0] : (matchingExisting?.dueDate || ''),
+        status: status,
+        assigneeId: assigneeEmail || matchingExisting?.assigneeId || '',
+        assignee: assigneeEmail ? { email: assigneeEmail, name: assigneeEmail.split('@')[0] } : (matchingExisting?.assignee || null),
+        updatedAt: gt.updated || new Date().toISOString(),
+        createdAt: matchingExisting?.createdAt || new Date().toISOString()
+      };
+
+      await saveKanbanTask(kanbanTask);
+      syncedTasks.push(kanbanTask);
+    }
+
+    console.log(`[Google Tasks Sync]: Synced ${syncedTasks.length} tasks from Google Tasks API.`);
+    return syncedTasks;
+  } catch (err) {
+    console.warn('[Google Tasks Sync]: Fetch/Sync error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Pushes a single Kanban Task card to Google Tasks API
+ */
+export async function pushKanbanToGoogleTasks(token, listId, taskRecord) {
+  if (!token || !listId || !taskRecord) return null;
+
+  try {
+    const { syncKanbanTaskToGoogleTask } = await import('../utils/backend-google-tasks.js');
+    const result = await syncKanbanTaskToGoogleTask(token, listId, taskRecord);
+    if (result && result.id) {
+      taskRecord.googleTaskId = result.id;
+      await saveKanbanTask(taskRecord);
+    }
+    return result;
+  } catch (err) {
+    console.warn('[Google Tasks Sync]: Push error:', err.message);
+    return null;
+  }
+}

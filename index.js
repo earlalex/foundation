@@ -334,6 +334,19 @@ async function boot() {
     await window.router.init();
   }
 
+  // Trigger Google Sheets CMS boot read-through sync if token and spreadsheet ID are present
+  try {
+    const { getGoogleAccessToken } = await import('./core/google-services.js');
+    const token = await getGoogleAccessToken(false);
+    const spreadsheetId = configManager.current?.google?.cmsSpreadsheetId;
+    if (token && spreadsheetId) {
+      const { contentDB } = await import('./core/db.js');
+      await contentDB.syncCmsFromGoogleSheets(token, spreadsheetId);
+    }
+  } catch (syncErr) {
+    console.warn('[Core Boot]: Background Google Sheets sync deferred:', syncErr.message);
+  }
+
   // Mount Chat Widget globally if enabled and available
   const chatbotEnabled = configManager.current.chatbot?.enabled !== false && configManager.current.features?.chatWidget !== false;
   if (chatbotEnabled) {

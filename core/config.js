@@ -143,7 +143,10 @@ export const defaultConfig = {
   google: {
     clientId: "",
     clientSecret: "",
-    ownerEmail: ""
+    ownerEmail: "",
+    cmsSpreadsheetId: "",
+    tasksListId: "",
+    autoSyncFrequency: "5 mins"
   },
   aiConfig: {
     geminiApiKey: "",
@@ -277,7 +280,9 @@ const legacyMap = {
   'TWILIO_PHONE_NUMBER': ['chatbot', 'twilioPhoneNumber'],
   'VIRUSTOTAL_API_KEY': ['virustotal', 'apiKey'],
   'LASTPASS_CID': ['lastpass', 'companyId'],
-  'LASTPASS_HASH': ['lastpass', 'provisioningHash']
+  'LASTPASS_HASH': ['lastpass', 'provisioningHash'],
+  'CMS_SPREADSHEET_ID': ['google', 'cmsSpreadsheetId'],
+  'GOOGLE_TASKS_LIST_ID': ['google', 'tasksListId']
 };
 
 function getNestedValue(obj, path) {

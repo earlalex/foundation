@@ -80,6 +80,15 @@ export function initIntegrationsTab() {
   if (cfgCfWorkflowUrl) cfgCfWorkflowUrl.value = currentCfg.cloudflare?.workflowUrl || '/api/workflow-trigger';
   if (cfgCfVtUrl) cfgCfVtUrl.value = currentCfg.cloudflare?.vtUrl || '/api/virustotal-scan';
 
+  // Google Workspace Sheets CMS & Tasks fields
+  const cfgSheetsCmsId = document.getElementById('cfg-sheets-cms-id');
+  const cfgTasksListId = document.getElementById('cfg-tasks-list-id');
+  const cfgAutoSyncFreq = document.getElementById('cfg-auto-sync-freq');
+
+  if (cfgSheetsCmsId) cfgSheetsCmsId.value = currentCfg.google?.cmsSpreadsheetId || '';
+  if (cfgTasksListId) cfgTasksListId.value = currentCfg.google?.tasksListId || '';
+  if (cfgAutoSyncFreq) cfgAutoSyncFreq.value = currentCfg.google?.autoSyncFrequency || '5 mins';
+
   // Google Business & AdSense fields
   const cfgGmbPlaceId = document.getElementById('cfg-gmb-place-id');
   const cfgAdsensePubId = document.getElementById('cfg-adsense-pub-id');
@@ -277,7 +286,10 @@ export function initIntegrationsTab() {
         google: {
           ...(configManager.current.google || {}),
           clientId: cfgGoogleClientId.value,
-          clientSecret: googleSecretValue
+          clientSecret: googleSecretValue,
+          cmsSpreadsheetId: cfgSheetsCmsId ? cfgSheetsCmsId.value.trim() : (configManager.current.google?.cmsSpreadsheetId || ''),
+          tasksListId: cfgTasksListId ? cfgTasksListId.value.trim() : (configManager.current.google?.tasksListId || ''),
+          autoSyncFrequency: cfgAutoSyncFreq ? cfgAutoSyncFreq.value : (configManager.current.google?.autoSyncFrequency || '5 mins')
         },
         aiConfig: {
           geminiApiKey: geminiKeyValue,
@@ -443,5 +455,47 @@ export function initIntegrationsTab() {
       return;
     }
     toast.success('LastPass Enterprise Provisioning Bridge Verified! Credentials vault is secure.');
+  });
+
+  document.getElementById('btn-test-sheets-tasks')?.addEventListener('click', async () => {
+    toast.info('Testing Google Sheets CMS & Tasks connection...');
+    try {
+      const { getGoogleAccessToken } = await import('../../core/google-services.js');
+      const token = await getGoogleAccessToken(true);
+      if (!token) {
+        toast.warning('Google OAuth Authorization is required.');
+        return;
+      }
+
+      const siteName = configManager.current.siteTitle || 'Foundation Framework';
+      const { ensureCmsWorkbook } = await import('../../utils/backend-google-sheets.js');
+      const { ensureTasksList } = await import('../../utils/backend-google-tasks.js');
+
+      const cmsId = await ensureCmsWorkbook(token, siteName);
+      const tasksId = await ensureTasksList(token);
+
+      if (cmsId || tasksId) {
+        if (cmsId) {
+          configManager.current.google = {
+            ...(configManager.current.google || {}),
+            cmsSpreadsheetId: cmsId
+          };
+          if (cfgSheetsCmsId) cfgSheetsCmsId.value = cmsId;
+        }
+        if (tasksId) {
+          configManager.current.google = {
+            ...(configManager.current.google || {}),
+            tasksListId: tasksId
+          };
+          if (cfgTasksListId) cfgTasksListId.value = tasksId;
+        }
+        await configManager.saveToFirebase(configManager.current);
+        toast.success('Google Sheets CMS & Google Tasks Sync Verified & Provisioned!');
+      } else {
+        toast.error('Google Sheets/Tasks API connection test returned empty ID.');
+      }
+    } catch (err) {
+      toast.error('Verification failed: ' + err.message);
+    }
   });
 }

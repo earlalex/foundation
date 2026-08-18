@@ -15,7 +15,9 @@ export async function authenticateGoogleServices() {
     'https://www.googleapis.com/auth/gmail.send',
     'https://www.googleapis.com/auth/webmasters.readonly',
     'https://www.googleapis.com/auth/analytics.readonly',
-    'https://www.googleapis.com/auth/drive.file'
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/tasks'
   ];
   scopes.forEach(scope => provider.addScope(scope));
 
