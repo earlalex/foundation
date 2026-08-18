@@ -2015,10 +2015,19 @@ export class FoundationWorksheetWizard extends HTMLElement {
     const confirmBtn = this.querySelector(`#${this.uid}-confirm-btn`);
     if (confirmBtn) {
       confirmBtn.onclick = async () => {
+        if (this.isSynthesizing) {
+          toast.warning("Brand synthesis is currently in progress. Please wait for completion before confirming.");
+          return;
+        }
+
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Injecting Custom Design System...";
 
         try {
+          if (!this.synthesizedBrand) {
+            await this.performBrandSynthesis();
+          }
+
           const brand = this.synthesizedBrand || {
             colors: { primary: "#1E3A8A", primaryHover: "#1D4ED8", accent: "#D97706", surface: "#FFFFFF", surfaceAlt: "#F8FAFC", textPrimary: "#0F172A", textSecondary: "#475569" },
             typography: { headingFont: "Cinzel", bodyFont: "Plus Jakarta Sans" }
