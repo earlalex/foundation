@@ -1677,6 +1677,29 @@ if (!customElements.get('master-setup-wizard')) {
  * Custom Web Component <foundation-worksheet-wizard>
  * Pre-Onboarding Foundation Worksheet & Semantic Brand Synthesis Engine
  */
+function escapeHTML(str) {
+  if (typeof str !== 'string') return str == null ? '' : String(str);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeCssHex(hex, fallback = "#1E3A8A") {
+  if (typeof hex !== 'string') return fallback;
+  const clean = hex.trim();
+  if (/^#([0-9A-Fa-f]{3}){1,2}$/.test(clean)) {
+    return clean;
+  }
+  return fallback;
+}
+
+/**
+ * Custom Web Component <foundation-worksheet-wizard>
+ * Pre-Onboarding Foundation Worksheet & Semantic Brand Synthesis Engine
+ */
 export class FoundationWorksheetWizard extends HTMLElement {
   constructor() {
     super();
@@ -1773,7 +1796,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
           </p>
           <div>
             <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Purpose Statement:</label>
-            <textarea id="ws-purpose-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${this.worksheet.purpose}</textarea>
+            <textarea id="ws-purpose-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${escapeHTML(this.worksheet.purpose)}</textarea>
           </div>
         </div>
       `;
@@ -1788,7 +1811,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
           </p>
           <div>
             <label style="display: block; font-weight: bold; font-size: 0.85rem; margin-bottom: 0.25rem;">Mission Statement:</label>
-            <textarea id="ws-mission-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${this.worksheet.mission}</textarea>
+            <textarea id="ws-mission-input" style="width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; line-height: 1.5;">${escapeHTML(this.worksheet.mission)}</textarea>
           </div>
         </div>
       `;
@@ -1802,8 +1825,8 @@ export class FoundationWorksheetWizard extends HTMLElement {
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; max-height: 320px; overflow-y: auto; padding-right: 4px;">
             ${this.worksheet.values.map((v, i) => `
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
-                <label style="font-size: 0.8rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); display: block; margin-bottom: 2px;">Value ${i + 1}: ${v.name}</label>
-                <input type="text" class="ws-val-desc" data-index="${i}" value="${v.desc}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;" />
+                <label style="font-size: 0.8rem; font-weight: bold; color: var(--theme-color-primary, #2b6cb0); display: block; margin-bottom: 2px;">Value ${i + 1}: ${escapeHTML(v.name)}</label>
+                <input type="text" class="ws-val-desc" data-index="${i}" value="${escapeHTML(v.desc)}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;" />
               </div>
             `).join('')}
           </div>
@@ -1819,8 +1842,8 @@ export class FoundationWorksheetWizard extends HTMLElement {
           <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 320px; overflow-y: auto; padding-right: 4px;">
             ${this.worksheet.kpis.map((k, i) => `
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem; display: flex; flex-direction: column; gap: 2px;">
-                <span style="font-size: 0.72rem; font-weight: bold; color: #718096; text-transform: uppercase;">${k.category}</span>
-                <input type="text" class="ws-kpi-input" data-index="${i}" value="${k.title}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;" />
+                <span style="font-size: 0.72rem; font-weight: bold; color: #718096; text-transform: uppercase;">${escapeHTML(k.category)}</span>
+                <input type="text" class="ws-kpi-input" data-index="${i}" value="${escapeHTML(k.title)}" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; box-sizing: border-box;" />
               </div>
             `).join('')}
           </div>
@@ -1863,6 +1886,13 @@ export class FoundationWorksheetWizard extends HTMLElement {
       }
     };
 
+    const safePrimary = sanitizeCssHex(brand.colors?.primary, "#1E3A8A");
+    const safeHover = sanitizeCssHex(brand.colors?.primaryHover, "#1D4ED8");
+    const safeAccent = sanitizeCssHex(brand.colors?.accent, "#D97706");
+    const safeSurface = sanitizeCssHex(brand.colors?.surface, "#FFFFFF");
+    const safeSurfaceAlt = sanitizeCssHex(brand.colors?.surfaceAlt, "#F8FAFC");
+    const safeTextPrimary = sanitizeCssHex(brand.colors?.textPrimary, "#0F172A");
+
     return `
       <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem; color: #166534; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
@@ -1882,40 +1912,40 @@ export class FoundationWorksheetWizard extends HTMLElement {
           <div>
             <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; text-transform: uppercase; color: #718096; letter-spacing: 0.05em;">Derived Palette Swatches:</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.5rem;">
-              <div style="background: ${brand.colors.primary}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
-                Primary<br><code>${brand.colors.primary}</code>
+              <div style="background: ${safePrimary}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
+                Primary<br><code>${escapeHTML(safePrimary)}</code>
               </div>
-              <div style="background: ${brand.colors.primaryHover}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
-                Hover<br><code>${brand.colors.primaryHover}</code>
+              <div style="background: ${safeHover}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
+                Hover<br><code>${escapeHTML(safeHover)}</code>
               </div>
-              <div style="background: ${brand.colors.accent}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
-                Accent<br><code>${brand.colors.accent}</code>
+              <div style="background: ${safeAccent}; color: white; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid rgba(0,0,0,0.1);">
+                Accent<br><code>${escapeHTML(safeAccent)}</code>
               </div>
-              <div style="background: ${brand.colors.surface}; color: ${brand.colors.textPrimary}; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid #cbd5e0;">
-                Surface<br><code>${brand.colors.surface}</code>
+              <div style="background: ${safeSurface}; color: ${safeTextPrimary}; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid #cbd5e0;">
+                Surface<br><code>${escapeHTML(safeSurface)}</code>
               </div>
-              <div style="background: ${brand.colors.surfaceAlt}; color: ${brand.colors.textPrimary}; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid #cbd5e0;">
-                Surface Alt<br><code>${brand.colors.surfaceAlt}</code>
+              <div style="background: ${safeSurfaceAlt}; color: ${safeTextPrimary}; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.72rem; font-weight: bold; border: 1px solid #cbd5e0;">
+                Surface Alt<br><code>${escapeHTML(safeSurfaceAlt)}</code>
               </div>
             </div>
           </div>
 
           <!-- Color Psychology Rationale -->
-          <div style="background: #f8fafc; border-left: 4px solid ${brand.colors.primary}; padding: 0.85rem; border-radius: 4px;">
-            <strong style="display: block; font-size: 0.85rem; color: ${brand.colors.primary}; margin-bottom: 2px;">🎨 Color Psychology Rationale:</strong>
-            <p style="margin: 0; font-size: 0.8rem; color: #334155; line-height: 1.5;">${brand.designRationale.colorPsychology}</p>
+          <div style="background: #f8fafc; border-left: 4px solid ${safePrimary}; padding: 0.85rem; border-radius: 4px;">
+            <strong style="display: block; font-size: 0.85rem; color: ${safePrimary}; margin-bottom: 2px;">🎨 Color Psychology Rationale:</strong>
+            <p style="margin: 0; font-size: 0.8rem; color: #334155; line-height: 1.5;">${escapeHTML(brand.designRationale?.colorPsychology)}</p>
           </div>
 
           <!-- Typographic Rationale -->
-          <div style="background: #f8fafc; border-left: 4px solid ${brand.colors.accent}; padding: 0.85rem; border-radius: 4px;">
-            <strong style="display: block; font-size: 0.85rem; color: ${brand.colors.accent}; margin-bottom: 2px;">✍️ Typographic Semantics (Headings: <em>${brand.typography.headingFont}</em> | Body: <em>${brand.typography.bodyFont}</em>):</strong>
-            <p style="margin: 0; font-size: 0.8rem; color: #334155; line-height: 1.5;">${brand.designRationale.typographyRationale}</p>
+          <div style="background: #f8fafc; border-left: 4px solid ${safeAccent}; padding: 0.85rem; border-radius: 4px;">
+            <strong style="display: block; font-size: 0.85rem; color: ${safeAccent}; margin-bottom: 2px;">✍️ Typographic Semantics (Headings: <em>${escapeHTML(brand.typography?.headingFont)}</em> | Body: <em>${escapeHTML(brand.typography?.bodyFont)}</em>):</strong>
+            <p style="margin: 0; font-size: 0.8rem; color: #334155; line-height: 1.5;">${escapeHTML(brand.designRationale?.typographyRationale)}</p>
           </div>
 
           <!-- Archetype & Voice Card -->
           <div style="background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 0.85rem; color: #1e3a8a;">
-            <strong style="display: block; font-size: 0.85rem; margin-bottom: 2px;">👑 Brand Archetype & Tone: <em>${brand.archetype}</em></strong>
-            <p style="margin: 0; font-size: 0.8rem; line-height: 1.5;"><strong>Voice & Tone:</strong> ${brand.voiceAndTone}. <br>${brand.designRationale.archetypeRationale}</p>
+            <strong style="display: block; font-size: 0.85rem; margin-bottom: 2px;">👑 Brand Archetype & Tone: <em>${escapeHTML(brand.archetype)}</em></strong>
+            <p style="margin: 0; font-size: 0.8rem; line-height: 1.5;"><strong>Voice & Tone:</strong> ${escapeHTML(brand.voiceAndTone)}. <br>${escapeHTML(brand.designRationale?.archetypeRationale)}</p>
           </div>
 
         </div>
@@ -2174,28 +2204,28 @@ export class BrandStylistWizard extends HTMLElement {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
               <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Primary Color:</label>
-              <input type="color" id="bs-ctrl-primary" value="${this.brand.colors.primary}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
+              <input type="color" id="bs-ctrl-primary" value="${escapeHTML(sanitizeCssHex(this.brand.colors?.primary, '#1E3A8A'))}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
             </div>
             <div>
               <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Accent Color:</label>
-              <input type="color" id="bs-ctrl-accent" value="${this.brand.colors.accent}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
+              <input type="color" id="bs-ctrl-accent" value="${escapeHTML(sanitizeCssHex(this.brand.colors?.accent, '#D97706'))}" style="width: 100%; height: 38px; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer;" />
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div>
               <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Heading Google Font:</label>
-              <input type="text" id="bs-ctrl-heading-font" value="${this.brand.typography.headingFont}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
+              <input type="text" id="bs-ctrl-heading-font" value="${escapeHTML(this.brand.typography?.headingFont)}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
             <div>
               <label style="display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Body Google Font:</label>
-              <input type="text" id="bs-ctrl-body-font" value="${this.brand.typography.bodyFont}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
+              <input type="text" id="bs-ctrl-body-font" value="${escapeHTML(this.brand.typography?.bodyFont)}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box;" />
             </div>
           </div>
 
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <strong style="font-size: 0.85rem; color: #475569;">Design Rationale Preview:</strong>
-            <p style="margin: 0; font-size: 0.8rem; color: #64748b;">${this.brand.designRationale?.colorPsychology || "Customized brand color system."}</p>
+            <p style="margin: 0; font-size: 0.8rem; color: #64748b;">${escapeHTML(this.brand.designRationale?.colorPsychology || "Customized brand color system.")}</p>
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
