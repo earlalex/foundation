@@ -327,6 +327,7 @@ export function getEnvVariable(key) {
  */
 class ConfigEngine {
   #activeConfig;
+  #syncPromiseChain = Promise.resolve();
 
   /**
    * Initialize ConfigEngine and load configuration from localStorage
@@ -512,17 +513,24 @@ class ConfigEngine {
    * @returns {Promise<boolean>} True if sync was successful
    */
   async syncToFirestore() {
+    // Queue Firestore syncs sequentially to enforce write ordering and prevent stale state overwrites
+    this.#syncPromiseChain = this.#syncPromiseChain.then(() => this.#performFirestoreSync()).catch(() => this.#performFirestoreSync());
+    return await this.#syncPromiseChain;
+  }
+
+  async #performFirestoreSync() {
+    const currentSnapshot = { ...this.#activeConfig };
     try {
       const db = getFirestore();
       const configRef = doc(db, 'settings', 'config');
 
       await Promise.race([
-        setDoc(configRef, this.#activeConfig, { merge: true }),
+        setDoc(configRef, currentSnapshot, { merge: true }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 5000))
       ]);
 
       console.log('[ConfigEngine]: Configuration synced to Firestore successfully.');
-      localStorage.setItem('foundation_config', JSON.stringify(this.#activeConfig));
+      localStorage.setItem('foundation_config', JSON.stringify(currentSnapshot));
 
       // Auto-Flush Outbox Engine: Purge sensitive local queues immediately on successful Cloud Firestore write acknowledgment
       try {
@@ -543,7 +551,7 @@ class ConfigEngine {
           id: `settings_config_${Date.now()}`,
           collection: 'settings',
           docId: 'config',
-          data: this.#activeConfig,
+          data: currentSnapshot,
           timestamp: new Date().toISOString()
         });
         localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
