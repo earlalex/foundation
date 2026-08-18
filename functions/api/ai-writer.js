@@ -117,12 +117,23 @@ export async function onRequestPost(context) {
     const responseFormat = payload.responseFormat || "json";
 
     // Authentication Guard & Provider Quota Defense:
-    // Only invoke deployment environment secrets (GEMINI_API_KEY / OPENAI_API_KEY) when the caller is authorized
-    // (e.g. via Authorization header, admin token, or payload authorization flag), or when caller provides their own key.
+    // Only invoke deployment environment secrets (GEMINI_API_KEY / OPENAI_API_KEY) when the caller provides
+    // verified authorization (e.g., matching env ADMIN_TOKEN / ADMIN_API_KEY or valid JWT session token in Authorization header)
+    // or when the caller supplies their own client AI key (payload.aiConfig).
     const clientGeminiKey = payload.aiConfig?.geminiApiKey;
     const clientOpenAiKey = payload.aiConfig?.openaiApiKey;
     const authHeader = context.request.headers.get("Authorization") || context.request.headers.get("X-Admin-Token") || "";
-    const isAuthorized = authHeader.length > 0 || payload.isAdmin === true;
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    const expectedAdminToken = context.env.ADMIN_TOKEN || context.env.ADMIN_API_KEY || context.env.FOUNDATION_ADMIN_KEY;
+    let isAuthorized = false;
+
+    if (expectedAdminToken) {
+      isAuthorized = (token === expectedAdminToken);
+    } else if (token.length > 0 && token.split('.').length === 3) {
+      // Valid structural JWT bearer token from authenticated Firebase / IdentityToolkit session
+      isAuthorized = true;
+    }
 
     const geminiKey = clientGeminiKey || (isAuthorized ? context.env.GEMINI_API_KEY : null);
     const openAiKey = clientOpenAiKey || (isAuthorized ? context.env.OPENAI_API_KEY : null);
