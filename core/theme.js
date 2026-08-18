@@ -312,6 +312,7 @@ export class ThemeEngine {
 
     let brandGuide = payload;
     let cssVarsMap = {};
+    let themeConfig = {};
 
     if (payload.colors || payload.typography) {
       const colors = payload.colors || {};
@@ -320,6 +321,33 @@ export class ThemeEngine {
       const surface = colors.surface || "#ffffff";
       let textPrimary = colors.textPrimary || "#1a202c";
       textPrimary = ensureContrastCompliance(textPrimary, surface, 4.5);
+
+      themeConfig = {
+        name: payload.name || payload.archetype || "Synthesized Brand",
+        colors: {
+          primary: colors.primary || '#2b6cb0',
+          primaryHover: colors.primaryHover || '#2c5282',
+          surface: surface,
+          background: colors.background || colors.surfaceAlt || '#f8fafc',
+          textPrimary: textPrimary,
+          textSecondary: colors.textSecondary || '#4a5568',
+          border: colors.border || '#e2e8f0',
+          accent: colors.accent || '#38a169',
+          danger: colors.danger || '#e53e3e'
+        },
+        typography: {
+          fontFamily: typography.bodyFont || typography.fontFamily || 'system-ui, sans-serif',
+          fontSizeBase: typography.fontSizeBase || '16px',
+          headingWeight: typography.headingWeight || '800',
+          primaryFont: typography.headingFont || typography.primaryFont || 'system-ui',
+          bodyFont: typography.bodyFont || typography.primaryFont || 'system-ui',
+          accentFont: typography.accentFont || 'monospace',
+          headingStyle: typography.headingStyle || ''
+        },
+        archetype: payload.archetype || '',
+        voiceAndTone: payload.voiceAndTone || '',
+        designRationale: payload.designRationale || {}
+      };
 
       cssVarsMap = {
         '--theme-color-primary': colors.primary || '#2b6cb0',
@@ -350,16 +378,19 @@ export class ThemeEngine {
       if (val) root.style.setProperty(prop, val);
     });
 
+    const savedObj = Object.keys(themeConfig).length > 0 ? themeConfig : brandGuide;
+
     try {
-      localStorage.setItem('foundation_theme_custom', JSON.stringify(brandGuide));
+      localStorage.setItem('foundation_theme_config', JSON.stringify(savedObj));
+      localStorage.setItem('foundation_theme_custom', JSON.stringify(savedObj));
     } catch (e) {}
 
     try {
-      store.dispatch('APPLY_THEME_JSON', brandGuide);
+      store.dispatch('APPLY_THEME_JSON', savedObj);
     } catch (e) {}
 
-    this.syncThemeToFirestore(brandGuide);
-    console.log('[ThemeEngine]: Custom design system injected dynamically.');
+    this.syncThemeToFirestore(savedObj);
+    console.log('[ThemeEngine]: Custom design system injected dynamically and saved to foundation_theme_config.');
   }
 
   loadGoogleFontIfNeeded(fontName) {
