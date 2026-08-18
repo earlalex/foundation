@@ -261,6 +261,16 @@ export function initBusinessProfileTab() {
     });
   }
 
+  function escapeHTML(str) {
+    if (typeof str !== 'string') return str == null ? '' : String(str);
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   if (btnGenerateWorksheet) {
     btnGenerateWorksheet.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -271,10 +281,15 @@ export function initBusinessProfileTab() {
           worksheetStatus.style.background = driveUploadRes ? '#f0fdf4' : '#fffbe0';
           worksheetStatus.style.borderColor = driveUploadRes ? '#bbf7d0' : '#fef08a';
           worksheetStatus.style.color = driveUploadRes ? '#15803d' : '#854d0e';
+
+          const safeDriveId = driveUploadRes?.id ? escapeHTML(driveUploadRes.id) : null;
+          const safePrimary = escapeHTML(brand?.colors?.primary || '#1E3A8A');
+          const safeHeadingFont = escapeHTML(brand?.typography?.headingFont || 'Cinzel');
+
           worksheetStatus.innerHTML = `
             <strong>✓ Foundation Worksheet & Semantic Brand Guide synthesized & applied!</strong><br>
-            ${driveUploadRes ? `Archived to Google Drive: <code>corporate-binder/Foundation_Worksheet.md</code> (ID: <code>${driveUploadRes.id}</code>)` : `Saved locally (Google Drive upload offline or pending authentication)`}<br>
-            Primary Color: <code>${brand?.colors?.primary || '#1E3A8A'}</code> | Heading Font: <code>${brand?.typography?.headingFont || 'Cinzel'}</code>
+            ${safeDriveId ? `Archived to Google Drive: <code>corporate-binder/Foundation_Worksheet.md</code> (ID: <code>${safeDriveId}</code>)` : `Saved locally (Google Drive upload offline or pending authentication)`}<br>
+            Primary Color: <code>${safePrimary}</code> | Heading Font: <code>${safeHeadingFont}</code>
           `;
         }
       });
