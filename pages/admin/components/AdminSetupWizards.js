@@ -2045,16 +2045,21 @@ export class FoundationWorksheetWizard extends HTMLElement {
           const mdText = this.generateMarkdownBinderContent();
           const mdFile = new File([new Blob([mdText], { type: 'text/markdown' })], "Foundation_Worksheet.md", { type: 'text/markdown' });
           mdFile.isCorporateBinder = true;
+          let driveUploadRes = null;
           try {
-            await uploadFileToDrive(mdFile);
+            driveUploadRes = await uploadFileToDrive(mdFile);
           } catch (e) {
             console.warn('[FoundationWorksheetWizard] Drive backup deferred:', e.message);
           }
 
-          toast.success("Semantic Brand Guide synthesized & custom design system injected successfully!");
+          if (driveUploadRes) {
+            toast.success("Semantic Brand Guide synthesized & archived to Google Drive (corporate-binder/Foundation_Worksheet.md)!");
+          } else {
+            toast.info("Semantic Brand Guide synthesized & saved locally (Google Drive backup offline/unconfigured).");
+          }
 
           if (this.onCompleteCallback) {
-            this.onCompleteCallback(brand);
+            this.onCompleteCallback(brand, driveUploadRes);
           }
           this.remove();
         } catch (err) {

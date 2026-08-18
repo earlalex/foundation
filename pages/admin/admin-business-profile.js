@@ -265,15 +265,15 @@ export function initBusinessProfileTab() {
     btnGenerateWorksheet.addEventListener('click', async (e) => {
       e.preventDefault();
       // Launch <foundation-worksheet-wizard> modal
-      AdminSetupWizards.launchFoundationWorksheetWizard((brand) => {
+      AdminSetupWizards.launchFoundationWorksheetWizard((brand, driveUploadRes) => {
         if (worksheetStatus) {
           worksheetStatus.style.display = 'block';
-          worksheetStatus.style.background = '#f0fdf4';
-          worksheetStatus.style.borderColor = '#bbf7d0';
-          worksheetStatus.style.color = '#15803d';
+          worksheetStatus.style.background = driveUploadRes ? '#f0fdf4' : '#fffbe0';
+          worksheetStatus.style.borderColor = driveUploadRes ? '#bbf7d0' : '#fef08a';
+          worksheetStatus.style.color = driveUploadRes ? '#15803d' : '#854d0e';
           worksheetStatus.innerHTML = `
             <strong>✓ Foundation Worksheet & Semantic Brand Guide synthesized & applied!</strong><br>
-            Archived to: <code>corporate-binder/Foundation_Worksheet.md</code><br>
+            ${driveUploadRes ? `Archived to Google Drive: <code>corporate-binder/Foundation_Worksheet.md</code> (ID: <code>${driveUploadRes.id}</code>)` : `Saved locally (Google Drive upload offline or pending authentication)`}<br>
             Primary Color: <code>${brand?.colors?.primary || '#1E3A8A'}</code> | Heading Font: <code>${brand?.typography?.headingFont || 'Cinzel'}</code>
           `;
         }
