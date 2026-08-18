@@ -1977,6 +1977,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
     const nextBtn = this.querySelector(`#${this.uid}-next-btn`);
     if (nextBtn) {
       nextBtn.onclick = async () => {
+        if (this.isSynthesizing) return;
         this.saveCurrentStepInputs();
         if (this.currentStep < this.totalSteps) {
           this.currentStep++;
@@ -1992,6 +1993,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
     const reSynthBtn = this.querySelector(`#${this.uid}-resynth-btn`);
     if (reSynthBtn) {
       reSynthBtn.onclick = async () => {
+        if (this.isSynthesizing) return;
         await this.performBrandSynthesis();
       };
     }
@@ -2097,7 +2099,9 @@ export class FoundationWorksheetWizard extends HTMLElement {
   }
 
   async performBrandSynthesis() {
+    if (this.isSynthesizing) return;
     this.isSynthesizing = true;
+    toast.info("Synthesizing custom brand identity with Gemini AI...", 3000);
     this.render();
 
     try {
@@ -2110,8 +2114,10 @@ export class FoundationWorksheetWizard extends HTMLElement {
         values: valuesArr,
         kpis: kpisArr
       });
+      toast.success("Brand Design Psychology Synthesis complete!");
     } catch (err) {
       console.warn('Brand synthesis deferred, using default fallback:', err);
+      toast.warning("Brand synthesis offline. Fallback design system applied.");
     } finally {
       this.isSynthesizing = false;
       this.render();
@@ -2272,7 +2278,7 @@ export class BrandStylistWizard extends HTMLElement {
       toast.success("Brand Stylist tokens applied successfully!");
       if (this.onCompleteCallback) this.onCompleteCallback(updatedBrand);
       this.remove();
-    };
+    });
   }
 }
 
