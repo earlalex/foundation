@@ -24,16 +24,16 @@ def run_cuj(page):
 
     # Take screenshot of the Login page
     print("Taking screenshot...")
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification.png'))
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

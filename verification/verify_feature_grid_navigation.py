@@ -22,7 +22,7 @@ def run_cuj(page):
     page.wait_for_timeout(1000)
 
     # Take a screenshot of the home page feature grid
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'homepage_feature_grid.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'homepage_feature_grid.png'))
     print("Home page feature grid screenshot saved.")
 
     # Click the Web3 & Crypto Payments 'Learn More' link in our new feature grid
@@ -35,20 +35,20 @@ def run_cuj(page):
     print("Current URL:", page.url)
 
     # Take screenshot of the target /docs page focused on Web3 & Crypto Payments section
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'docs_crypto_payments.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'docs_crypto_payments.png'))
     print("Docs page screenshot saved.")
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
     # Ensure verification directories exist
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
 
     with sync_playwright() as p:
         print("Launching Chromium browser...")
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

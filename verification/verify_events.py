@@ -19,7 +19,7 @@ def run_cuj(page):
 
     # Open/verify the cart overlay
     print("4. Inspecting the Cart sidebar...")
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_events.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification_events.png'))
     page.wait_for_timeout(1000)
 
     # Let's also verify Admin Event operations
@@ -36,14 +36,14 @@ def run_cuj(page):
 
     # Take screenshot of the Admin Dashboard
     print("7. Screenshotting Admin Event Operations Dashboard...")
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_admin_events.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification_admin_events.png'))
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

@@ -1,4 +1,3 @@
-import os
 # /home/jules/verification/verify_screenshots.py
 from playwright.sync_api import sync_playwright
 
@@ -6,12 +5,12 @@ def run_cuj(page):
     print("1. Loading home page...")
     page.goto("http://localhost:8788/")
     page.wait_for_timeout(2000)
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_home.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification_home.png'))
 
     print("2. Navigating to /events page...")
     page.goto("http://localhost:8788/events")
     page.wait_for_timeout(2000)
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_events.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification_events.png'))
 
     print("3. Logging in via dev bypass...")
     page.goto("http://localhost:8788/")
@@ -25,7 +24,7 @@ def run_cuj(page):
     print("4. Loading admin page...")
     page.goto("http://localhost:8788/admin")
     page.wait_for_timeout(2000)
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification_admin.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification_admin.png'))
 
 if __name__ == "__main__":
     with sync_playwright() as p:

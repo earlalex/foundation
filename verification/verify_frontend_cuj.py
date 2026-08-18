@@ -1,4 +1,3 @@
-import os
 from playwright.sync_api import sync_playwright
 
 def run_cuj(page):
@@ -11,7 +10,7 @@ def run_cuj(page):
     page.wait_for_timeout(1000)
 
     # Take screenshot at the key moment
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'verification.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification.png'))
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
@@ -19,7 +18,7 @@ if __name__ == "__main__":
         browser = p.chromium.launch(headless=True)
         # Force a large desktop viewport to prevent any hamburger responsive overlaps
         context = browser.new_context(
-            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos'),
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'),
             viewport={"width": 1280, "height": 800}
         )
         page = context.new_page()

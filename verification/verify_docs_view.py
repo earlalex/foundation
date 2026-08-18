@@ -20,7 +20,7 @@ def run_cuj(page):
     page.wait_for_timeout(1500)
 
     # Take a screenshot of the homepage hero banner showing the newly updated platform documentation link
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'homepage_hero.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'homepage_hero.png'))
     page.wait_for_timeout(500)
 
     # Click the "🛠️ Platform Documentation" button on the home page hero banner
@@ -36,7 +36,7 @@ def run_cuj(page):
 
     # Verify we are on the docs page
     print(f"[Playwright]: Current URL is {page.url}")
-    page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'docs_initial.png'))
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'docs_initial.png'))
 
     # Click on the Setup & Environment section link in the sidebar nav
     setup_nav_link = page.locator("a.docs-nav-link", has_text="3. Setup & Environment")
@@ -46,23 +46,23 @@ def run_cuj(page):
         page.wait_for_timeout(1500)
 
         # Take a screenshot showing the section scroll target
-        page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'docs_scrolled.png'))
+        page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'docs_scrolled.png'))
     else:
         print("[Playwright]: Setup link not found, scrolling manually...")
         page.evaluate("window.scrollTo(0, 1000)")
         page.wait_for_timeout(500)
-        page.screenshot(path=os.path.join(os.path.dirname(__file__), 'screenshots', 'docs_scrolled_manual.png'))
+        page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'docs_scrolled_manual.png'))
 
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir=os.path.join(os.path.dirname(__file__), 'videos')
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             browser.close()
 
         # Print recorded video file
-        video_files = glob.glob(os.path.join(os.path.dirname(__file__), 'videos', '*.webm'))
+        video_files = glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos', '*.webm'))
         if video_files:
             print(f"[Playwright]: Video recorded successfully: {video_files[0]}")
         else:
