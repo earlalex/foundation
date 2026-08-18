@@ -1708,6 +1708,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
     this.totalSteps = 5;
     this.synthesizedBrand = null;
     this.isSynthesizing = false;
+    this.isConfirming = false;
 
     // Pre-filled EarlAlex baseline defaults
     this.worksheet = {
@@ -2015,11 +2016,12 @@ export class FoundationWorksheetWizard extends HTMLElement {
     const confirmBtn = this.querySelector(`#${this.uid}-confirm-btn`);
     if (confirmBtn) {
       confirmBtn.onclick = async () => {
-        if (this.isSynthesizing) {
-          toast.warning("Brand synthesis is currently in progress. Please wait for completion before confirming.");
+        if (this.isSynthesizing || this.isConfirming) {
+          toast.warning("Brand synthesis or system confirmation is currently in progress. Please wait.");
           return;
         }
 
+        this.isConfirming = true;
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Injecting Custom Design System...";
 
@@ -2075,6 +2077,7 @@ export class FoundationWorksheetWizard extends HTMLElement {
           }
           this.remove();
         } catch (err) {
+          this.isConfirming = false;
           toast.error("Failed to apply brand theme: " + err.message);
           confirmBtn.disabled = false;
           confirmBtn.textContent = "✨ Confirm & Apply Custom Brand System";
