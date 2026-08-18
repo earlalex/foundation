@@ -5,6 +5,7 @@ import { toast } from '../../utils/toast.js';
 import { FormValidator, adminFormRules } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { renderDriveDirectoriesHub } from './admin-site-settings.js';
+import { AdminSetupWizards } from './components/AdminSetupWizards.js';
 
 export function initBusinessProfileTab() {
   const currentCfg = configManager.current || {};
@@ -260,156 +261,38 @@ export function initBusinessProfileTab() {
     });
   }
 
+  function escapeHTML(str) {
+    if (typeof str !== 'string') return str == null ? '' : String(str);
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   if (btnGenerateWorksheet) {
     btnGenerateWorksheet.addEventListener('click', async (e) => {
       e.preventDefault();
-
-      const revTarget = document.getElementById('worksheet-revenue-target')?.value || "50000";
-      const subGoal = document.getElementById('worksheet-subscriber-goal')?.value || "10000";
-      const companyName = worksheetCompanyNameInput ? worksheetCompanyNameInput.value : "Ascension Avenue Academy";
-      const naicsDef = worksheetNaicsInput ? worksheetNaicsInput.value : "Custom / Specialized Education & Empowerment Consulting Services";
-      const naicsCodeVal = bizNaicsSelect && bizNaicsSelect.value === 'custom'
-        ? (bizNaicsCustom ? bizNaicsCustom.value : '541611')
-        : (bizNaicsSelect ? bizNaicsSelect.value : '541611');
-
-      btnGenerateWorksheet.disabled = true;
-      btnGenerateWorksheet.textContent = 'Generating Worksheet...';
-
-      if (worksheetStatus) {
-        worksheetStatus.style.display = 'block';
-        worksheetStatus.textContent = "Compiling company values, goals, and regulatory classifications...";
-      }
-
-      const purpose = "To elevate men and women into full alignment with their potential - empowering them to reclaim sovereignty over their mind, body, and business through discipline, clarity, and higher consciousness.";
-      const mission = "To build transformational frameworks that merge fitness, mindset, and entrepreneurship, creating actionable programs, tools, and content that help people realign with their true purpose and achieve sustainable success.";
-      const coreValues = [
-        "Alignment over Achievement",
-        "Discipline",
-        "Integrity",
-        "Ownership",
-        "Creativity",
-        "Sovereignty",
-        "Growth",
-        "Community Impact",
-        "Health is Wealth"
-      ];
-      const kpis = [
-        "Health & Energy",
-        "Financial Performance",
-        "Customer & Market",
-        "Personal Growth & Operational Excellence"
-      ];
-
-      const worksheetData = {
-        companyName,
-        purpose,
-        mission,
-        coreValues,
-        kpiCategories: kpis,
-        targets: {
-          monthlyRevenueTarget: Number(revTarget),
-          subscriberGoal: Number(subGoal)
-        },
-        naics: {
-          code: naicsCodeVal,
-          definition: naicsDef
-        },
-        timestamp: new Date().toISOString()
-      };
-
-      const markdownContent = `# ${companyName} - Foundation Worksheet
-
-## Purpose (Your Why)
-"${purpose}"
-
-## Mission (Your What & How)
-"${mission}"
-
-## 9 Core Values
-${coreValues.map((v, i) => `${i + 1}. ${v}`).join('\n')}
-
-## 12 KPIs Categories
-${kpis.map(k => `- ${k}`).join('\n')}
-
-## Operational Targets
-- **Monthly Revenue Target:** $${Number(revTarget).toLocaleString()}
-- **Subscriber Goal:** ${Number(subGoal).toLocaleString()}
-
-## NAICS Code & Definition
-- **NAICS Code:** ${naicsCodeVal}
-- **NAICS Definition:** ${naicsDef}
-
----
-*Generated dynamically in the Ascension Avenue Academy Admin Command Center on ${new Date().toLocaleString()}*`;
-
-      try {
-        // Upload Markdown file
-        const mdBlob = new Blob([markdownContent], { type: 'text/markdown' });
-        const mdFile = new File([mdBlob], `${companyName.replace(/ /g, '_')}_Foundation_Worksheet.md`, { type: 'text/markdown' });
-        mdFile.isCorporateBinder = true;
-        const mdRes = await uploadFileToDrive(mdFile);
-
-        // Upload JSON file
-        const jsonBlob = new Blob([JSON.stringify(worksheetData, null, 2)], { type: 'application/json' });
-        const jsonFile = new File([jsonBlob], `${companyName.replace(/ /g, '_')}_Foundation_Worksheet.json`, { type: 'application/json' });
-        jsonFile.isCorporateBinder = true;
-        const jsonRes = await uploadFileToDrive(jsonFile);
-
-        if (mdRes && jsonRes) {
-          toast.success("Foundation Worksheet generated and securely saved to corporate-binder/ inside Google Drive and synced to LastPass Notes!");
-
-          if (worksheetStatus) {
-            worksheetStatus.style.background = "#f0fdf4";
-            worksheetStatus.style.borderColor = "#bbf7d0";
-            worksheetStatus.style.color = "#15803d";
-            worksheetStatus.innerHTML = `
-              <strong>✓ Foundation Worksheet successfully generated & archived!</strong><br>
-              Saved to: <code>corporate-binder/${mdFile.name}</code><br>
-              Google Drive ID: <code>${mdRes.id}</code><br>
-              Autofill and download copies locally below.
-            `;
-          }
-
-          // Enable and show local download buttons
-          if (btnDownloadMd) {
-            btnDownloadMd.style.display = 'inline-block';
-            btnDownloadMd.onclick = () => {
-              const url = URL.createObjectURL(mdBlob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = mdFile.name;
-              a.click();
-              URL.revokeObjectURL(url);
-            };
-          }
-
-          if (btnDownloadJson) {
-            btnDownloadJson.style.display = 'inline-block';
-            btnDownloadJson.onclick = () => {
-              const url = URL.createObjectURL(jsonBlob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = jsonFile.name;
-              a.click();
-              URL.revokeObjectURL(url);
-            };
-          }
-        } else {
-          throw new Error("Failed to upload worksheets to Google Drive.");
-        }
-      } catch (err) {
-        errorHandler.handleError(err, 'Admin Business Profile - Worksheet Generator');
-        toast.error(`Worksheet Generator Error: ${err.message}`);
+      // Launch <foundation-worksheet-wizard> modal
+      AdminSetupWizards.launchFoundationWorksheetWizard((brand, driveUploadRes) => {
         if (worksheetStatus) {
-          worksheetStatus.style.background = "#fff5f5";
-          worksheetStatus.style.borderColor = "#fed7d7";
-          worksheetStatus.style.color = "#c53030";
-          worksheetStatus.textContent = `Error: ${err.message}`;
+          worksheetStatus.style.display = 'block';
+          worksheetStatus.style.background = driveUploadRes ? '#f0fdf4' : '#fffbe0';
+          worksheetStatus.style.borderColor = driveUploadRes ? '#bbf7d0' : '#fef08a';
+          worksheetStatus.style.color = driveUploadRes ? '#15803d' : '#854d0e';
+
+          const safeDriveId = driveUploadRes?.id ? escapeHTML(driveUploadRes.id) : null;
+          const safePrimary = escapeHTML(brand?.colors?.primary || '#1E3A8A');
+          const safeHeadingFont = escapeHTML(brand?.typography?.headingFont || 'Cinzel');
+
+          worksheetStatus.innerHTML = `
+            <strong>✓ Foundation Worksheet & Semantic Brand Guide synthesized & applied!</strong><br>
+            ${safeDriveId ? `Archived to Google Drive: <code>corporate-binder/Foundation_Worksheet.md</code> (ID: <code>${safeDriveId}</code>)` : `Saved locally (Google Drive upload offline or pending authentication)`}<br>
+            Primary Color: <code>${safePrimary}</code> | Heading Font: <code>${safeHeadingFont}</code>
+          `;
         }
-      } finally {
-        btnGenerateWorksheet.disabled = false;
-        btnGenerateWorksheet.textContent = 'Generate & Save Foundation Worksheet to Corporate Binder';
-      }
+      });
     });
   }
 
