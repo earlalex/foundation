@@ -1,7 +1,7 @@
 // core/db-finances.js
 import {
   getFirestoreDB, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, limit,
-  queryWith3SecTimeout, INVOICES_COLLECTION
+  queryWith3SecTimeout, INVOICES_COLLECTION, store
 } from './db-shared.js';
 
 export async function saveInvoice(invoice) {
@@ -79,7 +79,19 @@ export async function getAllInvoices() {
   }
 
   try {
-    const collectionRef = collection(db, INVOICES_COLLECTION);
+    const user = store?.state?.user;
+    const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
+    let collectionRef;
+    if (isEditor) {
+      collectionRef = collection(db, INVOICES_COLLECTION);
+    } else if (user?.email) {
+      collectionRef = query(collection(db, INVOICES_COLLECTION), where('customerEmail', '==', user.email));
+    } else if (user?.uid) {
+      collectionRef = query(collection(db, INVOICES_COLLECTION), where('userId', '==', user.uid));
+    } else {
+      const local = getLocalInvoices();
+      return Object.values(local);
+    }
     const querySnapshot = await getDocs(collectionRef);
     return querySnapshot.docs.map(doc => doc.data());
   } catch (err) {

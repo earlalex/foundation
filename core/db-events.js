@@ -2,7 +2,7 @@
 import {
   getFirestoreDB, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, limit,
   originalGetDocs, queryWith3SecTimeout, CONTENT_COLLECTION,
-  getLocalContent, saveLocalContent
+  getLocalContent, saveLocalContent, store
 } from './db-shared.js';
 
 export async function saveEvent(eventData) {
@@ -231,7 +231,20 @@ export async function getAllRegistrations() {
     return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
   }
   try {
-    const querySnapshot = await getDocs(collection(db, 'registrations'));
+    const user = store?.state?.user;
+    const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
+    let q;
+    if (isEditor) {
+      q = collection(db, 'registrations');
+    } else if (user?.email) {
+      q = query(collection(db, 'registrations'), where('email', '==', user.email));
+    } else if (user?.uid) {
+      q = query(collection(db, 'registrations'), where('userId', '==', user.uid));
+    } else {
+      return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
+    }
+
+    const querySnapshot = await getDocs(q);
     const results = [];
     querySnapshot.forEach(docSnap => {
       results.push(docSnap.data());
@@ -292,7 +305,20 @@ export async function getAppointments() {
     return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
   }
   try {
-    const querySnapshot = await getDocs(collection(db, 'appointments'));
+    const user = store?.state?.user;
+    const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
+    let q;
+    if (isEditor) {
+      q = collection(db, 'appointments');
+    } else if (user?.email) {
+      q = query(collection(db, 'appointments'), where('email', '==', user.email));
+    } else if (user?.uid) {
+      q = query(collection(db, 'appointments'), where('userId', '==', user.uid));
+    } else {
+      return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
+    }
+
+    const querySnapshot = await getDocs(q);
     const results = [];
     querySnapshot.forEach(docSnap => {
       results.push(docSnap.data());

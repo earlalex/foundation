@@ -120,8 +120,22 @@ export class ContentDB {
     try {
       const db = getFirestoreDB();
       if (db) {
-        const { collection, getDocs } = await import('./db-shared.js');
-        const querySnapshot = await getDocs(collection(db, 'chat_logs'));
+        const { collection, query, where, getDocs } = await import('./db-shared.js');
+        const user = store?.state?.user;
+        const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
+        let q;
+        if (isEditor) {
+          q = collection(db, 'chat_logs');
+        } else if (user?.email) {
+          q = query(collection(db, 'chat_logs'), where('userEmail', '==', user.email));
+        } else if (user?.uid) {
+          q = query(collection(db, 'chat_logs'), where('userId', '==', user.uid));
+        } else {
+          const local = this.#getLocalChatLogs();
+          return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
+        }
+
+        const querySnapshot = await getDocs(q);
         const results = [];
         querySnapshot.forEach((docSnap) => {
           results.push({ id: docSnap.id, ...docSnap.data() });
