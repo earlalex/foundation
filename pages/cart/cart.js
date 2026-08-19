@@ -274,6 +274,26 @@ async function executeOrderCheckout() {
     if (selectedPayment === 'stripe_card' || selectedPayment === 'stripe_ach') {
       const isAch = selectedPayment === 'stripe_ach';
 
+      // Resolve authoritative catalog entries from contentDB
+      const allContent = await contentDB.getAllContent();
+      const contentMap = new Map();
+      allContent.forEach(c => {
+        if (c.id) contentMap.set(c.id, c);
+      });
+
+      const validatedLineItems = cartSummary.items.map(i => {
+        const catalogRecord = contentMap.get(i.id);
+        const officialPrice = catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(i.price);
+        return {
+          id: i.id,
+          name: catalogRecord?.title || i.name,
+          type: catalogRecord?.type || i.type || 'product',
+          amount: Math.round(officialPrice * 100), // cents
+          quantity: i.quantity,
+          currency: 'USD'
+        };
+      });
+
       // Call /api/stripe-checkout serverless endpoint
       try {
         const response = await fetch('/api/stripe-checkout', {
@@ -283,12 +303,7 @@ async function executeOrderCheckout() {
             email: customerEmail,
             userEmail: customerEmail,
             enableAch: isAch,
-            lineItems: cartSummary.items.map(i => ({
-              name: i.name,
-              amount: i.price * 100, // cents
-              quantity: i.quantity,
-              currency: 'USD'
-            })),
+            lineItems: validatedLineItems,
             successUrl: `${window.location.origin}/account?session_id={CHECKOUT_SESSION_ID}&payment=success`,
             cancelUrl: `${window.location.origin}/cart?payment=cancelled`
           })

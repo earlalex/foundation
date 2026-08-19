@@ -181,6 +181,20 @@ class CryptoCheckout extends HTMLElement {
         if (c.id) contentMap.set(c.id, c);
       });
 
+      // Reconcile transferred amount against total catalog price
+      const requiredTotalUSD = rawItems.reduce((sum, item) => {
+        const itemId = item.id || item.productId;
+        const catalogRecord = contentMap.get(itemId);
+        const itemPrice = catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(item.price || 0);
+        const itemQty = Number(item.quantity || 1);
+        return sum + (itemPrice * itemQty);
+      }, 0);
+
+      if (requiredTotalUSD > 0 && this.amountUSD < (requiredTotalUSD - 0.01)) {
+        toast.error(`Crypto settlement rejected: Transferred amount ($${this.amountUSD.toFixed(2)}) is less than total catalog price ($${requiredTotalUSD.toFixed(2)}).`);
+        return;
+      }
+
       const purchasedProducts = rawItems.map(item => {
         const itemId = item.id || item.productId;
         const catalogRecord = contentMap.get(itemId);
