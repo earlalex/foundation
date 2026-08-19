@@ -10,7 +10,8 @@ export function initLoginPage() {
   const googleBtn = document.getElementById('btn-login-google') || document.querySelector('.btn-google-login');
   const magicForm = document.getElementById('magic-login-form') || document.querySelector('#login-form');
 
-  if (googleBtn) {
+  if (googleBtn && !googleBtn.dataset.bound) {
+    googleBtn.dataset.bound = 'true';
     googleBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       googleBtn.disabled = true;
@@ -29,7 +30,8 @@ export function initLoginPage() {
     });
   }
 
-  if (magicForm) {
+  if (magicForm && !magicForm.dataset.bound) {
+    magicForm.dataset.bound = 'true';
     magicForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const emailInput = document.getElementById('magic-email') || document.querySelector('#login-email') || document.querySelector('input[type="email"]');

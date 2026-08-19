@@ -264,14 +264,14 @@ export class AuthManager {
       const isPrimaryAdmin = adminEmails.map(e => e.toLowerCase()).includes(user.email.toLowerCase()) || user.email.toLowerCase() === 'admin@earlalex.com';
 
       const effectiveRole = isPrimaryAdmin ? 'admin' : 'member';
-      const effectiveAdmin = isPrimaryAdmin;
+      const effectiveAdmin = Boolean(isPrimaryAdmin);
 
       // Update application state
       store.dispatch('SET_USER', {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
+        displayName: user.displayName || user.email.split('@')[0],
+        photoURL: user.photoURL || '',
         provider: 'google.com',
         role: effectiveRole,
         isAdmin: effectiveAdmin
