@@ -167,24 +167,32 @@ class CryptoCheckout extends HTMLElement {
       localStorage.setItem('foundation_local_purchases', JSON.stringify(localPurchases));
 
       // 2. Perform user access adjustments and product linkage upon verified on-chain tx
-      let purchasedProducts = [];
+      let rawItems = [];
       if (Array.isArray(this.cartItems) && this.cartItems.length > 0) {
-        purchasedProducts = this.cartItems.map(item => ({
-          id: item.id,
-          title: item.name,
-          type: item.type,
-          purchasedAt: new Date().toISOString(),
-          pricePaid: item.price
-        }));
+        rawItems = this.cartItems;
       } else if (this.productId) {
-        purchasedProducts.push({
-          id: this.productId,
-          title: this.productId,
-          type: 'product',
-          purchasedAt: new Date().toISOString(),
-          pricePaid: this.amountUSD
-        });
+        rawItems = [{ id: this.productId, price: this.amountUSD, type: 'product' }];
       }
+
+      // Validate item IDs against official contentDB catalog entries
+      const allContent = await contentDB.getAllContent();
+      const contentMap = new Map();
+      allContent.forEach(c => {
+        if (c.id) contentMap.set(c.id, c);
+      });
+
+      const purchasedProducts = rawItems.map(item => {
+        const itemId = item.id || item.productId;
+        const catalogRecord = contentMap.get(itemId);
+
+        return {
+          id: itemId,
+          title: catalogRecord?.title || item.name || itemId,
+          type: catalogRecord?.type || item.type || 'product',
+          purchasedAt: new Date().toISOString(),
+          pricePaid: catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(item.price || this.amountUSD)
+        };
+      });
 
       const updatedUser = await contentDB.registerOrMergeUser({
         email,
