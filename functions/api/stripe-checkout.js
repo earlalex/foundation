@@ -73,7 +73,7 @@ export async function onRequestPost(context) {
       }
 
       try {
-        const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${targetSessionId}`, {
+        const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${targetSessionId}?expand[]=line_items`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${stripeSecretKey}`
@@ -83,9 +83,27 @@ export async function onRequestPost(context) {
         if (res.ok) {
           const sessionData = await res.json();
           const isPaid = sessionData.payment_status === 'paid' || sessionData.status === 'complete';
+
+          let lineItems = [];
+          if (sessionData.metadata?.itemsManifest) {
+            try {
+              lineItems = JSON.parse(sessionData.metadata.itemsManifest);
+            } catch (e) {}
+          }
+
+          if ((!lineItems || lineItems.length === 0) && sessionData.line_items?.data) {
+            lineItems = sessionData.line_items.data.map(li => ({
+              id: li.price?.product || li.id,
+              name: li.description || 'Purchased Item',
+              type: 'product',
+              price: (li.amount_total || 0) / 100 / (li.quantity || 1)
+            }));
+          }
+
           return new Response(JSON.stringify({
             paid: isPaid,
-            customerEmail: sessionData.customer_details?.email || sessionData.customer_email || ''
+            customerEmail: sessionData.customer_details?.email || sessionData.customer_email || '',
+            lineItems
           }), {
             status: 200,
             headers: { "Content-Type": "application/json" }
@@ -189,6 +207,17 @@ export async function onRequestPost(context) {
     const finalCancelUrl = cancelUrl || `${domain}/account?payment=cancelled`;
     params.append('success_url', finalSuccessUrl);
     params.append('cancel_url', finalCancelUrl);
+
+    // Store Authoritative Cart Items Manifest in Session Metadata
+    if (body.lineItems && Array.isArray(body.lineItems) && body.lineItems.length > 0) {
+      const compactManifest = body.lineItems.map(i => ({
+        id: i.id || i.productId || i.name,
+        name: i.name || 'Purchased Item',
+        type: i.type || 'product',
+        price: (i.amount || 0) / 100
+      }));
+      params.append('metadata[itemsManifest]', JSON.stringify(compactManifest).substring(0, 500));
+    }
 
     // Add Metadata
     const uid = userId || userUid || '';

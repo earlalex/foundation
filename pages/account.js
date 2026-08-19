@@ -143,13 +143,22 @@ export async function initAccountPage() {
         if (verifyRes.ok) {
           const verifyData = await verifyRes.json();
           if (verifyData.paid) {
-            const pendingItems = JSON.parse(rawPending);
-            const newPurchasedItems = pendingItems.map(item => ({
-              id: item.id,
-              title: item.name,
-              type: item.type,
+            // Bind items strictly to verifyData.lineItems from Stripe API session verification
+            let pendingFallback = [];
+            try {
+              pendingFallback = JSON.parse(rawPending);
+            } catch (e) {}
+
+            const verifiedItems = (Array.isArray(verifyData.lineItems) && verifyData.lineItems.length > 0)
+              ? verifyData.lineItems
+              : pendingFallback;
+
+            const newPurchasedItems = verifiedItems.map(item => ({
+              id: item.id || item.productId || item.name,
+              title: item.name || item.title || item.id,
+              type: item.type || 'product',
               purchasedAt: new Date().toISOString(),
-              pricePaid: item.price
+              pricePaid: item.price !== undefined ? item.price : 0
             }));
 
             const targetEmail = verifyData.customerEmail || user.email;
