@@ -40,26 +40,29 @@ function setupApiKeyMasking(inputElement) {
 
 export function initIntegrationsTab() {
   const currentCfg = configManager.current || {};
-  
-  // Firebase & Google config elements
-  const cfgFbKey = document.getElementById('cfg-fb-key');
-  const cfgFbProject = document.getElementById('cfg-fb-project');
-  const cfgGoogleClientId = document.getElementById('cfg-google-client-id');
-  const cfgGoogleClientSecret = document.getElementById('cfg-google-client-secret');
-  const cfgFbAdmins = document.getElementById('cfg-fb-admins');
+  const tabConfig = document.getElementById('tab-config') || document;
+  const firebaseConfigForm = tabConfig.querySelector('#firebase-config-form');
+  const stripeForm = tabConfig.querySelector('#stripe-cloudflare-config-form');
+
+  // Firebase & Google config elements scoped to container
+  const cfgFbKey = tabConfig.querySelector('#cfg-fb-key');
+  const cfgFbProject = tabConfig.querySelector('#cfg-fb-project');
+  const cfgGoogleClientId = tabConfig.querySelector('#cfg-google-client-id');
+  const cfgGoogleClientSecret = tabConfig.querySelector('#cfg-google-client-secret');
+  const cfgFbAdmins = tabConfig.querySelector('#cfg-fb-admins');
 
   // AI Centralized Config Elements
-  const cfgGeminiKey = document.getElementById('cfg-gemini-key');
-  const cfgOpenaiKey = document.getElementById('cfg-openai-key');
-  const cfgAiProvider = document.getElementById('cfg-ai-provider');
+  const cfgGeminiKey = tabConfig.querySelector('#cfg-gemini-key');
+  const cfgOpenaiKey = tabConfig.querySelector('#cfg-openai-key');
+  const cfgAiProvider = tabConfig.querySelector('#cfg-ai-provider');
 
   // Stripe & Cloudflare config elements
-  const cfgStripeKey = document.getElementById('cfg-stripe-key');
-  const cfgStripePriceId = document.getElementById('cfg-stripe-price-id');
-  const cfgGa4Property = document.getElementById('cfg-ga4-property');
-  const cfgVtApiKey = document.getElementById('cfg-vt-apikey');
-  const cfgCfWorkflowUrl = document.getElementById('cfg-cf-workflow-url');
-  const cfgCfVtUrl = document.getElementById('cfg-cf-vt-url');
+  const cfgStripeKey = tabConfig.querySelector('#cfg-stripe-key');
+  const cfgStripePriceId = tabConfig.querySelector('#cfg-stripe-price-id');
+  const cfgGa4Property = tabConfig.querySelector('#cfg-ga4-property');
+  const cfgVtApiKey = tabConfig.querySelector('#cfg-vt-apikey');
+  const cfgCfWorkflowUrl = tabConfig.querySelector('#cfg-cf-workflow-url');
+  const cfgCfVtUrl = tabConfig.querySelector('#cfg-cf-vt-url');
 
   // Load existing values
   if (cfgFbKey) cfgFbKey.value = currentCfg.firebase?.apiKey || '';
@@ -80,10 +83,10 @@ export function initIntegrationsTab() {
   if (cfgCfWorkflowUrl) cfgCfWorkflowUrl.value = currentCfg.cloudflare?.workflowUrl || '/api/workflow-trigger';
   if (cfgCfVtUrl) cfgCfVtUrl.value = currentCfg.cloudflare?.vtUrl || '/api/virustotal-scan';
 
-  // Google Workspace Sheets CMS & Tasks fields
-  const cfgSheetsCmsId = document.getElementById('fnd-cfg-sheets-cms-id') || document.getElementById('cfg-sheets-cms-id');
-  const cfgTasksListId = document.getElementById('fnd-cfg-tasks-list-id') || document.getElementById('cfg-tasks-list-id');
-  const cfgAutoSyncFreq = document.getElementById('fnd-cfg-auto-sync-freq') || document.getElementById('cfg-auto-sync-freq');
+  // Google Workspace Sheets CMS & Tasks fields scoped to container
+  const cfgSheetsCmsId = tabConfig.querySelector('#fnd-cfg-sheets-cms-id') || tabConfig.querySelector('#cfg-sheets-cms-id');
+  const cfgTasksListId = tabConfig.querySelector('#fnd-cfg-tasks-list-id') || tabConfig.querySelector('#cfg-tasks-list-id');
+  const cfgAutoSyncFreq = tabConfig.querySelector('#fnd-cfg-auto-sync-freq') || tabConfig.querySelector('#cfg-auto-sync-freq');
 
   if (cfgSheetsCmsId) cfgSheetsCmsId.value = currentCfg.google?.cmsSpreadsheetId || '';
   if (cfgTasksListId) cfgTasksListId.value = currentCfg.google?.tasksListId || '';
