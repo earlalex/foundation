@@ -102,10 +102,10 @@ export function initIntegrationsTab() {
   }
 
   // Google Business & AdSense fields
-  const cfgGmbPlaceId = document.getElementById('cfg-gmb-place-id');
-  const cfgAdsensePubId = document.getElementById('cfg-adsense-pub-id');
-  const cfgAdsenseSlotId = document.getElementById('cfg-adsense-slot-id');
-  const cfgAdsenseEnableInFeed = document.getElementById('cfg-adsense-enable-in-feed');
+  const cfgGmbPlaceId = tabConfig.querySelector('#cfg-gmb-place-id');
+  const cfgAdsensePubId = tabConfig.querySelector('#cfg-adsense-pub-id');
+  const cfgAdsenseSlotId = tabConfig.querySelector('#cfg-adsense-slot-id');
+  const cfgAdsenseEnableInFeed = tabConfig.querySelector('#cfg-adsense-enable-in-feed');
 
   // Load existing values for Google Business & AdSense
   if (cfgGmbPlaceId) cfgGmbPlaceId.value = currentCfg.googleBusiness?.placeId || 'ChIJN1t_tDeuEmsRUsoyG83frY4';
@@ -117,8 +117,8 @@ export function initIntegrationsTab() {
   [cfgFbKey, cfgGoogleClientSecret, cfgGeminiKey, cfgOpenaiKey, cfgStripeKey, cfgVtApiKey].forEach(setupApiKeyMasking);
 
   // LastPass config elements setup
-  const cfgLastPassProv = document.getElementById('cfg-lastpass-provisioning');
-  const cfgLastPassComp = document.getElementById('cfg-lastpass-company');
+  const cfgLastPassProv = tabConfig.querySelector('#cfg-lastpass-provisioning');
+  const cfgLastPassComp = tabConfig.querySelector('#cfg-lastpass-company');
 
   if (cfgLastPassProv) {
     cfgLastPassProv.value = currentCfg.lastpass?.provisioningHash || '';
@@ -129,7 +129,6 @@ export function initIntegrationsTab() {
   }
 
   // Initialize form validator
-  const firebaseConfigForm = document.getElementById('firebase-config-form');
   let firebaseConfigValidator = null;
   if (firebaseConfigForm) {
     firebaseConfigValidator = new FormValidator(firebaseConfigForm, adminFormRules.integrations);
@@ -137,7 +136,7 @@ export function initIntegrationsTab() {
 
   // LastPass integrations form submit listener
   // Google My Business & AdSense Form Submit Listener
-  document.getElementById('adsense-gmb-config-form')?.addEventListener('submit', async (e) => {
+  tabConfig.querySelector('#adsense-gmb-config-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn?.textContent;
@@ -179,9 +178,9 @@ export function initIntegrationsTab() {
   });
 
   // Preview GMB Reviews Connection Test
-  document.getElementById('btn-test-gmb-reviews')?.addEventListener('click', async () => {
-    const previewContainer = document.getElementById('admin-gmb-reviews-preview-container');
-    const previewBox = document.getElementById('admin-gmb-reviews-preview-box');
+  tabConfig.querySelector('#btn-test-gmb-reviews')?.addEventListener('click', async () => {
+    const previewContainer = tabConfig.querySelector('#admin-gmb-reviews-preview-container');
+    const previewBox = tabConfig.querySelector('#admin-gmb-reviews-preview-box');
     if (!previewContainer || !previewBox) return;
 
     previewContainer.style.display = 'block';
@@ -221,12 +220,12 @@ export function initIntegrationsTab() {
   });
 
   // Test Review Prompt Toast Trigger
-  document.getElementById('btn-test-review-toast')?.addEventListener('click', () => {
+  tabConfig.querySelector('#btn-test-review-toast')?.addEventListener('click', () => {
     toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
     toast.success("Test review prompt triggered successfully!");
   });
 
-  document.getElementById('lastpass-integrations-form')?.addEventListener('submit', async (e) => {
+  tabConfig.querySelector('#lastpass-integrations-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn?.textContent;
@@ -263,7 +262,7 @@ export function initIntegrationsTab() {
   });
 
   // Firebase & Google config form
-  document.getElementById('firebase-config-form')?.addEventListener('submit', async (e) => {
+  firebaseConfigForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     // Validate form before submission
@@ -328,7 +327,7 @@ export function initIntegrationsTab() {
   });
 
   // Stripe & Cloudflare config form
-  document.getElementById('stripe-cloudflare-config-form')?.addEventListener('submit', async (e) => {
+  stripeForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -380,7 +379,7 @@ export function initIntegrationsTab() {
 
   // --- Integration Diagnostics & Test Connection Listeners ---
 
-  document.getElementById('btn-test-firebase')?.addEventListener('click', async () => {
+  tabConfig.querySelector('#btn-test-firebase')?.addEventListener('click', async () => {
     toast.info('Testing Firebase Auth & Firestore connection...');
     try {
       const fb = configManager.current.firebase || {};
@@ -394,7 +393,7 @@ export function initIntegrationsTab() {
     }
   });
 
-  document.getElementById('btn-test-gemini')?.addEventListener('click', () => {
+  tabConfig.querySelector('#btn-test-gemini')?.addEventListener('click', () => {
     toast.info('Testing Gemini API Connection...');
     const key = cfgGeminiKey.dataset.originalValue || cfgGeminiKey.value;
     if (!key) {
@@ -404,7 +403,7 @@ export function initIntegrationsTab() {
     toast.success('Gemini API online! Response received: "Hello, I am Gemini 2.5 Flash, ready to assist."');
   });
 
-  document.getElementById('btn-test-openai')?.addEventListener('click', () => {
+  tabConfig.querySelector('#btn-test-openai')?.addEventListener('click', () => {
     toast.info('Testing OpenAI API Connection...');
     const key = cfgOpenaiKey.dataset.originalValue || cfgOpenaiKey.value;
     if (!key) {
@@ -414,7 +413,7 @@ export function initIntegrationsTab() {
     toast.success('OpenAI API online! gpt-4o-mini is active and authenticated.');
   });
 
-  document.getElementById('btn-test-stripe')?.addEventListener('click', async () => {
+  tabConfig.querySelector('#btn-test-stripe')?.addEventListener('click', async () => {
     toast.info('Testing Stripe Connection...');
     const key = cfgStripeKey.dataset.originalValue || cfgStripeKey.value;
     if (!key) {
@@ -434,7 +433,7 @@ export function initIntegrationsTab() {
     }
   });
 
-  document.getElementById('btn-test-virustotal')?.addEventListener('click', async () => {
+  tabConfig.querySelector('#btn-test-virustotal')?.addEventListener('click', async () => {
     toast.info('Testing VirusTotal Edge Scanner API...');
     const key = cfgVtApiKey.dataset.originalValue || cfgVtApiKey.value;
     if (!key) {
@@ -458,7 +457,7 @@ export function initIntegrationsTab() {
     }
   });
 
-  document.getElementById('btn-test-lastpass')?.addEventListener('click', () => {
+  tabConfig.querySelector('#btn-test-lastpass')?.addEventListener('click', () => {
     toast.info('Testing LastPass Enterprise connection...');
     const key = cfgLastPassProv.dataset.originalValue || cfgLastPassProv.value;
     const comp = cfgLastPassComp.value;
@@ -469,7 +468,7 @@ export function initIntegrationsTab() {
     toast.success('LastPass Enterprise Provisioning Bridge Verified! Credentials vault is secure.');
   });
 
-  (document.getElementById('fnd-btn-test-sheets-tasks') || document.getElementById('btn-test-sheets-tasks'))?.addEventListener('click', async () => {
+  (tabConfig.querySelector('#fnd-btn-test-sheets-tasks') || tabConfig.querySelector('#btn-test-sheets-tasks'))?.addEventListener('click', async () => {
     toast.info('Testing Google Sheets CMS & Tasks connection...');
     try {
       const { getGoogleAccessToken } = await import('../../core/google-services.js');
