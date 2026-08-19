@@ -36,7 +36,7 @@ def run_cuj(page, context):
 
     # Let's take a screenshot of the initial admin dashboard load
     print("Taking screenshot of initial admin load...")
-    page.screenshot(path="/home/jules/verification/screenshots/initial_admin.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'initial_admin.png'))
 
     # Click on the "Re-configure Platform Master Settings" button to open the onboarding wizard
     reconfig_btn = page.locator("#btn-reconfigure-master-trigger")
@@ -56,7 +56,7 @@ def run_cuj(page, context):
 
             # Take screenshot of the setup wizard with the free email guide visible
             print("Taking screenshot of Onboarding Free Email DNS Guide...")
-            page.screenshot(path="/home/jules/verification/screenshots/wizard_free_emails.png")
+            page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'wizard_free_emails.png'))
             page.wait_for_timeout(1000)
 
             # Close the guide
@@ -94,7 +94,7 @@ def run_cuj(page, context):
 
         # Take screenshot of the popup DNS guide modal
         print("Taking final screenshot of DNS Guide Modal...")
-        page.screenshot(path="/home/jules/verification/screenshots/verification.png")
+        page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification.png'))
         page.wait_for_timeout(2000)
 
         # Close the modal
@@ -104,12 +104,12 @@ def run_cuj(page, context):
         print("ERROR: Email settings card not found!")
 
 if __name__ == "__main__":
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

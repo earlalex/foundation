@@ -969,7 +969,10 @@ export function initProductsTab() {
 
         for (const p of sampleProducts) {
           const imgUrl = await generateProductMockup(p.title, p.category);
-          const productId = 'product_test_' + Math.floor(Math.random() * 10000);
+          const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID().replace(/-/g, '').substring(0, 12)
+            : Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          const productId = 'product_test_' + uniqueId;
 
           await contentDB.saveContent({
             type: 'product',

@@ -91,6 +91,7 @@ export class AppNavbar extends HTMLElement {
           display: flex;
           gap: 1.25rem;
           align-items: center;
+          flex-wrap: wrap;
           letter-spacing: 0.05em;
         }
         .hamburger-btn {
@@ -104,7 +105,7 @@ export class AppNavbar extends HTMLElement {
           justify-content: center;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           #utility-header {
             display: none !important;
           }

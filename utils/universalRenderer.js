@@ -91,9 +91,8 @@ export function renderContent(contentData) {
   const isPaidMember = userRole === 'member' || userRole === 'affiliate' || userRole === 'admin' || (user?.isAdmin && !simulatedTier);
   const hasUserSession = simulatedTier ? (simulatedTier !== 'prospect') : !!user;
 
-  // Google Authenticated users, Editors, and Admins are always authorized
+  // Editors and Admins are authorized for administrative bypass
   const isAuthorizedEditor = !simulatedTier && !!(user && (
-    user.provider === 'google.com' ||
     user.role === 'admin' ||
     user.role === 'editor' ||
     user.isAdmin

@@ -72,8 +72,13 @@ export class ChatWidget extends HTMLElement {
 
       if (isBookingModalOpen && !hasModalClass) {
         document.body.classList.add('modal-open');
-      } else if (!isBookingModalOpen && hasModalClass && !document.querySelector('.modal-overlay')) {
-        document.body.classList.remove('modal-open');
+      } else if (!isBookingModalOpen && hasModalClass) {
+        // Check if any other modal or overlay is currently open before removing modal-open
+        const visibleOverlay = document.querySelector('.modal-overlay:not([style*="display: none"])');
+        const visibleDialog = document.querySelector('dialog[open]');
+        if (!visibleOverlay && !visibleDialog) {
+          document.body.classList.remove('modal-open');
+        }
       }
     });
 
@@ -171,7 +176,7 @@ export class ChatWidget extends HTMLElement {
         /* Mobile-first drawer styles (viewports < 640px) */
         @media (max-width: 640px) {
           .chat-widget-container {
-            bottom: 12px;
+            bottom: var(--chat-widget-bottom, 12px);
             right: 12px;
           }
           .chat-window {

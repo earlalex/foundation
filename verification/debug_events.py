@@ -1,3 +1,4 @@
+import os
 # /home/jules/verification/debug_events.py
 from playwright.sync_api import sync_playwright
 
@@ -10,7 +11,7 @@ def run_cuj(page):
     page.wait_for_timeout(4000)
 
     # Take screenshot of page
-    page.screenshot(path="/home/jules/verification/screenshots/debug_events.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'debug_events.png'))
     print("Screenshot saved!")
 
     # Print content of #events-grid

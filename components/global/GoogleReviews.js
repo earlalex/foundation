@@ -79,10 +79,10 @@ export class GoogleReviews extends HTMLElement {
     }
 
     try {
-      // 1. Fetch reviews stored in local/Firestore contentDB
+      // 1. Fetch reviews stored in local/Firestore contentDB (filtering strictly for public access)
       const { contentDB } = await import('../../core/db.js');
       const allContent = await contentDB.getAllContent();
-      const dbReviews = allContent.filter(item => item.type === 'review');
+      const dbReviews = allContent.filter(item => item.type === 'review' && (item.access?.visibility === 'public' || !item.access));
 
       const mappedDbReviews = dbReviews.map(r => ({
         authorAttribution: {

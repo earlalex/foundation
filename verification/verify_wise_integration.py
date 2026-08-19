@@ -51,8 +51,8 @@ def run_cuj(page, context):
 
     # Take screenshot showing the Wise configuration card and verified profile ID
     print("Taking a screenshot showing the Wise integration state...")
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
-    page.screenshot(path="/home/jules/verification/screenshots/wise_verified_wizard.png")
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'wise_verified_wizard.png'))
     page.wait_for_timeout(1000)
 
     # Proceed to Step 4/4
@@ -68,12 +68,12 @@ def run_cuj(page, context):
     print("Business Operations Setup complete! Access is unlocked.")
 
 if __name__ == "__main__":
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

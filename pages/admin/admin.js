@@ -42,6 +42,12 @@ export function initAdminPage() {
   const currentUser = store.state.user;
   const isEditor = currentUser?.role === 'editor';
 
+  // Hide AI Spark Agent tab if disabled in site settings
+  if (configManager.current.features?.aiSparkAgent === false) {
+    const sparkBtn = document.querySelector(`.admin-tab[data-tab="spark"]`);
+    if (sparkBtn) sparkBtn.style.display = 'none';
+  }
+
   if (isEditor) {
     // Hide forbidden sidebar tabs
     const forbiddenTabs = ['site', 'business', 'config', 'products', 'finances', 'plugins', 'spark'];
