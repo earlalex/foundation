@@ -127,37 +127,57 @@ export async function initAccountPage() {
 
   // Handle Stripe return checkout fulfillment
   const searchParams = new URLSearchParams(window.location.search);
-  if (searchParams.get('payment') === 'success') {
+  const sessionId = searchParams.get('session_id');
+
+  if (searchParams.get('payment') === 'success' && sessionId) {
     const rawPending = sessionStorage.getItem('foundation_pending_checkout_items');
     if (rawPending) {
+      sessionStorage.removeItem('foundation_pending_checkout_items');
       try {
-        const pendingItems = JSON.parse(rawPending);
-        sessionStorage.removeItem('foundation_pending_checkout_items');
-
-        const newPurchasedItems = pendingItems.map(item => ({
-          id: item.id,
-          title: item.name,
-          type: item.type,
-          purchasedAt: new Date().toISOString(),
-          pricePaid: item.price
-        }));
-
-        const updatedUser = await contentDB.registerOrMergeUser({
-          email: user.email,
-          name: user.displayName || user.name || '',
-          role: user.role || 'subscriber',
-          purchasedProducts: newPurchasedItems
+        const verifyRes = await fetch('/api/stripe-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'verify', sessionId })
         });
 
-        if (updatedUser) {
-          store.dispatch('SET_USER', updatedUser);
-        }
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          if (verifyData.paid) {
+            const pendingItems = JSON.parse(rawPending);
+            const newPurchasedItems = pendingItems.map(item => ({
+              id: item.id,
+              title: item.name,
+              type: item.type,
+              purchasedAt: new Date().toISOString(),
+              pricePaid: item.price
+            }));
 
-        toast.success('🎉 Payment verified! Your purchased items have been unlocked in your account.');
+            const targetEmail = verifyData.customerEmail || user.email;
+            const updatedUser = await contentDB.registerOrMergeUser({
+              email: targetEmail,
+              name: user.displayName || user.name || '',
+              role: user.role || 'subscriber',
+              purchasedProducts: newPurchasedItems
+            });
+
+            if (updatedUser && user.email === targetEmail) {
+              store.dispatch('SET_USER', updatedUser);
+            }
+
+            toast.success('🎉 Payment verified via Stripe! Your purchased items have been unlocked.');
+          } else {
+            toast.error('Stripe session is unpaid or incomplete. Checkout items were not unlocked.');
+          }
+        } else {
+          toast.error('Could not verify Stripe checkout session.');
+        }
       } catch (err) {
-        console.warn('[Account Portal]: Failed to fulfill pending Stripe checkout items:', err);
+        console.warn('[Account Portal]: Stripe session verification error:', err);
       }
     }
+  } else if (searchParams.get('payment') === 'success') {
+    // Session ID is missing - purge any unverified pending items
+    sessionStorage.removeItem('foundation_pending_checkout_items');
   }
 
   // Load dynamic collections
