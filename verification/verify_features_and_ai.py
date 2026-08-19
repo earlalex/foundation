@@ -19,7 +19,7 @@ def run_cuj(page):
     page.wait_for_timeout(1000)
 
     # Take screenshot of the Admin settings toggles card
-    page.screenshot(path="/home/jules/verification/screenshots/feature_toggles.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'feature_toggles.png'))
     page.wait_for_timeout(1000)
 
     # 5. Click on CMS tab
@@ -31,7 +31,7 @@ def run_cuj(page):
     page.wait_for_timeout(1000)
 
     # Take screenshot of the CMS AI Generator card
-    page.screenshot(path="/home/jules/verification/screenshots/cms_ai_generator.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'cms_ai_generator.png'))
     page.wait_for_timeout(1000)
 
     # 6. Click "Generate AI Test Reviews"
@@ -40,14 +40,14 @@ def run_cuj(page):
     page.wait_for_timeout(3500)
 
     # Take screenshot after generating reviews
-    page.screenshot(path="/home/jules/verification/screenshots/verification.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification.png'))
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

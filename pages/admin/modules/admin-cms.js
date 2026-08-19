@@ -74,9 +74,6 @@ export function initAdminCms() {
   // 3. Render Categories & Items List
   renderContentManager(managerCard);
 
-  // Trigger Google Sheets CMS Sync on initialization if OAuth token / Spreadsheet ID exists
-  triggerGoogleSheetsCmsSync();
-
   // 4. Render Public Site & Page Manager panel (Directive 4)
   renderHeroConfigurator(heroConfigCard);
 
@@ -145,8 +142,8 @@ export function initAdminCms() {
       }, { capture: true });
 
       cmsForm.addEventListener('submit', async () => {
-        // Wait briefly for standard saveContent to resolve, then refresh and push to Google Sheets
-        setTimeout(async () => {
+        // Wait briefly for standard saveContent to resolve, then refresh
+        setTimeout(() => {
           currentEditingItem = null;
           const idInput = document.getElementById('content-id');
           if (idInput) idInput.readOnly = false;
@@ -162,7 +159,6 @@ export function initAdminCms() {
           }
 
           renderContentManager(managerCard);
-          await pushCmsToGoogleSheetsSheet();
         }, 800);
       });
     }
@@ -204,55 +200,6 @@ export function initAdminCms() {
         btnCmsGenerate.textContent = "✨ Generate AI Visual Asset with Imagen";
       }
     };
-  }
-}
-
-/**
- * Triggers Google Sheets CMS background synchronization
- */
-export async function triggerGoogleSheetsCmsSync() {
-  try {
-    const { getGoogleAccessToken } = await import('../../../core/google-services.js');
-    const token = await getGoogleAccessToken(false);
-    if (!token) return;
-
-    const spreadsheetId = configManager.current.google?.cmsSpreadsheetId;
-    if (!spreadsheetId) return;
-
-    await contentDB.syncCmsFromGoogleSheets(token, spreadsheetId);
-  } catch (err) {
-    console.warn('[CMS Module]: Background Google Sheets sync deferred:', err.message);
-  }
-}
-
-/**
- * Pushes updated CMS articles/pages/products to Google Sheets tab
- */
-export async function pushCmsToGoogleSheetsSheet() {
-  try {
-    const { getGoogleAccessToken } = await import('../../../core/google-services.js');
-    const token = await getGoogleAccessToken(false);
-    if (!token) return;
-
-    const spreadsheetId = configManager.current.google?.cmsSpreadsheetId;
-    if (!spreadsheetId) return;
-
-    const allArticles = await contentDB.getAllContent();
-    const articlesRows = allArticles.filter(a => a.type !== 'product' && a.type !== 'media' && a.type !== 'custom_modal').map(a => ({
-      id: a.id,
-      type: a.type || 'blog',
-      title: a.title || '',
-      headline: a.headline || '',
-      description: a.description || '',
-      bodyParagraphs: JSON.stringify(a.longFormText || []),
-      author: a.author || 'Admin',
-      date: a.date || new Date().toISOString(),
-      access: a.access?.visibility || 'public'
-    }));
-
-    await contentDB.pushCmsToGoogleSheets(token, spreadsheetId, 'Content_Articles', articlesRows);
-  } catch (err) {
-    console.warn('[CMS Module]: Push to Google Sheets deferred:', err.message);
   }
 }
 

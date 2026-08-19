@@ -17,7 +17,7 @@ def run_cuj(page):
 
     # 1. Take a screenshot of the Photo Gallery page
     print("Taking gallery screenshot...")
-    page.screenshot(path="/home/jules/verification/screenshots/gallery_page.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'gallery_page.png'))
     page.wait_for_timeout(1000)
 
     # 2. Click on the first gallery item to open lightbox
@@ -26,7 +26,7 @@ def run_cuj(page):
     if first_item.is_visible():
         first_item.click()
         page.wait_for_timeout(2000)
-        page.screenshot(path="/home/jules/verification/screenshots/gallery_lightbox.png")
+        page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'gallery_lightbox.png'))
         page.wait_for_timeout(1000)
         # Close lightbox
         page.locator("#btn-close-lightbox").click()
@@ -36,7 +36,7 @@ def run_cuj(page):
     print("Navigating to videos page client-side...")
     page.evaluate("window.router.navigateTo('/videos')")
     page.wait_for_timeout(2000)
-    page.screenshot(path="/home/jules/verification/screenshots/videos_page.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'videos_page.png'))
     page.wait_for_timeout(1000)
 
     # 4. Interact with the video player (clicking play)
@@ -47,17 +47,17 @@ def run_cuj(page):
         page.wait_for_timeout(2000) # Let it play for a bit
 
     # Take final state screenshot of video page with persistent radio player
-    page.screenshot(path="/home/jules/verification/screenshots/videos_page_played.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'videos_page_played.png'))
     page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
-    os.makedirs("/home/jules/verification/videos", exist_ok=True)
-    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos'), exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots'), exist_ok=True)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir="/home/jules/verification/videos"
+            record_video_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
         )
         page = context.new_page()
         try:

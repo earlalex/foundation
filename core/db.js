@@ -35,9 +35,7 @@ import {
   saveEmailTemplate, getEmailTemplates, getEmailTemplateById,
   saveVaultCredential, getVaultCredentials, deleteVaultCredential,
   saveVaCandidate, getVaCandidates, getVaActivityLogs, assignLastpassVaultAccess,
-  saveMarketingWorkflow, getMarketingWorkflows, deleteMarketingWorkflow,
-  saveKanbanTask, getKanbanTasks, deleteKanbanTask, updateKanbanTaskStatus,
-  syncCmsFromGoogleSheets, pushCmsToGoogleSheets, syncKanbanFromGoogleTasks, pushKanbanToGoogleTasks
+  saveMarketingWorkflow, getMarketingWorkflows, deleteMarketingWorkflow
 } from './db-content.js';
 
 import {
@@ -207,12 +205,6 @@ export class ContentDB {
   async getVaCandidates(f) { return getVaCandidates(f); }
   async getVaActivityLogs(id) { return getVaActivityLogs(id); }
   async assignLastpassVaultAccess(v, e) { return assignLastpassVaultAccess(v, e); }
-
-  // Delegated Google Sheets CMS & Tasks Kanban helpers
-  async syncCmsFromGoogleSheets(token, spreadsheetId) { return syncCmsFromGoogleSheets(token, spreadsheetId); }
-  async pushCmsToGoogleSheets(token, spreadsheetId, tabName, payloadData) { return pushCmsToGoogleSheets(token, spreadsheetId, tabName, payloadData); }
-  async syncKanbanFromGoogleTasks(token, listId) { return syncKanbanFromGoogleTasks(token, listId); }
-  async pushKanbanToGoogleTasks(token, listId, taskRecord) { return pushKanbanToGoogleTasks(token, listId, taskRecord); }
 
   // Delegated scan & marketing methods
   async saveZapScanResult(data) { return saveZapScanResult(data); }

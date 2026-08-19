@@ -40,29 +40,26 @@ function setupApiKeyMasking(inputElement) {
 
 export function initIntegrationsTab() {
   const currentCfg = configManager.current || {};
-  const tabConfig = document.getElementById('tab-config') || document;
-  const firebaseConfigForm = tabConfig.querySelector('#firebase-config-form');
-  const stripeForm = tabConfig.querySelector('#stripe-cloudflare-config-form');
 
-  // Firebase & Google config elements scoped to container
-  const cfgFbKey = tabConfig.querySelector('#cfg-fb-key');
-  const cfgFbProject = tabConfig.querySelector('#cfg-fb-project');
-  const cfgGoogleClientId = tabConfig.querySelector('#cfg-google-client-id');
-  const cfgGoogleClientSecret = tabConfig.querySelector('#cfg-google-client-secret');
-  const cfgFbAdmins = tabConfig.querySelector('#cfg-fb-admins');
+  // Firebase & Google config elements
+  const cfgFbKey = document.getElementById('cfg-fb-key');
+  const cfgFbProject = document.getElementById('cfg-fb-project');
+  const cfgGoogleClientId = document.getElementById('cfg-google-client-id');
+  const cfgGoogleClientSecret = document.getElementById('cfg-google-client-secret');
+  const cfgFbAdmins = document.getElementById('cfg-fb-admins');
 
   // AI Centralized Config Elements
-  const cfgGeminiKey = tabConfig.querySelector('#cfg-gemini-key');
-  const cfgOpenaiKey = tabConfig.querySelector('#cfg-openai-key');
-  const cfgAiProvider = tabConfig.querySelector('#cfg-ai-provider');
+  const cfgGeminiKey = document.getElementById('cfg-gemini-key');
+  const cfgOpenaiKey = document.getElementById('cfg-openai-key');
+  const cfgAiProvider = document.getElementById('cfg-ai-provider');
 
   // Stripe & Cloudflare config elements
-  const cfgStripeKey = tabConfig.querySelector('#cfg-stripe-key');
-  const cfgStripePriceId = tabConfig.querySelector('#cfg-stripe-price-id');
-  const cfgGa4Property = tabConfig.querySelector('#cfg-ga4-property');
-  const cfgVtApiKey = tabConfig.querySelector('#cfg-vt-apikey');
-  const cfgCfWorkflowUrl = tabConfig.querySelector('#cfg-cf-workflow-url');
-  const cfgCfVtUrl = tabConfig.querySelector('#cfg-cf-vt-url');
+  const cfgStripeKey = document.getElementById('cfg-stripe-key');
+  const cfgStripePriceId = document.getElementById('cfg-stripe-price-id');
+  const cfgGa4Property = document.getElementById('cfg-ga4-property');
+  const cfgVtApiKey = document.getElementById('cfg-vt-apikey');
+  const cfgCfWorkflowUrl = document.getElementById('cfg-cf-workflow-url');
+  const cfgCfVtUrl = document.getElementById('cfg-cf-vt-url');
 
   // Load existing values
   if (cfgFbKey) cfgFbKey.value = currentCfg.firebase?.apiKey || '';
@@ -83,29 +80,11 @@ export function initIntegrationsTab() {
   if (cfgCfWorkflowUrl) cfgCfWorkflowUrl.value = currentCfg.cloudflare?.workflowUrl || '/api/workflow-trigger';
   if (cfgCfVtUrl) cfgCfVtUrl.value = currentCfg.cloudflare?.vtUrl || '/api/virustotal-scan';
 
-  // Google Workspace Sheets CMS & Tasks fields scoped to container
-  const cfgSheetsCmsId = tabConfig.querySelector('#fnd-cfg-sheets-cms-id') || tabConfig.querySelector('#cfg-sheets-cms-id');
-  const cfgTasksListId = tabConfig.querySelector('#fnd-cfg-tasks-list-id') || tabConfig.querySelector('#cfg-tasks-list-id');
-  const cfgAutoSyncFreq = tabConfig.querySelector('#fnd-cfg-auto-sync-freq') || tabConfig.querySelector('#cfg-auto-sync-freq');
-
-  if (cfgSheetsCmsId) cfgSheetsCmsId.value = currentCfg.google?.cmsSpreadsheetId || '';
-  if (cfgTasksListId) cfgTasksListId.value = currentCfg.google?.tasksListId || '';
-  if (cfgAutoSyncFreq) cfgAutoSyncFreq.value = currentCfg.google?.autoSyncFrequency || '5 mins';
-
-  const gWorkspaceAffiliateLink = document.getElementById('fnd-gworkspace-affiliate-link');
-  if (gWorkspaceAffiliateLink) {
-    import('../../core/affiliates.js').then(mod => {
-      if (mod.FRAMEWORK_AFFILIATES?.googleWorkspace?.url) {
-        gWorkspaceAffiliateLink.href = mod.FRAMEWORK_AFFILIATES.googleWorkspace.url;
-      }
-    }).catch(() => {});
-  }
-
   // Google Business & AdSense fields
-  const cfgGmbPlaceId = tabConfig.querySelector('#cfg-gmb-place-id');
-  const cfgAdsensePubId = tabConfig.querySelector('#cfg-adsense-pub-id');
-  const cfgAdsenseSlotId = tabConfig.querySelector('#cfg-adsense-slot-id');
-  const cfgAdsenseEnableInFeed = tabConfig.querySelector('#cfg-adsense-enable-in-feed');
+  const cfgGmbPlaceId = document.getElementById('cfg-gmb-place-id');
+  const cfgAdsensePubId = document.getElementById('cfg-adsense-pub-id');
+  const cfgAdsenseSlotId = document.getElementById('cfg-adsense-slot-id');
+  const cfgAdsenseEnableInFeed = document.getElementById('cfg-adsense-enable-in-feed');
 
   // Load existing values for Google Business & AdSense
   if (cfgGmbPlaceId) cfgGmbPlaceId.value = currentCfg.googleBusiness?.placeId || 'ChIJN1t_tDeuEmsRUsoyG83frY4';
@@ -117,8 +96,8 @@ export function initIntegrationsTab() {
   [cfgFbKey, cfgGoogleClientSecret, cfgGeminiKey, cfgOpenaiKey, cfgStripeKey, cfgVtApiKey].forEach(setupApiKeyMasking);
 
   // LastPass config elements setup
-  const cfgLastPassProv = tabConfig.querySelector('#cfg-lastpass-provisioning');
-  const cfgLastPassComp = tabConfig.querySelector('#cfg-lastpass-company');
+  const cfgLastPassProv = document.getElementById('cfg-lastpass-provisioning');
+  const cfgLastPassComp = document.getElementById('cfg-lastpass-company');
 
   if (cfgLastPassProv) {
     cfgLastPassProv.value = currentCfg.lastpass?.provisioningHash || '';
@@ -129,6 +108,7 @@ export function initIntegrationsTab() {
   }
 
   // Initialize form validator
+  const firebaseConfigForm = document.getElementById('firebase-config-form');
   let firebaseConfigValidator = null;
   if (firebaseConfigForm) {
     firebaseConfigValidator = new FormValidator(firebaseConfigForm, adminFormRules.integrations);
@@ -136,7 +116,7 @@ export function initIntegrationsTab() {
 
   // LastPass integrations form submit listener
   // Google My Business & AdSense Form Submit Listener
-  tabConfig.querySelector('#adsense-gmb-config-form')?.addEventListener('submit', async (e) => {
+  document.getElementById('adsense-gmb-config-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn?.textContent;
@@ -178,9 +158,9 @@ export function initIntegrationsTab() {
   });
 
   // Preview GMB Reviews Connection Test
-  tabConfig.querySelector('#btn-test-gmb-reviews')?.addEventListener('click', async () => {
-    const previewContainer = tabConfig.querySelector('#admin-gmb-reviews-preview-container');
-    const previewBox = tabConfig.querySelector('#admin-gmb-reviews-preview-box');
+  document.getElementById('btn-test-gmb-reviews')?.addEventListener('click', async () => {
+    const previewContainer = document.getElementById('admin-gmb-reviews-preview-container');
+    const previewBox = document.getElementById('admin-gmb-reviews-preview-box');
     if (!previewContainer || !previewBox) return;
 
     previewContainer.style.display = 'block';
@@ -220,12 +200,12 @@ export function initIntegrationsTab() {
   });
 
   // Test Review Prompt Toast Trigger
-  tabConfig.querySelector('#btn-test-review-toast')?.addEventListener('click', () => {
+  document.getElementById('btn-test-review-toast')?.addEventListener('click', () => {
     toast.info("Enjoying Foundation? Help us grow by leaving a quick 5-star Google review!", 6000);
     toast.success("Test review prompt triggered successfully!");
   });
 
-  tabConfig.querySelector('#lastpass-integrations-form')?.addEventListener('submit', async (e) => {
+  document.getElementById('lastpass-integrations-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn?.textContent;
@@ -262,7 +242,7 @@ export function initIntegrationsTab() {
   });
 
   // Firebase & Google config form
-  firebaseConfigForm?.addEventListener('submit', async (e) => {
+  document.getElementById('firebase-config-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     // Validate form before submission
@@ -297,10 +277,7 @@ export function initIntegrationsTab() {
         google: {
           ...(configManager.current.google || {}),
           clientId: cfgGoogleClientId.value,
-          clientSecret: googleSecretValue,
-          cmsSpreadsheetId: cfgSheetsCmsId ? cfgSheetsCmsId.value.trim() : (configManager.current.google?.cmsSpreadsheetId || ''),
-          tasksListId: cfgTasksListId ? cfgTasksListId.value.trim() : (configManager.current.google?.tasksListId || ''),
-          autoSyncFrequency: cfgAutoSyncFreq ? cfgAutoSyncFreq.value : (configManager.current.google?.autoSyncFrequency || '5 mins')
+          clientSecret: googleSecretValue
         },
         aiConfig: {
           geminiApiKey: geminiKeyValue,
@@ -327,7 +304,7 @@ export function initIntegrationsTab() {
   });
 
   // Stripe & Cloudflare config form
-  stripeForm?.addEventListener('submit', async (e) => {
+  document.getElementById('stripe-cloudflare-config-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -379,7 +356,7 @@ export function initIntegrationsTab() {
 
   // --- Integration Diagnostics & Test Connection Listeners ---
 
-  tabConfig.querySelector('#btn-test-firebase')?.addEventListener('click', async () => {
+  document.getElementById('btn-test-firebase')?.addEventListener('click', async () => {
     toast.info('Testing Firebase Auth & Firestore connection...');
     try {
       const fb = configManager.current.firebase || {};
@@ -393,7 +370,7 @@ export function initIntegrationsTab() {
     }
   });
 
-  tabConfig.querySelector('#btn-test-gemini')?.addEventListener('click', () => {
+  document.getElementById('btn-test-gemini')?.addEventListener('click', () => {
     toast.info('Testing Gemini API Connection...');
     const key = cfgGeminiKey.dataset.originalValue || cfgGeminiKey.value;
     if (!key) {
@@ -403,7 +380,7 @@ export function initIntegrationsTab() {
     toast.success('Gemini API online! Response received: "Hello, I am Gemini 2.5 Flash, ready to assist."');
   });
 
-  tabConfig.querySelector('#btn-test-openai')?.addEventListener('click', () => {
+  document.getElementById('btn-test-openai')?.addEventListener('click', () => {
     toast.info('Testing OpenAI API Connection...');
     const key = cfgOpenaiKey.dataset.originalValue || cfgOpenaiKey.value;
     if (!key) {
@@ -413,7 +390,7 @@ export function initIntegrationsTab() {
     toast.success('OpenAI API online! gpt-4o-mini is active and authenticated.');
   });
 
-  tabConfig.querySelector('#btn-test-stripe')?.addEventListener('click', async () => {
+  document.getElementById('btn-test-stripe')?.addEventListener('click', async () => {
     toast.info('Testing Stripe Connection...');
     const key = cfgStripeKey.dataset.originalValue || cfgStripeKey.value;
     if (!key) {
@@ -433,7 +410,7 @@ export function initIntegrationsTab() {
     }
   });
 
-  tabConfig.querySelector('#btn-test-virustotal')?.addEventListener('click', async () => {
+  document.getElementById('btn-test-virustotal')?.addEventListener('click', async () => {
     toast.info('Testing VirusTotal Edge Scanner API...');
     const key = cfgVtApiKey.dataset.originalValue || cfgVtApiKey.value;
     if (!key) {
@@ -457,7 +434,7 @@ export function initIntegrationsTab() {
     }
   });
 
-  tabConfig.querySelector('#btn-test-lastpass')?.addEventListener('click', () => {
+  document.getElementById('btn-test-lastpass')?.addEventListener('click', () => {
     toast.info('Testing LastPass Enterprise connection...');
     const key = cfgLastPassProv.dataset.originalValue || cfgLastPassProv.value;
     const comp = cfgLastPassComp.value;
@@ -466,47 +443,5 @@ export function initIntegrationsTab() {
       return;
     }
     toast.success('LastPass Enterprise Provisioning Bridge Verified! Credentials vault is secure.');
-  });
-
-  (tabConfig.querySelector('#fnd-btn-test-sheets-tasks') || tabConfig.querySelector('#btn-test-sheets-tasks'))?.addEventListener('click', async () => {
-    toast.info('Testing Google Sheets CMS & Tasks connection...');
-    try {
-      const { getGoogleAccessToken } = await import('../../core/google-services.js');
-      const token = await getGoogleAccessToken(true);
-      if (!token) {
-        toast.warning('Google OAuth Authorization is required.');
-        return;
-      }
-
-      const siteName = configManager.current.siteTitle || 'Foundation Framework';
-      const { ensureCmsWorkbook } = await import('../../utils/backend-google-sheets.js');
-      const { ensureTasksList } = await import('../../utils/backend-google-tasks.js');
-
-      const cmsId = await ensureCmsWorkbook(token, siteName);
-      const tasksId = await ensureTasksList(token);
-
-      if (cmsId || tasksId) {
-        if (cmsId) {
-          configManager.current.google = {
-            ...(configManager.current.google || {}),
-            cmsSpreadsheetId: cmsId
-          };
-          if (cfgSheetsCmsId) cfgSheetsCmsId.value = cmsId;
-        }
-        if (tasksId) {
-          configManager.current.google = {
-            ...(configManager.current.google || {}),
-            tasksListId: tasksId
-          };
-          if (cfgTasksListId) cfgTasksListId.value = tasksId;
-        }
-        await configManager.saveToFirebase(configManager.current);
-        toast.success('Google Sheets CMS & Google Tasks Sync Verified & Provisioned!');
-      } else {
-        toast.error('Google Sheets/Tasks API connection test returned empty ID.');
-      }
-    } catch (err) {
-      toast.error('Verification failed: ' + err.message);
-    }
   });
 }

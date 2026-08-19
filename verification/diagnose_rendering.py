@@ -1,3 +1,4 @@
+import os
 from playwright.sync_api import sync_playwright
 
 def run_cuj(page):
@@ -20,7 +21,7 @@ def run_cuj(page):
     else:
         print("Setup wizard not visible.")
 
-    page.screenshot(path="/home/jules/verification/screenshots/verification4.png")
+    page.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'verification4.png'))
 
 if __name__ == "__main__":
     with sync_playwright() as p:
