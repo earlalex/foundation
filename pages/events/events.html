@@ -1,16 +1,8 @@
 <!-- pages/events/events.html -->
 <div class="events-page-wrapper" style="font-family: var(--theme-font-body, system-ui, sans-serif); line-height: 1.6; color: var(--theme-color-text-primary, #1a202c);">
 
-  <!-- Google Reviews Showcase Section (Directive 3) -->
-  <div style="margin-bottom: 3rem;">
-    <h2 style="font-size: 1.75rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 1.25rem; text-align: center;" data-i18n="Sovereign Developers Community Reviews">
-      Sovereign Developers Community Reviews
-    </h2>
-    <google-reviews theme="dark" limit="3"></google-reviews>
-  </div>
-
-  <!-- Universal Hero Section (Directive 2) -->
-  <section id="events-hero" class="reveal-on-scroll" style="padding: 5rem 1.5rem; text-align: center; color: white; background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); margin-bottom: 3rem;">
+  <!-- Universal Hero Section -->
+  <section id="events-hero" class="events-hero-banner reveal-on-scroll" style="padding: 5rem 1.5rem; text-align: center; color: white; background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); margin-bottom: 3rem;">
     <div style="max-width: 800px; margin: 0 auto;">
       <h1 id="events-hero-title" style="font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 900; margin-bottom: 1.25rem;">
         Upcoming Summits & Experiences
@@ -25,7 +17,7 @@
     </div>
   </section>
 
-  <!-- Featured Summit Spotlight & Speaker strip (Directive 2) -->
+  <!-- Featured Summit Spotlight & Speaker strip -->
   <section style="max-width: var(--theme-layout-container-max-width, 1200px); margin: 0 auto 4rem auto; padding: 0 1.5rem;">
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; align-items: center; background: var(--theme-color-surface-alt, #f8fafc); border-radius: 12px; padding: 2rem; border: 1px solid var(--theme-color-border);">
       <div>
@@ -43,10 +35,20 @@
     </div>
   </section>
 
-  <section style="max-width: 1200px; margin: 3rem auto; padding: 0 1.5rem;">
+  <!-- Event Grid Section -->
+  <section id="events-grid-section" style="max-width: 1200px; margin: 3rem auto; padding: 0 1.5rem;">
     <!-- Event Grid Feed -->
-  <div id="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem;">
-    <p style="color: #a0aec0; text-align: center; grid-column: 1 / -1;">Loading event calendar...</p>
+    <div id="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem;">
+      <p style="color: #a0aec0; text-align: center; grid-column: 1 / -1;">Loading event calendar...</p>
+    </div>
+  </section>
+
+  <!-- Sovereign Developers Community Reviews (Relocated Below Events) -->
+  <div class="events-reviews-section" style="max-width: 1200px; margin: 4rem auto 3rem auto; padding: 3rem 1.5rem 0 1.5rem; border-top: 1px solid var(--theme-color-border, #e2e8f0);">
+    <h2 style="font-size: 1.75rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); margin-bottom: 1.25rem; text-align: center;" data-i18n="Sovereign Developers Community Reviews">
+      Sovereign Developers Community Reviews
+    </h2>
+    <google-reviews place-id="ChIJN1t_tDeuEmsRUsoyG83frY4" limit="3" theme="dark"></google-reviews>
   </div>
 
   <!-- Dynamic Event Interactive Registration Panel / Modal -->
@@ -71,7 +73,7 @@
         <!-- Event Promo Video (Optional) -->
         <div id="modal-video-container" style="display: none; width: 100%;"></div>
 
-        <!-- Rich Event Details Container (Directive 3) -->
+        <!-- Rich Event Details Container -->
         <div id="modal-rich-details-container" style="display: none; grid-template-columns: 1fr 1.25fr; gap: 1.5rem; border-bottom: 1px solid var(--theme-color-border, #edf2f7); padding-bottom: 1.5rem;">
           <!-- Flyer, Agenda & Lineup dynamically rendered -->
         </div>
@@ -186,5 +188,5 @@
   <button id="btn-floating-cart" style="display: none !important;">
     <span>🛒</span>
   </button>
-</section>
+
 </div>

@@ -307,7 +307,15 @@ export async function uploadFileToDrive(file) {
       body: formData
     });
 
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(`Google Drive API returned HTTP ${response.status}: ${errData.error?.message || 'Upload failed'}`);
+    }
+
     const result = await response.json();
+    if (!result || !result.id) {
+      throw new Error('Google Drive API response missing file ID');
+    }
 
     // Make individual file publicly readable, EXCEPT for corporate binder / private documents
     if (!isCorporateBinder) {

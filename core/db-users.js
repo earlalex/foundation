@@ -1,7 +1,7 @@
 // core/db-users.js
 import {
-  getFirestoreDB, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, limit,
-  queryWith3SecTimeout, USERS_COLLECTION
+  getFirestoreDB, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, limit,
+  queryWith3SecTimeout, withTimeout, USERS_COLLECTION
 } from './db-shared.js';
 
 export async function getAllUsers() {
@@ -31,23 +31,22 @@ export async function saveUser(userData) {
     updatedAt: new Date().toISOString()
   };
 
+  // Local-First: Persist to LocalStorage immediately for sub-200ms form completion
+  const local = getLocalUsers();
+  local[userId] = payload;
+  saveLocalUsers(local);
+
   const db = getFirestoreDB();
   if (!db) {
-    const local = getLocalUsers();
-    local[userId] = payload;
-    saveLocalUsers(local);
     return payload;
   }
 
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
-    await setDoc(docRef, payload, { merge: true });
+    await withTimeout(setDoc(docRef, payload, { merge: true }), 1500);
     return payload;
   } catch (err) {
-    console.warn('[DB]: Firestore user save error. Falling back to LocalStorage.', err.message);
-    const local = getLocalUsers();
-    local[userId] = payload;
-    saveLocalUsers(local);
+    console.warn('[DB]: Firestore user save error or timeout. Saved locally.', err.message);
     return payload;
   }
 }
@@ -115,29 +114,26 @@ export async function getUser(userId) {
 }
 
 export async function deleteUser(userId) {
+  const local = getLocalUsers();
+  delete local[userId];
+  saveLocalUsers(local);
+
   const db = getFirestoreDB();
   if (!db) {
-    const local = getLocalUsers();
-    delete local[userId];
-    saveLocalUsers(local);
     return true;
   }
 
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
-    await deleteDoc(docRef);
+    await withTimeout(deleteDoc(docRef), 1500);
     return true;
   } catch (err) {
-    console.warn('[DB]: Firestore user delete error. Falling back to LocalStorage.', err.message);
-    const local = getLocalUsers();
-    delete local[userId];
-    saveLocalUsers(local);
+    console.warn('[DB]: Firestore user delete error or timeout. Saved locally.', err.message);
     return true;
   }
 }
 
 export async function saveUserCourseProgress(userId, courseId, progressData) {
-  const dbInstance = getFirestoreDB();
   const payload = {
     ...progressData,
     userId,
@@ -145,24 +141,23 @@ export async function saveUserCourseProgress(userId, courseId, progressData) {
     updatedAt: new Date().toISOString()
   };
 
+  // Local-First: Persist to LocalStorage immediately
+  const local = getLocalCourseProgress();
+  const key = `${userId}_${courseId}`;
+  local[key] = payload;
+  saveLocalCourseProgress(local);
+
+  const dbInstance = getFirestoreDB();
   if (!dbInstance) {
-    const local = getLocalCourseProgress();
-    const key = `${userId}_${courseId}`;
-    local[key] = payload;
-    saveLocalCourseProgress(local);
     return payload;
   }
 
   try {
     const docRef = doc(dbInstance, USERS_COLLECTION, userId, 'course_progress', courseId);
-    await setDoc(docRef, payload, { merge: true });
+    await withTimeout(setDoc(docRef, payload, { merge: true }), 1500);
     return payload;
   } catch (err) {
-    console.warn('[DB]: Firestore course progress write error. Falling back to LocalStorage.', err.message);
-    const local = getLocalCourseProgress();
-    const key = `${userId}_${courseId}`;
-    local[key] = payload;
-    saveLocalCourseProgress(local);
+    console.warn('[DB]: Firestore course progress write error or timeout. Saved locally.', err.message);
     return payload;
   }
 }
