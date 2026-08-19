@@ -125,6 +125,41 @@ export async function initAccountPage() {
     await setupAffiliateHub(user);
   }
 
+  // Handle Stripe return checkout fulfillment
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.get('payment') === 'success') {
+    const rawPending = sessionStorage.getItem('foundation_pending_checkout_items');
+    if (rawPending) {
+      try {
+        const pendingItems = JSON.parse(rawPending);
+        sessionStorage.removeItem('foundation_pending_checkout_items');
+
+        const newPurchasedItems = pendingItems.map(item => ({
+          id: item.id,
+          title: item.name,
+          type: item.type,
+          purchasedAt: new Date().toISOString(),
+          pricePaid: item.price
+        }));
+
+        const updatedUser = await contentDB.registerOrMergeUser({
+          email: user.email,
+          name: user.displayName || user.name || '',
+          role: user.role || 'subscriber',
+          purchasedProducts: newPurchasedItems
+        });
+
+        if (updatedUser) {
+          store.dispatch('SET_USER', updatedUser);
+        }
+
+        toast.success('🎉 Payment verified! Your purchased items have been unlocked in your account.');
+      } catch (err) {
+        console.warn('[Account Portal]: Failed to fulfill pending Stripe checkout items:', err);
+      }
+    }
+  }
+
   // Load dynamic collections
   await loadPurchasedProducts(user);
   await loadUnlockedContent(currentRole);

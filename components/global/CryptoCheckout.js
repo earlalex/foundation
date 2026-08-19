@@ -19,10 +19,11 @@ class CryptoCheckout extends HTMLElement {
     this.variantId = 'default';
     this.qty = 1;
     this.buyerEmail = '';
+    this.cartItems = [];
   }
 
   static get observedAttributes() {
-    return ['amount-usd', 'checkout-type', 'product-id', 'variant-id', 'qty', 'buyer-email'];
+    return ['amount-usd', 'checkout-type', 'product-id', 'variant-id', 'qty', 'buyer-email', 'items-json'];
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
@@ -33,6 +34,13 @@ class CryptoCheckout extends HTMLElement {
     if (name === 'variant-id') this.variantId = newVal;
     if (name === 'qty') this.qty = parseInt(newVal) || 1;
     if (name === 'buyer-email') this.buyerEmail = newVal;
+    if (name === 'items-json') {
+      try {
+        this.cartItems = JSON.parse(newVal);
+      } catch (e) {
+        this.cartItems = [];
+      }
+    }
     this.render();
   }
 
@@ -158,9 +166,25 @@ class CryptoCheckout extends HTMLElement {
       localPurchases.push(purchasePayload);
       localStorage.setItem('foundation_local_purchases', JSON.stringify(localPurchases));
 
-      // 2. Perform user access adjustments
+      // 2. Perform user access adjustments and product linkage upon verified on-chain tx
       let purchasedProducts = [];
-      if (this.productId) purchasedProducts.push(this.productId);
+      if (Array.isArray(this.cartItems) && this.cartItems.length > 0) {
+        purchasedProducts = this.cartItems.map(item => ({
+          id: item.id,
+          title: item.name,
+          type: item.type,
+          purchasedAt: new Date().toISOString(),
+          pricePaid: item.price
+        }));
+      } else if (this.productId) {
+        purchasedProducts.push({
+          id: this.productId,
+          title: this.productId,
+          type: 'product',
+          purchasedAt: new Date().toISOString(),
+          pricePaid: this.amountUSD
+        });
+      }
 
       const updatedUser = await contentDB.registerOrMergeUser({
         email,
@@ -169,49 +193,18 @@ class CryptoCheckout extends HTMLElement {
         purchasedProducts
       });
 
+      if (updatedUser && store.state.user?.email === email) {
+        store.dispatch('SET_USER', updatedUser);
+      }
+
+      // Import eventCart dynamically and clear cart if items were purchased
+      const { eventCart } = await import('../../utils/eventCart.js');
+      eventCart.clearCart();
+
       if (this.checkoutType === 'membership') {
-        if (updatedUser) store.dispatch('SET_USER', updatedUser);
-        toast.success('Decentralized crypto settlement complete! Persona upgraded to Paid Member (Ad-Free).');
-      } else if (this.checkoutType === 'event') {
-        // Register event ticket
-        const regRecord = {
-          id: 'reg_crypto_' + Date.now(),
-          eventId: this.productId || 'sample-summit',
-          email: email,
-          accessCode: 'EVT-CRYPTO-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          qrPayload: 'FOUNDATION-PASS:EVT-CRYPTO-' + Date.now(),
-          cartItems: JSON.stringify([
-            { id: this.productId || 'sample-summit', type: 'ticket', name: 'General Admission', price: this.amountUSD, quantity: this.qty }
-          ]),
-          createdAt: new Date().toISOString()
-        };
-        await contentDB.saveRegistration(regRecord);
-        toast.success('Crypto tickets registered successfully! Check your pass on your account dashboard.');
-      } else if (this.checkoutType === 'product') {
-        // Save shop order
-        const orders = JSON.parse(localStorage.getItem('foundation_local_orders') || '{}');
-        const orderId = 'order_crypto_' + Date.now();
-        orders[orderId] = {
-          id: orderId,
-          type: 'order',
-          productId: this.productId,
-          productTitle: this.productId ? (await contentDB.getContentById(this.productId))?.title || 'Shop Product' : 'Shop Product',
-          variantId: this.variantId,
-          qty: this.qty,
-          paymentMethod: `Crypto: ${this.selectedCurrency}`,
-          paymentStatus: 'Paid',
-          fulfillmentStatus: 'Pending Production',
-          shippingDetails: { carrier: '', trackingNumber: '', shippedAt: '' },
-          buyerEmail: email,
-          createdAt: new Date().toISOString()
-        };
-        localStorage.setItem('foundation_local_orders', JSON.stringify(orders));
-
-        // Decrement inventory stock
-        const { decrementStock } = await import('../../utils/inventory.js');
-        await decrementStock(this.productId, this.variantId, this.qty);
-
-        toast.success('Decentralized storefront settlement successful! E-commerce order created.');
+        toast.success('Decentralized crypto settlement complete! Persona upgraded to Paid Member.');
+      } else {
+        toast.success('Decentralized settlement successful! Your items have been unlocked.');
       }
 
       // Add to local invoices collection fallback to show up in Invoices ledger

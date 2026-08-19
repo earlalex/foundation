@@ -3,7 +3,7 @@ import { store } from '../../core/store.js';
 import { eventCart } from '../../utils/eventCart.js';
 import { contentDB } from '../../core/db.js';
 import { toast } from '../../utils/toast.js';
-import { cleanTitle } from '../../utils/universalRenderer.js';
+import { cleanTitle, escapeHTML } from '../../utils/universalRenderer.js';
 
 export async function initCartPage() {
   const container = document.getElementById('cart-items-tbody');
@@ -203,28 +203,23 @@ function renderCartSummary() {
 }
 
 function renderCryptoComponent() {
-  const cryptoPanel = document.getElementById('cart-crypto-panel');
+  const form = document.getElementById('cart-checkout-form');
+  const cryptoPanel = form ? form.querySelector('#cart-crypto-panel') : document.getElementById('cart-crypto-panel');
   if (!cryptoPanel) return;
 
   const cartSummary = eventCart.getCartSummary();
-  const emailInput = document.getElementById('cart-customer-email');
+  const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
   const email = emailInput ? emailInput.value.trim() : '';
+  const itemsJson = escapeHTML(JSON.stringify(cartSummary.items || []));
 
   cryptoPanel.innerHTML = `
     <crypto-checkout
       amount-usd="${cartSummary.total}"
       checkout-type="product"
-      buyer-email="${email}">
+      buyer-email="${email}"
+      items-json="${itemsJson}">
     </crypto-checkout>
   `;
-
-  // Listen to crypto success event
-  const checkoutComp = cryptoPanel.querySelector('crypto-checkout');
-  if (checkoutComp) {
-    checkoutComp.addEventListener('crypto-payment-success', async (e) => {
-      await handleSuccessfulCartCheckout('Web3 Crypto', e.detail?.txHash);
-    });
-  }
 }
 
 async function executeOrderCheckout() {
@@ -308,41 +303,22 @@ async function executeOrderCheckout() {
             window.location.href = resData.url;
             return;
           }
-          if (resData.error) {
-            toast.error(`Stripe checkout error: ${resData.error}`);
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = '🔒 Complete Secure Purchase';
-            }
-            return;
-          }
+          toast.error(`Stripe checkout error: ${resData.error || 'Failed to generate payment session URL.'}`);
         } else {
           const errData = await response.json().catch(() => ({}));
-          // In local dev/bypass mode, allow fallback settlement if endpoint is unconfigured
-          if (!window.__FOUNDATION_DEV_BYPASS__ && !store.state.devMode) {
-            toast.error(errData.error || 'Payment processing failed. Please verify payment details.');
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = '🔒 Complete Secure Purchase';
-            }
-            return;
-          }
+          toast.error(errData.error || 'Payment processing failed. Please verify payment details.');
         }
       } catch (stripeErr) {
-        if (!window.__FOUNDATION_DEV_BYPASS__ && !store.state.devMode) {
-          console.error('[Cart Checkout]: Stripe backend call error:', stripeErr);
-          toast.error('Unable to connect to payment gateway. Please try again.');
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '🔒 Complete Secure Purchase';
-          }
-          return;
-        }
+        console.error('[Cart Checkout]: Stripe backend call error:', stripeErr);
+        toast.error('Unable to connect to payment gateway. Please try again.');
       }
-    }
 
-    // Direct Settlement Fallback (For Verified Web3 / Dev Simulation)
-    await handleSuccessfulCartCheckout(selectedPayment === 'stripe_ach' ? 'Stripe ACH' : 'Credit Card');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🔒 Complete Secure Purchase';
+      }
+      return;
+    }
 
   } catch (err) {
     console.error('[Cart Checkout Error]:', err);
