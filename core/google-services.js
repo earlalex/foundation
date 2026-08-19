@@ -27,7 +27,7 @@ export async function authenticateGoogleServices() {
     return googleAccessToken;
   } catch (err) {
     const errStr = String(err?.message || err?.code || '').toLowerCase();
-    const isPopupClosed =
+    const isPopupClosed = 
       err.code === 'auth/popup-closed-by-user' ||
       errStr.includes('popup-closed-by-user') ||
       errStr.includes('cancelled-popup-request') ||
