@@ -289,7 +289,7 @@ async function executeOrderCheckout() {
               quantity: i.quantity,
               currency: 'USD'
             })),
-            successUrl: `${window.location.origin}/account?payment=success`,
+            successUrl: `${window.location.origin}/account?session_id={CHECKOUT_SESSION_ID}&payment=success`,
             cancelUrl: `${window.location.origin}/cart?payment=cancelled`
           })
         });

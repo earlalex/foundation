@@ -82,18 +82,12 @@ export async function onRequestPost(context) {
 
         if (res.ok) {
           const sessionData = await res.json();
-          const isPaid = sessionData.payment_status === 'paid' || sessionData.status === 'complete';
+          const isPaid = sessionData.payment_status === 'paid';
 
           let lineItems = [];
-          if (sessionData.metadata?.itemsManifest) {
-            try {
-              lineItems = JSON.parse(sessionData.metadata.itemsManifest);
-            } catch (e) {}
-          }
-
-          if ((!lineItems || lineItems.length === 0) && sessionData.line_items?.data) {
+          if (sessionData.line_items?.data && Array.isArray(sessionData.line_items.data)) {
             lineItems = sessionData.line_items.data.map(li => ({
-              id: li.price?.product || li.id,
+              id: li.price?.product || li.price?.id || li.id,
               name: li.description || 'Purchased Item',
               type: 'product',
               price: (li.amount_total || 0) / 100 / (li.quantity || 1)
@@ -208,16 +202,6 @@ export async function onRequestPost(context) {
     params.append('success_url', finalSuccessUrl);
     params.append('cancel_url', finalCancelUrl);
 
-    // Store Authoritative Cart Items Manifest in Session Metadata
-    if (body.lineItems && Array.isArray(body.lineItems) && body.lineItems.length > 0) {
-      const compactManifest = body.lineItems.map(i => ({
-        id: i.id || i.productId || i.name,
-        name: i.name || 'Purchased Item',
-        type: i.type || 'product',
-        price: (i.amount || 0) / 100
-      }));
-      params.append('metadata[itemsManifest]', JSON.stringify(compactManifest).substring(0, 500));
-    }
 
     // Add Metadata
     const uid = userId || userUid || '';
