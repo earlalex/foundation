@@ -430,14 +430,15 @@ window.deleteTask = async function(taskId) {
   try {
     const taskToDelete = tasks.find(t => t.id === taskId);
     if (taskToDelete && taskToDelete.googleTaskId) {
-      const token = await getGoogleAccessToken(false);
+      const token = await getGoogleAccessToken(true);
       const listId = configManager.current.google?.tasksListId;
-      if (token && listId) {
-        const { deleteGoogleTask } = await import('../../utils/backend-google-tasks.js');
-        const deleted = await deleteGoogleTask(token, listId, taskToDelete.googleTaskId);
-        if (!deleted) {
-          throw new Error('Failed to delete task from Google Tasks.');
-        }
+      if (!token || !listId) {
+        throw new Error('Google Workspace OAuth token or Tasks List ID unavailable. Cannot delete synchronized Google Task.');
+      }
+      const { deleteGoogleTask } = await import('../../utils/backend-google-tasks.js');
+      const deleted = await deleteGoogleTask(token, listId, taskToDelete.googleTaskId);
+      if (!deleted) {
+        throw new Error('Failed to delete task from Google Tasks.');
       }
     }
 
