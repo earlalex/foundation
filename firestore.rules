@@ -11,10 +11,16 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        request.auth.token.email == 'admin@earlalex.com'
+        request.auth.token.email == 'admin@earlalex.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getUserProfile().role == 'admin')
       );
     }
 
@@ -23,7 +29,9 @@ service cloud.firestore {
         request.auth.token.admin == true ||
         request.auth.token.role == 'admin' ||
         request.auth.token.role == 'editor' ||
-        request.auth.token.email == 'admin@earlalex.com'
+        request.auth.token.email == 'admin@earlalex.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          (getUserProfile().role == 'admin' || getUserProfile().role == 'editor' || getUserProfile().isAdmin == true))
       );
     }
 
@@ -32,13 +40,13 @@ service cloud.firestore {
         resource != null ? (
           resource.data.userId == request.auth.uid ||
           resource.data.email == request.auth.token.email ||
-          resource.data.customerEmail == request.auth.token.email ||
-          resource.data.sender == request.auth.token.email
+          resource.data.userEmail == request.auth.token.email ||
+          resource.data.customerEmail == request.auth.token.email
         ) : (
           request.resource.data.userId == request.auth.uid ||
           request.resource.data.email == request.auth.token.email ||
-          request.resource.data.customerEmail == request.auth.token.email ||
-          request.resource.data.sender == request.auth.token.email
+          request.resource.data.userEmail == request.auth.token.email ||
+          request.resource.data.customerEmail == request.auth.token.email
         )
       );
     }

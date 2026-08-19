@@ -85,9 +85,12 @@ export class ContentDB {
       throw new Error('[DB]: Missing required fields in chat log');
     }
 
+    const currentUser = store.state.user;
     const payload = {
       ...logData,
       id: logData.id || `chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      userId: currentUser?.uid || logData.userId || 'anonymous',
+      userEmail: currentUser?.email || logData.userEmail || logData.email || 'anonymous',
       createdAt: new Date().toISOString()
     };
 
@@ -1664,8 +1667,33 @@ export async function syncOutboxToFirestore() {
         flushSensitiveLocalData();
       } catch (err) {
         if (err.code === 'permission-denied' || err.message?.includes('permissions') || err.message?.includes('Permission denied')) {
-          console.warn('[Outbox Sync]: Payload rejected due to missing permissions. Clearing invalid outbox queue to unblock retries while preserving local fallback records.');
-          localStorage.removeItem('foundation_outbox');
+          console.warn('[Outbox Sync]: Batch payload rejected due to missing permissions. Falling back to granular individual item sync...');
+          const { deleteDoc: originalDeleteDoc, setDoc: originalSetDoc } = await import('./db-shared.js');
+          const remainingOutbox = [];
+          for (const item of outbox) {
+            try {
+              const docRef = doc(db, item.collection, item.docId);
+              if (docRef) {
+                if (item.isDelete) {
+                  await originalDeleteDoc(docRef);
+                } else {
+                  await originalSetDoc(docRef, item.data, { merge: true });
+                }
+              }
+            } catch (singleErr) {
+              if (singleErr.code === 'permission-denied' || singleErr.message?.includes('permissions') || singleErr.message?.includes('Permission denied')) {
+                console.warn(`[Outbox Sync]: Pruned permission-denied item ${item.collection}/${item.docId} from outbox:`, singleErr.message);
+              } else {
+                remainingOutbox.push(item);
+              }
+            }
+          }
+          if (remainingOutbox.length > 0) {
+            localStorage.setItem('foundation_outbox', JSON.stringify(remainingOutbox));
+          } else {
+            localStorage.removeItem('foundation_outbox');
+            flushSensitiveLocalData();
+          }
         } else {
           console.error('[Outbox Sync]: Batch write error:', err);
         }
