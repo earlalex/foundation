@@ -507,8 +507,12 @@ export function getLocalPages() {
     let localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
     let isSeeded = localStorage.getItem('foundation_pages_seeded') === 'true';
 
-    const defaultPages = [
-      {
+    if (isSeeded && (!localPages['privacy'] || !localPages['terms'] || !localPages['cookies'])) {
+      isSeeded = false;
+    }
+
+    if (!isSeeded) {
+      const samplePage = {
         type: 'page',
         id: 'our-story',
         slug: 'our-story',
@@ -516,8 +520,11 @@ export function getLocalPages() {
         compiledHtml: '<div>Our story began with a desire to build simple websites.</div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      },
-      {
+      };
+      schemaRegistry.validate(samplePage);
+      localPages['our-story'] = samplePage;
+
+      const privacyPage = {
         type: 'page',
         id: 'privacy',
         slug: 'privacy',
@@ -525,8 +532,11 @@ export function getLocalPages() {
         compiledHtml: '<div><h2>Privacy Policy</h2><p>Your privacy is important to us. This policy details how we process your personal data.</p></div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      },
-      {
+      };
+      schemaRegistry.validate(privacyPage);
+      localPages['privacy'] = privacyPage;
+
+      const termsPage = {
         type: 'page',
         id: 'terms',
         slug: 'terms',
@@ -534,8 +544,11 @@ export function getLocalPages() {
         compiledHtml: '<div><h2>Terms of Service</h2><p>By using this platform, you agree to comply with our Terms of Service.</p></div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      },
-      {
+      };
+      schemaRegistry.validate(termsPage);
+      localPages['terms'] = termsPage;
+
+      const cookiesPage = {
         type: 'page',
         id: 'cookies',
         slug: 'cookies',
@@ -543,23 +556,13 @@ export function getLocalPages() {
         compiledHtml: '<div><h2>Cookie Policy</h2><p>This page describes how we use cookies to personalize your experience.</p></div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      }
-    ];
+      };
+      schemaRegistry.validate(cookiesPage);
+      localPages['cookies'] = cookiesPage;
 
-    let updated = false;
-    defaultPages.forEach(page => {
-      if (!localPages[page.id]) {
-        schemaRegistry.validate(page);
-        localPages[page.id] = page;
-        updated = true;
-      }
-    });
-
-    if (updated || !isSeeded) {
       localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
       localStorage.setItem('foundation_pages_seeded', 'true');
     }
-
     return localPages;
   } catch (e) {
     console.error('[DB Shared]: Failed to seed default sample pages', e);

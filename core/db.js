@@ -1664,7 +1664,9 @@ export async function syncOutboxToFirestore() {
         flushSensitiveLocalData();
       } catch (err) {
         if (err.code === 'permission-denied' || err.message?.includes('permissions') || err.message?.includes('Permission denied')) {
-          console.warn('[Outbox Sync]: Payload rejected due to missing permissions. Preserving local fallback data and logging error:', err.message);
+          console.warn('[Outbox Sync]: Payload rejected due to missing permissions. Clearing invalid outbox items to prevent retry loop.');
+          localStorage.removeItem('foundation_outbox');
+          flushSensitiveLocalData();
         } else {
           console.error('[Outbox Sync]: Batch write error:', err);
         }

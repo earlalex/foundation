@@ -479,6 +479,15 @@ export class Router {
 
       this.appContainer.innerHTML = htmlContent;
 
+      if (cleanPath === '/login') {
+        try {
+          const { initLoginPage } = await import('../pages/login.js');
+          initLoginPage();
+        } catch (err) {
+          console.error('[Router]: Failed to auto-initialize login page:', err);
+        }
+      }
+
       // Fallback View Container Check: prevent blank white screen viewport rendering
       if (!this.appContainer.innerHTML || this.appContainer.innerHTML.trim() === '') {
         console.warn(`[Router]: Empty template content parsed for path "${cleanPath}". Rendering fallback view.`);
