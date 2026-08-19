@@ -14,7 +14,32 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        request.auth.token.email.matches('.*@earlalex\\.com$')
+        request.auth.token.email == 'admin@earlalex.com'
+      );
+    }
+
+    function isEditorOrAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'editor' ||
+        request.auth.token.email == 'admin@earlalex.com'
+      );
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && (
+        resource != null ? (
+          resource.data.userId == request.auth.uid ||
+          resource.data.email == request.auth.token.email ||
+          resource.data.customerEmail == request.auth.token.email ||
+          resource.data.sender == request.auth.token.email
+        ) : (
+          request.resource.data.userId == request.auth.uid ||
+          request.resource.data.email == request.auth.token.email ||
+          request.resource.data.customerEmail == request.auth.token.email ||
+          request.resource.data.sender == request.auth.token.email
+        )
       );
     }
 
@@ -30,20 +55,75 @@ service cloud.firestore {
 
     // Custom Dynamic Pages
     match /pages/{pageId} {
-      allow read: if resource.data.access.visibility == 'public' || resource.data.access == null || isAdmin();
-      allow write: if isAdmin();
+      allow read: if resource.data.access.visibility == 'public' || resource.data.access == null || isEditorOrAdmin();
+      allow write: if isEditorOrAdmin();
     }
 
     // CMS & Catalog Content
     match /content/{contentId} {
       allow read: if resource.data.access.visibility == 'public' || resource.data.access == null || isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isEditorOrAdmin();
     }
 
     // Site Settings & Configuration
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // Invoices & Financial Records
+    match /invoices/{invoiceId} {
+      allow read, write: if isDocOwner() || isEditorOrAdmin();
+    }
+
+    match /finances_expenses/{expId} {
+      allow read, write: if isEditorOrAdmin();
+    }
+
+    match /finances_payroll/{payId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /finances_budgets/{budgetId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /finances_employees/{empId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /splits/{splitId} {
+      allow read, write: if isEditorOrAdmin();
+    }
+
+    match /earnings/{earningId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Bookings, Registrations & Purchases
+    match /appointments/{apptId} {
+      allow read, write: if isDocOwner() || isEditorOrAdmin();
+    }
+
+    match /registrations/{regId} {
+      allow read, write: if isDocOwner() || isEditorOrAdmin();
+    }
+
+    match /purchases/{purchaseId} {
+      allow read, write: if isDocOwner() || isEditorOrAdmin();
+    }
+
+    // Chat Logs & Spark AI Tasks
+    match /chat_logs/{logId} {
+      allow read, write: if isDocOwner() || isEditorOrAdmin();
+    }
+
+    match /spark_tasks/{taskId} {
+      allow read, write: if isEditorOrAdmin();
+    }
+
+    match /hipaa_logs/{logId} {
+      allow read, write: if isAdmin();
     }
 
     // Security Scans & Audit Logs (Admin only)
@@ -57,15 +137,15 @@ service cloud.firestore {
     }
 
     match /marketing_workflows/{workflowId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isEditorOrAdmin();
     }
 
     match /marketing_segments/{segmentId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isEditorOrAdmin();
     }
 
     match /email_templates/{templateId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isEditorOrAdmin();
     }
 
     // Password Vault Credentials (Strict Admin Access)
