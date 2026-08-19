@@ -38,12 +38,42 @@ class UniversalCart {
     try {
       sessionStorage.setItem(this.storageKey, JSON.stringify(this.cart));
       sessionStorage.setItem(this.legacyStorageKey, JSON.stringify(this.cart));
-      // Sync with global store state
-      store.dispatch('SET_CART', { ...this.cart });
+      // Sync with global store state (copying items array to prevent DeepFreeze immutability errors)
+      const clonedCart = {
+        ...this.cart,
+        items: this.cart.items.map(item => ({ ...item }))
+      };
+      store.dispatch('SET_CART', clonedCart);
       // Trigger custom window event for active views
       window.dispatchEvent(new CustomEvent('cart_updated', { detail: this.cart }));
     } catch (e) {
       console.error('[UniversalCart]: Failed to save cart', e);
+    }
+  }
+
+  updateItemQuantity(...args) {
+    let itemId, quantity, eventId, itemType;
+    if (args.length === 2) {
+      [itemId, quantity] = args;
+    } else if (args.length >= 3) {
+      [eventId, itemType, itemId, quantity] = args;
+    }
+
+    const newQty = Number(quantity);
+    if (isNaN(newQty) || newQty <= 0) {
+      this.removeItem(itemId);
+      return;
+    }
+
+    const item = this.cart.items.find(i =>
+      i.id === itemId &&
+      (!itemType || i.type === itemType) &&
+      (eventId === undefined || i.eventId === eventId)
+    );
+
+    if (item) {
+      item.quantity = newQty;
+      this.saveCart();
     }
   }
 

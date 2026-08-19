@@ -130,6 +130,8 @@ export class Router {
         await import('../pages/tag/tag.js');
       } else if (cleanPath === '/detail') {
         await import('../pages/detail/detail.js');
+      } else if (cleanPath === '/cart') {
+        await import('../pages/cart/cart.js');
       } else if (cleanPath === '/account') {
         await import('../pages/account.js');
       } else if (cleanPath === '/login') {

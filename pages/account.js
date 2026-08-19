@@ -126,6 +126,7 @@ export async function initAccountPage() {
   }
 
   // Load dynamic collections
+  await loadPurchasedProducts(user);
   await loadUnlockedContent(currentRole);
   await loadCourseProgressDashboard(currentRole);
   await loadInbox(user.uid);
@@ -468,6 +469,63 @@ function setupSnippetCopyListeners() {
   bindCopy('btn-copy-embed-text', 'embed-text-link', 'Text HTML snippet copied!');
   bindCopy('btn-copy-embed-btn', 'embed-btn-widget', 'Interactive CTA button widget snippet copied!');
   bindCopy('btn-copy-embed-banner', 'embed-banner', 'Graphic banner embed code copied!');
+}
+
+// Dynamic Purchased Products & Unlocked Items Loader
+async function loadPurchasedProducts(user) {
+  const container = document.getElementById('my-purchased-products-container');
+  const listEl = document.getElementById('my-purchased-products-list');
+  if (!container || !listEl) return;
+
+  try {
+    const latestUserDoc = (await contentDB.getUser(user.email)) || user;
+    const purchased = latestUserDoc.purchasedProducts || [];
+
+    if (!Array.isArray(purchased) || purchased.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+
+    listEl.innerHTML = purchased.map(prod => {
+      const isObject = typeof prod === 'object' && prod !== null;
+      const itemId = isObject ? prod.id : prod;
+      const itemTitle = isObject ? (prod.title || prod.name || itemId) : itemId;
+      const itemType = isObject ? (prod.type || 'product') : 'product';
+      const purchasedAt = isObject && prod.purchasedAt ? new Date(prod.purchasedAt).toLocaleDateString() : 'Active';
+      const pricePaid = isObject && prod.pricePaid !== undefined ? `$${Number(prod.pricePaid).toFixed(2)}` : '';
+
+      let icon = '📦';
+      if (itemType === 'book') icon = '📚';
+      if (itemType === 'education' || itemType === 'course') icon = '🎓';
+      if (itemType === 'event' || itemType === 'ticket') icon = '🎟️';
+      if (itemType === 'consultation') icon = '💬';
+
+      return `
+        <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.5rem;">${icon}</span>
+              <span style="font-size: 0.72rem; font-weight: bold; padding: 2px 8px; border-radius: 12px; background: #e6fffa; color: #319795; text-transform: uppercase;">UNLOCKED</span>
+            </div>
+            <h4 style="margin: 0 0 0.35rem 0; font-size: 1.05rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c); line-height: 1.3;">${cleanTitle(itemTitle)}</h4>
+            <div style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); margin-bottom: 0.75rem;">
+              Type: <strong style="text-transform: capitalize;">${itemType}</strong> ${pricePaid ? `• ${pricePaid}` : ''}
+              <div style="font-size: 0.75rem; color: #a0aec0; margin-top: 2px;">Acquired: ${purchasedAt}</div>
+            </div>
+          </div>
+          <button onclick="window.router?.navigateTo('/detail?id=${itemId}')" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; width: 100%;">
+            Access Item
+          </button>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('[Account Portal] Failed to load purchased products:', err);
+    container.style.display = 'none';
+  }
 }
 
 // Dynamic unlocked publications loader
