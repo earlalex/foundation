@@ -167,10 +167,16 @@ export async function syncKanbanTaskToGoogleTask(token, listId, taskRecord) {
         const updated = await res.json();
         console.log('[Google Tasks]: Updated task in Google Workspace:', updated.id);
         return updated;
+      } else if (res.status === 404) {
+        console.warn('[Google Tasks]: Task not found on Google Tasks (404). Re-creating...');
+      } else {
+        const errTxt = await res.text();
+        console.warn('[Google Tasks]: PATCH update failed with status', res.status, errTxt);
+        return null;
       }
     }
 
-    // Create new task if no googleTaskId or update failed
+    // Create new task if no googleTaskId or if remote task returned 404
     const createUrl = `https://tasks.googleapis.com/v1/lists/${listId}/tasks`;
     const res = await fetch(createUrl, {
       method: 'POST',

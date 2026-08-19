@@ -77,25 +77,6 @@ export async function ensureCmsWorkbook(token, siteName = 'Foundation Framework'
 
     const createdData = await createRes.json();
     console.log('[Google Sheets CMS]: Created new CMS Workbook ID:', createdData.spreadsheetId);
-
-    // Enforce primary admin email write permissions
-    try {
-      await fetch(`https://www.googleapis.com/drive/v3/files/${createdData.spreadsheetId}/permissions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          role: 'writer',
-          type: 'user',
-          emailAddress: 'admin@earlalex.com'
-        })
-      });
-    } catch (permErr) {
-      console.warn('[Google Sheets CMS]: Drive permission assignment notice:', permErr.message);
-    }
-
     return createdData.spreadsheetId;
   } catch (err) {
     errorHandler.handleError(err, 'Google Sheets CMS Workbook Provisioning');

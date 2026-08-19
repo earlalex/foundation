@@ -81,13 +81,22 @@ export function initIntegrationsTab() {
   if (cfgCfVtUrl) cfgCfVtUrl.value = currentCfg.cloudflare?.vtUrl || '/api/virustotal-scan';
 
   // Google Workspace Sheets CMS & Tasks fields
-  const cfgSheetsCmsId = document.getElementById('cfg-sheets-cms-id');
-  const cfgTasksListId = document.getElementById('cfg-tasks-list-id');
-  const cfgAutoSyncFreq = document.getElementById('cfg-auto-sync-freq');
+  const cfgSheetsCmsId = document.getElementById('fnd-cfg-sheets-cms-id') || document.getElementById('cfg-sheets-cms-id');
+  const cfgTasksListId = document.getElementById('fnd-cfg-tasks-list-id') || document.getElementById('cfg-tasks-list-id');
+  const cfgAutoSyncFreq = document.getElementById('fnd-cfg-auto-sync-freq') || document.getElementById('cfg-auto-sync-freq');
 
   if (cfgSheetsCmsId) cfgSheetsCmsId.value = currentCfg.google?.cmsSpreadsheetId || '';
   if (cfgTasksListId) cfgTasksListId.value = currentCfg.google?.tasksListId || '';
   if (cfgAutoSyncFreq) cfgAutoSyncFreq.value = currentCfg.google?.autoSyncFrequency || '5 mins';
+
+  const gWorkspaceAffiliateLink = document.getElementById('fnd-gworkspace-affiliate-link');
+  if (gWorkspaceAffiliateLink) {
+    import('../../core/affiliates.js').then(mod => {
+      if (mod.FRAMEWORK_AFFILIATES?.googleWorkspace?.url) {
+        gWorkspaceAffiliateLink.href = mod.FRAMEWORK_AFFILIATES.googleWorkspace.url;
+      }
+    }).catch(() => {});
+  }
 
   // Google Business & AdSense fields
   const cfgGmbPlaceId = document.getElementById('cfg-gmb-place-id');
@@ -457,7 +466,7 @@ export function initIntegrationsTab() {
     toast.success('LastPass Enterprise Provisioning Bridge Verified! Credentials vault is secure.');
   });
 
-  document.getElementById('btn-test-sheets-tasks')?.addEventListener('click', async () => {
+  (document.getElementById('fnd-btn-test-sheets-tasks') || document.getElementById('btn-test-sheets-tasks'))?.addEventListener('click', async () => {
     toast.info('Testing Google Sheets CMS & Tasks connection...');
     try {
       const { getGoogleAccessToken } = await import('../../core/google-services.js');

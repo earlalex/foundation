@@ -1,2 +1,5 @@
 .wrangler/
 *.log
+node_modules/.mf/
+verification/screenshots/*.png
+verification/videos/*.webm

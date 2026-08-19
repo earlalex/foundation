@@ -1107,7 +1107,8 @@ export async function syncKanbanFromGoogleTasks(token, listId) {
         assigneeEmail = (parts[1] || '').trim();
       }
 
-      const matchingExisting = Array.from(existingMap.values()).find(t => t.googleTaskId === gt.id || t.title === cleanTitle);
+      const matchingExisting = existingKanban.find(t => t.googleTaskId === gt.id) ||
+        existingKanban.find(t => !t.googleTaskId && t.title === cleanTitle && !syncedTasks.some(st => st.id === t.id));
       const taskId = matchingExisting ? matchingExisting.id : `task_gt_${gt.id}`;
 
       const kanbanTask = {

@@ -428,6 +428,16 @@ window.deleteTask = async function(taskId) {
   if (!confirm('Are you sure you want to delete this task card?')) return;
   
   try {
+    const taskToDelete = tasks.find(t => t.id === taskId);
+    if (taskToDelete && taskToDelete.googleTaskId) {
+      const token = await getGoogleAccessToken(false);
+      const listId = configManager.current.google?.tasksListId;
+      if (token && listId) {
+        const { deleteGoogleTask } = await import('../../utils/backend-google-tasks.js');
+        await deleteGoogleTask(token, listId, taskToDelete.googleTaskId);
+      }
+    }
+
     await contentDB.deleteKanbanTask(taskId);
     tasks = tasks.filter(t => t.id !== taskId);
     renderKanbanBoard();
