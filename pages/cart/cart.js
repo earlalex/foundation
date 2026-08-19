@@ -12,10 +12,12 @@ export async function initCartPage() {
   // Refresh in-memory cart state from sessionStorage
   eventCart.cart = eventCart.loadCart();
 
+  const form = document.getElementById('cart-checkout-form');
+
   // Pre-fill user details if logged in
   const currentUser = store.state.user;
-  const emailInput = document.getElementById('cart-customer-email');
-  const nameInput = document.getElementById('cart-customer-name');
+  const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
+  const nameInput = form ? form.querySelector('#cart-customer-name') : document.getElementById('cart-customer-name');
 
   if (currentUser) {
     if (emailInput && !emailInput.value) emailInput.value = currentUser.email || '';
@@ -23,8 +25,8 @@ export async function initCartPage() {
   }
 
   // Same billing checkbox toggle listener
-  const sameBillingCheck = document.getElementById('cart-same-billing');
-  const billingBlock = document.getElementById('billing-address-block');
+  const sameBillingCheck = form ? form.querySelector('#cart-same-billing') : document.getElementById('cart-same-billing');
+  const billingBlock = form ? form.querySelector('#billing-address-block') : document.getElementById('billing-address-block');
   if (sameBillingCheck && billingBlock) {
     sameBillingCheck.addEventListener('change', () => {
       billingBlock.style.display = sameBillingCheck.checked ? 'none' : 'block';
@@ -32,9 +34,9 @@ export async function initCartPage() {
   }
 
   // Payment Method Selection radio listeners
-  const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
-  const paymentLabels = document.querySelectorAll('.payment-option-label');
-  const cryptoPanel = document.getElementById('cart-crypto-panel');
+  const paymentRadios = form ? form.querySelectorAll('input[name="paymentMethod"]') : document.querySelectorAll('input[name="paymentMethod"]');
+  const paymentLabels = form ? form.querySelectorAll('.payment-option-label') : document.querySelectorAll('.payment-option-label');
+  const cryptoPanel = form ? form.querySelector('#cart-crypto-panel') : document.getElementById('cart-crypto-panel');
 
   paymentRadios.forEach(radio => {
     radio.addEventListener('change', () => {
@@ -65,7 +67,6 @@ export async function initCartPage() {
   renderCartSummary();
 
   // Handle Form Submission
-  const form = document.getElementById('cart-checkout-form');
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -227,14 +228,15 @@ function renderCryptoComponent() {
 }
 
 async function executeOrderCheckout() {
+  const form = document.getElementById('cart-checkout-form');
   const cartSummary = eventCart.getCartSummary();
   if (!cartSummary.items || cartSummary.items.length === 0) {
     toast.warning('Your cart is empty.');
     return;
   }
 
-  const emailInput = document.getElementById('cart-customer-email');
-  const nameInput = document.getElementById('cart-customer-name');
+  const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
+  const nameInput = form ? form.querySelector('#cart-customer-name') : document.getElementById('cart-customer-name');
   const customerEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
   const customerName = nameInput ? nameInput.value.trim() : '';
 
@@ -243,7 +245,7 @@ async function executeOrderCheckout() {
     return;
   }
 
-  const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'stripe_card';
+  const selectedPayment = form ? form.querySelector('input[name="paymentMethod"]:checked')?.value : document.querySelector('input[name="paymentMethod"]:checked')?.value || 'stripe_card';
   const submitBtn = document.getElementById('btn-cart-submit');
 
   if (submitBtn) {
@@ -252,21 +254,12 @@ async function executeOrderCheckout() {
   }
 
   try {
-    // 1. Ingest/Merge User Record & purchasedProducts linkage
-    const newPurchasedItems = cartSummary.items.map(item => ({
-      id: item.id,
-      title: item.name,
-      type: item.type,
-      purchasedAt: new Date().toISOString(),
-      pricePaid: item.price
-    }));
-
+    // 1. Account Lookup / Ingestion (WITHOUT granting purchasedProducts entitlements prior to payment completion)
     const existingUser = await contentDB.getUser(customerEmail);
     const updatedUser = await contentDB.registerOrMergeUser({
       email: customerEmail,
       name: customerName,
-      role: existingUser?.role || 'subscriber',
-      purchasedProducts: newPurchasedItems
+      role: existingUser?.role || 'subscriber'
     });
 
     if (updatedUser && store.state.user?.email === customerEmail) {
@@ -309,17 +302,46 @@ async function executeOrderCheckout() {
         if (response.ok) {
           const resData = await response.json();
           if (resData.url) {
+            // Save pending order items to sessionStorage before redirecting
+            sessionStorage.setItem('foundation_pending_checkout_items', JSON.stringify(cartSummary.items));
             eventCart.clearCart();
             window.location.href = resData.url;
             return;
           }
+          if (resData.error) {
+            toast.error(`Stripe checkout error: ${resData.error}`);
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = '🔒 Complete Secure Purchase';
+            }
+            return;
+          }
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          // In local dev/bypass mode, allow fallback settlement if endpoint is unconfigured
+          if (!window.__FOUNDATION_DEV_BYPASS__ && !store.state.devMode) {
+            toast.error(errData.error || 'Payment processing failed. Please verify payment details.');
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = '🔒 Complete Secure Purchase';
+            }
+            return;
+          }
         }
       } catch (stripeErr) {
-        console.warn('[Cart Checkout]: Stripe backend call unhandled or local fallback:', stripeErr);
+        if (!window.__FOUNDATION_DEV_BYPASS__ && !store.state.devMode) {
+          console.error('[Cart Checkout]: Stripe backend call error:', stripeErr);
+          toast.error('Unable to connect to payment gateway. Please try again.');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🔒 Complete Secure Purchase';
+          }
+          return;
+        }
       }
     }
 
-    // Direct Local Order Execution Fallback (Instant Client Settlement)
+    // Direct Settlement Fallback (For Verified Web3 / Dev Simulation)
     await handleSuccessfulCartCheckout(selectedPayment === 'stripe_ach' ? 'Stripe ACH' : 'Credit Card');
 
   } catch (err) {
@@ -333,14 +355,40 @@ async function executeOrderCheckout() {
 }
 
 async function handleSuccessfulCartCheckout(paymentMethodName, txHash = null) {
+  const form = document.getElementById('cart-checkout-form');
   const cartSummary = eventCart.getCartSummary();
-  const emailInput = document.getElementById('cart-customer-email');
-  const nameInput = document.getElementById('cart-customer-name');
+  const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
+  const nameInput = form ? form.querySelector('#cart-customer-name') : document.getElementById('cart-customer-name');
   const customerEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
   const customerName = nameInput ? nameInput.value.trim() : '';
 
   const orderId = 'ord_' + Date.now();
   const purchasedAt = new Date().toISOString();
+
+  // 1. Link purchased products to user profile AFTER payment is successfully verified
+  const newPurchasedItems = cartSummary.items.map(item => ({
+    id: item.id,
+    title: item.name,
+    type: item.type,
+    purchasedAt,
+    pricePaid: item.price
+  }));
+
+  try {
+    const existingUser = await contentDB.getUser(customerEmail);
+    const updatedUser = await contentDB.registerOrMergeUser({
+      email: customerEmail,
+      name: customerName,
+      role: existingUser?.role || 'subscriber',
+      purchasedProducts: newPurchasedItems
+    });
+
+    if (updatedUser && store.state.user?.email === customerEmail) {
+      store.dispatch('SET_USER', updatedUser);
+    }
+  } catch (e) {
+    console.warn('[Cart Checkout]: Failed to register purchased products to user profile:', e);
+  }
 
   // Save Order to Local/Firestore history
   const orderRecord = {
