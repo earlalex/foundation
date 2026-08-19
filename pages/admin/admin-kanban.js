@@ -434,7 +434,10 @@ window.deleteTask = async function(taskId) {
       const listId = configManager.current.google?.tasksListId;
       if (token && listId) {
         const { deleteGoogleTask } = await import('../../utils/backend-google-tasks.js');
-        await deleteGoogleTask(token, listId, taskToDelete.googleTaskId);
+        const deleted = await deleteGoogleTask(token, listId, taskToDelete.googleTaskId);
+        if (!deleted) {
+          throw new Error('Failed to delete task from Google Tasks.');
+        }
       }
     }
 
