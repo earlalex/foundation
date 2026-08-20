@@ -73,22 +73,14 @@ export async function getInvoice(invoiceId) {
 
 export async function getAllInvoices() {
   const db = getFirestoreDB();
-  const user = store?.state?.user;
-  const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
-
   if (!db) {
     const local = getLocalInvoices();
-    const invoices = Object.values(local);
-    if (isEditor) {
-      return invoices;
-    } else if (user?.email || user?.uid) {
-      return invoices.filter(inv => inv.customerEmail === user.email || inv.userId === user.uid);
-    } else {
-      return [];
-    }
+    return Object.values(local);
   }
 
   try {
+    const user = store?.state?.user;
+    const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
     let collectionRef;
     if (isEditor) {
       collectionRef = collection(db, INVOICES_COLLECTION);
@@ -97,21 +89,15 @@ export async function getAllInvoices() {
     } else if (user?.uid) {
       collectionRef = query(collection(db, INVOICES_COLLECTION), where('userId', '==', user.uid));
     } else {
-      return [];
+      const local = getLocalInvoices();
+      return Object.values(local);
     }
     const querySnapshot = await getDocs(collectionRef);
     return querySnapshot.docs.map(doc => doc.data());
   } catch (err) {
     console.warn('[DB]: Firestore invoices get error. Falling back to LocalStorage.', err.message);
     const local = getLocalInvoices();
-    const invoices = Object.values(local);
-    if (isEditor) {
-      return invoices;
-    } else if (user?.email || user?.uid) {
-      return invoices.filter(inv => inv.customerEmail === user.email || inv.userId === user.uid);
-    } else {
-      return [];
-    }
+    return Object.values(local);
   }
 }
 

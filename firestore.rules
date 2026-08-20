@@ -8,7 +8,15 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.token.email == userId ||
+        (resource != null && (
+          ('email' in resource.data && resource.data.email == request.auth.token.email) ||
+          ('id' in resource.data && resource.data.id == request.auth.uid) ||
+          ('userId' in resource.data && resource.data.userId == request.auth.uid)
+        ))
+      );
     }
 
     function getUserProfile() {
@@ -47,10 +55,10 @@ service cloud.firestore {
     function isDocOwner() {
       return isAuthenticated() && (
         resource != null ? (
-          (('userId' in resource.data && resource.data.userId == request.auth.uid) ||
-           ('email' in resource.data && resource.data.email == request.auth.token.email) ||
-           ('userEmail' in resource.data && resource.data.userEmail == request.auth.token.email) ||
-           ('customerEmail' in resource.data && resource.data.customerEmail == request.auth.token.email)) &&
+          (resource.data.userId == request.auth.uid ||
+           resource.data.email == request.auth.token.email ||
+           resource.data.userEmail == request.auth.token.email ||
+           resource.data.customerEmail == request.auth.token.email) &&
           isRequestIdentityValid()
         ) : (
           isRequestIdentityValid() && request.resource != null && (
@@ -69,11 +77,17 @@ service cloud.firestore {
       allow write: if isAdmin() || (
         isOwner(userId) && isRequestIdentityValid() && (
           resource == null
-            ? (request.resource.data.get('role', 'user') != 'admin' &&
-               request.resource.data.get('role', 'user') != 'editor' &&
+            ? (request.resource.data.role != 'admin' &&
+               request.resource.data.role != 'editor' &&
+               request.resource.data.role != 'member' &&
+               request.resource.data.role != 'affiliate' &&
                (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true))
             : (request.resource == null || (
-                ((request.resource.data.get('role', 'user') != 'admin' && request.resource.data.get('role', 'user') != 'editor') || request.resource.data.get('role', 'user') == resource.data.get('role', 'user')) &&
+                ((request.resource.data.role != 'admin' &&
+                  request.resource.data.role != 'editor' &&
+                  request.resource.data.role != 'member' &&
+                  request.resource.data.role != 'affiliate') ||
+                 request.resource.data.role == resource.data.role) &&
                 (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true || ('isAdmin' in resource.data && resource.data.isAdmin == true))
               ))
         )
@@ -87,13 +101,13 @@ service cloud.firestore {
 
     // Custom Dynamic Pages
     match /pages/{pageId} {
-      allow read: if isEditorOrAdmin() || (resource != null && ('access' in resource.data && resource.data.access != null && resource.data.access.visibility == 'public')) || (resource != null && !('access' in resource.data));
+      allow read: if resource.data.access.visibility == 'public' || resource.data.access == null || isEditorOrAdmin();
       allow write: if isEditorOrAdmin();
     }
 
     // CMS & Catalog Content
     match /content/{contentId} {
-      allow read: if isAuthenticated() || (resource != null && ('access' in resource.data && resource.data.access != null && resource.data.access.visibility == 'public')) || (resource != null && !('access' in resource.data));
+      allow read: if resource.data.access.visibility == 'public' || resource.data.access == null || isAuthenticated();
       allow write: if isEditorOrAdmin();
     }
 

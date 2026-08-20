@@ -227,20 +227,12 @@ export async function getRegistrationsByUser(email) {
 
 export async function getAllRegistrations() {
   const db = getFirestoreDB();
-  const user = store?.state?.user;
-  const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
-
   if (!db) {
-    const local = JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
-    if (isEditor) {
-      return local;
-    } else if (user?.email || user?.uid) {
-      return local.filter(r => r.email === user.email || r.userId === user.uid);
-    } else {
-      return [];
-    }
+    return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
   }
   try {
+    const user = store?.state?.user;
+    const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
     let q;
     if (isEditor) {
       q = collection(db, 'registrations');
@@ -249,7 +241,7 @@ export async function getAllRegistrations() {
     } else if (user?.uid) {
       q = query(collection(db, 'registrations'), where('userId', '==', user.uid));
     } else {
-      return [];
+      return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
     }
 
     const querySnapshot = await getDocs(q);
@@ -261,15 +253,7 @@ export async function getAllRegistrations() {
   } catch (err) {
     console.warn('[DB]: Failed to fetch registrations, falling back', err);
   }
-
-  const local = JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
-  if (isEditor) {
-    return local;
-  } else if (user?.email || user?.uid) {
-    return local.filter(r => r.email === user.email || r.userId === user.uid);
-  } else {
-    return [];
-  }
+  return JSON.parse(localStorage.getItem('foundation_local_registrations') || '[]');
 }
 
 export async function saveAppointment(apptData) {
@@ -317,20 +301,12 @@ export async function saveAppointment(apptData) {
 
 export async function getAppointments() {
   const db = getFirestoreDB();
-  const user = store?.state?.user;
-  const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
-
   if (!db) {
-    const local = JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
-    if (isEditor) {
-      return local;
-    } else if (user?.email || user?.uid) {
-      return local.filter(a => a.email === user.email || a.userId === user.uid);
-    } else {
-      return [];
-    }
+    return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
   }
   try {
+    const user = store?.state?.user;
+    const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
     let q;
     if (isEditor) {
       q = collection(db, 'appointments');
@@ -339,7 +315,7 @@ export async function getAppointments() {
     } else if (user?.uid) {
       q = query(collection(db, 'appointments'), where('userId', '==', user.uid));
     } else {
-      return [];
+      return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
     }
 
     const querySnapshot = await getDocs(q);
@@ -351,14 +327,6 @@ export async function getAppointments() {
   } catch (err) {
     console.warn('[DB]: Failed to fetch appointments from Firestore, falling back', err);
   }
-
-  const local = JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
-  if (isEditor) {
-    return local;
-  } else if (user?.email || user?.uid) {
-    return local.filter(a => a.email === user.email || a.userId === user.uid);
-  } else {
-    return [];
-  }
+  return JSON.parse(localStorage.getItem('foundation_local_appointments') || '[]');
 }
 
