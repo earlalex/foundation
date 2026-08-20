@@ -158,12 +158,18 @@ class CryptoCheckout extends HTMLElement {
                 attempts++;
               }
             }
-            if (receipt && (receipt.status === '0x0' || receipt.status === 0)) {
+            if (!receipt) {
+              toast.error('Transaction unconfirmed: On-chain receipt confirmation timed out. Settlement halted.');
+              return;
+            }
+            const statusStr = String(receipt.status);
+            if (statusStr === '0x0' || statusStr === '0' || statusStr === 'false') {
               toast.error('Transaction failed: On-chain transaction reverted.');
               return;
             }
           } catch (receiptErr) {
-            console.warn('Receipt verification skipped or pending:', receiptErr);
+            toast.error(`Receipt verification failed: ${receiptErr.message || receiptErr}`);
+            return;
           }
         }
       } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
