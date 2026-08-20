@@ -55,20 +55,22 @@ class UniversalCart {
     let itemId, quantity, eventId, itemType;
     if (args.length === 2) {
       [itemId, quantity] = args;
+      // Two-argument mode: find first item matching id only
+      // Callers should pass full identity or use removeItem for precise targeting
     } else if (args.length >= 3) {
       [eventId, itemType, itemId, quantity] = args;
     }
 
     const newQty = Number(quantity);
     if (isNaN(newQty) || newQty <= 0) {
-      this.removeItem(itemId);
+      this.removeItem(itemId, itemType, eventId);
       return;
     }
 
     const item = this.cart.items.find(i =>
       i.id === itemId &&
-      (!itemType || i.type === itemType) &&
-      (eventId === undefined || i.eventId === eventId)
+      (args.length === 2 || !itemType || i.type === itemType) &&
+      (args.length === 2 || eventId === undefined || i.eventId === eventId)
     );
 
     if (item) {
@@ -107,8 +109,13 @@ class UniversalCart {
     this.saveCart();
   }
 
-  removeItem(itemId) {
-    this.cart.items = this.cart.items.filter(i => i.id !== itemId);
+  removeItem(itemId, itemType = null, eventId = undefined) {
+    this.cart.items = this.cart.items.filter(i => {
+      if (i.id !== itemId) return true;
+      if (itemType && i.type !== itemType) return true;
+      if (eventId !== undefined && i.eventId !== eventId) return true;
+      return false;
+    });
     const eventIds = [...new Set(this.cart.items.map(i => i.eventId).filter(Boolean))];
     this.cart.eventId = eventIds.length > 0 ? eventIds[0] : null;
     this.cart.eventIds = eventIds;

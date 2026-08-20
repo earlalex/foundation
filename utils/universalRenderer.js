@@ -15,11 +15,14 @@ export function escapeHTML(str) {
 
 export function sanitizeUrl(url) {
   if (typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+  // Remove leading/embedded control characters, tabs, and newlines
+  const cleaned = url.replace(/^[\x00-\x1F\x7F]+|[\t\n\r]/g, '').trim();
+  // Normalize scheme comparison case-insensitively
+  const lowerCleaned = cleaned.toLowerCase();
+  if (lowerCleaned.startsWith('javascript:') || lowerCleaned.startsWith('data:') || lowerCleaned.startsWith('vbscript:')) {
     return '#';
   }
-  return trimmed;
+  return cleaned;
 }
 
 export function cleanTitle(title) {

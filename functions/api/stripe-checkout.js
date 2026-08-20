@@ -63,7 +63,7 @@ export async function onRequestPost(context) {
 
     const domain = new URL(request.url).origin;
 
-    if (action === 'verify' && (body.sessionId || body.sessionId === '')) {
+    if (action === 'verify') {
       const targetSessionId = body.sessionId;
       if (!targetSessionId) {
         return new Response(JSON.stringify({ paid: false, error: 'Session ID is required' }), {
@@ -105,11 +105,14 @@ export async function onRequestPost(context) {
             lineItems = sessionData.line_items.data.map(li => {
               const productMeta = typeof li.price?.product === 'object' ? li.price.product?.metadata : null;
               const appItemId = productMeta?.appItemId;
+              const unitPrice = (li.price?.unit_amount || 0) / 100;
+              const pricePaid = (li.amount_total || 0) / 100 / (li.quantity || 1);
               return {
                 id: appItemId || (typeof li.price?.product === 'string' ? li.price.product : li.price?.product?.id) || li.id,
                 name: li.description || 'Purchased Item',
                 type: 'product',
-                price: (li.amount_total || 0) / 100 / (li.quantity || 1)
+                price: unitPrice,
+                pricePaid: pricePaid
               };
             });
           }
@@ -196,14 +199,24 @@ export async function onRequestPost(context) {
           params.append(`line_items[${index}][price]`, item.priceId);
           params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
         } else {
-          params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
-          params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
-          params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
-          const itemId = item.id || item.productId;
-          if (itemId) {
-            params.append(`line_items[${index}][price_data][product_data][metadata][appItemId]`, String(itemId));
+          // Handle ACH processing fee specially
+          if (item.id === 'ach_processing_fee') {
+            params.append(`line_items[${index}][price_data][unit_amount]`, '500');
+            params.append(`line_items[${index}][price_data][currency]`, 'usd');
+            params.append(`line_items[${index}][price_data][product_data][name]`, 'ACH Bank Processing Fee');
+            params.append(`line_items[${index}][quantity]`, '1');
+          } else {
+            // TODO: Server should resolve catalog pricing by item.id here
+            // For now, preserve existing behavior with client-provided amount
+            params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount || 0)));
+            params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
+            params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
+            const itemId = item.id || item.productId;
+            if (itemId) {
+              params.append(`line_items[${index}][price_data][product_data][metadata][appItemId]`, String(itemId));
+            }
+            params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
           }
-          params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
         }
       });
     } else if (priceId) {

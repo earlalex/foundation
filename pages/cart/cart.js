@@ -22,6 +22,8 @@ export async function initCartPage() {
   if (currentUser) {
     if (emailInput && !emailInput.value) emailInput.value = currentUser.email || '';
     if (nameInput && !nameInput.value) nameInput.value = currentUser.displayName || currentUser.name || '';
+    // Make email field readonly for authenticated users
+    if (emailInput) emailInput.readOnly = true;
   }
 
   // Same billing checkbox toggle listener
@@ -105,7 +107,7 @@ function renderCartTable() {
 
   tbody.innerHTML = items.map((item) => {
     const itemTotal = (item.price * item.quantity).toFixed(2);
-    const typeLabel = (item.type || 'product').toUpperCase();
+    const typeLabel = escapeHTML((item.type || 'product').toUpperCase());
 
     // Icon helper by item type
     let icon = '📦';
@@ -114,28 +116,34 @@ function renderCartTable() {
     if (item.type === 'event' || item.type === 'ticket') icon = '🎟️';
     if (item.type === 'consultation') icon = '💬';
 
+    const escapedId = escapeHTML(item.id);
+    const escapedName = escapeHTML(cleanTitle(item.name || 'Catalog Item'));
+    const escapedPrice = escapeHTML(item.price.toFixed(2));
+    const escapedQuantity = escapeHTML(String(item.quantity));
+    const escapedTotal = escapeHTML(itemTotal);
+
     return `
-      <tr data-id="${item.id}">
+      <tr data-id="${escapedId}">
         <td>
           <div class="cart-item-info">
             <div class="cart-item-thumb">${icon}</div>
             <div>
               <span style="font-size: 0.72rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: var(--theme-color-background, #edf2f7); color: var(--theme-color-primary, #2b6cb0); text-transform: uppercase;">${typeLabel}</span>
-              <div style="font-weight: 700; color: var(--theme-color-text-primary, #1a202c); margin-top: 2px;">${cleanTitle(item.name || 'Catalog Item')}</div>
+              <div style="font-weight: 700; color: var(--theme-color-text-primary, #1a202c); margin-top: 2px;">${escapedName}</div>
             </div>
           </div>
         </td>
-        <td style="font-weight: 600;">$${item.price.toFixed(2)}</td>
+        <td style="font-weight: 600;">$${escapedPrice}</td>
         <td>
           <div class="cart-qty-ctrl">
-            <button type="button" class="cart-qty-btn btn-qty-minus" data-id="${item.id}">-</button>
-            <span class="cart-qty-val">${item.quantity}</span>
-            <button type="button" class="cart-qty-btn btn-qty-plus" data-id="${item.id}">+</button>
+            <button type="button" class="cart-qty-btn btn-qty-minus" data-id="${escapedId}">-</button>
+            <span class="cart-qty-val">${escapedQuantity}</span>
+            <button type="button" class="cart-qty-btn btn-qty-plus" data-id="${escapedId}">+</button>
           </div>
         </td>
-        <td style="font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">$${itemTotal}</td>
+        <td style="font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">$${escapedTotal}</td>
         <td>
-          <button type="button" class="cart-remove-btn btn-remove-item" data-id="${item.id}">🗑️ Remove</button>
+          <button type="button" class="cart-remove-btn btn-remove-item" data-id="${escapedId}">🗑️ Remove</button>
         </td>
       </tr>
     `;
@@ -185,7 +193,7 @@ function renderCartSummary() {
   const achLine = document.getElementById('summary-ach-fee-line');
   const grandTotalEl = document.getElementById('summary-grand-total');
 
-  const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'stripe_card';
+  const selectedPayment = (form ? form.querySelector('input[name="paymentMethod"]:checked') : document.querySelector('input[name="paymentMethod"]:checked'))?.value || 'stripe_card';
   const isAch = selectedPayment === 'stripe_ach';
 
   const achFee = isAch ? 5.00 : 0.00;
@@ -210,13 +218,14 @@ function renderCryptoComponent() {
   const cartSummary = eventCart.getCartSummary();
   const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
   const email = emailInput ? emailInput.value.trim() : '';
+  const escapedEmail = escapeHTML(email);
   const itemsJson = escapeHTML(JSON.stringify(cartSummary.items || []));
 
   cryptoPanel.innerHTML = `
     <crypto-checkout
       amount-usd="${cartSummary.total}"
       checkout-type="product"
-      buyer-email="${email}"
+      buyer-email="${escapedEmail}"
       items-json="${itemsJson}">
     </crypto-checkout>
   `;
@@ -232,7 +241,8 @@ async function executeOrderCheckout() {
 
   const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
   const nameInput = form ? form.querySelector('#cart-customer-name') : document.getElementById('cart-customer-name');
-  const customerEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
+  const currentUser = store.state.user;
+  const customerEmail = currentUser?.email || (emailInput ? emailInput.value.trim().toLowerCase() : '');
   const customerName = nameInput ? nameInput.value.trim() : '';
 
   if (!customerEmail) {
@@ -268,13 +278,19 @@ async function executeOrderCheckout() {
         const officialPrice = catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(i.price);
         return {
           id: i.id,
-          name: catalogRecord?.title || i.name,
-          type: catalogRecord?.type || i.type || 'product',
-          amount: Math.round(officialPrice * 100), // cents
+          amount: Math.round(officialPrice * 100), // cents - server uses this for unit_amount
           quantity: i.quantity,
           currency: 'USD'
         };
       }));
+
+      // Append ACH fee line item when ACH is selected
+      if (isAch) {
+        validatedLineItems.push({
+          id: 'ach_processing_fee',
+          quantity: 1
+        });
+      }
 
       // Call /api/stripe-checkout serverless endpoint
       try {
