@@ -75,8 +75,9 @@ export class ContentDB {
       if (!Array.isArray(logs) || logs.length === 0) return [];
 
       if (currentUser?.email || currentUser?.uid) {
-        // Authenticated user: ONLY return logs belonging to this specific user
+        // Authenticated user: return logs belonging to this specific user, OR un-owned legacy logs
         return logs.filter(item =>
+          (!item.userEmail && !item.userId) ||
           (item.userEmail && currentUser.email && item.userEmail === currentUser.email) ||
           (item.userId && currentUser.uid && item.userId === currentUser.uid)
         );
