@@ -8,7 +8,11 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && (
+        request.auth.uid == userId ||
+        (resource != null && (resource.data.email == request.auth.token.email || resource.data.id == request.auth.uid)) ||
+        (request.resource != null && (request.resource.data.email == request.auth.token.email || request.resource.data.id == request.auth.uid))
+      );
     }
 
     function getUserProfile() {

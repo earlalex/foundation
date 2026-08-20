@@ -1702,16 +1702,16 @@ export async function syncOutboxToFirestore() {
       } catch (err) {
         if (err.code === 'permission-denied' || err.message?.includes('permissions') || err.message?.includes('Permission denied')) {
           console.warn('[Outbox Sync]: Batch payload rejected due to missing permissions. Falling back to granular individual item sync...');
-          const { deleteDoc: originalDeleteDoc, setDoc: originalSetDoc } = await import('./db-shared.js');
+          const { rawFirebaseSetDoc, rawFirebaseDeleteDoc } = await import('./db-shared.js');
           const remainingOutbox = [];
           for (const item of outbox) {
             try {
               const docRef = doc(db, item.collection, item.docId);
               if (docRef) {
                 if (item.isDelete) {
-                  await originalDeleteDoc(docRef);
+                  await rawFirebaseDeleteDoc(docRef);
                 } else {
-                  await originalSetDoc(docRef, item.data, { merge: true });
+                  await rawFirebaseSetDoc(docRef, item.data, item.options || { merge: true });
                 }
               }
             } catch (singleErr) {
