@@ -188,26 +188,32 @@ class CryptoCheckout extends HTMLElement {
                 return;
               }
 
-              // Inspect Transfer logs if available
-              if (Array.isArray(receipt.logs) && receipt.logs.length > 0) {
-                const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; // Transfer(address,address,uint256)
-                const transferLog = receipt.logs.find(log => log.topics && log.topics[0] && log.topics[0].toLowerCase() === transferTopic);
-                if (transferLog && transferLog.topics.length >= 3) {
-                  const logRecipient = '0x' + transferLog.topics[2].slice(-40);
-                  if (logRecipient.toLowerCase() !== recipient.toLowerCase()) {
-                    toast.error('Transaction verification failed: ERC20 Transfer event recipient does not match treasury address.');
-                    return;
-                  }
-                  if (transferLog.data && transferLog.data !== '0x') {
-                    const tokenDecimals = 6;
-                    const expectedRawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
-                    const transferredRawAmount = BigInt(transferLog.data);
-                    if (transferredRawAmount < expectedRawAmount) {
-                      toast.error('Transaction verification failed: Transferred token amount is less than expected total.');
-                      return;
-                    }
-                  }
-                }
+              // Require valid ERC20 Transfer log
+              if (!Array.isArray(receipt.logs) || receipt.logs.length === 0) {
+                toast.error('Transaction verification failed: No contract logs returned for ERC20 transfer.');
+                return;
+              }
+
+              const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; // Transfer(address,address,uint256)
+              const transferLog = receipt.logs.find(log => log.topics && log.topics[0] && log.topics[0].toLowerCase() === transferTopic);
+
+              if (!transferLog || !transferLog.topics || transferLog.topics.length < 3 || !transferLog.data || transferLog.data === '0x') {
+                toast.error('Transaction verification failed: Missing or invalid ERC20 Transfer event log on receipt.');
+                return;
+              }
+
+              const logRecipient = '0x' + transferLog.topics[2].slice(-40);
+              if (logRecipient.toLowerCase() !== recipient.toLowerCase()) {
+                toast.error('Transaction verification failed: ERC20 Transfer event recipient does not match treasury address.');
+                return;
+              }
+
+              const tokenDecimals = 6;
+              const expectedRawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
+              const transferredRawAmount = BigInt(transferLog.data);
+              if (transferredRawAmount < expectedRawAmount) {
+                toast.error('Transaction verification failed: Transferred token amount is less than required USD total.');
+                return;
               }
             }
           } catch (receiptErr) {
@@ -217,8 +223,35 @@ class CryptoCheckout extends HTMLElement {
         }
       } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
         // Phantom transaction signature request
-        const res = await window.solana.signAndSendTransaction();
-        txHash = res.signature;
+        const provider = window.solana || window.phantom?.solana;
+        const res = await provider.signAndSendTransaction();
+        txHash = res.signature || res.publicKey;
+
+        if (txHash && provider.connection) {
+          try {
+            let confirmed = false;
+            let attempts = 0;
+            while (!confirmed && attempts < 5) {
+              const status = await provider.connection.getSignatureStatus(txHash);
+              if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
+                if (status.value.err) {
+                  toast.error('Solana transaction failed: On-chain transaction error reported.');
+                  return;
+                }
+                confirmed = true;
+                break;
+              }
+              await new Promise(r => setTimeout(r, 1000));
+              attempts++;
+            }
+            if (!confirmed) {
+              toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
+              return;
+            }
+          } catch (solErr) {
+            console.warn('Solana signature confirmation skipped/pending:', solErr);
+          }
+        }
       }
     } catch (err) {
       toast.error(`Blockchain transaction failed or rejected: ${err.message || err}`);
@@ -274,21 +307,18 @@ class CryptoCheckout extends HTMLElement {
         rawItems = [{ id: this.productId, price: this.amountUSD, type: 'product' }];
       }
 
-      // Validate item IDs against official contentDB catalog entries
-      const allContent = await contentDB.getAllContent();
-      const contentMap = new Map();
-      allContent.forEach(c => {
-        if (c.id) contentMap.set(c.id, c);
-      });
+      // Fetch catalog records directly using getContentById
+      const catalogRecords = await Promise.all(rawItems.map(item => contentDB.getContentById(item.id || item.productId)));
 
       // Reconcile transferred amount against total catalog price
-      const requiredTotalUSD = rawItems.reduce((sum, item) => {
-        const itemId = item.id || item.productId;
-        const catalogRecord = contentMap.get(itemId);
+      let requiredTotalUSD = 0;
+      for (let idx = 0; idx < rawItems.length; idx++) {
+        const item = rawItems[idx];
+        const catalogRecord = catalogRecords[idx];
         const itemPrice = catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(item.price || 0);
         const itemQty = Number(item.quantity || 1);
-        return sum + (itemPrice * itemQty);
-      }, 0);
+        requiredTotalUSD += (itemPrice * itemQty);
+      }
 
       if (requiredTotalUSD > 0 && this.amountUSD < (requiredTotalUSD - 0.01)) {
         toast.error(`Crypto settlement rejected: Transferred amount ($${this.amountUSD.toFixed(2)}) is less than total catalog price ($${requiredTotalUSD.toFixed(2)}).`);
@@ -296,9 +326,10 @@ class CryptoCheckout extends HTMLElement {
       }
 
       const purchasedProducts = [];
-      for (const item of rawItems) {
+      for (let idx = 0; idx < rawItems.length; idx++) {
+        const item = rawItems[idx];
+        const catalogRecord = catalogRecords[idx];
         const itemId = item.id || item.productId;
-        const catalogRecord = contentMap.get(itemId);
         if (!catalogRecord) {
           toast.error(`Crypto settlement failed: Unknown catalog item ID (${itemId}).`);
           return;

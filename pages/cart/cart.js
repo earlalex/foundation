@@ -274,15 +274,9 @@ async function executeOrderCheckout() {
     if (selectedPayment === 'stripe_card' || selectedPayment === 'stripe_ach') {
       const isAch = selectedPayment === 'stripe_ach';
 
-      // Resolve authoritative catalog entries from contentDB
-      const allContent = await contentDB.getAllContent();
-      const contentMap = new Map();
-      allContent.forEach(c => {
-        if (c.id) contentMap.set(c.id, c);
-      });
-
-      const validatedLineItems = cartSummary.items.map(i => {
-        const catalogRecord = contentMap.get(i.id);
+      // Resolve authoritative catalog entries from contentDB using getContentById
+      const validatedLineItems = await Promise.all(cartSummary.items.map(async i => {
+        const catalogRecord = await contentDB.getContentById(i.id);
         const officialPrice = catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(i.price);
         return {
           id: i.id,
@@ -292,7 +286,7 @@ async function executeOrderCheckout() {
           quantity: i.quantity,
           currency: 'USD'
         };
-      });
+      }));
 
       // Call /api/stripe-checkout serverless endpoint
       try {
@@ -343,89 +337,4 @@ async function executeOrderCheckout() {
       submitBtn.textContent = '🔒 Complete Secure Purchase';
     }
   }
-}
-
-async function handleSuccessfulCartCheckout(paymentMethodName, txHash = null) {
-  const form = document.getElementById('cart-checkout-form');
-  const cartSummary = eventCart.getCartSummary();
-  const emailInput = form ? form.querySelector('#cart-customer-email') : document.getElementById('cart-customer-email');
-  const nameInput = form ? form.querySelector('#cart-customer-name') : document.getElementById('cart-customer-name');
-  const customerEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
-  const customerName = nameInput ? nameInput.value.trim() : '';
-
-  const orderId = 'ord_' + Date.now();
-  const purchasedAt = new Date().toISOString();
-
-  // 1. Link purchased products to user profile AFTER payment is successfully verified
-  const newPurchasedItems = cartSummary.items.map(item => ({
-    id: item.id,
-    title: item.name,
-    type: item.type,
-    purchasedAt,
-    pricePaid: item.price
-  }));
-
-  try {
-    const existingUser = await contentDB.getUser(customerEmail);
-    const updatedUser = await contentDB.registerOrMergeUser({
-      email: customerEmail,
-      name: customerName,
-      role: existingUser?.role || 'subscriber',
-      purchasedProducts: newPurchasedItems
-    });
-
-    if (updatedUser && store.state.user?.email === customerEmail) {
-      store.dispatch('SET_USER', updatedUser);
-    }
-  } catch (e) {
-    console.warn('[Cart Checkout]: Failed to register purchased products to user profile:', e);
-  }
-
-  // Save Order to Local/Firestore history
-  const orderRecord = {
-    id: orderId,
-    type: 'order',
-    customerEmail,
-    customerName,
-    items: cartSummary.items,
-    subtotal: cartSummary.subtotal,
-    tax: cartSummary.tax,
-    serviceFee: cartSummary.serviceFee,
-    totalAmount: cartSummary.total,
-    paymentMethod: paymentMethodName,
-    txHash: txHash || null,
-    status: 'Paid',
-    createdAt: purchasedAt
-  };
-
-  try {
-    // Save invoice receipt
-    const invoiceRecord = {
-      id: 'inv_' + Date.now(),
-      customerEmail,
-      amount: cartSummary.total,
-      currency: 'USD',
-      status: 'paid',
-      date: new Date().toLocaleDateString(),
-      dueDate: new Date().toLocaleDateString(),
-      createdAt: purchasedAt
-    };
-    await contentDB.saveInvoice(invoiceRecord);
-  } catch (e) {
-    console.warn('[Cart Checkout]: Save invoice error:', e);
-  }
-
-  // Clear Cart
-  eventCart.clearCart();
-
-  toast.success('🎉 Purchase successful! Your order has been placed.');
-
-  // Navigate to Account Dashboard
-  setTimeout(() => {
-    if (window.router) {
-      window.router.navigateTo('/account');
-    } else {
-      window.location.href = '/account';
-    }
-  }, 1000);
 }

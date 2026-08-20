@@ -141,17 +141,11 @@ export async function initAccountPage() {
       if (verifyRes.ok) {
         const verifyData = await verifyRes.json();
         if (verifyData.paid && Array.isArray(verifyData.lineItems) && verifyData.lineItems.length > 0) {
-          // Validate line items strictly against contentDB catalog
-          const allContent = await contentDB.getAllContent();
-          const contentMap = new Map();
-          allContent.forEach(c => {
-            if (c.id) contentMap.set(c.id, c);
-          });
-
+          // Validate line items strictly against contentDB catalog using getContentById
           const verifiedPurchasedItems = [];
           for (const item of verifyData.lineItems) {
             const itemId = item.id;
-            const catalogRecord = contentMap.get(itemId);
+            const catalogRecord = await contentDB.getContentById(itemId);
             if (!catalogRecord) {
               console.warn(`[Stripe Fulfillment] Unknown catalog item ID rejected: ${itemId}`);
               continue; // Reject unknown catalog items
