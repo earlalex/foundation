@@ -183,8 +183,9 @@ export async function onRequestPost(context) {
           params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
           params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
           params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
-          if (item.id) {
-            params.append(`line_items[${index}][price_data][product_data][metadata][appItemId]`, String(item.id));
+          const itemId = item.id || item.productId;
+          if (itemId) {
+            params.append(`line_items[${index}][price_data][product_data][metadata][appItemId]`, String(itemId));
           }
           params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
         }

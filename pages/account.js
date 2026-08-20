@@ -130,43 +130,55 @@ export async function initAccountPage() {
   const sessionId = searchParams.get('session_id');
 
   if (searchParams.get('payment') === 'success' && sessionId) {
-    const rawPending = sessionStorage.getItem('foundation_pending_checkout_items');
-    if (rawPending) {
-      sessionStorage.removeItem('foundation_pending_checkout_items');
-      try {
-        const verifyRes = await fetch('/api/stripe-checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'verify', sessionId })
-        });
+    sessionStorage.removeItem('foundation_pending_checkout_items');
+    try {
+      const verifyRes = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', sessionId })
+      });
 
-        if (verifyRes.ok) {
-          const verifyData = await verifyRes.json();
-          if (verifyData.paid) {
-            // Bind items strictly to verifyData.lineItems from Stripe API session verification
-            let pendingFallback = [];
-            try {
-              pendingFallback = JSON.parse(rawPending);
-            } catch (e) {}
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        if (verifyData.paid && Array.isArray(verifyData.lineItems) && verifyData.lineItems.length > 0) {
+          // Validate line items strictly against contentDB catalog
+          const allContent = await contentDB.getAllContent();
+          const contentMap = new Map();
+          allContent.forEach(c => {
+            if (c.id) contentMap.set(c.id, c);
+          });
 
-            const verifiedItems = (Array.isArray(verifyData.lineItems) && verifyData.lineItems.length > 0)
-              ? verifyData.lineItems
-              : pendingFallback;
+          const verifiedPurchasedItems = [];
+          for (const item of verifyData.lineItems) {
+            const itemId = item.id;
+            const catalogRecord = contentMap.get(itemId);
+            if (!catalogRecord) {
+              console.warn(`[Stripe Fulfillment] Unknown catalog item ID rejected: ${itemId}`);
+              continue; // Reject unknown catalog items
+            }
+            const catalogPrice = Number(catalogRecord.price || 0);
+            const paidPrice = Number(item.price || 0);
+            if (catalogPrice > 0 && paidPrice < catalogPrice - 0.01) {
+              console.warn(`[Stripe Fulfillment] Underpaid item rejected: ${itemId} (Paid: $${paidPrice}, Required: $${catalogPrice})`);
+              continue; // Reject underpaid items
+            }
 
-            const newPurchasedItems = verifiedItems.map(item => ({
-              id: item.id || item.productId || item.name,
-              title: item.name || item.title || item.id,
-              type: item.type || 'product',
+            verifiedPurchasedItems.push({
+              id: itemId,
+              title: catalogRecord.title || catalogRecord.name || item.name || itemId,
+              type: catalogRecord.type || item.type || 'product',
               purchasedAt: new Date().toISOString(),
-              pricePaid: item.price !== undefined ? item.price : 0
-            }));
+              pricePaid: paidPrice
+            });
+          }
 
+          if (verifiedPurchasedItems.length > 0) {
             const targetEmail = verifyData.customerEmail || user.email;
             const updatedUser = await contentDB.registerOrMergeUser({
               email: targetEmail,
               name: user.displayName || user.name || '',
               role: user.role || 'subscriber',
-              purchasedProducts: newPurchasedItems
+              purchasedProducts: verifiedPurchasedItems
             });
 
             if (updatedUser && user.email === targetEmail) {
@@ -175,14 +187,16 @@ export async function initAccountPage() {
 
             toast.success('🎉 Payment verified via Stripe! Your purchased items have been unlocked.');
           } else {
-            toast.error('Stripe session is unpaid or incomplete. Checkout items were not unlocked.');
+            toast.error('Payment verified, but no valid catalog items were matched or paid in full.');
           }
         } else {
-          toast.error('Could not verify Stripe checkout session.');
+          toast.error('Stripe session is unpaid or incomplete. Checkout items were not unlocked.');
         }
-      } catch (err) {
-        console.warn('[Account Portal]: Stripe session verification error:', err);
+      } else {
+        toast.error('Could not verify Stripe checkout session.');
       }
+    } catch (err) {
+      console.warn('[Account Portal]: Stripe session verification error:', err);
     }
   } else if (searchParams.get('payment') === 'success') {
     // Session ID is missing - purge any unverified pending items

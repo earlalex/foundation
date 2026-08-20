@@ -167,6 +167,49 @@ class CryptoCheckout extends HTMLElement {
               toast.error('Transaction failed: On-chain transaction reverted.');
               return;
             }
+
+            // Verify sender address matches active wallet
+            if (receipt.from && receipt.from.toLowerCase() !== this.activeWallet.toLowerCase()) {
+              toast.error('Transaction verification failed: Sender address on receipt does not match connected wallet.');
+              return;
+            }
+
+            // Verify recipient address and transfer execution
+            if (this.selectedCurrency === 'ETH') {
+              if (receipt.to && recipient && receipt.to.toLowerCase() !== recipient.toLowerCase()) {
+                toast.error('Transaction verification failed: Transaction recipient on receipt does not match treasury address.');
+                return;
+              }
+            } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
+              // Verify token contract address
+              const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
+              if (receipt.to && tokenContract && receipt.to.toLowerCase() !== tokenContract.toLowerCase()) {
+                toast.error('Transaction verification failed: Contract interaction on receipt does not match token contract.');
+                return;
+              }
+
+              // Inspect Transfer logs if available
+              if (Array.isArray(receipt.logs) && receipt.logs.length > 0) {
+                const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; // Transfer(address,address,uint256)
+                const transferLog = receipt.logs.find(log => log.topics && log.topics[0] && log.topics[0].toLowerCase() === transferTopic);
+                if (transferLog && transferLog.topics.length >= 3) {
+                  const logRecipient = '0x' + transferLog.topics[2].slice(-40);
+                  if (logRecipient.toLowerCase() !== recipient.toLowerCase()) {
+                    toast.error('Transaction verification failed: ERC20 Transfer event recipient does not match treasury address.');
+                    return;
+                  }
+                  if (transferLog.data && transferLog.data !== '0x') {
+                    const tokenDecimals = 6;
+                    const expectedRawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
+                    const transferredRawAmount = BigInt(transferLog.data);
+                    if (transferredRawAmount < expectedRawAmount) {
+                      toast.error('Transaction verification failed: Transferred token amount is less than expected total.');
+                      return;
+                    }
+                  }
+                }
+              }
+            }
           } catch (receiptErr) {
             toast.error(`Receipt verification failed: ${receiptErr.message || receiptErr}`);
             return;
@@ -252,18 +295,23 @@ class CryptoCheckout extends HTMLElement {
         return;
       }
 
-      const purchasedProducts = rawItems.map(item => {
+      const purchasedProducts = [];
+      for (const item of rawItems) {
         const itemId = item.id || item.productId;
         const catalogRecord = contentMap.get(itemId);
+        if (!catalogRecord) {
+          toast.error(`Crypto settlement failed: Unknown catalog item ID (${itemId}).`);
+          return;
+        }
 
-        return {
+        purchasedProducts.push({
           id: itemId,
-          title: catalogRecord?.title || item.name || itemId,
-          type: catalogRecord?.type || item.type || 'product',
+          title: catalogRecord.title || catalogRecord.name || item.name || itemId,
+          type: catalogRecord.type || item.type || 'product',
           purchasedAt: new Date().toISOString(),
-          pricePaid: catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(item.price || this.amountUSD)
-        };
-      });
+          pricePaid: Number(catalogRecord.price !== undefined ? catalogRecord.price : item.price || this.amountUSD)
+        });
+      }
 
       const updatedUser = await contentDB.registerOrMergeUser({
         email,
