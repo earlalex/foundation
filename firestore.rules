@@ -60,8 +60,8 @@ service cloud.firestore {
             ? (request.resource.data.role != 'admin' &&
                request.resource.data.role != 'editor' &&
                (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true))
-            : (request.resource.data.role == resource.data.role &&
-               (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin))
+            : ((request.resource.data.role != 'admin' && request.resource.data.role != 'editor' || request.resource.data.role == resource.data.role) &&
+               (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true || ('isAdmin' in resource.data && resource.data.isAdmin == true)))
         )
       );
     }
