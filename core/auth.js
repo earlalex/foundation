@@ -358,7 +358,20 @@ export class AuthManager {
       window.__FOUNDATION_DEV_BYPASS__ = false;
       try {
         localStorage.removeItem('foundation_chat_history');
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[Auth logout]: Failed to remove foundation_chat_history from localStorage:', e);
+      }
+
+      // Clear mounted ChatWidget's in-memory history
+      try {
+        const chatWidget = document.querySelector('chat-widget');
+        if (chatWidget && typeof chatWidget.clearHistory === 'function') {
+          chatWidget.clearHistory();
+        }
+      } catch (e) {
+        console.warn('[Auth logout]: Failed to clear ChatWidget in-memory history:', e);
+      }
+
       await signOut(auth);
       store.dispatch('LOGOUT');
       if (window.router) {

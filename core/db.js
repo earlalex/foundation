@@ -75,9 +75,26 @@ export class ContentDB {
       if (!Array.isArray(logs) || logs.length === 0) return [];
 
       if (currentUser?.email || currentUser?.uid) {
-        // Authenticated user: return logs belonging to this specific user, OR un-owned legacy logs
-        return logs.filter(item =>
-          (!item.userEmail && !item.userId) ||
+        // Authenticated user: migrate un-owned legacy logs on first read
+        let migrated = false;
+        const updatedLogs = logs.map(item => {
+          if (!item.userEmail && !item.userId) {
+            migrated = true;
+            return {
+              ...item,
+              userId: currentUser.uid || null,
+              userEmail: currentUser.email || null
+            };
+          }
+          return item;
+        });
+
+        if (migrated) {
+          this.#saveLocalChatLogs(updatedLogs);
+        }
+
+        // Return only logs strictly matching current user
+        return updatedLogs.filter(item =>
           (item.userEmail && currentUser.email && item.userEmail === currentUser.email) ||
           (item.userId && currentUser.uid && item.userId === currentUser.uid)
         );
@@ -99,7 +116,7 @@ export class ContentDB {
       throw new Error('[DB]: Missing required fields in chat log');
     }
 
-    const currentUser = store.state.user;
+    const currentUser = store?.state?.user;
     const payload = {
       ...logData,
       id: logData.id || `chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -1703,30 +1720,82 @@ export async function syncOutboxToFirestore() {
       } catch (err) {
         if (err.code === 'permission-denied' || err.message?.includes('permissions') || err.message?.includes('Permission denied')) {
           console.warn('[Outbox Sync]: Batch payload rejected due to missing permissions. Falling back to granular individual item sync...');
-          const { rawFirebaseSetDoc, rawFirebaseDeleteDoc } = await import('./db-shared.js');
+          const { rawFirebaseSetDoc, rawFirebaseDeleteDoc, withTimeout } = await import('./db-shared.js');
           const remainingOutbox = [];
-          for (const item of outbox) {
-            try {
-              const docRef = doc(db, item.collection, item.docId);
-              if (docRef) {
-                if (item.isDelete) {
-                  await rawFirebaseDeleteDoc(docRef);
-                } else {
-                  await rawFirebaseSetDoc(docRef, item.data, item.options || { merge: true });
+          const quarantinedItems = [];
+          const MAX_PROCESSED_ITEMS = 50;
+          const MAX_RETRIES_PER_ITEM = 2;
+          const BACKOFF_MS = 500;
+
+          const itemsToProcess = outbox.slice(0, MAX_PROCESSED_ITEMS);
+
+          for (const item of itemsToProcess) {
+            let retries = 0;
+            let success = false;
+
+            while (retries <= MAX_RETRIES_PER_ITEM && !success) {
+              try {
+                const docRef = doc(db, item.collection, item.docId);
+                if (docRef) {
+                  if (item.isDelete) {
+                    await withTimeout(rawFirebaseDeleteDoc(docRef), 3000);
+                  } else {
+                    await withTimeout(rawFirebaseSetDoc(docRef, item.data, item.options || { merge: true }), 3000);
+                  }
+                  success = true;
                 }
-              }
-            } catch (singleErr) {
-              if (singleErr.code === 'permission-denied' || singleErr.message?.includes('permissions') || singleErr.message?.includes('Permission denied')) {
-                console.warn(`[Outbox Sync]: Pruned permission-denied item ${item.collection}/${item.docId} from outbox:`, singleErr.message);
-              } else {
-                remainingOutbox.push(item);
+              } catch (singleErr) {
+                if (singleErr.code === 'permission-denied' || singleErr.message?.includes('permissions') || singleErr.message?.includes('Permission denied')) {
+                  console.warn(`[Outbox Sync]: Quarantining permission-denied item ${item.collection}/${item.docId}`);
+                  quarantinedItems.push({
+                    ...item,
+                    quarantineReason: 'permission-denied',
+                    quarantinedAt: new Date().toISOString()
+                  });
+                  success = true; // Stop retrying
+                } else if (retries < MAX_RETRIES_PER_ITEM) {
+                  retries++;
+                  await new Promise(resolve => setTimeout(resolve, BACKOFF_MS * retries));
+                } else {
+                  remainingOutbox.push(item);
+                  success = true; // Stop retrying
+                }
               }
             }
           }
+
+          // Add any unprocessed items back to outbox
+          if (outbox.length > MAX_PROCESSED_ITEMS) {
+            remainingOutbox.push(...outbox.slice(MAX_PROCESSED_ITEMS));
+          }
+
           if (remainingOutbox.length > 0) {
             localStorage.setItem('foundation_outbox', JSON.stringify(remainingOutbox));
           } else {
             localStorage.removeItem('foundation_outbox');
+          }
+
+          if (quarantinedItems.length > 0) {
+            const existingQuarantine = JSON.parse(localStorage.getItem('foundation_outbox_quarantine') || '[]');
+            existingQuarantine.push(...quarantinedItems);
+            localStorage.setItem('foundation_outbox_quarantine', JSON.stringify(existingQuarantine));
+
+            // Surface notification to user
+            try {
+              const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+              history.unshift({
+                id: 'notif_quarantine_' + Date.now(),
+                message: `${quarantinedItems.length} outbox item(s) quarantined due to permissions. Check quarantine for recovery.`,
+                type: 'warning',
+                category: 'System Alerts',
+                timestamp: new Date().toISOString(),
+                isRead: false
+              });
+              localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+              window.dispatchEvent(new CustomEvent('notification-received'));
+            } catch (notifErr) {
+              console.warn('[Outbox Sync]: Failed to notify user about quarantined items:', notifErr);
+            }
           }
         } else {
           console.error('[Outbox Sync]: Batch write error:', err);

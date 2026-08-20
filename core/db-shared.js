@@ -505,7 +505,12 @@ export function saveLocalContent(data) {
 export function getLocalPages() {
   try {
     let localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
-    let isSeeded = localStorage.getItem('foundation_pages_seeded') === 'true';
+    let seededIds = [];
+    try {
+      seededIds = JSON.parse(localStorage.getItem('foundation_pages_seeded_ids') || '[]');
+    } catch (e) {
+      seededIds = [];
+    }
 
     const defaultPages = [
       {
@@ -548,17 +553,23 @@ export function getLocalPages() {
 
     let updated = false;
     defaultPages.forEach(page => {
-      if (!localPages[page.id]) {
-        schemaRegistry.validate(page);
-        localPages[page.id] = page;
-        updated = true;
+      if (!localPages[page.id] && !seededIds.includes(page.id)) {
+        try {
+          schemaRegistry.validate(page);
+          localPages[page.id] = page;
+          seededIds.push(page.id);
+          updated = true;
+        } catch (validationErr) {
+          console.warn(`[DB Shared]: Default page ${page.id} validation failed, skipping seed:`, validationErr.message);
+          seededIds.push(page.id);
+        }
       }
     });
 
-    if (updated || !isSeeded) {
+    if (updated) {
       localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
-      localStorage.setItem('foundation_pages_seeded', 'true');
     }
+    localStorage.setItem('foundation_pages_seeded_ids', JSON.stringify(seededIds));
 
     return localPages;
   } catch (e) {
