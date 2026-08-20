@@ -201,7 +201,6 @@ export async function initAccountPage() {
       }
     } catch (err) {
       console.warn('[Account Portal]: Stripe session verification error:', err);
-      toast.error('Payment verification failed. Please retry or contact support if the issue persists.');
     }
   } else if (searchParams.get('payment') === 'success') {
     // Session ID is missing - purge any unverified pending items

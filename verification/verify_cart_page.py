@@ -72,12 +72,8 @@ def run_cuj(page):
     page.wait_for_timeout(1000)
 
     # Take screenshot of populated cart and checkout form
-    import pathlib
-    script_dir = pathlib.Path(__file__).parent.resolve()
-    screenshots_dir = script_dir / "screenshots"
-    screenshots_dir.mkdir(parents=True, exist_ok=True)
-    screenshot_path = screenshots_dir / "cart_checkout_page.png"
-    page.screenshot(path=str(screenshot_path))
+    screenshot_path = "/home/jules/verification/screenshots/cart_checkout_page.png"
+    page.screenshot(path=screenshot_path)
     page.wait_for_timeout(1500)
 
     # 9. Complete Purchase
@@ -85,15 +81,10 @@ def run_cuj(page):
     page.wait_for_timeout(2000)
 
 if __name__ == "__main__":
-    import pathlib
-    script_dir = pathlib.Path(__file__).parent.resolve()
-    videos_dir = script_dir / "videos"
-    videos_dir.mkdir(parents=True, exist_ok=True)
-
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            record_video_dir=str(videos_dir)
+            record_video_dir="/home/jules/verification/videos"
         )
         page = context.new_page()
         try:

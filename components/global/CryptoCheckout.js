@@ -103,14 +103,6 @@ class CryptoCheckout extends HTMLElement {
     try {
       // 1. Submit actual blockchain transfer if a Web3 wallet provider is connected
       if (this.walletType === 'evm' && window.ethereum) {
-        // Read and validate chain ID
-        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        const supportedChains = ['0x1', '0x89', '0xa4b1']; // Ethereum Mainnet, Polygon, Arbitrum
-        if (!supportedChains.includes(chainId)) {
-          toast.error(`Unsupported EVM network. Please switch to Ethereum, Polygon, or Arbitrum.`);
-          return;
-        }
-
         const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '0x0000000000000000000000000000000000000000';
         let txParams = {};
 
@@ -122,20 +114,14 @@ class CryptoCheckout extends HTMLElement {
             value: hexAmount
           };
         } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
-          // Use network-specific token decimals and contract configuration
-          const tokenDecimals = chainId === '0x1' ? 6 : (chainId === '0x89' ? 6 : 6); // USDC/USDT use 6 decimals
-          const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`];
-
-          if (!tokenContract) {
-            toast.error(`${this.selectedCurrency} contract not configured for this network. Cannot proceed.`);
-            return;
-          }
-
           // Construct ERC20 transfer(address,uint256) calldata
+          const tokenDecimals = 6;
           const rawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
           const cleanRecipient = recipient.toLowerCase().replace('0x', '').padStart(64, '0');
           const cleanAmount = rawAmount.toString(16).padStart(64, '0');
           const data = '0xa9059cbb' + cleanRecipient + cleanAmount;
+
+          const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
 
           txParams = {
             from: this.activeWallet,
@@ -254,74 +240,53 @@ class CryptoCheckout extends HTMLElement {
             return;
           }
         }
-      } else if (this.walletType === 'solana' && (window.solana?.isPhantom || window.phantom?.solana)) {
+      } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
         // Phantom transaction signature request
         const provider = window.solana || window.phantom?.solana;
-
-        if (!provider) {
-          toast.error('Solana wallet provider not found.');
-          return;
-        }
-
-        // Construct a valid Solana transfer transaction
-        const { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
-        const rpcEndpoint = configManager.current.integrations?.solanaRpcUrl || 'https://api.mainnet-beta.solana.com';
-        const connection = new Connection(rpcEndpoint, 'confirmed');
-        const treasuryPubkey = new PublicKey(configManager.current.integrations?.cryptoTreasuryAddress || '');
-        const senderPubkey = new PublicKey(this.activeWallet);
-
-        const lamports = Math.floor(parseFloat(this.cryptoEquivalent) * LAMPORTS_PER_SOL);
-        const transaction = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: senderPubkey,
-            toPubkey: treasuryPubkey,
-            lamports
-          })
-        );
-
-        const { blockhash } = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = senderPubkey;
-
-        const res = await provider.signAndSendTransaction(transaction);
-        txHash = res.signature;
+        const res = await provider.signAndSendTransaction();
+        txHash = res.signature || res.publicKey;
 
         if (!txHash) {
           toast.error('Solana transaction failed: No transaction signature returned.');
           return;
         }
 
-        // Use application-owned RPC connection for confirmation and parsing
-        try {
-          let confirmed = false;
-          let attempts = 0;
-          while (!confirmed && attempts < 5) {
-            const status = await connection.getSignatureStatus(txHash);
-            if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
-              if (status.value.err) {
-                toast.error('Solana transaction failed: On-chain transaction error reported.');
-                return;
-              }
-              confirmed = true;
-              break;
-            }
-            await new Promise(r => setTimeout(r, 1000));
-            attempts++;
-          }
-          if (!confirmed) {
-            toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
-            return;
-          }
-
-          // On-chain transaction details verification for Solana
-          const solTreasury = configManager.current.integrations?.cryptoTreasuryAddress || '';
-          if (!solTreasury) {
-            toast.error('Solana settlement failed: Treasury wallet address is not configured.');
-            return;
-          }
-
+        if (provider.connection) {
           try {
-            const parsedTx = await connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
+            let confirmed = false;
+            let attempts = 0;
+            while (!confirmed && attempts < 5) {
+              const status = await provider.connection.getSignatureStatus(txHash);
+              if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
+                if (status.value.err) {
+                  toast.error('Solana transaction failed: On-chain transaction error reported.');
+                  return;
+                }
+                confirmed = true;
+                break;
+              }
+              await new Promise(r => setTimeout(r, 1000));
+              attempts++;
+            }
+            if (!confirmed) {
+              toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
+              return;
+            }
+
+            // On-chain transaction details verification for Solana
+            const solTreasury = configManager.current.integrations?.cryptoTreasuryAddress || '';
+            if (!solTreasury) {
+              toast.error('Solana settlement failed: Treasury wallet address is not configured.');
+              return;
+            }
+
+            if (!provider.connection || typeof provider.connection.getParsedTransaction !== 'function') {
+              toast.error('Solana settlement failed: On-chain transaction parser API unavailable on provider connection.');
+              return;
+            }
+
+            try {
+              const parsedTx = await provider.connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
               if (!parsedTx) {
                 toast.error('Solana transaction verification failed: Could not retrieve parsed on-chain transaction details.');
                 return;
@@ -373,12 +338,16 @@ class CryptoCheckout extends HTMLElement {
                 toast.error(`Solana settlement rejected: Verified transferred amount ($${transferredAmountUSD.toFixed(2)}) is less than required USD price ($${this.amountUSD.toFixed(2)}).`);
                 return;
               }
-          } catch (txParseErr) {
-            toast.error(`Solana transaction parsing error: ${txParseErr.message || txParseErr}`);
+            } catch (txParseErr) {
+              toast.error(`Solana transaction parsing error: ${txParseErr.message || txParseErr}`);
+              return;
+            }
+          } catch (solErr) {
+            toast.error(`Solana signature confirmation failed: ${solErr.message || solErr}`);
             return;
           }
-        } catch (solErr) {
-          toast.error(`Solana signature confirmation failed: ${solErr.message || solErr}`);
+        } else {
+          toast.error('Solana settlement failed: Provider connection object missing for on-chain status verification.');
           return;
         }
       }
@@ -416,19 +385,7 @@ class CryptoCheckout extends HTMLElement {
     };
 
     try {
-      // 1. Emit/Save purchase payload to Firestore /purchases collection
-      const db = getFirestoreDB();
-      if (db) {
-        const purchaseDocRef = doc(db, 'purchases', purchasePayload.id);
-        await setDoc(purchaseDocRef, purchasePayload);
-      }
-
-      // Also sync to local storage /purchases equivalents or local fallback
-      const localPurchases = JSON.parse(localStorage.getItem('foundation_local_purchases') || '[]');
-      localPurchases.push(purchasePayload);
-      localStorage.setItem('foundation_local_purchases', JSON.stringify(localPurchases));
-
-      // 2. Perform user access adjustments and product linkage upon verified on-chain tx
+      // 1. Perform user access adjustments and product linkage upon verified on-chain tx
       let rawItems = [];
       if (Array.isArray(this.cartItems) && this.cartItems.length > 0) {
         rawItems = this.cartItems;
@@ -472,6 +429,18 @@ class CryptoCheckout extends HTMLElement {
           pricePaid: Number(catalogRecord.price !== undefined ? catalogRecord.price : item.price || this.amountUSD)
         });
       }
+
+      // Save purchase payload to Firestore /purchases collection only after validation completes
+      const db = getFirestoreDB();
+      if (db) {
+        const purchaseDocRef = doc(db, 'purchases', purchasePayload.id);
+        await setDoc(purchaseDocRef, purchasePayload);
+      }
+
+      // Also sync to local storage /purchases equivalents or local fallback
+      const localPurchases = JSON.parse(localStorage.getItem('foundation_local_purchases') || '[]');
+      localPurchases.push(purchasePayload);
+      localStorage.setItem('foundation_local_purchases', JSON.stringify(localPurchases));
 
       const updatedUser = await contentDB.registerOrMergeUser({
         email,
