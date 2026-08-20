@@ -67,10 +67,28 @@ export class ContentDB {
     return this.getContentById(id);
   }
 
-  // Chat logs fallback
+  // Chat logs fallback with legacy record auto-migration
   #getLocalChatLogs() {
     try {
-      return JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
+      const logs = JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
+      const currentUser = store?.state?.user;
+      if (currentUser && Array.isArray(logs) && logs.length > 0) {
+        let migrated = false;
+        logs.forEach(item => {
+          if (!item.userEmail && currentUser.email) {
+            item.userEmail = currentUser.email;
+            migrated = true;
+          }
+          if (!item.userId && currentUser.uid) {
+            item.userId = currentUser.uid;
+            migrated = true;
+          }
+        });
+        if (migrated) {
+          this.#saveLocalChatLogs(logs);
+        }
+      }
+      return logs;
     } catch (e) {
       return [];
     }
@@ -117,6 +135,7 @@ export class ContentDB {
   }
 
   async getChatLogs(limitCount = 50) {
+    const results = [];
     try {
       const db = getFirestoreDB();
       if (db) {
@@ -130,25 +149,31 @@ export class ContentDB {
           q = query(collection(db, 'chat_logs'), where('userEmail', '==', user.email));
         } else if (user?.uid) {
           q = query(collection(db, 'chat_logs'), where('userId', '==', user.uid));
-        } else {
-          const local = this.#getLocalChatLogs();
-          return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
         }
 
-        const querySnapshot = await getDocs(q);
-        const results = [];
-        querySnapshot.forEach((docSnap) => {
-          results.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        if (results.length > 0) return results.slice(0, limitCount);
+        if (q) {
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((docSnap) => {
+            results.push({ id: docSnap.id, ...docSnap.data() });
+          });
+        }
       }
     } catch (err) {
       console.warn('[DB]: Could not fetch chat logs from Firestore.', err.message);
     }
 
+    // Merge Firestore query results with local chat logs (deduplicating by ID)
     const local = this.#getLocalChatLogs();
-    return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
+    const seenIds = new Set(results.map(r => r.id));
+    local.forEach(item => {
+      if (item.id && !seenIds.has(item.id)) {
+        seenIds.add(item.id);
+        results.push(item);
+      }
+    });
+
+    results.sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp));
+    return results.slice(0, limitCount);
   }
 
   // Delegated content methods
@@ -1706,7 +1731,6 @@ export async function syncOutboxToFirestore() {
             localStorage.setItem('foundation_outbox', JSON.stringify(remainingOutbox));
           } else {
             localStorage.removeItem('foundation_outbox');
-            flushSensitiveLocalData();
           }
         } else {
           console.error('[Outbox Sync]: Batch write error:', err);
