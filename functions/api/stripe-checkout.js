@@ -73,7 +73,7 @@ export async function onRequestPost(context) {
       }
 
       try {
-        const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${targetSessionId}?expand[]=line_items`, {
+        const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${targetSessionId}?expand[]=line_items&expand[]=line_items.data.price.product`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${stripeSecretKey}`
@@ -86,12 +86,16 @@ export async function onRequestPost(context) {
 
           let lineItems = [];
           if (sessionData.line_items?.data && Array.isArray(sessionData.line_items.data)) {
-            lineItems = sessionData.line_items.data.map(li => ({
-              id: li.price?.product || li.price?.id || li.id,
-              name: li.description || 'Purchased Item',
-              type: 'product',
-              price: (li.amount_total || 0) / 100 / (li.quantity || 1)
-            }));
+            lineItems = sessionData.line_items.data.map(li => {
+              const productMeta = typeof li.price?.product === 'object' ? li.price.product?.metadata : null;
+              const appItemId = productMeta?.appItemId;
+              return {
+                id: appItemId || (typeof li.price?.product === 'string' ? li.price.product : li.price?.product?.id) || li.id,
+                name: li.description || 'Purchased Item',
+                type: 'product',
+                price: (li.amount_total || 0) / 100 / (li.quantity || 1)
+              };
+            });
           }
 
           return new Response(JSON.stringify({
@@ -179,6 +183,9 @@ export async function onRequestPost(context) {
           params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
           params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
           params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
+          if (item.id) {
+            params.append(`line_items[${index}][price_data][product_data][metadata][appItemId]`, String(item.id));
+          }
           params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
         }
       });

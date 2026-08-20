@@ -103,18 +103,69 @@ class CryptoCheckout extends HTMLElement {
     try {
       // 1. Submit actual blockchain transfer if a Web3 wallet provider is connected
       if (this.walletType === 'evm' && window.ethereum) {
-        // Request EVM eth_sendTransaction or ERC20 transfer
         const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '0x0000000000000000000000000000000000000000';
-        const hexAmount = '0x' + Math.floor(parseFloat(this.cryptoEquivalent) * 1e18).toString(16);
+        let txParams = {};
+
+        if (this.selectedCurrency === 'ETH') {
+          const hexAmount = '0x' + BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18)).toString(16);
+          txParams = {
+            from: this.activeWallet,
+            to: recipient,
+            value: hexAmount
+          };
+        } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
+          // Construct ERC20 transfer(address,uint256) calldata
+          const tokenDecimals = 6;
+          const rawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
+          const cleanRecipient = recipient.toLowerCase().replace('0x', '').padStart(64, '0');
+          const cleanAmount = rawAmount.toString(16).padStart(64, '0');
+          const data = '0xa9059cbb' + cleanRecipient + cleanAmount;
+
+          const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
+
+          txParams = {
+            from: this.activeWallet,
+            to: tokenContract,
+            value: '0x0',
+            data
+          };
+        } else {
+          const hexAmount = '0x' + BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18)).toString(16);
+          txParams = {
+            from: this.activeWallet,
+            to: recipient,
+            value: hexAmount
+          };
+        }
 
         txHash = await window.ethereum.request({
           method: 'eth_sendTransaction',
-          params: [{
-            from: this.activeWallet,
-            to: recipient,
-            value: this.selectedCurrency === 'ETH' ? hexAmount : '0x0'
-          }]
+          params: [txParams]
         });
+
+        // Verify transaction receipt on-chain when possible
+        if (txHash && window.ethereum.request) {
+          try {
+            let receipt = null;
+            let attempts = 0;
+            while (!receipt && attempts < 5) {
+              receipt = await window.ethereum.request({
+                method: 'eth_getTransactionReceipt',
+                params: [txHash]
+              });
+              if (!receipt) {
+                await new Promise(r => setTimeout(r, 1000));
+                attempts++;
+              }
+            }
+            if (receipt && (receipt.status === '0x0' || receipt.status === 0)) {
+              toast.error('Transaction failed: On-chain transaction reverted.');
+              return;
+            }
+          } catch (receiptErr) {
+            console.warn('Receipt verification skipped or pending:', receiptErr);
+          }
+        }
       } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
         // Phantom transaction signature request
         const res = await window.solana.signAndSendTransaction();
