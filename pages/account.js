@@ -167,19 +167,26 @@ export async function initAccountPage() {
           }
 
           if (verifiedPurchasedItems.length > 0) {
-            const targetEmail = verifyData.customerEmail || user.email;
-            const updatedUser = await contentDB.registerOrMergeUser({
-              email: targetEmail,
-              name: user.displayName || user.name || '',
-              role: user.role || 'subscriber',
-              purchasedProducts: verifiedPurchasedItems
-            });
+            const targetEmail = (verifyData.customerEmail || '').toLowerCase();
+            const activeEmail = (user.email || '').toLowerCase();
 
-            if (updatedUser && user.email === targetEmail) {
-              store.dispatch('SET_USER', updatedUser);
+            if (targetEmail && targetEmail !== activeEmail) {
+              toast.error('Payment session belongs to a different email address.');
+              console.warn(`[Stripe Fulfillment] Cross-account session rejected: session customer (${targetEmail}) != active user (${activeEmail})`);
+            } else {
+              const updatedUser = await contentDB.registerOrMergeUser({
+                email: activeEmail,
+                name: user.displayName || user.name || '',
+                role: user.role || 'subscriber',
+                purchasedProducts: verifiedPurchasedItems
+              });
+
+              if (updatedUser) {
+                store.dispatch('SET_USER', updatedUser);
+              }
+
+              toast.success('🎉 Payment verified via Stripe! Your purchased items have been unlocked.');
             }
-
-            toast.success('🎉 Payment verified via Stripe! Your purchased items have been unlocked.');
           } else {
             toast.error('Payment verified, but no valid catalog items were matched or paid in full.');
           }
