@@ -135,7 +135,7 @@ export async function initAccountPage() {
       const verifyRes = await fetch('/api/stripe-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', sessionId })
+        body: JSON.stringify({ action: 'verify', sessionId, email: user.email, userEmail: user.email })
       });
 
       if (verifyRes.ok) {

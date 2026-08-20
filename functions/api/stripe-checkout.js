@@ -86,7 +86,14 @@ export async function onRequestPost(context) {
           const sessionCustomerEmail = (sessionData.customer_details?.email || sessionData.customer_email || '').toLowerCase().trim();
 
           const requestingUserEmail = (userEmail || email || '').toLowerCase().trim();
-          if (requestingUserEmail && sessionCustomerEmail && requestingUserEmail !== sessionCustomerEmail) {
+          if (!requestingUserEmail) {
+            return new Response(JSON.stringify({ paid: false, error: 'Authentication required: Caller email parameter is required to verify session' }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          if (sessionCustomerEmail && requestingUserEmail !== sessionCustomerEmail) {
             return new Response(JSON.stringify({ paid: false, error: 'Unauthorized: Session customer email does not match caller' }), {
               status: 403,
               headers: { "Content-Type": "application/json" }
