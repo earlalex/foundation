@@ -249,19 +249,7 @@ async function executeOrderCheckout() {
   }
 
   try {
-    // 1. Account Lookup / Ingestion (WITHOUT granting purchasedProducts entitlements prior to payment completion)
-    const existingUser = await contentDB.getUser(customerEmail);
-    const updatedUser = await contentDB.registerOrMergeUser({
-      email: customerEmail,
-      name: customerName,
-      role: existingUser?.role || 'subscriber'
-    });
-
-    if (updatedUser && store.state.user?.email === customerEmail) {
-      store.dispatch('SET_USER', updatedUser);
-    }
-
-    // 2. Process Payment Option
+    // Process Payment Option
     if (selectedPayment === 'web3_crypto') {
       toast.info('Please connect your Web3 wallet in the payment section above to authorize payment.');
       if (submitBtn) {

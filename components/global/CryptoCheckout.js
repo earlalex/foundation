@@ -180,6 +180,25 @@ class CryptoCheckout extends HTMLElement {
                 toast.error('Transaction verification failed: Transaction recipient on receipt does not match treasury address.');
                 return;
               }
+
+              // Verify on-chain ETH value transferred in transaction details
+              const txObj = await window.ethereum.request({
+                method: 'eth_getTransactionByHash',
+                params: [txHash]
+              });
+
+              if (!txObj || !txObj.value) {
+                toast.error('Transaction verification failed: Could not retrieve ETH transaction value from network.');
+                return;
+              }
+
+              const expectedWei = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18));
+              const transferredWei = BigInt(txObj.value);
+
+              if (transferredWei < expectedWei) {
+                toast.error(`Transaction verification failed: Transferred ETH (${(Number(transferredWei) / 1e18).toFixed(6)} ETH) is less than required amount (${this.cryptoEquivalent} ETH).`);
+                return;
+              }
             } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
               // Verify token contract address
               const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
@@ -227,7 +246,12 @@ class CryptoCheckout extends HTMLElement {
         const res = await provider.signAndSendTransaction();
         txHash = res.signature || res.publicKey;
 
-        if (txHash && provider.connection) {
+        if (!txHash) {
+          toast.error('Solana transaction failed: No transaction signature returned.');
+          return;
+        }
+
+        if (provider.connection) {
           try {
             let confirmed = false;
             let attempts = 0;
@@ -249,8 +273,12 @@ class CryptoCheckout extends HTMLElement {
               return;
             }
           } catch (solErr) {
-            console.warn('Solana signature confirmation skipped/pending:', solErr);
+            toast.error(`Solana signature confirmation failed: ${solErr.message || solErr}`);
+            return;
           }
+        } else {
+          toast.error('Solana settlement failed: Provider connection object missing for on-chain status verification.');
+          return;
         }
       }
     } catch (err) {
