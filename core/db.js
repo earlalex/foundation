@@ -67,28 +67,23 @@ export class ContentDB {
     return this.getContentById(id);
   }
 
-  // Chat logs fallback with legacy record auto-migration
+  // Scoped chat logs fallback filtered strictly by user identity
   #getLocalChatLogs() {
     try {
       const logs = JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
       const currentUser = store?.state?.user;
-      if (currentUser && Array.isArray(logs) && logs.length > 0) {
-        let migrated = false;
-        logs.forEach(item => {
-          if (!item.userEmail && currentUser.email) {
-            item.userEmail = currentUser.email;
-            migrated = true;
-          }
-          if (!item.userId && currentUser.uid) {
-            item.userId = currentUser.uid;
-            migrated = true;
-          }
-        });
-        if (migrated) {
-          this.#saveLocalChatLogs(logs);
-        }
+      if (!Array.isArray(logs) || logs.length === 0) return [];
+
+      if (currentUser?.email || currentUser?.uid) {
+        // Authenticated user: ONLY return logs belonging to this specific user
+        return logs.filter(item =>
+          (item.userEmail && currentUser.email && item.userEmail === currentUser.email) ||
+          (item.userId && currentUser.uid && item.userId === currentUser.uid)
+        );
+      } else {
+        // Unauthenticated / guest session: ONLY return un-owned anonymous logs
+        return logs.filter(item => !item.userEmail && !item.userId);
       }
-      return logs;
     } catch (e) {
       return [];
     }
