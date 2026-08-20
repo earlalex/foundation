@@ -35,18 +35,30 @@ service cloud.firestore {
       );
     }
 
+    function isRequestIdentityValid() {
+      return (
+        (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid) &&
+        (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email) &&
+        (!('userEmail' in request.resource.data) || request.resource.data.userEmail == request.auth.token.email) &&
+        (!('customerEmail' in request.resource.data) || request.resource.data.customerEmail == request.auth.token.email)
+      );
+    }
+
     function isDocOwner() {
       return isAuthenticated() && (
         resource != null ? (
-          resource.data.userId == request.auth.uid ||
-          resource.data.email == request.auth.token.email ||
-          resource.data.userEmail == request.auth.token.email ||
-          resource.data.customerEmail == request.auth.token.email
+          (resource.data.userId == request.auth.uid ||
+           resource.data.email == request.auth.token.email ||
+           resource.data.userEmail == request.auth.token.email ||
+           resource.data.customerEmail == request.auth.token.email) &&
+          (request.resource == null || isRequestIdentityValid())
         ) : (
-          request.resource.data.userId == request.auth.uid ||
-          request.resource.data.email == request.auth.token.email ||
-          request.resource.data.userEmail == request.auth.token.email ||
-          request.resource.data.customerEmail == request.auth.token.email
+          isRequestIdentityValid() && (
+            ('userId' in request.resource.data && request.resource.data.userId == request.auth.uid) ||
+            ('email' in request.resource.data && request.resource.data.email == request.auth.token.email) ||
+            ('userEmail' in request.resource.data && request.resource.data.userEmail == request.auth.token.email) ||
+            ('customerEmail' in request.resource.data && request.resource.data.customerEmail == request.auth.token.email)
+          )
         )
       );
     }
