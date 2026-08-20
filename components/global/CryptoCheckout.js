@@ -278,25 +278,57 @@ class CryptoCheckout extends HTMLElement {
             if (solTreasury && provider.connection.getParsedTransaction) {
               try {
                 const parsedTx = await provider.connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
-                if (parsedTx) {
-                  const accountKeys = parsedTx.transaction?.message?.accountKeys || [];
-                  const keyStrings = accountKeys.map(k => (typeof k === 'string' ? k : k.pubkey?.toString() || ''));
+                if (!parsedTx) {
+                  toast.error('Solana transaction verification failed: Could not retrieve parsed transaction details.');
+                  return;
+                }
 
-                  // Verify feePayer / sender is active wallet
-                  if (keyStrings.length > 0 && keyStrings[0] !== this.activeWallet) {
-                    toast.error('Solana transaction verification failed: Sender on transaction does not match active wallet.');
-                    return;
+                const accountKeys = parsedTx.transaction?.message?.accountKeys || [];
+                const keyStrings = accountKeys.map(k => (typeof k === 'string' ? k : k.pubkey?.toString() || ''));
+
+                // Verify feePayer / sender is active wallet
+                if (keyStrings.length > 0 && keyStrings[0] !== this.activeWallet) {
+                  toast.error('Solana transaction verification failed: Sender on transaction does not match active wallet.');
+                  return;
+                }
+
+                // Verify treasury address is present in account keys / recipient
+                const treasuryIndex = keyStrings.findIndex(k => k === solTreasury);
+                if (treasuryIndex === -1) {
+                  toast.error('Solana transaction verification failed: Treasury recipient address not found in transaction accounts.');
+                  return;
+                }
+
+                // Verify balance increase for treasury account in SOL lamports or SPL Token balance
+                const meta = parsedTx.meta;
+                if (meta) {
+                  let transferredAmountUSD = 0;
+                  if (this.selectedCurrency === 'SOL' && meta.preBalances && meta.postBalances) {
+                    const preBal = meta.preBalances[treasuryIndex] || 0;
+                    const postBal = meta.postBalances[treasuryIndex] || 0;
+                    const diffLamports = postBal - preBal;
+                    const diffSOL = diffLamports / 1e9;
+                    const solRate = 0.006; // rate conversion matching get cryptoEquivalent
+                    transferredAmountUSD = diffSOL / solRate;
+                  } else if ((this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') && meta.postTokenBalances) {
+                    const treasuryTokenBal = meta.postTokenBalances.find(tb => {
+                      const owner = tb.owner || keyStrings[tb.accountIndex];
+                      return owner === solTreasury;
+                    });
+                    if (treasuryTokenBal) {
+                      const tokenAmount = parseFloat(treasuryTokenBal.uiTokenAmount?.uiAmountString || treasuryTokenBal.uiTokenAmount?.amount || 0);
+                      transferredAmountUSD = tokenAmount;
+                    }
                   }
 
-                  // Verify treasury address is present in account keys / recipient
-                  const hasTreasury = keyStrings.some(k => k === solTreasury);
-                  if (!hasTreasury) {
-                    toast.error('Solana transaction verification failed: Treasury recipient address not found in transaction accounts.');
+                  if (transferredAmountUSD > 0 && transferredAmountUSD < (this.amountUSD - 0.01)) {
+                    toast.error(`Solana settlement rejected: Transferred amount ($${transferredAmountUSD.toFixed(2)}) is less than total required price ($${this.amountUSD.toFixed(2)}).`);
                     return;
                   }
                 }
               } catch (txParseErr) {
-                console.warn('Solana parsed transaction lookup skipped:', txParseErr);
+                toast.error(`Solana transaction parsing error: ${txParseErr.message || txParseErr}`);
+                return;
               }
             }
           } catch (solErr) {

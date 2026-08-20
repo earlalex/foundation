@@ -170,9 +170,12 @@ export async function initAccountPage() {
             const sessionEmail = (verifyData.customerEmail || '').toLowerCase().trim();
             const activeEmail = (user.email || '').toLowerCase().trim();
 
-            if (!sessionEmail || sessionEmail !== activeEmail) {
-              toast.error('Payment session email is missing or does not match active account.');
-              console.warn(`[Stripe Fulfillment] Unbound or cross-account session rejected: session customer (${sessionEmail}) != active user (${activeEmail})`);
+            if (!sessionEmail) {
+              toast.error('Payment session has no associated customer email. Unlocking failed.');
+              console.warn(`[Stripe Fulfillment] Unbound session rejected: customerEmail is empty.`);
+            } else if (sessionEmail !== activeEmail) {
+              toast.error('Payment session belongs to a different email address.');
+              console.warn(`[Stripe Fulfillment] Cross-account session rejected: session customer (${sessionEmail}) != active user (${activeEmail})`);
             } else {
               const updatedUser = await contentDB.registerOrMergeUser({
                 email: activeEmail,
