@@ -358,7 +358,6 @@ export class AuthManager {
       window.__FOUNDATION_DEV_BYPASS__ = false;
       try {
         localStorage.removeItem('foundation_chat_history');
-        localStorage.removeItem('foundation_local_chat_logs');
       } catch (e) {}
       await signOut(auth);
       store.dispatch('LOGOUT');
