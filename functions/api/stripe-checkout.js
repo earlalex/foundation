@@ -83,6 +83,15 @@ export async function onRequestPost(context) {
         if (res.ok) {
           const sessionData = await res.json();
           const isPaid = sessionData.payment_status === 'paid';
+          const sessionCustomerEmail = (sessionData.customer_details?.email || sessionData.customer_email || '').toLowerCase().trim();
+
+          const requestingUserEmail = (userEmail || email || '').toLowerCase().trim();
+          if (requestingUserEmail && sessionCustomerEmail && requestingUserEmail !== sessionCustomerEmail) {
+            return new Response(JSON.stringify({ paid: false, error: 'Unauthorized: Session customer email does not match caller' }), {
+              status: 403,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
 
           let lineItems = [];
           if (sessionData.line_items?.data && Array.isArray(sessionData.line_items.data)) {
@@ -100,7 +109,7 @@ export async function onRequestPost(context) {
 
           return new Response(JSON.stringify({
             paid: isPaid,
-            customerEmail: sessionData.customer_details?.email || sessionData.customer_email || '',
+            customerEmail: sessionCustomerEmail,
             lineItems
           }), {
             status: 200,

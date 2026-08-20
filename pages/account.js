@@ -167,12 +167,12 @@ export async function initAccountPage() {
           }
 
           if (verifiedPurchasedItems.length > 0) {
-            const targetEmail = (verifyData.customerEmail || '').toLowerCase();
-            const activeEmail = (user.email || '').toLowerCase();
+            const sessionEmail = (verifyData.customerEmail || '').toLowerCase().trim();
+            const activeEmail = (user.email || '').toLowerCase().trim();
 
-            if (targetEmail && targetEmail !== activeEmail) {
-              toast.error('Payment session belongs to a different email address.');
-              console.warn(`[Stripe Fulfillment] Cross-account session rejected: session customer (${targetEmail}) != active user (${activeEmail})`);
+            if (!sessionEmail || sessionEmail !== activeEmail) {
+              toast.error('Payment session email is missing or does not match active account.');
+              console.warn(`[Stripe Fulfillment] Unbound or cross-account session rejected: session customer (${sessionEmail}) != active user (${activeEmail})`);
             } else {
               const updatedUser = await contentDB.registerOrMergeUser({
                 email: activeEmail,

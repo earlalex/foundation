@@ -272,6 +272,33 @@ class CryptoCheckout extends HTMLElement {
               toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
               return;
             }
+
+            // On-chain transaction details verification for Solana
+            const solTreasury = configManager.current.integrations?.cryptoTreasuryAddress || '';
+            if (solTreasury && provider.connection.getParsedTransaction) {
+              try {
+                const parsedTx = await provider.connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
+                if (parsedTx) {
+                  const accountKeys = parsedTx.transaction?.message?.accountKeys || [];
+                  const keyStrings = accountKeys.map(k => (typeof k === 'string' ? k : k.pubkey?.toString() || ''));
+
+                  // Verify feePayer / sender is active wallet
+                  if (keyStrings.length > 0 && keyStrings[0] !== this.activeWallet) {
+                    toast.error('Solana transaction verification failed: Sender on transaction does not match active wallet.');
+                    return;
+                  }
+
+                  // Verify treasury address is present in account keys / recipient
+                  const hasTreasury = keyStrings.some(k => k === solTreasury);
+                  if (!hasTreasury) {
+                    toast.error('Solana transaction verification failed: Treasury recipient address not found in transaction accounts.');
+                    return;
+                  }
+                }
+              } catch (txParseErr) {
+                console.warn('Solana parsed transaction lookup skipped:', txParseErr);
+              }
+            }
           } catch (solErr) {
             toast.error(`Solana signature confirmation failed: ${solErr.message || solErr}`);
             return;
