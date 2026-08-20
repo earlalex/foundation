@@ -102,8 +102,8 @@ export class ContentDB {
     const payload = {
       ...logData,
       id: logData.id || `chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      userId: currentUser?.uid || logData.userId || 'anonymous',
-      userEmail: currentUser?.email || logData.userEmail || logData.email || 'anonymous',
+      userId: currentUser?.uid || logData.userId || null,
+      userEmail: currentUser?.email || logData.userEmail || logData.email || null,
       createdAt: new Date().toISOString()
     };
 
