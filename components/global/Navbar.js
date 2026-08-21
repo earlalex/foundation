@@ -59,8 +59,9 @@ export function initNavbar() {
         }
         .nav-menu {
           display: flex;
-          gap: 1.25rem;
+          gap: 0.75rem;
           align-items: center;
+          flex-wrap: wrap;
           letter-spacing: 0.05em;
         }
         .hamburger-btn {
@@ -84,7 +85,7 @@ export function initNavbar() {
           animation: pulse-badge 0.3s ease-out;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           #utility-header {
             display: none !important;
           }

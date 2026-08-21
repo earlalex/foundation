@@ -1,6 +1,6 @@
 // utils/backend-google.js
 import { errorHandler } from '../core/error-handler.js';
-import { getEnvVariable } from '../core/config.js';
+import { getEnvVariable, configManager } from '../core/config.js';
 
 /**
  * Retrieves Google standardized credentials using the unified resolver
@@ -15,8 +15,20 @@ export function getGoogleCredentials() {
 }
 
 /**
- * Uploads a transcript or communication log to Google Drive from Cloudflare Pages Environment:
- * [Site Name] / Communication Logs / YYYY / MM /
+ * Returns expected root site folder name in Google Drive: {{company-name}}-{{site-name}}
+ * @param {string} [overrideSiteName]
+ * @returns {string}
+ */
+export function getExpectedRootFolderName(overrideSiteName = null) {
+  const siteConfig = configManager.current?.site || {};
+  const companyName = siteConfig.companyName || configManager.current?.businessProfile?.legalName || "Ascension Avenue Academy";
+  const siteName = overrideSiteName || siteConfig.siteName || configManager.current?.siteTitle || "Foundation";
+  return `${companyName}-${siteName}`;
+}
+
+/**
+ * Uploads a transcript or communication log to Google Drive:
+ * {{company-name}}-{{site-name}} / Communication Logs / YYYY / MM /
  */
 export async function uploadCommunicationLogToDrive(token, siteName, fileName, content) {
   if (!token) {
@@ -25,9 +37,10 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
   }
 
   try {
-    // 1. Search or create the Root siteName folder
+    // 1. Search or create the Root site folder {{company-name}}-{{site-name}}
+    const rootName = getExpectedRootFolderName(siteName);
     let folderId = null;
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(rootName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
     const searchRes = await fetch(searchUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -43,7 +56,7 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: siteName,
+          name: rootName,
           mimeType: 'application/vnd.google-apps.folder'
         })
       });
@@ -460,9 +473,10 @@ export async function uploadBackupToDrive(token, siteName, fileName, content) {
     return null;
   }
   try {
-    // 1. Search or create the Root siteName folder
+    // 1. Search or create the Root site folder {{company-name}}-{{site-name}}
+    const rootName = getExpectedRootFolderName(siteName);
     let folderId = null;
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(siteName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(rootName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
     const searchRes = await fetch(searchUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -478,7 +492,7 @@ export async function uploadBackupToDrive(token, siteName, fileName, content) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: siteName,
+          name: rootName,
           mimeType: 'application/vnd.google-apps.folder'
         })
       });

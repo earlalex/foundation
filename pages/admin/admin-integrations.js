@@ -40,7 +40,7 @@ function setupApiKeyMasking(inputElement) {
 
 export function initIntegrationsTab() {
   const currentCfg = configManager.current || {};
-  
+
   // Firebase & Google config elements
   const cfgFbKey = document.getElementById('cfg-fb-key');
   const cfgFbProject = document.getElementById('cfg-fb-project');

@@ -41,7 +41,7 @@ export class VideoLibrary extends HTMLElement {
 
     // Check if there are configured videos or fall back to beautiful seed content
     const customVideos = configManager.current.media?.videos;
-    if (customVideos && customVideos.length > 0) {
+    if (Array.isArray(customVideos)) {
       this.videos = customVideos;
     } else {
       this.videos = [
@@ -92,15 +92,66 @@ export class VideoLibrary extends HTMLElement {
       ];
     }
 
-    this.activeVideo = this.videos[0];
+    this.activeVideo = this.videos.length > 0 ? this.videos[0] : null;
+  }
+
+  escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  sanitizeUrl(url) {
+    if (!url) return '';
+    const trimmed = String(url).trim();
+    if (
+      trimmed.startsWith('/') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('blob:') ||
+      trimmed.startsWith('data:image/')
+    ) {
+      return this.escapeHTML(trimmed);
+    }
+    return '';
   }
 
   render() {
-    const categories = ['all', ...new Set(this.videos.map(v => v.category))];
+    const escapeHTML = this.escapeHTML;
+    const sanitizeUrl = this.sanitizeUrl.bind(this);
+
+    if (this.videos.length === 0) {
+      this.innerHTML = `
+        <div style="text-align: center; padding: 4rem 2rem; background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: var(--theme-layout-border-radius, 12px); margin-top: 1.5rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🎬</div>
+          <h3 style="font-size: 1.25rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c); margin: 0 0 0.5rem 0;">No Videos Available</h3>
+          <p style="color: var(--theme-color-text-secondary, #718096); font-size: 0.95rem; margin: 0;">There are currently no videos published in the video library.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const categories = ['all', ...new Set(this.videos.map(v => v.category).filter(Boolean))];
 
     const filteredVideos = this.activeCategory === 'all'
       ? this.videos
       : this.videos.filter(v => v.category === this.activeCategory);
+
+    const activeVid = {
+      id: escapeHTML(this.activeVideo?.id || ''),
+      title: escapeHTML(this.activeVideo?.title || ''),
+      description: escapeHTML(this.activeVideo?.description || ''),
+      url: sanitizeUrl(this.activeVideo?.url || ''),
+      category: escapeHTML(this.activeVideo?.category || ''),
+      duration: escapeHTML(this.activeVideo?.duration || ''),
+      views: escapeHTML(this.activeVideo?.views || 0),
+      thumbnail: sanitizeUrl(this.activeVideo?.thumbnail || ''),
+      isLive: !!this.activeVideo?.isLive
+    };
 
     this.innerHTML = `
       <style>
@@ -303,39 +354,51 @@ export class VideoLibrary extends HTMLElement {
         <div>
           <!-- Custom Video Stream Player component -->
           <div class="spotlight-card">
-            <video-stream-player id="main-player" video-id="${this.activeVideo.id}" video-url="${this.activeVideo.url}" video-title="${this.activeVideo.title}"></video-stream-player>
+            <video-stream-player id="main-player" video-id="${activeVid.id}" video-url="${activeVid.url}" video-title="${activeVid.title}"></video-stream-player>
             <div class="spotlight-info">
-              <h2 class="spotlight-title">${this.activeVideo.title}</h2>
-              <p class="spotlight-desc">${this.activeVideo.description}</p>
+              <h2 class="spotlight-title">${activeVid.title}</h2>
+              <p class="spotlight-desc">${activeVid.description}</p>
             </div>
           </div>
 
           <!-- Category Filter Pills -->
           <div class="category-pills">
-            ${categories.map(cat => `
-              <button class="category-pill ${this.activeCategory === cat ? 'active' : ''}" data-category="${cat}">
-                ${cat.charAt(0).toUpperCase() + cat.slice(1)}
+            ${categories.map(cat => {
+              const safeCat = escapeHTML(cat);
+              const displayCat = safeCat.charAt(0).toUpperCase() + safeCat.slice(1);
+              return `
+              <button class="category-pill ${this.activeCategory === cat ? 'active' : ''}" data-category="${safeCat}">
+                ${displayCat}
               </button>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
 
           <!-- Filtered Video Feed -->
           <div class="video-grid">
-            ${filteredVideos.map(vid => `
-              <div class="video-card" data-id="${vid.id}">
+            ${filteredVideos.map(vid => {
+              const safeId = escapeHTML(vid.id || '');
+              const safeTitle = escapeHTML(vid.title || '');
+              const safeCategory = escapeHTML(vid.category || '');
+              const safeDuration = escapeHTML(vid.duration || '');
+              const safeViews = escapeHTML(vid.views || 0);
+              const safeThumb = sanitizeUrl(vid.thumbnail || '');
+              return `
+              <div class="video-card" data-id="${safeId}">
                 <div class="thumb-wrapper">
-                  <img class="thumb-img" src="${vid.thumbnail}" alt="${vid.title}" />
-                  ${vid.isLive ? `<span class="live-badge">Live</span>` : `<span class="duration-badge">${vid.duration}</span>`}
+                  <img class="thumb-img" src="${safeThumb}" alt="${safeTitle}" />
+                  ${vid.isLive ? `<span class="live-badge">Live</span>` : `<span class="duration-badge">${safeDuration}</span>`}
                 </div>
                 <div class="video-info">
-                  <h4 class="video-title">${vid.title}</h4>
+                  <h4 class="video-title">${safeTitle}</h4>
                   <div class="video-meta">
-                    <span>👁️ ${vid.views} Views</span>
-                    <span>${vid.category}</span>
+                    <span>👁️ ${safeViews} Views</span>
+                    <span>${safeCategory}</span>
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
 
@@ -343,18 +406,25 @@ export class VideoLibrary extends HTMLElement {
         <div class="sidebar-playlist">
           <h3 class="sidebar-playlist-title">Up Next</h3>
           <div class="playlist-items">
-            ${this.videos.map(vid => `
-              <div class="playlist-item ${this.activeVideo.id === vid.id ? 'active' : ''}" data-id="${vid.id}">
-                <img class="playlist-thumb" src="${vid.thumbnail}" alt="${vid.title}" />
+            ${this.videos.map(vid => {
+              const safeId = escapeHTML(vid.id || '');
+              const safeTitle = escapeHTML(vid.title || '');
+              const safeDuration = escapeHTML(vid.duration || '');
+              const safeViews = escapeHTML(vid.views || 0);
+              const safeThumb = sanitizeUrl(vid.thumbnail || '');
+              return `
+              <div class="playlist-item ${this.activeVideo?.id === vid.id ? 'active' : ''}" data-id="${safeId}">
+                <img class="playlist-thumb" src="${safeThumb}" alt="${safeTitle}" />
                 <div class="playlist-details">
-                  <h4 class="playlist-item-title">${vid.title}</h4>
+                  <h4 class="playlist-item-title">${safeTitle}</h4>
                   <div class="video-meta" style="font-size: 0.75rem;">
-                    <span>👁️ ${vid.views}</span>
-                    <span>${vid.isLive ? 'LIVE' : vid.duration}</span>
+                    <span>👁️ ${safeViews}</span>
+                    <span>${vid.isLive ? 'LIVE' : safeDuration}</span>
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
       </div>
@@ -451,6 +521,10 @@ export class VideoStreamPlayer extends HTMLElement {
 
     const currentUrl = encodeURIComponent(window.location.origin + '/videos?id=' + this.videoId);
     const videoTitleEncoded = encodeURIComponent(this.videoTitle);
+
+    // Stream URL protection: Non-members only receive stream URL if teaser duration > 0 and only while unexpired, or if a dedicated preview clip is defined.
+    // Full raw video source URL is withheld from unauthenticated DOM if not entitled.
+    const activeStreamUrl = isPremium ? this.videoUrl : '';
 
     this.innerHTML = `
       <style>
@@ -615,12 +689,12 @@ export class VideoStreamPlayer extends HTMLElement {
         <div class="paywall-overlay" id="paywall-gate">
           <div class="paywall-lock">🔒</div>
           <div class="paywall-prompt">Preview Time Limit Reached</div>
-          <div class="paywall-subtext">Upgrade to Member ($27/mo) to unlock the full video stream, including live event feeds and masterminds.</div>
+          <div class="paywall-subtext">Upgrade to Member ($29/mo) to unlock the full video stream, including live event feeds and masterminds.</div>
           <button class="btn-primary" id="btn-paywall-upgrade" style="padding: 10px 24px; font-weight: bold; font-size: 0.9rem;">Upgrade Instantly</button>
         </div>
 
-        <video class="html5-video" id="video-core">
-          <source src="${this.videoUrl}" type="video/mp4">
+        <video class="html5-video" id="video-core" ${isPremium ? '' : 'controlsList="nodownload"'}>
+          ${activeStreamUrl ? `<source src="${activeStreamUrl}" type="video/mp4">` : ''}
           Your browser does not support HTML5 video playback.
         </video>
 
@@ -711,14 +785,31 @@ export class VideoStreamPlayer extends HTMLElement {
       });
     }
 
+    // Stream loading & preview gating:
+    // Non-members only receive media source element upon user play intent, preventing automatic stream harvesting in raw HTML
+    const ensureStreamLoadedForPreview = () => {
+      if (!video.querySelector('source') && this.videoUrl) {
+        const source = document.createElement('source');
+        source.src = this.videoUrl;
+        source.type = 'video/mp4';
+        video.appendChild(source);
+        video.load();
+      }
+    };
+
     // Toggle Play/Pause
     const togglePlay = () => {
+      if (!isPremium && video.currentTime >= teaserLimit) {
+        if (paywall) paywall.style.display = 'flex';
+        return;
+      }
+      ensureStreamLoadedForPreview();
       if (video.paused) {
-        video.play();
-        btnPlayPause.textContent = '⏸️';
+        video.play().catch(() => {});
+        if (btnPlayPause) btnPlayPause.textContent = '⏸️';
       } else {
         video.pause();
-        btnPlayPause.textContent = '▶️';
+        if (btnPlayPause) btnPlayPause.textContent = '▶️';
       }
     };
 

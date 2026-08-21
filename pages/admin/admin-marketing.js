@@ -854,7 +854,7 @@ async function initGrapesJSEditor() {
   bm.add('pricing-table-component', {
     label: 'Pricing Table Component',
     category: 'Foundation Global Components',
-    content: '<pricing-table title="Core Membership" price="$27" period="/month"></pricing-table>'
+    content: '<pricing-table title="Core Membership" price="$29" period="/month"></pricing-table>'
   });
   bm.add('testimonial-slider-component', {
     label: 'Testimonial Slider Component',

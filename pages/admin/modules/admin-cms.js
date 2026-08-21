@@ -1,7 +1,7 @@
 // pages/admin/modules/admin-cms.js
 import { contentDB } from '../../../core/db.js';
 import { toast } from '../../../utils/toast.js';
-import { getAssetSplits, saveAssetSplits } from '../../../core/royalties.js';
+import { getAssetSplits, saveAssetSplits, DEFAULT_ADMIN_SPLIT } from '../../../core/royalties.js';
 import { configManager } from '../../../core/config.js';
 
 let currentEditingItem = null;
@@ -126,6 +126,17 @@ export function initAdminCms() {
             e.stopPropagation();
             toast.error(`Failed to save royalty splits: ${err.message}`);
             return;
+          }
+        } else {
+          // If no rows are present, revert asset splits to DEFAULT_ADMIN_SPLIT
+          const contentId = document.getElementById('content-id').value;
+          const contentType = document.getElementById('content-type').value;
+          if (contentId && contentType) {
+            try {
+              await saveAssetSplits(contentId, contentType, DEFAULT_ADMIN_SPLIT);
+            } catch (err) {
+              console.warn('[CMS Splits]: Reset to default split failed:', err.message);
+            }
           }
         }
       }, { capture: true });

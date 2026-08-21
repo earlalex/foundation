@@ -130,6 +130,8 @@ export class Router {
         await import('../pages/tag/tag.js');
       } else if (cleanPath === '/detail') {
         await import('../pages/detail/detail.js');
+      } else if (cleanPath === '/cart') {
+        await import('../pages/cart/cart.js');
       } else if (cleanPath === '/account') {
         await import('../pages/account.js');
       } else if (cleanPath === '/login') {
@@ -383,7 +385,7 @@ export class Router {
           return;
         }
         this.#isLoading = false;
-        sessionStorage.setItem('intended_destination', cleanPath);
+        sessionStorage.setItem('intended_destination', fullPath);
         await this.loadRoute('/login');
         return;
       }
@@ -504,7 +506,12 @@ export class Router {
       }
 
       this.updateMetadata(cleanPath);
-      this.appContainer.focus();
+      if (this.appContainer) {
+        if (this.appContainer.getAttribute('tabindex') !== '-1') {
+          this.appContainer.setAttribute('tabindex', '-1');
+        }
+        this.appContainer.focus();
+      }
 
       // Dispatch PUSH_HISTORY to store
       store.dispatch('PUSH_HISTORY', cleanPath);
@@ -538,6 +545,9 @@ export class Router {
         }
         const appContainer = document.getElementById('app');
         if (appContainer) {
+          if (appContainer.getAttribute('tabindex') !== '-1') {
+            appContainer.setAttribute('tabindex', '-1');
+          }
           appContainer.focus();
         }
       } catch (e) {

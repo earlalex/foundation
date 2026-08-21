@@ -2,7 +2,6 @@
 import { store } from '../../core/store.js';
 import { configManager } from '../../core/config.js';
 import { i18n } from '../../core/i18n.js';
-import { eventCart } from '../../utils/eventCart.js';
 
 export class AppNavbar extends HTMLElement {
   constructor() {
@@ -92,6 +91,7 @@ export class AppNavbar extends HTMLElement {
           display: flex;
           gap: 1.25rem;
           align-items: center;
+          flex-wrap: wrap;
           letter-spacing: 0.05em;
         }
         .hamburger-btn {
@@ -105,7 +105,7 @@ export class AppNavbar extends HTMLElement {
           justify-content: center;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           #utility-header {
             display: none !important;
           }
@@ -323,32 +323,19 @@ export class AppNavbar extends HTMLElement {
       }
     });
 
-    // Hook Cart Toggle click to toggle cart sidebar globally
+    // Hook Cart Toggle click to navigate directly to dedicated /cart SPA route
     const cartBtn = this.querySelector('#nav-cart-btn');
     if (cartBtn) {
-      cartBtn.onclick = () => {
-        const sidebar = document.getElementById('cart-sidebar');
-        if (sidebar) {
-          if (sidebar.style.right === '0px') {
-            sidebar.style.right = '-420px';
-            document.body.classList.remove('cart-drawer-open');
-          } else {
-            sidebar.style.right = '0px';
-            document.body.classList.add('cart-drawer-open');
-          }
-        } else {
-          // If we are not on /events, navigate to /events and open cart on load
-          window.sessionStorage.setItem('open_cart_on_load', 'true');
-          window.router?.navigateTo('/events');
-        }
+      cartBtn.onclick = (e) => {
+        e.preventDefault();
+        window.router?.navigateTo('/cart');
       };
     }
 
     // Reactive Cart Badge update
     const countBadge = this.querySelector('#cart-count-badge');
     if (countBadge) {
-      const summary = eventCart.getCartSummary();
-      const items = summary.items || state.cart?.items || [];
+      const items = state.cart?.items || [];
       const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
       countBadge.textContent = totalCount;

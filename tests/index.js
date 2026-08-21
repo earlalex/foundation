@@ -18,6 +18,7 @@ import { runHooksPluginsTests } from './hooks-plugins.test.js';
 import { runSparkTests } from './spark.test.js';
 import { runUiTests } from './ui.test.js';
 import { runMediaTests } from './media.test.js';
+import { runStripeProductCreateTests } from './stripe-product-create.test.js';
 
 /**
  * Main test runner that executes all Foundation Framework test suites
@@ -48,7 +49,8 @@ export async function runAllTests() {
     { name: 'System Hooks & Plugin Extensions Registry', runner: runHooksPluginsTests },
     { name: 'Gemini Spark COO Agent Operations', runner: runSparkTests },
     { name: 'UI Buttons & Interactive Controls', runner: runUiTests },
-    { name: 'Photo Gallery, Video Streaming & Radio Player', runner: runMediaTests }
+    { name: 'Photo Gallery, Video Streaming & Radio Player', runner: runMediaTests },
+    { name: 'Stripe Product Create Authorization & Token Verification', runner: runStripeProductCreateTests }
   ];
 
   for (const suite of testSuites) {
@@ -98,5 +100,6 @@ export {
   runWizardsTests,
   runHooksPluginsTests,
   runSparkTests,
-  runUiTests
+  runUiTests,
+  runStripeProductCreateTests
 };

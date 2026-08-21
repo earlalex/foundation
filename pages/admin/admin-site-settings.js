@@ -1394,6 +1394,20 @@ function launchFactoryResetModal() {
             </div>
           `;
           try {
+            // Purge local caches (LocalStorage, SessionStorage, IndexedDB)
+            localStorage.clear();
+            sessionStorage.clear();
+            try {
+              if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+                const dbs = await indexedDB.databases();
+                for (const db of dbs) {
+                  if (db.name) indexedDB.deleteDatabase(db.name);
+                }
+              }
+            } catch (idbErr) {
+              console.warn('[Factory Reset]: IndexedDB purge warning:', idbErr);
+            }
+
             await configManager.resetPlatform();
             toast.success("Platform has been factory reset successfully.");
             modal.remove();
@@ -1671,6 +1685,7 @@ function initFeatureTogglesEditor() {
 
     try {
       const updatedFeatures = {
+        ...(configManager.current.features || {}),
         chatWidget: document.getElementById('toggle-feat-chat').checked,
         webRadioPlayer: document.getElementById('toggle-feat-radio').checked,
         videoPortal: document.getElementById('toggle-feat-video').checked,
@@ -1689,19 +1704,36 @@ function initFeatureTogglesEditor() {
       if (success) {
         toast.success("Feature toggles and module bypass settings saved successfully!");
 
-        // Immediately apply state changes (e.g. remove radio player if disabled)
+        // Immediately apply state changes (e.g. mount or unmount radio player & chat widget)
         if (!updatedFeatures.webRadioPlayer) {
           const radioPlayer = document.querySelector('radio-stream-player');
           if (radioPlayer) {
             radioPlayer.style.display = 'none';
             radioPlayer.remove();
           }
+        } else {
+          let radioPlayer = document.querySelector('radio-stream-player');
+          if (!radioPlayer) {
+            radioPlayer = document.createElement('radio-stream-player');
+            document.body.appendChild(radioPlayer);
+          } else {
+            radioPlayer.style.display = 'block';
+          }
         }
+
         if (!updatedFeatures.chatWidget) {
           const chatWidget = document.querySelector('chat-widget');
           if (chatWidget) {
             chatWidget.style.display = 'none';
             chatWidget.remove();
+          }
+        } else {
+          let chatWidget = document.querySelector('chat-widget');
+          if (!chatWidget) {
+            chatWidget = document.createElement('chat-widget');
+            document.body.appendChild(chatWidget);
+          } else {
+            chatWidget.style.display = 'block';
           }
         }
       } else {

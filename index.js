@@ -217,7 +217,7 @@ async function boot() {
     '/docs': {
       template: './pages/docs/docs.html',
       controller: './pages/docs/docs.js',
-      title: 'Platform Documentation & Setup Guide | Foundation',
+      title: 'Platform Documentation & Setup Guide',
       viewPath: './pages/docs/docs.html'
     },
     '/about': {
@@ -260,6 +260,11 @@ async function boot() {
       description: 'Log in to your Foundation account portal.',
       viewPath: './pages/login.html'
     },
+    '/cart': {
+      title: 'Shopping Cart & Secure Checkout | Foundation',
+      description: 'Review your items, enter shipping details, and complete your purchase securely.',
+      viewPath: './pages/cart/cart.html'
+    },
     '/account': {
       title: 'Customer Dashboard',
       description: 'Manage your unlocked premium publications and subscription billing.',
@@ -286,17 +291,17 @@ async function boot() {
       viewPath: './pages/tag/tag.html'
     },
     '/privacy': {
-      title: 'Privacy Policy | Foundation',
+      title: 'Privacy Policy',
       description: 'Platform Privacy Policy and Data Safeguards.',
       viewPath: './pages/legal/privacy.html'
     },
     '/terms': {
-      title: 'Terms of Service | Foundation',
+      title: 'Terms of Service',
       description: 'Platform Terms of Service and Usage Agreement.',
       viewPath: './pages/legal/terms.html'
     },
     '/cookies': {
-      title: 'Cookie Settings & Preferences | Foundation',
+      title: 'Cookie Settings & Preferences',
       description: 'Manage cookie preferences and tracking consent.',
       viewPath: './pages/legal/cookies.html'
     },
@@ -422,10 +427,25 @@ window.addEventListener('pageLoaded', (e) => {
   const isConfigured = configManager.current.isInstalled === true;
   if (!isConfigured && !window.__FOUNDATION_DEV_BYPASS__) return;
 
+  // Execute active route cleanup if previously registered
+  if (window.__FOUNDATION_ROUTE_CLEANUP__) {
+    try {
+      window.__FOUNDATION_ROUTE_CLEANUP__();
+    } catch (cleanupErr) {
+      console.warn('[Router Cleanup Error]:', cleanupErr);
+    }
+    window.__FOUNDATION_ROUTE_CLEANUP__ = null;
+  }
+
   if (e.detail.path === '/home') {
     initHomePage();
   } else if (e.detail.path === '/docs') {
-    import('./pages/docs/docs.js').then(m => m.initDocsPage());
+    import('./pages/docs/docs.js').then(m => {
+      const cleanup = m.initDocsPage();
+      if (typeof cleanup === 'function') {
+        window.__FOUNDATION_ROUTE_CLEANUP__ = cleanup;
+      }
+    });
   } else if (e.detail.path === '/about') {
     import('./pages/about/about.js').then(m => m.initAboutPage());
   } else if (e.detail.path === '/gallery') {
@@ -446,6 +466,8 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/detail/detail.js').then(m => m.initDetailPage());
   } else if (e.detail.path === '/admin') {
     import('./pages/admin/admin.js').then(m => m.initAdminPage());
+  } else if (e.detail.path === '/cart') {
+    import('./pages/cart/cart.js').then(m => m.initCartPage());
   } else if (e.detail.path === '/account') {
     import('./pages/account.js').then(m => m.initAccountPage());
   } else if (e.detail.path === '/login') {

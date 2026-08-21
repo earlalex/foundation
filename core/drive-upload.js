@@ -119,6 +119,16 @@ export async function pushToLastPass(metadata) {
     await contentDB.saveVaultCredential(record);
     console.log(`[LastPass Bridge]: Saved note for "${metadata.name}" to vault_credentials.`);
 
+    // Automatically sync corporate binder note to Google Workspace Password Vault
+    if (googleAccessToken) {
+      try {
+        const { syncCredentialToGoogleVault } = await import('../utils/backend-google.js');
+        await syncCredentialToGoogleVault(googleAccessToken, record);
+      } catch (vaultErr) {
+        console.warn('[Workspace Vault Sync]: Dynamic vault sync warning:', vaultErr.message);
+      }
+    }
+
     if (isLpConfigured) {
       const payload = {
         action: "add_note",
@@ -307,7 +317,15 @@ export async function uploadFileToDrive(file) {
       body: formData
     });
 
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(`Google Drive API returned HTTP ${response.status}: ${errData.error?.message || 'Upload failed'}`);
+    }
+
     const result = await response.json();
+    if (!result || !result.id) {
+      throw new Error('Google Drive API response missing file ID');
+    }
 
     // Make individual file publicly readable, EXCEPT for corporate binder / private documents
     if (!isCorporateBinder) {

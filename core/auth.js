@@ -281,7 +281,9 @@ export class AuthManager {
       toast.success(`Welcome back, ${user.displayName || user.email}!`);
 
       // Navigate to account or destination route
-      window.router.navigateTo('/account');
+      const intendedDest = sessionStorage.getItem('intended_destination');
+      sessionStorage.removeItem('intended_destination');
+      window.router.navigateTo(intendedDest || '/account');
     } catch (err) {
       console.warn('[Auth Core]: Google OAuth popup error / closed by user:', err);
       throw err;
@@ -356,6 +358,9 @@ export class AuthManager {
   async logout() {
     try {
       window.__FOUNDATION_DEV_BYPASS__ = false;
+      try {
+        localStorage.removeItem('foundation_chat_history');
+      } catch (e) {}
       await signOut(auth);
       store.dispatch('LOGOUT');
       if (window.router) {

@@ -5,7 +5,7 @@ import { FormValidator } from '../../utils/validation.js';
 import { errorHandler } from '../../core/error-handler.js';
 import { uploadFileToDrive } from '../../core/drive-upload.js';
 import { stripeService } from '../../core/stripe.js';
-import { getAssetSplits, saveAssetSplits } from '../../core/royalties.js';
+import { getAssetSplits, saveAssetSplits, DEFAULT_ADMIN_SPLIT } from '../../core/royalties.js';
 
 let selectedCourse = null;
 let grapesLessonEditor = null;
@@ -354,10 +354,9 @@ export function initProductsTab() {
 
       await contentDB.saveContent(productData);
 
-      // Save splits if configured
-      if (splits.length > 0) {
-        await saveAssetSplits(productId, 'merchandise', splits);
-      }
+      // Save splits if configured, or revert to default admin split if all contributor rows were removed
+      const splitsToSave = splits.length > 0 ? splits : DEFAULT_ADMIN_SPLIT;
+      await saveAssetSplits(productId, 'merchandise', splitsToSave);
 
       toast.success(editingProductId ? 'Product details & royalty splits updated successfully!' : 'Product created successfully and synced with Stripe!');
       
@@ -970,7 +969,10 @@ export function initProductsTab() {
 
         for (const p of sampleProducts) {
           const imgUrl = await generateProductMockup(p.title, p.category);
-          const productId = 'product_test_' + Math.floor(Math.random() * 10000);
+          const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID().replace(/-/g, '').substring(0, 12)
+            : Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          const productId = 'product_test_' + uniqueId;
 
           await contentDB.saveContent({
             type: 'product',

@@ -3,6 +3,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/fir
 import { auth } from './auth.js';
 import { errorHandler } from './error-handler.js';
 import { configManager } from './config.js';
+import { toast } from '../utils/toast.js';
 
 let googleAccessToken = null;
 
@@ -21,10 +22,31 @@ export async function authenticateGoogleServices() {
   try {
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    googleAccessToken = credential.accessToken;
+    googleAccessToken = credential?.accessToken || null;
     console.log('[Google Services]: Access token acquired successfully.');
     return googleAccessToken;
   } catch (err) {
+    const errStr = String(err?.message || err?.code || '').toLowerCase();
+    const isPopupClosed = 
+      err.code === 'auth/popup-closed-by-user' ||
+      errStr.includes('popup-closed-by-user') ||
+      errStr.includes('cancelled-popup-request') ||
+      errStr.includes('cross-origin') ||
+      errStr.includes('coop') ||
+      errStr.includes('opener') ||
+      errStr.includes('window.close') ||
+      errStr.includes('window.closed') ||
+      errStr.includes('popup') ||
+      errStr.includes('blocked');
+
+    if (isPopupClosed) {
+      console.warn('[Google Services]: OAuth popup closed, blocked, or COOP window notice handled:', err.message || err);
+      toast.warning('Google sign-in popup was closed, blocked, or interrupted. Please try again.', 5000, { isActionable: true });
+      return googleAccessToken || null;
+    }
+
+    console.error('[Google Services]: OAuth error:', err);
+    toast.error('Google authorization failed: ' + (err.message || 'Unknown error'), 5000, { isActionable: true });
     errorHandler.handleError(new Error(`Google Services OAuth Failed: ${err.message}`));
     return null;
   }
@@ -370,7 +392,7 @@ export async function sendBulkGmail({ recipientList, subject, messageBody }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                       4. GOOGLE SEARCH CONSOLE ENGINE                       */
+/*                       4. GOOGLE SEARCH CONSOLE ENGINE                      */
 /* -------------------------------------------------------------------------- */
 export async function getSearchConsolePerformance(siteUrl) {
   const token = await getAccessToken(false);
@@ -501,7 +523,7 @@ export async function getSearchConsoleSecurityIssues() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                         5. GOOGLE ANALYTICS (GA4) ENGINE                    */
+/*                         5. GOOGLE ANALYTICS (GA4) ENGINE                   */
 /* -------------------------------------------------------------------------- */
 export async function getAnalyticsOverview(propertyIdOverride, dateRange = '30daysAgo') {
   const token = await getAccessToken(false);
@@ -557,7 +579,6 @@ export async function fetchSeoMyRankAddr(domain) {
   const apiKey = seoCfg.apiKey || "E4462175E8369240D133B6C4F3CD288C";
   const cost = Number(seoCfg.costPerRequest) || 0.01;
 
-  // Increment tracking
   seoCfg.requestCount = (Number(seoCfg.requestCount) || 0) + 1;
   seoCfg.totalSpent = (Number(seoCfg.totalSpent) || 0) + cost;
   await configManager.saveToFirebase({
@@ -603,21 +624,14 @@ export async function fetchSeoMyRankAddr(domain) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                 7. GOOGLE PAGESPEED / LIGHTHOUSE AUDIT ENGINE              */
+/*                  7. GOOGLE PAGESPEED / LIGHTHOUSE AUDIT ENGINE              */
 /* -------------------------------------------------------------------------- */
 
-// Rate limiting and caching for PageSpeed API
 const PAGE_SPEED_CACHE_KEY = 'foundation_pagespeed_cache';
 const PAGE_SPEED_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 const PAGE_SPEED_RATE_LIMIT_DELAY = 2000; // 2 seconds between requests
 let lastPageSpeedRequestTime = 0;
 
-/**
- * Get cached PageSpeed results if available and not expired
- * @param {string} url - URL to check cache for
- * @param {string} strategy - Strategy (mobile/desktop)
- * @returns {Object|null} Cached results or null
- */
 function getCachedPageSpeedResults(url, strategy) {
   try {
     const cache = JSON.parse(localStorage.getItem(PAGE_SPEED_CACHE_KEY) || '{}');
@@ -634,12 +648,6 @@ function getCachedPageSpeedResults(url, strategy) {
   return null;
 }
 
-/**
- * Cache PageSpeed results
- * @param {string} url - URL being audited
- * @param {string} strategy - Strategy (mobile/desktop)
- * @param {Object} data - Results to cache
- */
 function cachePageSpeedResults(url, strategy, data) {
   try {
     const cache = JSON.parse(localStorage.getItem(PAGE_SPEED_CACHE_KEY) || '{}');
@@ -654,10 +662,6 @@ function cachePageSpeedResults(url, strategy, data) {
   }
 }
 
-/**
- * Wait for rate limit delay
- * @returns {Promise<void>}
- */
 async function waitForRateLimit() {
   const now = Date.now();
   const timeSinceLastRequest = now - lastPageSpeedRequestTime;
@@ -674,7 +678,6 @@ async function waitForRateLimit() {
 export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-  // Local Dual Mode: run native Web Vitals and Performance measurement if testing on localhost
   if (isLocalhost) {
     console.log('[Lighthouse Engine]: Running local timing metrics session (Local Host bypass).');
     const [paint] = performance.getEntriesByType('paint');
@@ -706,13 +709,11 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
 
   const urlToAudit = targetUrl || window.location.href;
   
-  // Check cache first
   const cachedResults = getCachedPageSpeedResults(urlToAudit, strategy);
   if (cachedResults) {
     return cachedResults;
   }
 
-  // Apply rate limiting
   await waitForRateLimit();
 
   const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(urlToAudit)}&strategy=${strategy}&category=performance&category=accessibility&category=best-practices&category=seo`;
@@ -750,18 +751,14 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
         ]
       };
 
-      // Cache the results
       cachePageSpeedResults(urlToAudit, strategy, results);
-      
       return results;
     } else if (response.status === 429) {
       console.warn('[Lighthouse Engine]: Rate limit exceeded (429). Using fallback data.');
-      // Return cached data if available, even if expired
       const staleCache = getCachedPageSpeedResults(urlToAudit, strategy);
       if (staleCache) {
         return staleCache;
       }
-      // Fallback to default values
       return getFallbackLighthouseResults(strategy);
     } else {
       console.warn('[Lighthouse Engine]: API error', response.status, response.statusText);
@@ -773,11 +770,6 @@ export async function runLighthouseAudit(targetUrl, strategy = 'mobile') {
   }
 }
 
-/**
- * Get fallback Lighthouse results when API is unavailable
- * @param {string} strategy - Strategy being used
- * @returns {Object} Fallback results
- */
 function getFallbackLighthouseResults(strategy) {
   console.log('[Lighthouse Engine]: Using fallback results for', strategy);
   return {

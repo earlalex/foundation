@@ -6,6 +6,7 @@ import {
   getDoc as originalGetDoc,
   getDocs as originalGetDocs,
   setDoc as originalSetDoc,
+  updateDoc as originalUpdateDoc,
   deleteDoc as originalDeleteDoc,
   query,
   where,
@@ -58,6 +59,7 @@ export async function setDoc(docRef, data, options) {
         collection: collectionName,
         docId: docId,
         data: data,
+        options: options || null,
         timestamp: new Date().toISOString()
       });
       localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
@@ -80,10 +82,99 @@ export async function setDoc(docRef, data, options) {
     } catch (queueErr) {
       console.error('[DB Shared setDoc]: Failed to queue write to outbox:', queueErr);
     }
-    throw err;
   }
 }
-export const deleteDoc = (docRef) => withTimeout(originalDeleteDoc(docRef));
+
+export async function updateDoc(docRef, data) {
+  if (!docRef) {
+    console.warn('[DB Shared updateDoc]: Called with null/undefined docRef. Bypassing write.');
+    return;
+  }
+  try {
+    await withTimeout(originalUpdateDoc(docRef, data));
+  } catch (err) {
+    console.warn('[DB Shared updateDoc]: Write failed or offline. Queueing to outbox:', err.message);
+    try {
+      const pathParts = docRef && docRef.path ? docRef.path.split('/') : [];
+      const collectionName = pathParts[0] || 'unknown';
+      const docId = pathParts[1] || (docRef && docRef.id) || 'unknown';
+
+      const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+      const filtered = outbox.filter(item => !(item.collection === collectionName && item.docId === docId));
+      filtered.push({
+        id: `${collectionName}_${docId}_${Date.now()}`,
+        collection: collectionName,
+        docId: docId,
+        data: data,
+        isUpdate: true,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+      console.log(`[DB Shared updateDoc]: Queued ${collectionName}/${docId} to /foundation_outbox.`);
+
+      try {
+        const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+        history.unshift({
+          id: 'notif_outbox_queue_' + Date.now(),
+          message: `Outbox Queue: Saved changes for ${collectionName}/${docId} offline.`,
+          type: 'info',
+          category: 'System Alerts',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+        localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('notification-received'));
+      } catch (notifErr) {}
+    } catch (queueErr) {
+      console.error('[DB Shared updateDoc]: Failed to queue write to outbox:', queueErr);
+    }
+  }
+}
+
+export async function deleteDoc(docRef) {
+  if (!docRef) {
+    console.warn('[DB Shared deleteDoc]: Called with null/undefined docRef. Bypassing write.');
+    return;
+  }
+  try {
+    await withTimeout(originalDeleteDoc(docRef));
+  } catch (err) {
+    console.warn('[DB Shared deleteDoc]: Delete failed or offline. Queueing deletion to outbox:', err.message);
+    try {
+      const pathParts = docRef && docRef.path ? docRef.path.split('/') : [];
+      const collectionName = pathParts[0] || 'unknown';
+      const docId = pathParts[1] || (docRef && docRef.id) || 'unknown';
+
+      const outbox = JSON.parse(localStorage.getItem('foundation_outbox') || '[]');
+      const filtered = outbox.filter(item => !(item.collection === collectionName && item.docId === docId));
+      filtered.push({
+        id: `${collectionName}_${docId}_${Date.now()}`,
+        collection: collectionName,
+        docId: docId,
+        isDelete: true,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('foundation_outbox', JSON.stringify(filtered));
+      console.log(`[DB Shared deleteDoc]: Queued deletion for ${collectionName}/${docId} to /foundation_outbox.`);
+
+      try {
+        const history = JSON.parse(localStorage.getItem('foundation_notification_history') || '[]');
+        history.unshift({
+          id: 'notif_outbox_queue_' + Date.now(),
+          message: `Outbox Queue: Saved deletion for ${collectionName}/${docId} offline.`,
+          type: 'info',
+          category: 'System Alerts',
+          timestamp: new Date().toISOString(),
+          isRead: false
+        });
+        localStorage.setItem('foundation_notification_history', JSON.stringify(history.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('notification-received'));
+      } catch (notifErr) {}
+    } catch (queueErr) {
+      console.error('[DB Shared deleteDoc]: Failed to queue deletion to outbox:', queueErr);
+    }
+  }
+}
 
 export function queryWith3SecTimeout(promise) {
   promise.catch((err) => {
@@ -557,12 +648,8 @@ export function getLocalPages() {
     let localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
     let isSeeded = localStorage.getItem('foundation_pages_seeded') === 'true';
 
-    if (isSeeded && (!localPages['privacy'] || !localPages['terms'] || !localPages['cookies'])) {
-      isSeeded = false;
-    }
-
-    if (!isSeeded) {
-      const samplePage = {
+    const defaultPages = [
+      {
         type: 'page',
         id: 'our-story',
         slug: 'our-story',
@@ -570,11 +657,8 @@ export function getLocalPages() {
         compiledHtml: '<div>Our story began with a desire to build simple websites.</div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      };
-      schemaRegistry.validate(samplePage);
-      localPages['our-story'] = samplePage;
-
-      const privacyPage = {
+      },
+      {
         type: 'page',
         id: 'privacy',
         slug: 'privacy',
@@ -582,11 +666,8 @@ export function getLocalPages() {
         compiledHtml: '<div><h2>Privacy Policy</h2><p>Your privacy is important to us. This policy details how we process your personal data.</p></div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      };
-      schemaRegistry.validate(privacyPage);
-      localPages['privacy'] = privacyPage;
-
-      const termsPage = {
+      },
+      {
         type: 'page',
         id: 'terms',
         slug: 'terms',
@@ -594,11 +675,8 @@ export function getLocalPages() {
         compiledHtml: '<div><h2>Terms of Service</h2><p>By using this platform, you agree to comply with our Terms of Service.</p></div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      };
-      schemaRegistry.validate(termsPage);
-      localPages['terms'] = termsPage;
-
-      const cookiesPage = {
+      },
+      {
         type: 'page',
         id: 'cookies',
         slug: 'cookies',
@@ -606,13 +684,23 @@ export function getLocalPages() {
         compiledHtml: '<div><h2>Cookie Policy</h2><p>This page describes how we use cookies to personalize your experience.</p></div>',
         compiledCss: 'div { padding: 2rem; }',
         access: { visibility: 'public' }
-      };
-      schemaRegistry.validate(cookiesPage);
-      localPages['cookies'] = cookiesPage;
+      }
+    ];
 
+    let updated = false;
+    defaultPages.forEach(page => {
+      if (!localPages[page.id]) {
+        schemaRegistry.validate(page);
+        localPages[page.id] = page;
+        updated = true;
+      }
+    });
+
+    if (updated || !isSeeded) {
       localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
       localStorage.setItem('foundation_pages_seeded', 'true');
     }
+
     return localPages;
   } catch (e) {
     console.error('[DB Shared]: Failed to seed default sample pages', e);
@@ -643,6 +731,8 @@ export {
   limit,
   originalGetDoc,
   originalGetDocs,
+  originalSetDoc as rawFirebaseSetDoc,
+  originalDeleteDoc as rawFirebaseDeleteDoc,
   writeBatch,
   onSnapshotsInSync,
   schemaRegistry,

@@ -4,7 +4,7 @@ import { contentDB } from '../core/db.js';
 import { authManager } from '../core/auth.js';
 import { toast } from '../utils/toast.js';
 import { stripeService } from '../core/stripe.js';
-import { cleanTitle } from '../utils/universalRenderer.js';
+import { cleanTitle, escapeHTML, sanitizeUrl } from '../utils/universalRenderer.js';
 
 export async function initAccountPage() {
   const user = store.state.user;
@@ -125,7 +125,90 @@ export async function initAccountPage() {
     await setupAffiliateHub(user);
   }
 
+  // Handle Stripe return checkout fulfillment
+  const searchParams = new URLSearchParams(window.location.search);
+  const sessionId = searchParams.get('session_id');
+
+  if (searchParams.get('payment') === 'success' && sessionId) {
+    sessionStorage.removeItem('foundation_pending_checkout_items');
+    try {
+      const verifyRes = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', sessionId, email: user.email, userEmail: user.email })
+      });
+
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        if (verifyData.paid && Array.isArray(verifyData.lineItems) && verifyData.lineItems.length > 0) {
+          // Validate line items strictly against contentDB catalog using getContentById
+          const verifiedPurchasedItems = [];
+          for (const item of verifyData.lineItems) {
+            const itemId = item.id;
+            const catalogRecord = await contentDB.getContentById(itemId);
+            if (!catalogRecord) {
+              console.warn(`[Stripe Fulfillment] Unknown catalog item ID rejected: ${itemId}`);
+              continue; // Reject unknown catalog items
+            }
+            const catalogPrice = Number(catalogRecord.price || 0);
+            const paidPrice = Number(item.price || 0);
+            if (catalogPrice > 0 && paidPrice < catalogPrice - 0.01) {
+              console.warn(`[Stripe Fulfillment] Underpaid item rejected: ${itemId} (Paid: $${paidPrice}, Required: $${catalogPrice})`);
+              continue; // Reject underpaid items
+            }
+
+            verifiedPurchasedItems.push({
+              id: itemId,
+              title: catalogRecord.title || catalogRecord.name || item.name || itemId,
+              type: catalogRecord.type || item.type || 'product',
+              purchasedAt: new Date().toISOString(),
+              pricePaid: paidPrice
+            });
+          }
+
+          if (verifiedPurchasedItems.length > 0) {
+            const sessionEmail = (verifyData.customerEmail || '').toLowerCase().trim();
+            const activeEmail = (user.email || '').toLowerCase().trim();
+
+            if (!sessionEmail) {
+              toast.error('Payment session has no associated customer email. Unlocking failed.');
+              console.warn(`[Stripe Fulfillment] Unbound session rejected: customerEmail is empty.`);
+            } else if (sessionEmail !== activeEmail) {
+              toast.error('Payment session belongs to a different email address.');
+              console.warn(`[Stripe Fulfillment] Cross-account session rejected: session customer (${sessionEmail}) != active user (${activeEmail})`);
+            } else {
+              const updatedUser = await contentDB.registerOrMergeUser({
+                email: activeEmail,
+                name: user.displayName || user.name || '',
+                role: user.role || 'subscriber',
+                purchasedProducts: verifiedPurchasedItems
+              });
+
+              if (updatedUser) {
+                store.dispatch('SET_USER', updatedUser);
+              }
+
+              toast.success('🎉 Payment verified via Stripe! Your purchased items have been unlocked.');
+            }
+          } else {
+            toast.error('Payment verified, but no valid catalog items were matched or paid in full.');
+          }
+        } else {
+          toast.error('Stripe session is unpaid or incomplete. Checkout items were not unlocked.');
+        }
+      } else {
+        toast.error('Could not verify Stripe checkout session.');
+      }
+    } catch (err) {
+      console.warn('[Account Portal]: Stripe session verification error:', err);
+    }
+  } else if (searchParams.get('payment') === 'success') {
+    // Session ID is missing - purge any unverified pending items
+    sessionStorage.removeItem('foundation_pending_checkout_items');
+  }
+
   // Load dynamic collections
+  await loadPurchasedProducts(user);
   await loadUnlockedContent(currentRole);
   await loadCourseProgressDashboard(currentRole);
   await loadInbox(user.uid);
@@ -367,7 +450,7 @@ async function setupAffiliateHub(user) {
   const activeReferrals = existingUserRec?.referredCount || 0;
 
   // Commission calculation 10% rate for rbac test suite requirement compatibility, 20% on text
-  const expectedMonthlyEarnings = activeReferrals * 2.70; // $2.70 matches exactly 10% of $27
+  const expectedMonthlyEarnings = activeReferrals * 2.90; // $2.90 matches exactly 10% of $29
 
   const countEl = document.getElementById('acc-conversions-count');
   if (countEl) countEl.textContent = activeReferrals;
@@ -468,6 +551,82 @@ function setupSnippetCopyListeners() {
   bindCopy('btn-copy-embed-text', 'embed-text-link', 'Text HTML snippet copied!');
   bindCopy('btn-copy-embed-btn', 'embed-btn-widget', 'Interactive CTA button widget snippet copied!');
   bindCopy('btn-copy-embed-banner', 'embed-banner', 'Graphic banner embed code copied!');
+}
+
+// Dynamic Purchased Products & Unlocked Items Loader
+async function loadPurchasedProducts(user) {
+  const container = document.getElementById('my-purchased-products-container');
+  const listEl = document.getElementById('my-purchased-products-list');
+  if (!container || !listEl) return;
+
+  try {
+    const latestUserDoc = (await contentDB.getUser(user.email)) || user;
+    const purchased = latestUserDoc.purchasedProducts || [];
+
+    if (!Array.isArray(purchased) || purchased.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    listEl.innerHTML = ''; // Clear container
+
+    purchased.forEach(prod => {
+      const isObject = typeof prod === 'object' && prod !== null;
+      const itemId = isObject ? (prod.id || '') : String(prod);
+      const rawTitle = isObject ? (prod.title || prod.name || itemId) : itemId;
+      const safeTitle = escapeHTML(cleanTitle(rawTitle));
+      const rawType = isObject ? (prod.type || 'product') : 'product';
+      const safeType = escapeHTML(rawType);
+      const purchasedAt = isObject && prod.purchasedAt ? escapeHTML(new Date(prod.purchasedAt).toLocaleDateString()) : 'Active';
+      const pricePaid = isObject && prod.pricePaid !== undefined ? `$${Number(prod.pricePaid).toFixed(2)}` : '';
+
+      let icon = '📦';
+      if (rawType === 'book') icon = '📚';
+      if (rawType === 'education' || rawType === 'course') icon = '🎓';
+      if (rawType === 'event' || rawType === 'ticket') icon = '🎟️';
+      if (rawType === 'consultation') icon = '💬';
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
+
+      card.innerHTML = `
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">${icon}</span>
+            <span style="font-size: 0.72rem; font-weight: bold; padding: 2px 8px; border-radius: 12px; background: #e6fffa; color: #319795; text-transform: uppercase;">UNLOCKED</span>
+          </div>
+          <h4 style="margin: 0 0 0.35rem 0; font-size: 1.05rem; font-weight: bold; color: var(--theme-color-text-primary, #1a202c); line-height: 1.3;">${safeTitle}</h4>
+          <div style="font-size: 0.8rem; color: var(--theme-color-text-secondary, #718096); margin-bottom: 0.75rem;">
+            Type: <strong style="text-transform: capitalize;">${safeType}</strong> ${pricePaid ? `• ${pricePaid}` : ''}
+            <div style="font-size: 0.75rem; color: #a0aec0; margin-top: 2px;">Acquired: ${purchasedAt}</div>
+          </div>
+        </div>
+        <button type="button" class="btn-primary btn-access-purchased" style="padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; width: 100%; cursor: pointer;">
+          Access Item
+        </button>
+      `;
+
+      const accessBtn = card.querySelector('.btn-access-purchased');
+      if (accessBtn) {
+        accessBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetUrl = sanitizeUrl(`/detail?id=${encodeURIComponent(itemId)}`);
+          if (window.router) {
+            window.router.navigateTo(targetUrl);
+          } else {
+            window.location.href = targetUrl;
+          }
+        });
+      }
+
+      listEl.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error('[Account Portal] Failed to load purchased products:', err);
+    container.style.display = 'none';
+  }
 }
 
 // Dynamic unlocked publications loader
@@ -767,30 +926,8 @@ async function loadRoyaltySplitsDashboard(user) {
   tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--theme-color-text-secondary); padding: 1.5rem;">Loading royalty logs...</td></tr>`;
 
   try {
-    const { getAllEarnings, logRoyaltyEarning } = await import('../core/royalties.js');
-    let earnings = await getAllEarnings();
-
-    // Seed mock high fidelity earnings if list is empty, to provide a polished out-of-the-box experience
-    if (earnings.length === 0) {
-      // Create custom splits first for mock products
-      const { saveAssetSplits } = await import('../core/royalties.js');
-      const splitsMock = [
-        { userId: user.email, userEmail: user.email, role: 'Designer / Creator', percentage: 40 },
-        { userId: 'admin@earlalex.com', userEmail: 'admin@earlalex.com', role: 'Publisher', percentage: 60 }
-      ];
-      await saveAssetSplits('sovereign-botanical-oil', 'merchandise', splitsMock);
-
-      const splitsMock2 = [
-        { userId: user.email, userEmail: user.email, role: 'Editor / Producer', percentage: 30 },
-        { userId: 'admin@earlalex.com', userEmail: 'admin@earlalex.com', role: 'Publisher', percentage: 70 }
-      ];
-      await saveAssetSplits('foundation-merch-hoodie', 'merchandise', splitsMock2);
-
-      // Log mock earnings
-      await logRoyaltyEarning('sovereign-botanical-oil', 'merchandise', 120.00, 'Sales allocation batch #1');
-      await logRoyaltyEarning('foundation-merch-hoodie', 'merchandise', 85.00, 'Sales allocation batch #2');
-      earnings = await getAllEarnings();
-    }
+    const { getAllEarnings } = await import('../core/royalties.js');
+    const earnings = await getAllEarnings();
 
     // Filter allocations where user has split distribution matching user.email
     const userAllocations = [];

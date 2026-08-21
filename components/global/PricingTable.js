@@ -2,7 +2,7 @@
 export class PricingTable extends HTMLElement {
   connectedCallback() {
     const title = this.getAttribute('title') || 'Enterprise Access';
-    const price = this.getAttribute('price') || '$27';
+    const price = this.getAttribute('price') || '$29';
     const period = this.getAttribute('period') || '/month';
     const desc = this.getAttribute('description') || 'Unrestricted backoffice tools, automated pipelines & visual editors.';
 

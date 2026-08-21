@@ -1,7 +1,7 @@
 // core/db-users.js
 import {
-  getFirestoreDB, doc, getDoc, getDocs, setDoc, deleteDoc, collection, query, where, limit,
-  queryWith3SecTimeout, USERS_COLLECTION
+  getFirestoreDB, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, limit,
+  queryWith3SecTimeout, withTimeout, USERS_COLLECTION
 } from './db-shared.js';
 
 export async function getAllUsers() {
@@ -24,30 +24,53 @@ export async function getAllUsers() {
 }
 
 export async function saveUser(userData) {
-  const userId = userData.id || userData.email.replace(/[@.]/g, '_');
+  const userId = userData.id || (userData.email ? userData.email.replace(/[@.]/g, '_') : `user_${Date.now()}`);
+
+  // ePHI Encryption at Rest Guard: Encrypt sensitive PHI fields using AES-GCM 256-bit
+  let encryptedUserData = { ...userData };
+  const phiKeys = ['ephi', 'phi', 'medicalHistory', 'sensitiveNotes'];
+  for (const key of phiKeys) {
+    if (userData[key] && typeof userData[key] === 'string' && !userData[key].cipherText) {
+      try {
+        const { encryptPHIRecord } = await import('../utils/hipaa-audit.js');
+        encryptedUserData[key] = await encryptPHIRecord(userData[key]);
+      } catch (encErr) {
+        console.error('[ePHI Guard]: AES-GCM 256-bit encryption failed:', encErr.message);
+        throw new Error(`ePHI encryption failed for field "${key}". Persistence aborted to prevent storing unencrypted PHI.`);
+      }
+    }
+  }
+
   const payload = {
-    ...userData,
+    ...encryptedUserData,
     id: userId,
     updatedAt: new Date().toISOString()
   };
 
+  // Log to immutable HIPAA audit trail
+  try {
+    const { logHipaaAccess } = await import('../utils/hipaa-audit.js');
+    await logHipaaAccess('WRITE', userId, 'SUCCESS', { notes: `Saved user record for ${userData.email || userId}` });
+  } catch (auditErr) {
+    console.warn('[HIPAA Audit]: Audit log queue warning:', auditErr.message);
+  }
+
+  // Local-First: Persist to LocalStorage immediately
+  const local = getLocalUsers();
+  local[userId] = payload;
+  saveLocalUsers(local);
+
   const db = getFirestoreDB();
   if (!db) {
-    const local = getLocalUsers();
-    local[userId] = payload;
-    saveLocalUsers(local);
     return payload;
   }
 
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
-    await setDoc(docRef, payload, { merge: true });
+    await withTimeout(setDoc(docRef, payload, { merge: true }), 1500);
     return payload;
   } catch (err) {
-    console.warn('[DB]: Firestore user save error. Falling back to LocalStorage.', err.message);
-    const local = getLocalUsers();
-    local[userId] = payload;
-    saveLocalUsers(local);
+    console.warn('[DB]: Firestore user save error or timeout. Saved locally.', err.message);
     return payload;
   }
 }
@@ -87,7 +110,16 @@ export async function registerOrMergeUser(userData) {
     // Merge arrays (newsletter tags, registered events, purchased products)
     const mergedConsents = { ...(primaryUser.consents || {}), ...(userData.consents || {}) };
     const mergedEvents = Array.from(new Set([...(primaryUser.registeredEvents || []), ...(userData.registeredEvents || [])]));
-    const mergedProducts = Array.from(new Set([...(primaryUser.purchasedProducts || []), ...(userData.purchasedProducts || [])]));
+
+    // Deduplicate purchasedProducts cleanly across strings and objects by item ID
+    const existingProducts = primaryUser.purchasedProducts || [];
+    const newProducts = userData.purchasedProducts || [];
+    const productMap = new Map();
+    [...existingProducts, ...newProducts].forEach(p => {
+      const key = typeof p === 'string' ? p : (p?.id || JSON.stringify(p));
+      productMap.set(key, p);
+    });
+    const mergedProducts = Array.from(productMap.values());
 
     const updatedUser = {
       ...primaryUser,
@@ -115,29 +147,26 @@ export async function getUser(userId) {
 }
 
 export async function deleteUser(userId) {
+  const local = getLocalUsers();
+  delete local[userId];
+  saveLocalUsers(local);
+
   const db = getFirestoreDB();
   if (!db) {
-    const local = getLocalUsers();
-    delete local[userId];
-    saveLocalUsers(local);
     return true;
   }
 
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
-    await deleteDoc(docRef);
+    await withTimeout(deleteDoc(docRef), 1500);
     return true;
   } catch (err) {
-    console.warn('[DB]: Firestore user delete error. Falling back to LocalStorage.', err.message);
-    const local = getLocalUsers();
-    delete local[userId];
-    saveLocalUsers(local);
+    console.warn('[DB]: Firestore user delete error or timeout. Saved locally.', err.message);
     return true;
   }
 }
 
 export async function saveUserCourseProgress(userId, courseId, progressData) {
-  const dbInstance = getFirestoreDB();
   const payload = {
     ...progressData,
     userId,
@@ -145,24 +174,23 @@ export async function saveUserCourseProgress(userId, courseId, progressData) {
     updatedAt: new Date().toISOString()
   };
 
+  // Local-First: Persist to LocalStorage immediately
+  const local = getLocalCourseProgress();
+  const key = `${userId}_${courseId}`;
+  local[key] = payload;
+  saveLocalCourseProgress(local);
+
+  const dbInstance = getFirestoreDB();
   if (!dbInstance) {
-    const local = getLocalCourseProgress();
-    const key = `${userId}_${courseId}`;
-    local[key] = payload;
-    saveLocalCourseProgress(local);
     return payload;
   }
 
   try {
     const docRef = doc(dbInstance, USERS_COLLECTION, userId, 'course_progress', courseId);
-    await setDoc(docRef, payload, { merge: true });
+    await withTimeout(setDoc(docRef, payload, { merge: true }), 1500);
     return payload;
   } catch (err) {
-    console.warn('[DB]: Firestore course progress write error. Falling back to LocalStorage.', err.message);
-    const local = getLocalCourseProgress();
-    const key = `${userId}_${courseId}`;
-    local[key] = payload;
-    saveLocalCourseProgress(local);
+    console.warn('[DB]: Firestore course progress write error or timeout. Saved locally.', err.message);
     return payload;
   }
 }
