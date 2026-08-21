@@ -21,13 +21,17 @@ import { runMediaTests } from './media.test.js';
 
 // Dynamically load optional test suites without breaking core boot
 export async function runStripeProductCreateTests() {
+  let stripeTestMod;
   try {
-    const stripeTestMod = await import('./stripe-product-create.test.js');
-    if (typeof stripeTestMod.runStripeProductCreateTests === 'function') {
-      await stripeTestMod.runStripeProductCreateTests();
-    }
+    stripeTestMod = await import('./stripe-product-create.test.js');
   } catch (err) {
     console.warn('[Test Runner]: Optional test file stripe-product-create.test.js not found or failed to load. Skipping.', err);
+    return;
+  }
+
+  // Run the test outside try/catch so failures propagate to runAllTests
+  if (typeof stripeTestMod.runStripeProductCreateTests === 'function') {
+    await stripeTestMod.runStripeProductCreateTests();
   }
 }
 

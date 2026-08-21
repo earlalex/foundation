@@ -18,33 +18,28 @@ export async function runStripeProductCreateTests() {
   }
 
   await assertTest('Stripe Product Create: Endpoint handles missing authorization header with HTTP 403 Forbidden', async () => {
+    let response;
     try {
-      const response = await fetch('/api/stripe-product-create', {
+      response = await fetch('/api/stripe-product-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Test Course', amount: 9900 })
       });
-      if (response.status !== 403) {
-        // Python static http.server returns 501 Unsupported method ('POST') for non-Cloudflare edge server runners
-        if (response.status === 501 || response.status === 404) {
-          console.log('    [Note]: Static dev server returned expected status:', response.status);
-          return;
-        }
-        const text = await response.text();
-        if (!text.includes('Forbidden')) {
-          throw new Error(`Expected HTTP 403 Forbidden, got ${response.status}`);
-        }
-      }
     } catch (e) {
-      if (e.message.includes('Expected HTTP 403')) throw e;
-      // Fetch error in offline runner is acceptable
-      console.log('    [Note]: Network fetch skipped in offline runner:', e.message);
+      // Genuinely offline/unreachable endpoint - skip test
+      console.log('    [SKIP]: Endpoint unreachable, skipping test:', e.message);
+      throw new Error('SKIP: Endpoint unreachable');
+    }
+
+    if (response.status !== 403) {
+      throw new Error(`Expected HTTP 403 Forbidden, got ${response.status}`);
     }
   });
 
   await assertTest('Stripe Product Create: Endpoint processes authorized request with simulation mode fallback', async () => {
+    let response;
     try {
-      const response = await fetch('/api/stripe-product-create', {
+      response = await fetch('/api/stripe-product-create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,21 +47,26 @@ export async function runStripeProductCreateTests() {
         },
         body: JSON.stringify({ name: 'Sovereign Architecture Guide', amount: 4900, currency: 'usd' })
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (!data.productId || !data.priceId) {
-          throw new Error('Response payload missing productId or priceId');
-        }
-      }
     } catch (e) {
-      if (e.message.includes('Response payload missing')) throw e;
-      console.log('    [Note]: Network fetch skipped in offline runner:', e.message);
+      // Genuinely offline/unreachable endpoint - skip test
+      console.log('    [SKIP]: Endpoint unreachable, skipping test:', e.message);
+      throw new Error('SKIP: Endpoint unreachable');
+    }
+
+    if (response.status !== 200) {
+      throw new Error(`Expected HTTP 200 OK, got ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.productId || !data.priceId) {
+      throw new Error('Response payload missing productId or priceId');
     }
   });
 
   await assertTest('Stripe Product Create: Validation rejects requests missing required fields', async () => {
+    let response;
     try {
-      const response = await fetch('/api/stripe-product-create', {
+      response = await fetch('/api/stripe-product-create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,12 +74,14 @@ export async function runStripeProductCreateTests() {
         },
         body: JSON.stringify({ description: 'Missing name and amount' })
       });
-      if (response.ok) {
-        throw new Error('Endpoint accepted invalid payload with missing name and amount');
-      }
     } catch (e) {
-      if (e.message.includes('accepted invalid payload')) throw e;
-      console.log('    [Note]: Network fetch skipped in offline runner:', e.message);
+      // Genuinely offline/unreachable endpoint - skip test
+      console.log('    [SKIP]: Endpoint unreachable, skipping test:', e.message);
+      throw new Error('SKIP: Endpoint unreachable');
+    }
+
+    if (response.status !== 400) {
+      throw new Error(`Expected HTTP 400 Bad Request for missing required fields, got ${response.status}`);
     }
   });
 
