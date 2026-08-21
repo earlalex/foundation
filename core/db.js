@@ -67,10 +67,26 @@ export class ContentDB {
     return this.getContentById(id);
   }
 
-  // Chat logs fallback
+  // Scoped chat logs fallback filtered strictly by user identity
   #getLocalChatLogs() {
     try {
-      return JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
+      const logs = JSON.parse(localStorage.getItem('foundation_local_chat_logs') || '[]');
+      const currentUser = store?.state?.user;
+      if (!Array.isArray(logs) || logs.length === 0) return [];
+
+      if (currentUser?.email || currentUser?.uid) {
+        // Authenticated user: return logs belonging to this user, OR un-owned legacy/guest logs
+        return logs.filter(item =>
+          (!item.userEmail && !item.userId && !item.email && !item.customerEmail) ||
+          (item.userEmail && currentUser.email && item.userEmail === currentUser.email) ||
+          (item.userId && currentUser.uid && item.userId === currentUser.uid) ||
+          (item.email && currentUser.email && item.email === currentUser.email) ||
+          (item.customerEmail && currentUser.email && item.customerEmail === currentUser.email)
+        );
+      } else {
+        // Unauthenticated / guest session: ONLY return un-owned anonymous logs
+        return logs.filter(item => !item.userEmail && !item.userId && !item.email && !item.customerEmail);
+      }
     } catch (e) {
       return [];
     }
@@ -85,9 +101,12 @@ export class ContentDB {
       throw new Error('[DB]: Missing required fields in chat log');
     }
 
+    const currentUser = store.state.user;
     const payload = {
       ...logData,
       id: logData.id || `chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      userId: currentUser?.uid || logData.userId || null,
+      userEmail: currentUser?.email || logData.userEmail || logData.email || null,
       createdAt: new Date().toISOString()
     };
 
@@ -114,24 +133,63 @@ export class ContentDB {
   }
 
   async getChatLogs(limitCount = 50) {
+    const results = [];
     try {
       const db = getFirestoreDB();
       if (db) {
-        const { collection, getDocs } = await import('./db-shared.js');
-        const querySnapshot = await getDocs(collection(db, 'chat_logs'));
-        const results = [];
-        querySnapshot.forEach((docSnap) => {
-          results.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        if (results.length > 0) return results.slice(0, limitCount);
+        const { collection, query, where, getDocs } = await import('./db-shared.js');
+        const user = store?.state?.user;
+        const isEditor = user?.isAdmin || user?.role === 'admin' || user?.role === 'editor';
+        let q;
+        if (isEditor) {
+          const querySnapshot = await getDocs(collection(db, 'chat_logs'));
+          querySnapshot.forEach((docSnap) => {
+            results.push({ id: docSnap.id, ...docSnap.data() });
+          });
+        } else {
+          // Fetch across userEmail, userId, email, and customerEmail to catch legacy records
+          const queries = [];
+          if (user?.email) {
+            queries.push(query(collection(db, 'chat_logs'), where('userEmail', '==', user.email)));
+            queries.push(query(collection(db, 'chat_logs'), where('email', '==', user.email)));
+            queries.push(query(collection(db, 'chat_logs'), where('customerEmail', '==', user.email)));
+          }
+          if (user?.uid) {
+            queries.push(query(collection(db, 'chat_logs'), where('userId', '==', user.uid)));
+          }
+
+          const seenFirestoreIds = new Set();
+          for (const q of queries) {
+            try {
+              const querySnapshot = await getDocs(q);
+              querySnapshot.forEach((docSnap) => {
+                if (!seenFirestoreIds.has(docSnap.id)) {
+                  seenFirestoreIds.add(docSnap.id);
+                  results.push({ id: docSnap.id, ...docSnap.data() });
+                }
+              });
+            } catch (qErr) {
+              console.warn('[DB]: Sub-query for chat logs failed:', qErr.message);
+            }
+          }
+        }
       }
     } catch (err) {
       console.warn('[DB]: Could not fetch chat logs from Firestore.', err.message);
     }
 
+    // Merge Firestore query results with local chat logs (deduplicating by ID)
     const local = this.#getLocalChatLogs();
-    return [...local].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limitCount);
+    const seenIds = new Set(results.map(r => r.id));
+    local.forEach(item => {
+      if (item.id && !seenIds.has(item.id)) {
+        seenIds.add(item.id);
+        results.push(item);
+      }
+    });
+
+    results.sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp));
+    return results.slice(0, limitCount);
   }
 
   // Delegated content methods
@@ -1664,9 +1722,29 @@ export async function syncOutboxToFirestore() {
         flushSensitiveLocalData();
       } catch (err) {
         if (err.code === 'permission-denied' || err.message?.includes('permissions') || err.message?.includes('Permission denied')) {
-          console.warn('[Outbox Sync]: Payload rejected due to missing permissions. Clearing invalid outbox items to prevent retry loop.');
-          localStorage.removeItem('foundation_outbox');
-          flushSensitiveLocalData();
+          console.warn('[Outbox Sync]: Batch payload rejected due to missing permissions. Falling back to granular individual item sync...');
+          const { rawFirebaseSetDoc, rawFirebaseDeleteDoc } = await import('./db-shared.js');
+          const remainingOutbox = [];
+          for (const item of outbox) {
+            try {
+              const docRef = doc(db, item.collection, item.docId);
+              if (docRef) {
+                if (item.isDelete) {
+                  await rawFirebaseDeleteDoc(docRef);
+                } else {
+                  await rawFirebaseSetDoc(docRef, item.data, item.options || { merge: true });
+                }
+              }
+            } catch (singleErr) {
+              console.warn(`[Outbox Sync]: Retaining item ${item.collection}/${item.docId} in outbox due to sync error:`, singleErr.message);
+              remainingOutbox.push(item);
+            }
+          }
+          if (remainingOutbox.length > 0) {
+            localStorage.setItem('foundation_outbox', JSON.stringify(remainingOutbox));
+          } else {
+            localStorage.removeItem('foundation_outbox');
+          }
         } else {
           console.error('[Outbox Sync]: Batch write error:', err);
         }
