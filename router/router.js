@@ -385,7 +385,7 @@ export class Router {
           return;
         }
         this.#isLoading = false;
-        sessionStorage.setItem('intended_destination', cleanPath);
+        sessionStorage.setItem('intended_destination', fullPath);
         await this.loadRoute('/login');
         return;
       }
