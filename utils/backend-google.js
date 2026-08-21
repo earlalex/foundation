@@ -450,7 +450,26 @@ export async function syncGoogleContactCommunication({ phone, name, type, timest
 export async function fetchDriveSystemFolders(token, siteName) {
   if (!token) return null;
   try {
-    const q = `mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const rootNames = [getExpectedRootFolderName(siteName), 'Foundation Framework'];
+    const rootIds = [];
+
+    for (const name of rootNames) {
+      const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      const searchRes = await fetch(searchUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.files) {
+          searchData.files.forEach(f => rootIds.push(f.id));
+        }
+      }
+    }
+
+    if (rootIds.length === 0) return [];
+
+    const parentConditions = rootIds.map(id => `'${id}' in parents`).join(' or ');
+    const q = `mimeType='application/vnd.google-apps.folder' and trashed=false and (${parentConditions})`;
     const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,webViewLink,parents)`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -496,9 +515,12 @@ export async function uploadBackupToDrive(token, siteName, fileName, content) {
           mimeType: 'application/vnd.google-apps.folder'
         })
       });
+      if (!createRes.ok) return null;
       const folderData = await createRes.json();
       folderId = folderData.id;
     }
+
+    if (!folderId) return null;
 
     // 2. Search or create "Backups" child folder
     let backupsFolderId = null;
@@ -523,9 +545,12 @@ export async function uploadBackupToDrive(token, siteName, fileName, content) {
           parents: [folderId]
         })
       });
+      if (!createBackupsRes.ok) return null;
       const backupsFolderData = await createBackupsRes.json();
       backupsFolderId = backupsFolderData.id;
     }
+
+    if (!backupsFolderId) return null;
 
     // 3. Upload the backup json file itself (Private by default)
     const metadata = {
@@ -544,7 +569,9 @@ export async function uploadBackupToDrive(token, siteName, fileName, content) {
       body: formData
     });
 
-    return await response.json();
+    if (!response.ok) return null;
+    const result = await response.json();
+    return result && result.id ? result : null;
   } catch (err) {
     errorHandler.handleError(err, 'Upload Backup Drive');
     return null;

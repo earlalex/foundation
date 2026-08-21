@@ -10,10 +10,42 @@ export class NotificationCenter extends HTMLElement {
   connectedCallback() {
     this.loadNotifications();
     this.render();
-    this.setupEventListeners();
 
     // Ensure persistent presence in document body if not present
     this.ensurePersistentMount();
+
+    // Delegated click listener on shadow host for inner dropdown controls
+    this.onControlClick = (e) => {
+      const readAll = e.target.closest('#btn-notif-read-all');
+      if (readAll) {
+        e.stopPropagation();
+        this.markAllAsRead();
+        return;
+      }
+
+      const clear = e.target.closest('#btn-notif-clear');
+      if (clear) {
+        e.stopPropagation();
+        this.clearAll();
+        return;
+      }
+
+      const tabBtn = e.target.closest('.notif-tab-btn');
+      if (tabBtn && tabBtn.dataset.tab) {
+        e.stopPropagation();
+        this.activeTab = tabBtn.dataset.tab;
+        this.render();
+        return;
+      }
+
+      const item = e.target.closest('.notif-item');
+      if (item && item.dataset.id) {
+        e.stopPropagation();
+        this.markAsRead(item.dataset.id);
+        return;
+      }
+    };
+    this.addEventListener('click', this.onControlClick);
 
     // Listen for real-time notification received events
     this.onNotificationReceived = (e) => {
@@ -23,7 +55,6 @@ export class NotificationCenter extends HTMLElement {
       console.log('[NotificationCenter]: Real-time alert received:', e.detail);
       this.loadNotifications();
       this.render();
-      this.setupEventListeners();
     };
     window.addEventListener('notification-received', this.onNotificationReceived);
 
@@ -61,6 +92,7 @@ export class NotificationCenter extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.removeEventListener('click', this.onControlClick);
     window.removeEventListener('notification-received', this.onNotificationReceived);
     document.removeEventListener('click', this.onDocumentClick);
     document.removeEventListener('keydown', this.onDocumentKeyDown);
@@ -98,14 +130,12 @@ export class NotificationCenter extends HTMLElement {
     this.notifications.forEach(n => n.isRead = true);
     this.saveNotifications();
     this.render();
-    this.setupEventListeners();
   }
 
   clearAll() {
     this.notifications = [];
     this.saveNotifications();
     this.render();
-    this.setupEventListeners();
   }
 
   markAsRead(id) {
@@ -114,7 +144,6 @@ export class NotificationCenter extends HTMLElement {
       notif.isRead = true;
       this.saveNotifications();
       this.render();
-      this.setupEventListeners();
     }
   }
 
