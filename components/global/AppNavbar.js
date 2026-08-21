@@ -323,24 +323,12 @@ export class AppNavbar extends HTMLElement {
       }
     });
 
-    // Hook Cart Toggle click to toggle cart sidebar globally
+    // Hook Cart Toggle click to navigate directly to dedicated /cart SPA route
     const cartBtn = this.querySelector('#nav-cart-btn');
     if (cartBtn) {
-      cartBtn.onclick = () => {
-        const sidebar = document.getElementById('cart-sidebar');
-        if (sidebar) {
-          if (sidebar.style.right === '0px') {
-            sidebar.style.right = '-420px';
-            document.body.classList.remove('cart-drawer-open');
-          } else {
-            sidebar.style.right = '0px';
-            document.body.classList.add('cart-drawer-open');
-          }
-        } else {
-          // If we are not on /events, navigate to /events and open cart on load
-          window.sessionStorage.setItem('open_cart_on_load', 'true');
-          window.router?.navigateTo('/events');
-        }
+      cartBtn.onclick = (e) => {
+        e.preventDefault();
+        window.router?.navigateTo('/cart');
       };
     }
 

@@ -281,7 +281,9 @@ export class AuthManager {
       toast.success(`Welcome back, ${user.displayName || user.email}!`);
 
       // Navigate to account or destination route
-      window.router.navigateTo('/account');
+      const intendedDest = sessionStorage.getItem('intended_destination');
+      sessionStorage.removeItem('intended_destination');
+      window.router.navigateTo(intendedDest || '/account');
     } catch (err) {
       console.warn('[Auth Core]: Google OAuth popup error / closed by user:', err);
       throw err;

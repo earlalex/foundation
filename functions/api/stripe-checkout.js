@@ -63,6 +63,80 @@ export async function onRequestPost(context) {
 
     const domain = new URL(request.url).origin;
 
+    if (action === 'verify' && (body.sessionId || body.sessionId === '')) {
+      const targetSessionId = body.sessionId;
+      if (!targetSessionId) {
+        return new Response(JSON.stringify({ paid: false, error: 'Session ID is required' }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      try {
+        const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${targetSessionId}?expand[]=line_items&expand[]=line_items.data.price.product`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`
+          }
+        });
+
+        if (res.ok) {
+          const sessionData = await res.json();
+          const isPaid = sessionData.payment_status === 'paid';
+          const sessionCustomerEmail = (sessionData.customer_details?.email || sessionData.customer_email || '').toLowerCase().trim();
+
+          const requestingUserEmail = (userEmail || email || '').toLowerCase().trim();
+          if (!requestingUserEmail) {
+            return new Response(JSON.stringify({ paid: false, error: 'Authentication required: Caller email parameter is required to verify session' }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          if (!sessionCustomerEmail || requestingUserEmail !== sessionCustomerEmail) {
+            return new Response(JSON.stringify({ paid: false, error: 'Unauthorized: Session customer email does not match caller or is unbound' }), {
+              status: 403,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+
+          let lineItems = [];
+          if (sessionData.line_items?.data && Array.isArray(sessionData.line_items.data)) {
+            lineItems = sessionData.line_items.data.map(li => {
+              const productMeta = typeof li.price?.product === 'object' ? li.price.product?.metadata : null;
+              const appItemId = productMeta?.appItemId;
+              return {
+                id: appItemId || (typeof li.price?.product === 'string' ? li.price.product : li.price?.product?.id) || li.id,
+                name: li.description || 'Purchased Item',
+                type: 'product',
+                price: (li.amount_total || 0) / 100 / (li.quantity || 1)
+              };
+            });
+          }
+
+          return new Response(JSON.stringify({
+            paid: isPaid,
+            customerEmail: sessionCustomerEmail,
+            lineItems
+          }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        const errData = await res.json().catch(() => ({}));
+        return new Response(JSON.stringify({ paid: false, error: errData.error?.message || 'Invalid or unconfirmed session' }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (verifyErr) {
+        return new Response(JSON.stringify({ paid: false, error: 'Session verification failed: ' + verifyErr.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
     if (action === 'portal') {
       // Create Customer Portal Link
       try {
@@ -125,6 +199,10 @@ export async function onRequestPost(context) {
           params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.amount)));
           params.append(`line_items[${index}][price_data][currency]`, (item.currency || 'USD').toLowerCase());
           params.append(`line_items[${index}][price_data][product_data][name]`, item.name || 'Event Item');
+          const itemId = item.id || item.productId;
+          if (itemId) {
+            params.append(`line_items[${index}][price_data][product_data][metadata][appItemId]`, String(itemId));
+          }
           params.append(`line_items[${index}][quantity]`, String(item.quantity || 1));
         }
       });
@@ -147,6 +225,7 @@ export async function onRequestPost(context) {
     const finalCancelUrl = cancelUrl || `${domain}/account?payment=cancelled`;
     params.append('success_url', finalSuccessUrl);
     params.append('cancel_url', finalCancelUrl);
+
 
     // Add Metadata
     const uid = userId || userUid || '';

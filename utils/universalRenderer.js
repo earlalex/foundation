@@ -2,6 +2,26 @@
 import { store } from '../core/store.js';
 import { configManager } from '../core/config.js';
 
+export function escapeHTML(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[&<>'"]/g, (tag) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag] || tag));
+}
+
+export function sanitizeUrl(url) {
+  if (typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+    return '#';
+  }
+  return trimmed;
+}
+
 export function cleanTitle(title) {
   if (typeof title !== 'string') return title;
   let cleaned = title

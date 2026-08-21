@@ -86,7 +86,16 @@ export async function registerOrMergeUser(userData) {
     // Merge arrays (newsletter tags, registered events, purchased products)
     const mergedConsents = { ...(primaryUser.consents || {}), ...(userData.consents || {}) };
     const mergedEvents = Array.from(new Set([...(primaryUser.registeredEvents || []), ...(userData.registeredEvents || [])]));
-    const mergedProducts = Array.from(new Set([...(primaryUser.purchasedProducts || []), ...(userData.purchasedProducts || [])]));
+
+    // Deduplicate purchasedProducts cleanly across strings and objects by item ID
+    const existingProducts = primaryUser.purchasedProducts || [];
+    const newProducts = userData.purchasedProducts || [];
+    const productMap = new Map();
+    [...existingProducts, ...newProducts].forEach(p => {
+      const key = typeof p === 'string' ? p : (p?.id || JSON.stringify(p));
+      productMap.set(key, p);
+    });
+    const mergedProducts = Array.from(productMap.values());
 
     const updatedUser = {
       ...primaryUser,

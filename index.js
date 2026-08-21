@@ -260,6 +260,11 @@ async function boot() {
       description: 'Log in to your Foundation account portal.',
       viewPath: './pages/login.html'
     },
+    '/cart': {
+      title: 'Shopping Cart & Secure Checkout | Foundation',
+      description: 'Review your items, enter shipping details, and complete your purchase securely.',
+      viewPath: './pages/cart/cart.html'
+    },
     '/account': {
       title: 'Customer Dashboard',
       description: 'Manage your unlocked premium publications and subscription billing.',
@@ -461,6 +466,8 @@ window.addEventListener('pageLoaded', (e) => {
     import('./pages/detail/detail.js').then(m => m.initDetailPage());
   } else if (e.detail.path === '/admin') {
     import('./pages/admin/admin.js').then(m => m.initAdminPage());
+  } else if (e.detail.path === '/cart') {
+    import('./pages/cart/cart.js').then(m => m.initCartPage());
   } else if (e.detail.path === '/account') {
     import('./pages/account.js').then(m => m.initAccountPage());
   } else if (e.detail.path === '/login') {

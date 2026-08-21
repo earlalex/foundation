@@ -1,0 +1,519 @@
+<!-- pages/cart/cart.html - Standalone Dedicated Cart & Secure Checkout View -->
+<style>
+  .cart-checkout-container {
+    max-width: var(--theme-layout-container-max-width, 1200px);
+    margin: 2rem auto;
+    padding: 0 1.5rem 3rem 1.5rem;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .cart-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--theme-color-border, #e2e8f0);
+    padding-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .cart-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  @media (min-width: 992px) {
+    .cart-grid {
+      grid-template-columns: 1.8fr 1fr;
+      align-items: start;
+    }
+  }
+
+  /* Cart Table */
+  .cart-table-wrapper {
+    background: var(--theme-color-surface, #ffffff);
+    border: 1px solid var(--theme-color-border, #e2e8f0);
+    border-radius: var(--theme-layout-border-radius, 8px);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .cart-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9rem;
+  }
+
+  .cart-table th {
+    background: var(--theme-color-background, #f7fafc);
+    padding: 12px 16px;
+    font-weight: 700;
+    color: var(--theme-color-text-secondary, #4a5568);
+    border-bottom: 1px solid var(--theme-color-border, #e2e8f0);
+  }
+
+  .cart-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--theme-color-border, #edf2f7);
+    vertical-align: middle;
+  }
+
+  .cart-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cart-item-thumb {
+    width: 54px;
+    height: 54px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--theme-color-background, #edf2f7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .cart-qty-ctrl {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--theme-color-border, #cbd5e0);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--theme-color-surface, #ffffff);
+  }
+
+  .cart-qty-btn {
+    background: var(--theme-color-background, #edf2f7);
+    border: none;
+    width: 32px;
+    height: 32px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--theme-color-text-primary, #2d3748);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cart-qty-btn:hover {
+    background: var(--theme-color-border, #cbd5e0);
+  }
+
+  .cart-qty-val {
+    width: 36px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--theme-color-text-primary, #1a202c);
+  }
+
+  .cart-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--theme-color-danger, #e53e3e);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+
+  .cart-remove-btn:hover {
+    background: #fff5f5;
+  }
+
+  /* Checkout Form Panels */
+  .checkout-section {
+    background: var(--theme-color-surface, #ffffff);
+    border: 1px solid var(--theme-color-border, #e2e8f0);
+    border-radius: var(--theme-layout-border-radius, 8px);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .checkout-section-title {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--theme-color-primary, #2b6cb0);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+    color: var(--theme-color-text-primary, #2d3748);
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--theme-color-border, #cbd5e0);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: var(--theme-color-surface, #ffffff);
+    color: var(--theme-color-text-primary, #1a202c);
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: var(--theme-color-primary, #2b6cb0);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+
+  /* Payment Selectors */
+  .payment-method-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .payment-option-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 12px 16px;
+    border: 2px solid var(--theme-color-border, #e2e8f0);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background: var(--theme-color-surface, #ffffff);
+  }
+
+  .payment-option-label:hover {
+    border-color: var(--theme-color-primary, #2b6cb0);
+    background: var(--theme-color-background, #f7fafc);
+  }
+
+  .payment-option-label input[type="radio"] {
+    accent-color: var(--theme-color-primary, #2b6cb0);
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .payment-option-label.active {
+    border-color: var(--theme-color-primary, #2b6cb0);
+    background: #ebf8ff;
+    color: var(--theme-color-primary, #2b6cb0);
+  }
+
+  /* Summary Card */
+  .summary-card {
+    background: var(--theme-color-surface, #ffffff);
+    border: 1px solid var(--theme-color-border, #e2e8f0);
+    border-radius: var(--theme-layout-border-radius, 8px);
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 2rem;
+  }
+
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--theme-color-text-secondary, #4a5568);
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-line.total {
+    border-top: 2px dashed var(--theme-color-border, #e2e8f0);
+    padding-top: 1rem;
+    margin-top: 1rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--theme-color-text-primary, #1a202c);
+  }
+
+  .trust-badge-group {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--theme-color-border, #e2e8f0);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+    color: var(--theme-color-text-secondary, #718096);
+  }
+
+  .trust-badge-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-submit-order {
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--theme-color-accent, #38a169);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 4px 6px rgba(56, 161, 105, 0.2);
+    margin-top: 1rem;
+  }
+
+  .btn-submit-order:hover {
+    background: #2f855a;
+  }
+
+  .btn-submit-order:active {
+    transform: scale(0.99);
+  }
+
+  .btn-submit-order:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+</style>
+
+<div class="cart-checkout-container">
+  <div class="cart-header">
+    <div>
+      <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c);">Shopping Cart & Checkout</h1>
+      <p style="margin: 0.25rem 0 0 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.95rem;">Review line items, confirm contact details, and complete your order.</p>
+    </div>
+    <a href="/shop" onclick="event.preventDefault(); window.router?.navigateTo('/shop');" style="color: var(--theme-color-primary, #2b6cb0); font-weight: bold; text-decoration: none; font-size: 0.9rem;">
+      ← Continue Shopping
+    </a>
+  </div>
+
+  <form id="cart-checkout-form">
+    <div class="cart-grid">
+
+      <!-- LEFT COLUMN: Cart Items & Customer Details -->
+      <div>
+
+        <!-- Line Items Table -->
+        <div class="cart-table-wrapper">
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="cart-items-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 1. Customer Account & Email Lookup -->
+        <div class="checkout-section">
+          <h2 class="checkout-section-title">
+            <span>👤</span> 1. Customer & Account Information
+          </h2>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label for="cart-customer-email">Customer Email Address *</label>
+              <input type="email" id="cart-customer-email" class="form-control" required placeholder="you@example.com" />
+              <small style="color: var(--theme-color-text-secondary, #718096); font-size: 0.78rem; display: block; margin-top: 4px;">
+                Your purchased items will be automatically linked to this profile for instant access in your <strong>/account</strong> portal.
+              </small>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="cart-customer-name">Full Name *</label>
+              <input type="text" id="cart-customer-name" class="form-control" required placeholder="Alex Johnson" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Shipping & Billing Addresses -->
+        <div class="checkout-section">
+          <h2 class="checkout-section-title">
+            <span>📦</span> 2. Shipping & Billing Address
+          </h2>
+
+          <div id="shipping-address-block">
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--theme-color-text-primary, #2d3748);">Shipping Address</h4>
+            <div class="form-group">
+              <label for="cart-ship-street">Street Address *</label>
+              <input type="text" id="cart-ship-street" class="form-control" required placeholder="123 Elevation Way" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cart-ship-city">City *</label>
+                <input type="text" id="cart-ship-city" class="form-control" required placeholder="San Francisco" />
+              </div>
+              <div class="form-group">
+                <label for="cart-ship-state">State / Province *</label>
+                <input type="text" id="cart-ship-state" class="form-control" required placeholder="CA" />
+              </div>
+              <div class="form-group">
+                <label for="cart-ship-zip">ZIP / Postal Code *</label>
+                <input type="text" id="cart-ship-zip" class="form-control" required placeholder="94105" />
+              </div>
+              <div class="form-group">
+                <label for="cart-ship-country">Country *</label>
+                <input type="text" id="cart-ship-country" class="form-control" required placeholder="United States" value="United States" />
+              </div>
+            </div>
+          </div>
+
+          <div style="margin: 1.25rem 0; padding: 0.75rem; background: var(--theme-color-background, #f7fafc); border-radius: 6px; border: 1px solid var(--theme-color-border, #e2e8f0);">
+            <label style="display: flex; align-items: center; gap: 0.6rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; margin: 0;">
+              <input type="checkbox" id="cart-same-billing" checked style="width: 18px; height: 18px; cursor: pointer;" />
+              Billing address is the same as shipping address
+            </label>
+          </div>
+
+          <div id="billing-address-block" style="display: none; border-top: 1px dashed var(--theme-color-border, #e2e8f0); padding-top: 1rem; margin-top: 1rem;">
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--theme-color-text-primary, #2d3748);">Billing Address</h4>
+            <div class="form-group">
+              <label for="cart-bill-street">Street Address *</label>
+              <input type="text" id="cart-bill-street" class="form-control" placeholder="456 Commerce Blvd" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cart-bill-city">City *</label>
+                <input type="text" id="cart-bill-city" class="form-control" placeholder="Austin" />
+              </div>
+              <div class="form-group">
+                <label for="cart-bill-state">State / Province *</label>
+                <input type="text" id="cart-bill-state" class="form-control" placeholder="TX" />
+              </div>
+              <div class="form-group">
+                <label for="cart-bill-zip">ZIP / Postal Code *</label>
+                <input type="text" id="cart-bill-zip" class="form-control" placeholder="78701" />
+              </div>
+              <div class="form-group">
+                <label for="cart-bill-country">Country *</label>
+                <input type="text" id="cart-bill-country" class="form-control" placeholder="United States" value="United States" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Payment Method Selector -->
+        <div class="checkout-section">
+          <h2 class="checkout-section-title">
+            <span>💳</span> 3. Payment Method
+          </h2>
+
+          <div class="payment-method-options">
+            <label class="payment-option-label active" id="label-pay-card">
+              <input type="radio" name="paymentMethod" value="stripe_card" checked />
+              <span>💳 Credit / Debit Card (Stripe / Apple Pay)</span>
+            </label>
+
+            <label class="payment-option-label" id="label-pay-ach">
+              <input type="radio" name="paymentMethod" value="stripe_ach" />
+              <span>🏦 Bank Transfer / ACH Direct Debit ($5 Flat Fee)</span>
+            </label>
+
+            <label class="payment-option-label" id="label-pay-crypto">
+              <input type="radio" name="paymentMethod" value="web3_crypto" />
+              <span>🪙 Web3 Cryptocurrency (ETH / MATIC / USDC)</span>
+            </label>
+          </div>
+
+          <!-- Dynamic Web3 Crypto Panel container -->
+          <div id="cart-crypto-panel" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--theme-color-border, #e2e8f0); padding-top: 1rem;">
+            <!-- Rendered when Crypto option is active -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Order Financial Summary & Trust Badges -->
+      <div>
+        <div class="summary-card">
+          <h3 style="margin-top: 0; margin-bottom: 1.25rem; font-size: 1.25rem; font-weight: 800; color: var(--theme-color-text-primary, #1a202c); border-bottom: 1px solid var(--theme-color-border, #e2e8f0); padding-bottom: 0.75rem;">
+            Order Summary
+          </h3>
+
+          <div class="summary-line">
+            <span>Item Subtotal</span>
+            <span id="summary-subtotal" style="font-weight: 600;">$0.00</span>
+          </div>
+
+          <div class="summary-line">
+            <span>Shipping & Handling</span>
+            <span id="summary-shipping" style="font-weight: 600; color: #38a169;">FREE</span>
+          </div>
+
+          <div class="summary-line">
+            <span>Estimated Tax (8.25%)</span>
+            <span id="summary-tax" style="font-weight: 600;">$0.00</span>
+          </div>
+
+          <div class="summary-line">
+            <span>Platform Service Fee</span>
+            <span id="summary-service-fee" style="font-weight: 600;">$0.00</span>
+          </div>
+
+          <div class="summary-line" id="summary-ach-fee-line" style="display: none;">
+            <span>ACH Bank Processing Fee</span>
+            <span id="summary-ach-fee" style="font-weight: 600;">$5.00</span>
+          </div>
+
+          <div class="summary-line total">
+            <span>Grand Total</span>
+            <span id="summary-grand-total">$0.00</span>
+          </div>
+
+          <button type="submit" id="btn-cart-submit" class="btn-submit-order">
+            🔒 Complete Secure Purchase
+          </button>
+
+          <div class="trust-badge-group">
+            <div class="trust-badge-item">
+              <span style="font-size: 1.1rem;">🔒</span>
+              <span><strong>256-Bit SSL Encryption:</strong> Your payment information is processed on high-security encrypted pipelines.</span>
+            </div>
+            <div class="trust-badge-item">
+              <span style="font-size: 1.1rem;">🛡️</span>
+              <span><strong>Satisfaction Guarantee:</strong> 30-day money-back assurance on eligible courses and digital guides.</span>
+            </div>
+            <div class="trust-badge-item">
+              <span style="font-size: 1.1rem;">⚡</span>
+              <span><strong>Instant Access:</strong> Purchased items immediately populate in your <strong>/account</strong> dashboard.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>

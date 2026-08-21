@@ -19,10 +19,11 @@ class CryptoCheckout extends HTMLElement {
     this.variantId = 'default';
     this.qty = 1;
     this.buyerEmail = '';
+    this.cartItems = [];
   }
 
   static get observedAttributes() {
-    return ['amount-usd', 'checkout-type', 'product-id', 'variant-id', 'qty', 'buyer-email'];
+    return ['amount-usd', 'checkout-type', 'product-id', 'variant-id', 'qty', 'buyer-email', 'items-json'];
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
@@ -33,6 +34,13 @@ class CryptoCheckout extends HTMLElement {
     if (name === 'variant-id') this.variantId = newVal;
     if (name === 'qty') this.qty = parseInt(newVal) || 1;
     if (name === 'buyer-email') this.buyerEmail = newVal;
+    if (name === 'items-json') {
+      try {
+        this.cartItems = JSON.parse(newVal);
+      } catch (e) {
+        this.cartItems = [];
+      }
+    }
     this.render();
   }
 
@@ -95,22 +103,257 @@ class CryptoCheckout extends HTMLElement {
     try {
       // 1. Submit actual blockchain transfer if a Web3 wallet provider is connected
       if (this.walletType === 'evm' && window.ethereum) {
-        // Request EVM eth_sendTransaction or ERC20 transfer
-        const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '0x0000000000000000000000000000000000000000';
-        const hexAmount = '0x' + Math.floor(parseFloat(this.cryptoEquivalent) * 1e18).toString(16);
+        const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '';
+        if (!recipient || recipient === '0x0000000000000000000000000000000000000000') {
+          toast.error('EVM settlement failed: Crypto treasury wallet address is not configured.');
+          return;
+        }
+
+        const evmCurrencies = ['ETH', 'USDC', 'USDT'];
+        if (!evmCurrencies.includes(this.selectedCurrency)) {
+          toast.error(`Unsupported currency for EVM checkout: ${this.selectedCurrency}. Please select ETH, USDC, or USDT.`);
+          return;
+        }
+
+        let txParams = {};
+
+        if (this.selectedCurrency === 'ETH') {
+          const hexAmount = '0x' + BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18)).toString(16);
+          txParams = {
+            from: this.activeWallet,
+            to: recipient,
+            value: hexAmount
+          };
+        } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
+          const tokenDecimals = 6;
+          const rawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
+          const cleanRecipient = recipient.toLowerCase().replace('0x', '').padStart(64, '0');
+          const cleanAmount = rawAmount.toString(16).padStart(64, '0');
+          const data = '0xa9059cbb' + cleanRecipient + cleanAmount;
+
+          const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
+
+          txParams = {
+            from: this.activeWallet,
+            to: tokenContract,
+            value: '0x0',
+            data
+          };
+        }
 
         txHash = await window.ethereum.request({
           method: 'eth_sendTransaction',
-          params: [{
-            from: this.activeWallet,
-            to: recipient,
-            value: this.selectedCurrency === 'ETH' ? hexAmount : '0x0'
-          }]
+          params: [txParams]
         });
+
+        // Verify transaction receipt on-chain when possible
+        if (txHash && window.ethereum.request) {
+          let receipt = null;
+          let attempts = 0;
+          while (!receipt && attempts < 5) {
+            receipt = await window.ethereum.request({
+              method: 'eth_getTransactionReceipt',
+              params: [txHash]
+            });
+            if (!receipt) {
+              await new Promise(r => setTimeout(r, 1000));
+              attempts++;
+            }
+          }
+          if (!receipt) {
+            toast.error('Transaction unconfirmed: On-chain receipt confirmation timed out. Settlement halted.');
+            return;
+          }
+          const statusStr = String(receipt.status);
+          if (statusStr === '0x0' || statusStr === '0' || statusStr === 'false') {
+            toast.error('Transaction failed: On-chain transaction reverted.');
+            return;
+          }
+
+          // Verify sender address matches active wallet
+          if (receipt.from && receipt.from.toLowerCase() !== this.activeWallet.toLowerCase()) {
+            toast.error('Transaction verification failed: Sender address on receipt does not match connected wallet.');
+            return;
+          }
+
+          // Verify recipient address and transfer execution
+          if (this.selectedCurrency === 'ETH') {
+            if (receipt.to && recipient && receipt.to.toLowerCase() !== recipient.toLowerCase()) {
+              toast.error('Transaction verification failed: Transaction recipient on receipt does not match treasury address.');
+              return;
+            }
+
+            // Verify on-chain ETH value transferred in transaction details
+            const txObj = await window.ethereum.request({
+              method: 'eth_getTransactionByHash',
+              params: [txHash]
+            });
+
+            if (!txObj || !txObj.value) {
+              toast.error('Transaction verification failed: Could not retrieve ETH transaction value from network.');
+              return;
+            }
+
+            const expectedWei = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18));
+            const transferredWei = BigInt(txObj.value);
+
+            if (transferredWei < expectedWei) {
+              toast.error(`Transaction verification failed: Transferred ETH (${(Number(transferredWei) / 1e18).toFixed(6)} ETH) is less than required amount (${this.cryptoEquivalent} ETH).`);
+              return;
+            }
+          } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
+            // Verify token contract address
+            const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
+            if (receipt.to && tokenContract && receipt.to.toLowerCase() !== tokenContract.toLowerCase()) {
+              toast.error('Transaction verification failed: Contract interaction on receipt does not match token contract.');
+              return;
+            }
+
+            // Require valid ERC20 Transfer log
+            if (!Array.isArray(receipt.logs) || receipt.logs.length === 0) {
+              toast.error('Transaction verification failed: No contract logs returned for ERC20 transfer.');
+              return;
+            }
+
+            const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; // Transfer(address,address,uint256)
+            const transferLog = receipt.logs.find(log => log.topics && log.topics[0] && log.topics[0].toLowerCase() === transferTopic);
+
+            if (!transferLog || !transferLog.topics || transferLog.topics.length < 3 || !transferLog.data || transferLog.data === '0x') {
+              toast.error('Transaction verification failed: Missing or invalid ERC20 Transfer event log on receipt.');
+              return;
+            }
+
+            const logRecipient = '0x' + transferLog.topics[2].slice(-40);
+            if (logRecipient.toLowerCase() !== recipient.toLowerCase()) {
+              toast.error('Transaction verification failed: ERC20 Transfer event recipient does not match treasury address.');
+              return;
+            }
+
+            const tokenDecimals = 6;
+            const expectedRawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
+            const transferredRawAmount = BigInt(transferLog.data);
+            if (transferredRawAmount < expectedRawAmount) {
+              toast.error('Transaction verification failed: Transferred token amount is less than required USD total.');
+              return;
+            }
+          }
+        }
       } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
         // Phantom transaction signature request
-        const res = await window.solana.signAndSendTransaction();
-        txHash = res.signature;
+        const provider = window.solana || window.phantom?.solana;
+        const res = await provider.signAndSendTransaction();
+        txHash = res.signature || res.publicKey;
+
+        if (!txHash) {
+          toast.error('Solana transaction failed: No transaction signature returned.');
+          return;
+        }
+
+        if (!provider.connection) {
+          toast.error('Solana settlement failed: Provider connection object missing for on-chain status verification.');
+          return;
+        }
+
+        let confirmed = false;
+        let attempts = 0;
+        while (!confirmed && attempts < 5) {
+          const status = await provider.connection.getSignatureStatus(txHash);
+          if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
+            if (status.value.err) {
+              toast.error('Solana transaction failed: On-chain transaction error reported.');
+              return;
+            }
+            confirmed = true;
+            break;
+          }
+          await new Promise(r => setTimeout(r, 1000));
+          attempts++;
+        }
+        if (!confirmed) {
+          toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
+          return;
+        }
+
+        // On-chain transaction details verification for Solana
+        const solTreasury = configManager.current.integrations?.cryptoTreasuryAddress || '';
+        if (!solTreasury) {
+          toast.error('Solana settlement failed: Treasury wallet address is not configured.');
+          return;
+        }
+
+        if (typeof provider.connection.getParsedTransaction !== 'function') {
+          toast.error('Solana settlement failed: On-chain transaction parser API unavailable on provider connection.');
+          return;
+        }
+
+        const parsedTx = await provider.connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
+        if (!parsedTx) {
+          toast.error('Solana transaction verification failed: Could not retrieve parsed on-chain transaction details.');
+          return;
+        }
+
+        const accountKeys = parsedTx.transaction?.message?.accountKeys || [];
+        const keyStrings = accountKeys.map(k => (typeof k === 'string' ? k : k.pubkey?.toString() || ''));
+
+        // Verify feePayer / sender is active wallet
+        if (keyStrings.length > 0 && keyStrings[0] !== this.activeWallet) {
+          toast.error('Solana transaction verification failed: Sender on transaction does not match active wallet.');
+          return;
+        }
+
+        // Verify treasury address is present in account keys / recipient
+        const treasuryIndex = keyStrings.findIndex(k => k === solTreasury);
+        if (treasuryIndex === -1) {
+          toast.error('Solana transaction verification failed: Treasury recipient address not found in transaction accounts.');
+          return;
+        }
+
+        // Verify balance increase for treasury account in SOL lamports or SPL Token balance delta
+        const meta = parsedTx.meta;
+        if (!meta) {
+          toast.error('Solana transaction verification failed: Missing execution metadata on on-chain transaction.');
+          return;
+        }
+
+        let transferredAmountUSD = 0;
+        if (this.selectedCurrency === 'SOL' && meta.preBalances && meta.postBalances) {
+          const preBal = meta.preBalances[treasuryIndex] || 0;
+          const postBal = meta.postBalances[treasuryIndex] || 0;
+          const diffLamports = postBal - preBal;
+          const diffSOL = diffLamports / 1e9;
+          const solRate = 0.006; // rate conversion matching get cryptoEquivalent
+          transferredAmountUSD = diffSOL / solRate;
+        } else if ((this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') && meta.postTokenBalances) {
+          const expectedMint = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}MintAddress`]?.toLowerCase() || '';
+
+          const preTokenBal = (meta.preTokenBalances || []).find(tb => {
+            const owner = tb.owner || keyStrings[tb.accountIndex];
+            const mint = (tb.mint || '').toLowerCase();
+            return owner === solTreasury && (!expectedMint || mint === expectedMint);
+          });
+
+          const postTokenBal = (meta.postTokenBalances || []).find(tb => {
+            const owner = tb.owner || keyStrings[tb.accountIndex];
+            const mint = (tb.mint || '').toLowerCase();
+            return owner === solTreasury && (!expectedMint || mint === expectedMint);
+          });
+
+          if (!postTokenBal) {
+            toast.error('Solana transaction verification failed: Treasury token balance not found or mint mismatch.');
+            return;
+          }
+
+          const preAmount = parseFloat(preTokenBal?.uiTokenAmount?.uiAmountString || preTokenBal?.uiTokenAmount?.amount || 0);
+          const postAmount = parseFloat(postTokenBal.uiTokenAmount?.uiAmountString || postTokenBal.uiTokenAmount?.amount || 0);
+          const tokenDelta = postAmount - preAmount;
+
+          transferredAmountUSD = tokenDelta;
+        }
+
+        if (transferredAmountUSD <= 0 || transferredAmountUSD < (this.amountUSD - 0.01)) {
+          toast.error(`Solana settlement rejected: Verified transferred amount ($${transferredAmountUSD.toFixed(2)}) is less than required USD price ($${this.amountUSD.toFixed(2)}).`);
+          return;
+        }
       }
     } catch (err) {
       toast.error(`Blockchain transaction failed or rejected: ${err.message || err}`);
@@ -146,7 +389,52 @@ class CryptoCheckout extends HTMLElement {
     };
 
     try {
-      // 1. Emit/Save purchase payload to Firestore /purchases collection
+      // 1. Perform user access adjustments and product linkage upon verified on-chain tx
+      let rawItems = [];
+      if (Array.isArray(this.cartItems) && this.cartItems.length > 0) {
+        rawItems = this.cartItems;
+      } else if (this.productId) {
+        rawItems = [{ id: this.productId, price: this.amountUSD, type: 'product' }];
+      }
+
+      // Fetch catalog records directly using getContentById
+      const catalogRecords = await Promise.all(rawItems.map(item => contentDB.getContentById(item.id || item.productId)));
+
+      // Reconcile transferred amount against total catalog price
+      let requiredTotalUSD = 0;
+      for (let idx = 0; idx < rawItems.length; idx++) {
+        const item = rawItems[idx];
+        const catalogRecord = catalogRecords[idx];
+        const itemPrice = catalogRecord?.price !== undefined ? Number(catalogRecord.price) : Number(item.price || 0);
+        const itemQty = Number(item.quantity || 1);
+        requiredTotalUSD += (itemPrice * itemQty);
+      }
+
+      if (requiredTotalUSD > 0 && this.amountUSD < (requiredTotalUSD - 0.01)) {
+        toast.error(`Crypto settlement rejected: Transferred amount ($${this.amountUSD.toFixed(2)}) is less than total catalog price ($${requiredTotalUSD.toFixed(2)}).`);
+        return;
+      }
+
+      const purchasedProducts = [];
+      for (let idx = 0; idx < rawItems.length; idx++) {
+        const item = rawItems[idx];
+        const catalogRecord = catalogRecords[idx];
+        const itemId = item.id || item.productId;
+        if (!catalogRecord) {
+          toast.error(`Crypto settlement failed: Unknown catalog item ID (${itemId}).`);
+          return;
+        }
+
+        purchasedProducts.push({
+          id: itemId,
+          title: catalogRecord.title || catalogRecord.name || item.name || itemId,
+          type: catalogRecord.type || item.type || 'product',
+          purchasedAt: new Date().toISOString(),
+          pricePaid: Number(catalogRecord.price !== undefined ? catalogRecord.price : item.price || this.amountUSD)
+        });
+      }
+
+      // Save purchase payload to Firestore /purchases collection only after validation completes
       const db = getFirestoreDB();
       if (db) {
         const purchaseDocRef = doc(db, 'purchases', purchasePayload.id);
@@ -158,10 +446,6 @@ class CryptoCheckout extends HTMLElement {
       localPurchases.push(purchasePayload);
       localStorage.setItem('foundation_local_purchases', JSON.stringify(localPurchases));
 
-      // 2. Perform user access adjustments
-      let purchasedProducts = [];
-      if (this.productId) purchasedProducts.push(this.productId);
-
       const updatedUser = await contentDB.registerOrMergeUser({
         email,
         role: this.checkoutType === 'membership' ? 'member' : 'subscriber',
@@ -169,49 +453,18 @@ class CryptoCheckout extends HTMLElement {
         purchasedProducts
       });
 
+      if (updatedUser && store.state.user?.email === email) {
+        store.dispatch('SET_USER', updatedUser);
+      }
+
+      // Import eventCart dynamically and clear cart if items were purchased
+      const { eventCart } = await import('../../utils/eventCart.js');
+      eventCart.clearCart();
+
       if (this.checkoutType === 'membership') {
-        if (updatedUser) store.dispatch('SET_USER', updatedUser);
-        toast.success('Decentralized crypto settlement complete! Persona upgraded to Paid Member (Ad-Free).');
-      } else if (this.checkoutType === 'event') {
-        // Register event ticket
-        const regRecord = {
-          id: 'reg_crypto_' + Date.now(),
-          eventId: this.productId || 'sample-summit',
-          email: email,
-          accessCode: 'EVT-CRYPTO-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          qrPayload: 'FOUNDATION-PASS:EVT-CRYPTO-' + Date.now(),
-          cartItems: JSON.stringify([
-            { id: this.productId || 'sample-summit', type: 'ticket', name: 'General Admission', price: this.amountUSD, quantity: this.qty }
-          ]),
-          createdAt: new Date().toISOString()
-        };
-        await contentDB.saveRegistration(regRecord);
-        toast.success('Crypto tickets registered successfully! Check your pass on your account dashboard.');
-      } else if (this.checkoutType === 'product') {
-        // Save shop order
-        const orders = JSON.parse(localStorage.getItem('foundation_local_orders') || '{}');
-        const orderId = 'order_crypto_' + Date.now();
-        orders[orderId] = {
-          id: orderId,
-          type: 'order',
-          productId: this.productId,
-          productTitle: this.productId ? (await contentDB.getContentById(this.productId))?.title || 'Shop Product' : 'Shop Product',
-          variantId: this.variantId,
-          qty: this.qty,
-          paymentMethod: `Crypto: ${this.selectedCurrency}`,
-          paymentStatus: 'Paid',
-          fulfillmentStatus: 'Pending Production',
-          shippingDetails: { carrier: '', trackingNumber: '', shippedAt: '' },
-          buyerEmail: email,
-          createdAt: new Date().toISOString()
-        };
-        localStorage.setItem('foundation_local_orders', JSON.stringify(orders));
-
-        // Decrement inventory stock
-        const { decrementStock } = await import('../../utils/inventory.js');
-        await decrementStock(this.productId, this.variantId, this.qty);
-
-        toast.success('Decentralized storefront settlement successful! E-commerce order created.');
+        toast.success('Decentralized crypto settlement complete! Persona upgraded to Paid Member.');
+      } else {
+        toast.success('Decentralized settlement successful! Your items have been unlocked.');
       }
 
       // Add to local invoices collection fallback to show up in Invoices ledger
