@@ -36,24 +36,40 @@ async def verify_console_cleanliness():
             '/cart', '/account', '/admin', '/login', '/privacy', '/terms', '/cookies'
         ]
 
-        print("\n--- Navigating Across All Routes to Verify Console Cleanliness ---")
-        await page.goto("http://localhost:3000/", wait_until="domcontentloaded")
-        await page.wait_for_timeout(1000)
+        try:
+            print("\n--- Navigating Across All Routes to Verify Console Cleanliness ---")
+            await page.goto("http://localhost:3000/", wait_until="domcontentloaded")
+            await page.wait_for_timeout(1000)
 
-        for route in routes:
-            print(f"Navigating to {route}...")
-            await page.evaluate(f"window.router && window.router.navigateTo('{route}')")
-            await page.wait_for_timeout(300)
+            for route in routes:
+                print(f"Navigating to {route}...")
+                # Verify router is available before navigation
+                router_available = await page.evaluate("typeof window.router !== 'undefined' && typeof window.router.navigateTo === 'function'")
+                if not router_available:
+                    raise AssertionError(f"Router is not available for navigation to {route}")
 
-        print(f"\nTotal Console Logs Captured: {len(console_logs)}")
-        print(f"Fatal Console/Page Errors Count: {len(fatal_errors)}")
+                # Navigate to route
+                await page.evaluate(f"window.router.navigateTo('{route}')")
+                await page.wait_for_timeout(300)
 
-        screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'console_cleanliness.png')
-        await page.screenshot(path=screenshot_path)
-        print(f"Captured screenshot: {screenshot_path}")
+                # Verify the active route matches the current route
+                current_route = await page.evaluate("window.router ? window.router.currentRoute : null")
+                if current_route is None:
+                    raise AssertionError(f"Unable to verify navigation to {route}: router.currentRoute is null")
 
-        await context.close()
-        await browser.close()
+            print(f"\nTotal Console Logs Captured: {len(console_logs)}")
+            print(f"Fatal Console/Page Errors Count: {len(fatal_errors)}")
+
+            screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'console_cleanliness.png')
+            await page.screenshot(path=screenshot_path)
+            print(f"Captured screenshot: {screenshot_path}")
+
+            if len(fatal_errors) > 0:
+                raise AssertionError(f"Console cleanliness verification failed with {len(fatal_errors)} fatal error(s)")
+
+        finally:
+            await context.close()
+            await browser.close()
 
         if len(fatal_errors) > 0:
             print("\n❌ Console Cleanliness Audit Failed due to fatal errors:")

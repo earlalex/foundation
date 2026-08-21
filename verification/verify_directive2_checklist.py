@@ -51,7 +51,7 @@ async def run_checklist_audit():
             await page.evaluate("window.router && window.router.navigateTo('/admin')")
             await page.wait_for_timeout(1000)
 
-            admin_rendered = await page.evaluate("document.body.innerText.includes('Admin') || window.location.pathname.includes('/admin')")
+            admin_rendered = await page.evaluate("document.querySelector('.admin-sidebar') !== null")
             print(f"  [{'PASS' if admin_rendered else 'FAIL'}] /admin access under bypass: {admin_rendered}")
             if not admin_rendered: passed_all_checks = False
 
@@ -60,7 +60,9 @@ async def run_checklist_audit():
             page_guest = await context_guest.new_page()
             await page_guest.goto("http://localhost:3000/admin", wait_until="domcontentloaded")
             await page_guest.wait_for_timeout(1500)
-            lockdown_active = await page_guest.evaluate("document.body.innerText.includes('Access Restricted') || document.body.innerText.includes('Sign In') || window.location.pathname.includes('/login') || !document.querySelector('#admin-sidebar')")
+            has_signin_ui = await page_guest.evaluate("document.body.innerText.includes('Access Restricted') || document.body.innerText.includes('Sign In')")
+            no_admin_sidebar = await page_guest.evaluate("document.querySelector('.admin-sidebar') === null")
+            lockdown_active = has_signin_ui and no_admin_sidebar
             print(f"  [{'PASS' if lockdown_active else 'FAIL'}] /admin lockdown for unauthorized guests: {lockdown_active}")
             if not lockdown_active: passed_all_checks = False
             await context_guest.close()
@@ -69,13 +71,13 @@ async def run_checklist_audit():
             print("\n2. Media, Streaming, & Component Library:")
             await page.evaluate("window.router && window.router.navigateTo('/gallery')")
             await page.wait_for_timeout(1000)
-            gallery_rendered = await page.evaluate("document.querySelector('photo-gallery') !== null || document.querySelector('#gallery-grid') !== null || window.location.pathname.includes('/gallery')")
+            gallery_rendered = await page.evaluate("document.querySelector('photo-gallery') !== null")
             print(f"  [{'PASS' if gallery_rendered else 'FAIL'}] /gallery masonry grid rendered: {gallery_rendered}")
             if not gallery_rendered: passed_all_checks = False
 
             await page.evaluate("window.router && window.router.navigateTo('/videos')")
             await page.wait_for_timeout(1000)
-            video_rendered = await page.evaluate("document.querySelector('video-library') !== null || document.querySelector('#video-grid') !== null || window.location.pathname.includes('/videos')")
+            video_rendered = await page.evaluate("document.querySelector('video-library') !== null")
             print(f"  [{'PASS' if video_rendered else 'FAIL'}] /videos streaming portal rendered: {video_rendered}")
             if not video_rendered: passed_all_checks = False
 
@@ -104,7 +106,9 @@ async def run_checklist_audit():
                     const subtotalOk = summary.subtotal === 150;
                     const taxOk = Math.abs(summary.tax - 12.38) < 0.05;
                     const feeOk = summary.serviceFee === 3.00;
-                    const totalOk = summary.total > 150;
+                    // Calculate expected total using eventCart's rounding rule (toFixed(2))
+                    const expectedTotal = Number((summary.subtotal + summary.tax + summary.serviceFee).toFixed(2));
+                    const totalOk = summary.total === expectedTotal;
                     return subtotalOk && taxOk && feeOk && totalOk;
                 }
             """)
