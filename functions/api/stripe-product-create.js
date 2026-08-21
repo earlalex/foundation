@@ -6,6 +6,58 @@ export async function onRequestPost(context) {
   // Unified Environment Variable Law: strictly read STRIPE_SECRET_KEY
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
 
+  // Security: Guard endpoint against unauthorized callers creating product/price catalog entries
+  const authHeader = request.headers.get("Authorization") || request.headers.get("X-Admin-Token") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  const expectedAdminToken = env.ADMIN_TOKEN || env.ADMIN_API_KEY || env.FOUNDATION_ADMIN_KEY;
+  let isAuthorized = false;
+
+  if (expectedAdminToken && token === expectedAdminToken) {
+    isAuthorized = true;
+  } else if (token) {
+    // 1. In Simulation Mode without active Stripe key, allow explicit mock admin/editor tokens
+    if ((!stripeSecretKey || stripeSecretKey === 'sk_test_placeholder') && (token.startsWith('mock_admin') || token.startsWith('mock_editor'))) {
+      isAuthorized = true;
+    } else {
+      // 2. Decode JWT Bearer token and verify caller role against Firestore
+      let userEmail = '';
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          userEmail = payload.email || '';
+        }
+      } catch (_) {}
+
+      const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+      const firestoreApiKey = env.FIREBASE_API_KEY;
+
+      if (userEmail && firebaseProjectId && firestoreApiKey) {
+        try {
+          const docId = userEmail.replace(/[@.]/g, '_');
+          const userRes = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`);
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            const role = userData.fields?.role?.stringValue || '';
+            if (role === 'admin' || role === 'editor') {
+              isAuthorized = true;
+            }
+          }
+        } catch (dbErr) {
+          console.error('[Stripe Product Create] Auth DB check failed:', dbErr);
+        }
+      }
+    }
+  }
+
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ error: 'Forbidden: Insufficient privileges' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     const body = await request.json();
     const { name, description, amount, currency, recurring } = body;
