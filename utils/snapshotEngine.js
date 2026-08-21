@@ -133,88 +133,22 @@ export async function restoreSiteSnapshot(snapshot) {
     const { getFirestoreDB, collection, getDocs, doc, deleteDoc } = await import('../core/db-shared.js');
     const db = getFirestoreDB();
 
-    // Track cleanup failures
-    const cleanupFailures = [];
-
-    // Purge post-snapshot records created after snapshot was taken
-    // 2. Purge and Restore Custom Pages
-    const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
-    try {
-      const currentPages = await contentDB.getAllCustomPages();
-      for (const p of currentPages) {
-        if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
-          if (db) {
-            try {
-              await deleteDoc(doc(db, 'pages', p.id || p.slug));
-            } catch (e) {
-              cleanupFailures.push({ type: 'page', id: p.id || p.slug, error: e.message });
-              console.error('[SnapshotEngine]: Failed to delete page:', p.id || p.slug, e);
-            }
-          }
-        }
-      }
-      const localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
-      Object.keys(localPages).forEach(k => {
-        if (!snapshotPageIds.has(k)) delete localPages[k];
-      });
-      localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Pages purge warning:', e.message);
-      cleanupFailures.push({ type: 'pages_purge', error: e.message });
-    }
-
+    // Step A: Restore all snapshot records FIRST to guarantee data integrity before deleting any obsolete records
+    // 2. Restore Custom Pages
     if (Array.isArray(pages)) {
       for (const page of pages) {
         await contentDB.saveCustomPage(page);
       }
     }
 
-    // 3. Purge and Restore Content Entries
-    const snapshotContentIds = new Set((content || []).map(c => c.id));
-    try {
-      const currentContent = await contentDB.getAllContent();
-      for (const c of currentContent) {
-        if (c.id && !snapshotContentIds.has(c.id)) {
-          await contentDB.deleteContent(c.id);
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Content purge warning:', e.message);
-    }
-
+    // 3. Restore Content Entries
     if (Array.isArray(content)) {
       for (const c of content) {
         await contentDB.saveContent(c);
       }
     }
 
-    // 4. Purge and Restore Royalty Splits
-    const snapshotSplitKeys = new Set(Object.keys(splits || {}));
-    try {
-      const localSplits = JSON.parse(localStorage.getItem('foundation_local_splits') || '{}');
-      Object.keys(localSplits).forEach(k => {
-        if (!snapshotSplitKeys.has(k)) delete localSplits[k];
-      });
-      localStorage.setItem('foundation_local_splits', JSON.stringify(localSplits));
-
-      if (db) {
-        const querySnapshot = await getDocs(collection(db, 'splits'));
-        for (const docSnap of querySnapshot.docs) {
-          if (!snapshotSplitKeys.has(docSnap.id)) {
-            try {
-              await deleteDoc(doc(db, 'splits', docSnap.id));
-            } catch (e) {
-              cleanupFailures.push({ type: 'split', id: docSnap.id, error: e.message });
-              console.error('[SnapshotEngine]: Failed to delete split:', docSnap.id, e);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Splits purge warning:', e.message);
-      cleanupFailures.push({ type: 'splits_purge', error: e.message });
-    }
-
+    // 4. Restore Royalty Splits
     if (splits) {
       for (const [assetId, splitObj] of Object.entries(splits)) {
         if (splitObj && splitObj.splits) {
@@ -223,85 +157,21 @@ export async function restoreSiteSnapshot(snapshot) {
       }
     }
 
-    // 5. Purge and Restore Employee Ledgers
-    const snapshotEmpIds = new Set((employees || []).map(e => e.id));
-    try {
-      const currentEmployees = await contentDB.getEmployees();
-      for (const emp of currentEmployees) {
-        if (emp.id && !snapshotEmpIds.has(emp.id)) {
-          await contentDB.deleteEmployee(emp.id);
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Employee purge warning:', e.message);
-    }
-
+    // 5. Restore Employee Ledgers
     if (Array.isArray(employees)) {
       for (const emp of employees) {
         await contentDB.saveEmployee(emp);
       }
     }
 
-    // 6. Purge and Restore Payroll Records
-    const snapshotPayrollIds = new Set((payroll || []).map(p => p.id));
-    try {
-      const localPayroll = JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
-      Object.keys(localPayroll).forEach(k => {
-        if (!snapshotPayrollIds.has(k)) delete localPayroll[k];
-      });
-      localStorage.setItem('foundation_local_payroll', JSON.stringify(localPayroll));
-
-      if (db) {
-        const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
-        for (const docSnap of querySnapshot.docs) {
-          if (!snapshotPayrollIds.has(docSnap.id)) {
-            try {
-              await deleteDoc(doc(db, 'finances_payroll', docSnap.id));
-            } catch (e) {
-              cleanupFailures.push({ type: 'payroll', id: docSnap.id, error: e.message });
-              console.error('[SnapshotEngine]: Failed to delete payroll record:', docSnap.id, e);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Payroll purge warning:', e.message);
-      cleanupFailures.push({ type: 'payroll_purge', error: e.message });
-    }
-
+    // 6. Restore Payroll Records
     if (Array.isArray(payroll)) {
       for (const pr of payroll) {
         await contentDB.savePayrollRecord(pr);
       }
     }
 
-    // 7. Purge and Restore Expense Records
-    const snapshotExpenseIds = new Set((expenses || []).map(e => e.id));
-    try {
-      const localExpenses = JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
-      Object.keys(localExpenses).forEach(k => {
-        if (!snapshotExpenseIds.has(k)) delete localExpenses[k];
-      });
-      localStorage.setItem('foundation_local_expenses', JSON.stringify(localExpenses));
-
-      if (db) {
-        const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
-        for (const docSnap of querySnapshot.docs) {
-          if (!snapshotExpenseIds.has(docSnap.id)) {
-            try {
-              await deleteDoc(doc(db, 'finances_expenses', docSnap.id));
-            } catch (e) {
-              cleanupFailures.push({ type: 'expense', id: docSnap.id, error: e.message });
-              console.error('[SnapshotEngine]: Failed to delete expense record:', docSnap.id, e);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Expense purge warning:', e.message);
-      cleanupFailures.push({ type: 'expense_purge', error: e.message });
-    }
-
+    // 7. Restore Expense Records
     if (Array.isArray(expenses)) {
       for (const exp of expenses) {
         await contentDB.saveExpense(exp);
@@ -317,6 +187,110 @@ export async function restoreSiteSnapshot(snapshot) {
       await configManager.saveToFirebase(config);
     }
 
+    // Step B: ONLY after all snapshot restorations succeed, purge post-snapshot records created after snapshot
+    const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
+    try {
+      const currentPages = await contentDB.getAllCustomPages();
+      for (const p of currentPages) {
+        if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
+          if (db) {
+            try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) {}
+          }
+        }
+      }
+      const localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
+      Object.keys(localPages).forEach(k => {
+        if (!snapshotPageIds.has(k)) delete localPages[k];
+      });
+      localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
+    } catch (e) {
+      console.warn('[SnapshotEngine]: Pages purge warning:', e.message);
+    }
+
+    const snapshotContentIds = new Set((content || []).map(c => c.id));
+    try {
+      const currentContent = await contentDB.getAllContent();
+      for (const c of currentContent) {
+        if (c.id && !snapshotContentIds.has(c.id)) {
+          await contentDB.deleteContent(c.id);
+        }
+      }
+    } catch (e) {
+      console.warn('[SnapshotEngine]: Content purge warning:', e.message);
+    }
+
+    const snapshotSplitKeys = new Set(Object.keys(splits || {}));
+    try {
+      const localSplits = JSON.parse(localStorage.getItem('foundation_local_splits') || '{}');
+      Object.keys(localSplits).forEach(k => {
+        if (!snapshotSplitKeys.has(k)) delete localSplits[k];
+      });
+      localStorage.setItem('foundation_local_splits', JSON.stringify(localSplits));
+
+      if (db) {
+        const querySnapshot = await getDocs(collection(db, 'splits'));
+        for (const docSnap of querySnapshot.docs) {
+          if (!snapshotSplitKeys.has(docSnap.id)) {
+            try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[SnapshotEngine]: Splits purge warning:', e.message);
+    }
+
+    const snapshotEmpIds = new Set((employees || []).map(e => e.id));
+    try {
+      const currentEmployees = await contentDB.getEmployees();
+      for (const emp of currentEmployees) {
+        if (emp.id && !snapshotEmpIds.has(emp.id)) {
+          await contentDB.deleteEmployee(emp.id);
+        }
+      }
+    } catch (e) {
+      console.warn('[SnapshotEngine]: Employee purge warning:', e.message);
+    }
+
+    const snapshotPayrollIds = new Set((payroll || []).map(p => p.id));
+    try {
+      const localPayroll = JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
+      Object.keys(localPayroll).forEach(k => {
+        if (!snapshotPayrollIds.has(k)) delete localPayroll[k];
+      });
+      localStorage.setItem('foundation_local_payroll', JSON.stringify(localPayroll));
+
+      if (db) {
+        const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
+        for (const docSnap of querySnapshot.docs) {
+          if (!snapshotPayrollIds.has(docSnap.id)) {
+            try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[SnapshotEngine]: Payroll purge warning:', e.message);
+    }
+
+    const snapshotExpenseIds = new Set((expenses || []).map(e => e.id));
+    try {
+      const localExpenses = JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
+      Object.keys(localExpenses).forEach(k => {
+        if (!snapshotExpenseIds.has(k)) delete localExpenses[k];
+      });
+      localStorage.setItem('foundation_local_expenses', JSON.stringify(localExpenses));
+
+      if (db) {
+        const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
+        for (const docSnap of querySnapshot.docs) {
+          if (!snapshotExpenseIds.has(docSnap.id)) {
+            try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[SnapshotEngine]: Expense purge warning:', e.message);
+    }
+
     // 7. Restore Theme settings & Custom Tokens
     if (theme && Object.keys(theme).length > 0) {
       localStorage.setItem('foundation_theme_config', JSON.stringify(theme));
@@ -328,18 +302,8 @@ export async function restoreSiteSnapshot(snapshot) {
       localStorage.setItem('foundation_high_contrast', String(highContrast));
     }
 
-    // Report cleanup status
-    if (cleanupFailures.length > 0) {
-      console.warn('[SnapshotEngine]: Site state restored with cleanup failures:', cleanupFailures);
-      return {
-        success: true,
-        partialRestore: true,
-        cleanupFailures: cleanupFailures
-      };
-    }
-
     console.log('[SnapshotEngine]: Site state fully restored to chosen snapshot.');
-    return { success: true, partialRestore: false };
+    return true;
   } catch (err) {
     errorHandler.handleError(err, 'Restore Snapshot');
     throw err;

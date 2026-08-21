@@ -14,23 +14,34 @@ export class NotificationCenter extends HTMLElement {
     // Ensure persistent presence in document body if not present
     this.ensurePersistentMount();
 
-    // Delegated click listener on shadow host for inner dropdown controls
+    // Delegated click listener inspecting e.composedPath() for shadow-boundary retargeted clicks
     this.onControlClick = (e) => {
-      const readAll = e.target.closest('#btn-notif-read-all');
+      const path = e.composedPath ? e.composedPath() : [e.target];
+
+      const findInPath = (selector) => {
+        for (const node of path) {
+          if (node && node.nodeType === Node.ELEMENT_NODE && node.matches && node.matches(selector)) {
+            return node;
+          }
+        }
+        return null;
+      };
+
+      const readAll = findInPath('#btn-notif-read-all');
       if (readAll) {
         e.stopPropagation();
         this.markAllAsRead();
         return;
       }
 
-      const clear = e.target.closest('#btn-notif-clear');
+      const clear = findInPath('#btn-notif-clear');
       if (clear) {
         e.stopPropagation();
         this.clearAll();
         return;
       }
 
-      const tabBtn = e.target.closest('.notif-tab-btn');
+      const tabBtn = findInPath('.notif-tab-btn');
       if (tabBtn && tabBtn.dataset.tab) {
         e.stopPropagation();
         this.activeTab = tabBtn.dataset.tab;
@@ -38,7 +49,7 @@ export class NotificationCenter extends HTMLElement {
         return;
       }
 
-      const item = e.target.closest('.notif-item');
+      const item = findInPath('.notif-item');
       if (item && item.dataset.id) {
         e.stopPropagation();
         this.markAsRead(item.dataset.id);

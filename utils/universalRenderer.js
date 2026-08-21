@@ -20,37 +20,10 @@ export function escapeHTML(str) {
 export function sanitizeUrl(url) {
   if (typeof url !== 'string') return '';
   const trimmed = url.trim();
-
-  // Handle empty or anchor-only URLs
-  if (!trimmed || trimmed === '#') return trimmed;
-
-  // Parse and normalize URL scheme case-insensitively
-  try {
-    // Try to parse as absolute URL first
-    const parsedUrl = new URL(trimmed);
-    const scheme = parsedUrl.protocol.toLowerCase();
-
-    // Allow only safe schemes
-    const allowedSchemes = ['http:', 'https:', 'mailto:'];
-    if (!allowedSchemes.includes(scheme)) {
-      return '#';
-    }
-
-    return parsedUrl.href;
-  } catch (e) {
-    // If not a valid absolute URL, check for relative URLs or fragments
-    // Reject any scheme-like patterns that aren't http/https/mailto
-    const schemeMatch = trimmed.match(/^([a-z][a-z0-9+.-]*?):/i);
-    if (schemeMatch) {
-      const scheme = schemeMatch[1].toLowerCase();
-      if (!['http', 'https', 'mailto'].includes(scheme)) {
-        return '#';
-      }
-    }
-
-    // Allow relative URLs and fragments
-    return trimmed;
+  if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+    return '#';
   }
+  return trimmed;
 }
 
 // Pre-compiled regular expressions for cleanTitle avoid re-compiling RegExp instances on every call (~8.5% faster)
