@@ -86,13 +86,12 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
       const { getGoogleAccessToken } = await import('../core/google-services.js');
       const token = await getGoogleAccessToken(false);
       if (token) {
-        const siteConfig = configManager.current?.site || {};
-        const siteName = siteConfig.siteName || configManager.current?.siteTitle || "Foundation";
+        const siteName = configManager.current?.siteTitle || configManager.current?.site?.siteName || 'Foundation';
         const formattedDate = new Date().toISOString().split('T')[0];
         const fileName = `${formattedDate}_snapshot.json`;
         const { uploadBackupToDrive } = await import('./backend-google.js');
         await uploadBackupToDrive(token, siteName, fileName, payloadStr);
-        console.log(`[SnapshotEngine]: Securely archived JSON backup to Google Drive folder: ${siteName} / Backups / ${fileName}`);
+        console.log(`[SnapshotEngine]: Securely archived JSON backup to Google Drive folder: [Site Name] / Backups / ${fileName}`);
       }
     } catch (driveErr) {
       console.warn('[SnapshotEngine]: Google Drive upload deferred or offline:', driveErr.message);

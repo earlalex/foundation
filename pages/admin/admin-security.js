@@ -21,12 +21,6 @@ export function initSecurityTab() {
 }
 
 function setupHipaaAuditExporterPanel() {
-  checkAdminRole();
-  if (!isAdminPrimary) {
-    console.warn('[HIPAA Exporter]: Access denied - admin role required');
-    return;
-  }
-
   const securityPanel = document.getElementById('tab-security');
   if (!securityPanel) return;
 
@@ -632,11 +626,11 @@ function setupZapScannerPanel() {
 
             if (progress >= 100) {
               clearInterval(interval);
-              completeScan(targetUrl, scanType, scanId);
+              completeScan(targetUrl, scanType);
             }
           } catch (e) {
             clearInterval(interval);
-            completeScan(targetUrl, scanType, scanId); // Fallback to instant finish in sandbox
+            completeScan(targetUrl, scanType); // Fallback to instant finish in sandbox
           }
         }, 1000);
       } else {
@@ -650,10 +644,10 @@ function setupZapScannerPanel() {
     }
   });
 
-  async function completeScan(targetUrl, scanType, scanId = null) {
+  async function completeScan(targetUrl, scanType) {
     try {
       // Fetch scan alerts/vulnerabilities
-      const alertRes = await zapScannerInstance.getScanAlerts(targetUrl, '', scanId);
+      const alertRes = await zapScannerInstance.getScanAlerts(targetUrl);
       const findings = alertRes.findings || [];
 
       // Save to Firestore / local history

@@ -18,7 +18,6 @@ export const zapScanner = {
       scanType,
       targetUrl,
       status,
-      scanId: details.scanId || null,
       findingsCount: Array.isArray(findings) ? findings.length : 0,
       findings: Array.isArray(findings) ? findings : [],
       details
@@ -98,9 +97,7 @@ export const zapScanner = {
     if (!response.ok) {
       throw new Error(`Failed to start ZAP Ajax Spider scan: ${response.statusText}`);
     }
-    const resData = await response.json();
-    await this.logSecurityScan('ajaxSpider', targetUrl, 'STARTED', [], { scanId: resData.scanId });
-    return resData;
+    return response.json();
   },
 
   /**
@@ -125,35 +122,20 @@ export const zapScanner = {
    * Queries alerts/findings identified for the target URL
    * @param {string} targetUrl
    * @param {string} [riskLevel] - Optional filter ('High', 'Medium', 'Low', 'Informational')
-   * @param {string} [scanId] - Optional scan ID to associate with the alert query
    * @returns {Promise<Object>} The findings list
    */
-  async getScanAlerts(targetUrl, riskLevel = '', scanId = null) {
-    let status = 'FAILED';
-    let resData = null;
-    let alerts = [];
-
-    try {
-      const response = await fetch('/api/zap-scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'alerts', targetUrl, riskLevel })
-      });
-
-      if (!response.ok) {
-        await this.logSecurityScan('alerts_query', targetUrl, 'FAILED', [], { riskLevel, scanId, error: `HTTP ${response.status}` });
-        throw new Error(`Failed to retrieve ZAP scan alerts: ${response.statusText}`);
-      }
-
-      resData = await response.json();
-      alerts = resData.alerts || resData.findings || [];
-      status = 'COMPLETED';
-    } catch (err) {
-      await this.logSecurityScan('alerts_query', targetUrl, 'FAILED', [], { riskLevel, scanId, error: err.message });
-      throw err;
+  async getScanAlerts(targetUrl, riskLevel = '') {
+    const response = await fetch('/api/zap-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'alerts', targetUrl, riskLevel })
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to retrieve ZAP scan alerts: ${response.statusText}`);
     }
-
-    await this.logSecurityScan('alerts_query', targetUrl, status, alerts, { riskLevel, scanId });
+    const resData = await response.json();
+    const alerts = resData.alerts || resData.findings || [];
+    await this.logSecurityScan('alerts_query', targetUrl, 'COMPLETED', alerts, { riskLevel });
     return resData;
   },
 
