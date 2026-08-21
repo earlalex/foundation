@@ -56,6 +56,36 @@ export async function runUiTests() {
     btn.remove();
   });
 
+  await assertTest('UI Component: "<notification-center>" handles ARIA expanded state and Escape key dismissal', async () => {
+    await import('../components/global/NotificationCenter.js');
+    const notifCenter = document.createElement('notification-center');
+    sandbox.appendChild(notifCenter);
+
+    const bell = notifCenter.querySelector('#utility-notification-bell');
+    if (!bell) throw new Error('Notification bell button not found.');
+
+    if (bell.getAttribute('aria-haspopup') !== 'true') {
+      throw new Error('Notification bell missing aria-haspopup="true".');
+    }
+    if (bell.getAttribute('aria-expanded') !== 'false') {
+      throw new Error('Initial aria-expanded should be "false".');
+    }
+
+    // Toggle open
+    bell.click();
+    if (bell.getAttribute('aria-expanded') !== 'true') {
+      throw new Error('aria-expanded should be "true" when open.');
+    }
+
+    // Press Escape key
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    if (bell.getAttribute('aria-expanded') !== 'false') {
+      throw new Error('aria-expanded should revert to "false" after Escape key press.');
+    }
+
+    notifCenter.remove();
+  });
+
   await assertTest('UI Button: "Checkout" initiates checkout state update', async () => {
     const btn = document.createElement('button');
     btn.id = 'btn-checkout';

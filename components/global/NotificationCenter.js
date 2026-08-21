@@ -47,11 +47,23 @@ export class NotificationCenter extends HTMLElement {
       }
     };
     document.addEventListener('click', this.onDocumentClick);
+
+    // Global keydown listener for Escape key dismissal
+    this.onDocumentKeyDown = (e) => {
+      if (e.key === 'Escape' && this.isOpen) {
+        this.isOpen = false;
+        this.updateDropdownVisibility();
+        const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger');
+        if (trigger) trigger.focus();
+      }
+    };
+    document.addEventListener('keydown', this.onDocumentKeyDown);
   }
 
   disconnectedCallback() {
     window.removeEventListener('notification-received', this.onNotificationReceived);
     document.removeEventListener('click', this.onDocumentClick);
+    document.removeEventListener('keydown', this.onDocumentKeyDown);
   }
 
   ensurePersistentMount() {
@@ -108,11 +120,15 @@ export class NotificationCenter extends HTMLElement {
 
   updateDropdownVisibility() {
     const dropdown = this.querySelector('#notif-dropdown');
+    const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', this.isOpen ? 'true' : 'false');
+    }
     if (!dropdown) return;
 
     if (this.isOpen) {
-      const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger') || this;
-      const rect = trigger.getBoundingClientRect();
+      const targetTrigger = trigger || this;
+      const rect = targetTrigger.getBoundingClientRect();
 
       dropdown.style.position = 'fixed';
       dropdown.style.top = `${rect.bottom > 0 ? rect.bottom + 6 : 42}px`;
@@ -266,7 +282,7 @@ export class NotificationCenter extends HTMLElement {
         }
       </style>
 
-      <button id="utility-notification-bell" class="notif-bell-btn" aria-label="Notifications Dropdown">
+      <button id="utility-notification-bell" class="notif-bell-btn" aria-label="Notifications Dropdown" aria-haspopup="true" aria-expanded="${this.isOpen ? 'true' : 'false'}">
         <span>🔔</span>
         ${unreadCount > 0 ? `<span class="notif-badge">${unreadCount}</span>` : ''}
       </button>
