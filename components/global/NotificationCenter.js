@@ -53,7 +53,7 @@ export class NotificationCenter extends HTMLElement {
       if (e.key === 'Escape' && this.isOpen) {
         this.isOpen = false;
         this.updateDropdownVisibility();
-        const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger');
+        const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger') || this.querySelector('[data-toggle="notif-drawer"]');
         if (trigger) trigger.focus();
       }
     };
@@ -120,7 +120,7 @@ export class NotificationCenter extends HTMLElement {
 
   updateDropdownVisibility() {
     const dropdown = this.querySelector('#notif-dropdown');
-    const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger');
+    const trigger = this.querySelector('#utility-notification-bell') || this.querySelector('#notif-bell-trigger') || this.querySelector('[data-toggle="notif-drawer"]');
     if (trigger) {
       trigger.setAttribute('aria-expanded', this.isOpen ? 'true' : 'false');
     }
@@ -282,7 +282,7 @@ export class NotificationCenter extends HTMLElement {
         }
       </style>
 
-      <button id="utility-notification-bell" class="notif-bell-btn" aria-label="Notifications Dropdown" aria-haspopup="true" aria-expanded="${this.isOpen ? 'true' : 'false'}">
+      <button id="utility-notification-bell" class="notif-bell-btn" aria-label="Notifications Dropdown" aria-controls="notif-dropdown" aria-expanded="${this.isOpen ? 'true' : 'false'}">
         <span>🔔</span>
         ${unreadCount > 0 ? `<span class="notif-badge">${unreadCount}</span>` : ''}
       </button>

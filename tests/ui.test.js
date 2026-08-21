@@ -64,8 +64,8 @@ export async function runUiTests() {
     const bell = notifCenter.querySelector('#utility-notification-bell');
     if (!bell) throw new Error('Notification bell button not found.');
 
-    if (bell.getAttribute('aria-haspopup') !== 'true') {
-      throw new Error('Notification bell missing aria-haspopup="true".');
+    if (bell.getAttribute('aria-controls') !== 'notif-dropdown') {
+      throw new Error('Notification bell missing aria-controls="notif-dropdown".');
     }
     if (bell.getAttribute('aria-expanded') !== 'false') {
       throw new Error('Initial aria-expanded should be "false".');
