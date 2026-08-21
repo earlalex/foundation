@@ -83,11 +83,11 @@ service cloud.firestore {
                request.resource.data.role != 'affiliate' &&
                (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true))
             : (request.resource == null || (
-                ((request.resource.data.role != 'admin' &&
-                  request.resource.data.role != 'editor' &&
-                  request.resource.data.role != 'member' &&
-                  request.resource.data.role != 'affiliate') ||
-                 request.resource.data.role == resource.data.role) &&
+                (((request.resource.data.role != 'admin' &&
+                   request.resource.data.role != 'editor' &&
+                   request.resource.data.role != 'member' &&
+                   request.resource.data.role != 'affiliate') ||
+                  request.resource.data.role == resource.data.role)) &&
                 (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true || ('isAdmin' in resource.data && resource.data.isAdmin == true))
               ))
         )

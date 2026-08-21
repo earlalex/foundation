@@ -75,11 +75,13 @@ export class ContentDB {
       if (!Array.isArray(logs) || logs.length === 0) return [];
 
       if (currentUser?.email || currentUser?.uid) {
-        // Authenticated user: return logs belonging to this specific user
+        // Authenticated user: return logs belonging to this user, OR un-owned legacy/guest logs
         return logs.filter(item =>
+          (!item.userEmail && !item.userId && !item.email && !item.customerEmail) ||
           (item.userEmail && currentUser.email && item.userEmail === currentUser.email) ||
           (item.userId && currentUser.uid && item.userId === currentUser.uid) ||
-          (!item.userEmail && !item.userId && (item.email === currentUser.email || item.customerEmail === currentUser.email))
+          (item.email && currentUser.email && item.email === currentUser.email) ||
+          (item.customerEmail && currentUser.email && item.customerEmail === currentUser.email)
         );
       } else {
         // Unauthenticated / guest session: ONLY return un-owned anonymous logs
@@ -1734,11 +1736,8 @@ export async function syncOutboxToFirestore() {
                 }
               }
             } catch (singleErr) {
-              if (singleErr.code === 'permission-denied' || singleErr.message?.includes('permissions') || singleErr.message?.includes('Permission denied')) {
-                console.warn(`[Outbox Sync]: Pruned permission-denied item ${item.collection}/${item.docId} from outbox:`, singleErr.message);
-              } else {
-                remainingOutbox.push(item);
-              }
+              console.warn(`[Outbox Sync]: Retaining item ${item.collection}/${item.docId} in outbox due to sync error:`, singleErr.message);
+              remainingOutbox.push(item);
             }
           }
           if (remainingOutbox.length > 0) {
