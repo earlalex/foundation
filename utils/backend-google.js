@@ -363,6 +363,14 @@ export async function syncCredentialToGoogleVault(token, credentialRecord) {
       })
     }).catch(() => ({ ok: false }));
 
+    if (!response.ok) {
+      console.warn('[Workspace Vault Sync]: API returned non-ok response');
+      return {
+        success: false,
+        error: 'Vault sync API returned non-ok response'
+      };
+    }
+
     console.log('[Workspace Vault Sync]: Synced credential record to admin@earlalex.com');
 
     return {

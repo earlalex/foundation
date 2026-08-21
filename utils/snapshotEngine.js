@@ -87,14 +87,12 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
       const token = await getGoogleAccessToken(false);
       if (token) {
         const siteConfig = configManager.current?.site || {};
-        const companyName = siteConfig.companyName || configManager.current?.businessProfile?.legalName || "Ascension Avenue Academy";
         const siteName = siteConfig.siteName || configManager.current?.siteTitle || "Foundation";
-        const folderSiteName = `${companyName}-${siteName}`;
         const formattedDate = new Date().toISOString().split('T')[0];
         const fileName = `${formattedDate}_snapshot.json`;
         const { uploadBackupToDrive } = await import('./backend-google.js');
-        await uploadBackupToDrive(token, folderSiteName, fileName, payloadStr);
-        console.log(`[SnapshotEngine]: Securely archived JSON backup to Google Drive folder: ${folderSiteName} / Backups / ${fileName}`);
+        await uploadBackupToDrive(token, siteName, fileName, payloadStr);
+        console.log(`[SnapshotEngine]: Securely archived JSON backup to Google Drive folder: ${siteName} / Backups / ${fileName}`);
       }
     } catch (driveErr) {
       console.warn('[SnapshotEngine]: Google Drive upload deferred or offline:', driveErr.message);
@@ -125,7 +123,7 @@ export async function restoreSiteSnapshot(snapshot) {
     console.log('[SnapshotEngine]: Creating temporary Pre-Rollback Backup safeguard snapshot...');
     await createSiteSnapshot('Pre-Rollback Backup');
 
-    const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, highContrast } = snapshot.data;
+    const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, customTheme, highContrast } = snapshot.data;
 
     // 2. Restore configManager
     if (config) {

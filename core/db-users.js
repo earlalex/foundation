@@ -35,7 +35,8 @@ export async function saveUser(userData) {
         const { encryptPHIRecord } = await import('../utils/hipaa-audit.js');
         encryptedUserData[key] = await encryptPHIRecord(userData[key]);
       } catch (encErr) {
-        console.warn('[ePHI Guard]: AES-GCM 256-bit encryption warning:', encErr.message);
+        console.error('[ePHI Guard]: AES-GCM 256-bit encryption failed:', encErr.message);
+        throw new Error(`ePHI encryption failed for field "${key}": ${encErr.message}`);
       }
     }
   }
@@ -46,14 +47,6 @@ export async function saveUser(userData) {
     updatedAt: new Date().toISOString()
   };
 
-  // Log to immutable HIPAA audit trail
-  try {
-    const { logHipaaAccess } = await import('../utils/hipaa-audit.js');
-    await logHipaaAccess('WRITE', userId, 'SUCCESS', { notes: `Saved user record for ${userData.email || userId}` });
-  } catch (auditErr) {
-    console.warn('[HIPAA Audit]: Audit log queue warning:', auditErr.message);
-  }
-
   // Local-First: Persist to LocalStorage immediately
   const local = getLocalUsers();
   local[userId] = payload;
@@ -61,15 +54,40 @@ export async function saveUser(userData) {
 
   const db = getFirestoreDB();
   if (!db) {
+    // Log to immutable HIPAA audit trail after successful local save
+    try {
+      const { logHipaaAccess } = await import('../utils/hipaa-audit.js');
+      await logHipaaAccess('WRITE', userId, 'SUCCESS', { notes: `Saved user record for ${userData.email || userId}` });
+    } catch (auditErr) {
+      console.error('[HIPAA Audit]: Audit log failed after save:', auditErr.message);
+    }
     return payload;
   }
 
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
     await withTimeout(setDoc(docRef, payload, { merge: true }), 1500);
+
+    // Log to immutable HIPAA audit trail after successful save
+    try {
+      const { logHipaaAccess } = await import('../utils/hipaa-audit.js');
+      await logHipaaAccess('WRITE', userId, 'SUCCESS', { notes: `Saved user record for ${userData.email || userId}` });
+    } catch (auditErr) {
+      console.error('[HIPAA Audit]: Audit log failed after save:', auditErr.message);
+    }
+
     return payload;
   } catch (err) {
     console.warn('[DB]: Firestore user save error or timeout. Saved locally.', err.message);
+
+    // Log to immutable HIPAA audit trail after local-only save
+    try {
+      const { logHipaaAccess } = await import('../utils/hipaa-audit.js');
+      await logHipaaAccess('WRITE', userId, 'SUCCESS', { notes: `Saved user record for ${userData.email || userId} (local-only)` });
+    } catch (auditErr) {
+      console.error('[HIPAA Audit]: Audit log failed after save:', auditErr.message);
+    }
+
     return payload;
   }
 }

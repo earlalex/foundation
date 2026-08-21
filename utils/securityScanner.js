@@ -73,16 +73,25 @@ export function scanTextContent(content) {
  */
 export async function queryVirusTotal(hash) {
   if (!hash) return null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await fetch('/api/virustotal-scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash })
+      body: JSON.stringify({ hash }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     if (!response.ok) return null;
     return await response.json();
   } catch (err) {
-    console.warn('[VirusTotal Scan]: Query skipped or offline:', err.message);
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      console.warn('[VirusTotal Scan]: Request timed out after 10s');
+    } else {
+      console.warn('[VirusTotal Scan]: Query skipped or offline:', err.message);
+    }
     return null;
   }
 }

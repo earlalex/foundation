@@ -1399,10 +1399,32 @@ function launchFactoryResetModal() {
             sessionStorage.clear();
             try {
               if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
-                const dbs = await indexedDB.databases();
-                for (const db of dbs) {
-                  if (db.name) indexedDB.deleteDatabase(db.name);
+                // Close FoundationFinancesDB connection before deletion
+                try {
+                  const { closeDatabase } = await import('../../core/invoice-tracker.js');
+                  if (typeof closeDatabase === 'function') {
+                    await closeDatabase();
+                  }
+                } catch (closeErr) {
+                  console.warn('[Factory Reset]: Could not close invoice-tracker connection:', closeErr);
                 }
+
+                const dbs = await indexedDB.databases();
+                const deletions = [];
+                for (const db of dbs) {
+                  if (db.name) {
+                    deletions.push(new Promise((resolve, reject) => {
+                      const req = indexedDB.deleteDatabase(db.name);
+                      req.onsuccess = () => resolve();
+                      req.onerror = () => reject(req.error);
+                      req.onblocked = () => {
+                        console.warn(`[Factory Reset]: Deletion of ${db.name} blocked`);
+                        resolve();
+                      };
+                    }));
+                  }
+                }
+                await Promise.all(deletions);
               }
             } catch (idbErr) {
               console.warn('[Factory Reset]: IndexedDB purge warning:', idbErr);

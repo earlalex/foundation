@@ -34,11 +34,14 @@ async function deriveKey(password, salt) {
 /**
  * Encrypt sensitive ePHI / record at rest using AES-GCM 256-bit.
  * @param {string} plainText
- * @param {string} keyPhrase - Encryption password/phrase
+ * @param {string} keyPhrase - Encryption password/phrase (must be provided, no default)
  * @returns {Promise<Object>} { cipherText: string (hex), iv: string (hex), salt: string (hex) }
  */
-export async function encryptPHIRecord(plainText, keyPhrase = 'FOUNDATION-SECURE-ePHI-KEY-PHRASE-2026') {
+export async function encryptPHIRecord(plainText, keyPhrase) {
   if (!plainText) return { cipherText: '', iv: '', salt: '' };
+  if (!keyPhrase) {
+    throw new Error('ePHI encryption keyPhrase is required and must be provided by server/KMS');
+  }
 
   const encoder = new TextEncoder();
   const data = encoder.encode(plainText);
@@ -71,11 +74,14 @@ export async function encryptPHIRecord(plainText, keyPhrase = 'FOUNDATION-SECURE
  * @param {string} cipherTextHex
  * @param {string} ivHex
  * @param {string} saltHex
- * @param {string} keyPhrase
+ * @param {string} keyPhrase - Encryption password/phrase (must be provided, no default)
  * @returns {Promise<string>} Decrypted plain text
  */
-export async function decryptPHIRecord(cipherTextHex, ivHex, saltHex, keyPhrase = 'FOUNDATION-SECURE-ePHI-KEY-PHRASE-2026') {
+export async function decryptPHIRecord(cipherTextHex, ivHex, saltHex, keyPhrase) {
   if (!cipherTextHex || !ivHex || !saltHex) return '';
+  if (!keyPhrase) {
+    throw new Error('ePHI decryption keyPhrase is required and must be provided by server/KMS');
+  }
 
   const cipherBytes = new Uint8Array(cipherTextHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
   const iv = new Uint8Array(ivHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
@@ -170,30 +176,44 @@ export function getHipaaLogs() {
 }
 
 /**
+ * Escapes a CSV cell value to prevent CSV injection attacks
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeCsvCell(value) {
+  const strValue = String(value);
+  // Prefix with apostrophe if starts with =, +, -, or @ to prevent formula injection
+  const needsPrefix = /^[=+\-@]/.test(strValue);
+  const prefixed = needsPrefix ? "'" + strValue : strValue;
+  // Quote and escape internal quotes
+  return `"${prefixed.replace(/"/g, '""')}"`;
+}
+
+/**
  * Exports all local HIPAA audit logs as a downloadable CSV.
  */
 export function exportHipaaLogsCsv() {
   const logs = getHipaaLogs();
   const headers = ['ID', 'Timestamp', 'Agent ID', 'User ID', 'User Email', 'Role', 'Action', 'Record ID', 'Status', 'IP Address', 'Details'];
   if (logs.length === 0) {
-    return headers.join(',') + '\n';
+    return headers.map(h => escapeCsvCell(h)).join(',') + '\n';
   }
 
-  const csvRows = [headers.join(',')];
+  const csvRows = [headers.map(h => escapeCsvCell(h)).join(',')];
 
   logs.forEach(log => {
     const row = [
-      log.id,
-      log.timestamp,
-      log.agentId,
-      log.userId,
-      log.userEmail,
-      log.role,
-      log.action,
-      log.recordId,
-      log.status,
-      log.ip,
-      `"${String(log.details).replace(/"/g, '""')}"`
+      escapeCsvCell(log.id),
+      escapeCsvCell(log.timestamp),
+      escapeCsvCell(log.agentId),
+      escapeCsvCell(log.userId),
+      escapeCsvCell(log.userEmail),
+      escapeCsvCell(log.role),
+      escapeCsvCell(log.action),
+      escapeCsvCell(log.recordId),
+      escapeCsvCell(log.status),
+      escapeCsvCell(log.ip),
+      escapeCsvCell(log.details)
     ];
     csvRows.push(row.join(','));
   });
