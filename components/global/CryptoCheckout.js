@@ -103,7 +103,18 @@ class CryptoCheckout extends HTMLElement {
     try {
       // 1. Submit actual blockchain transfer if a Web3 wallet provider is connected
       if (this.walletType === 'evm' && window.ethereum) {
-        const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '0x0000000000000000000000000000000000000000';
+        const recipient = configManager.current.integrations?.cryptoTreasuryAddress || '';
+        if (!recipient || recipient === '0x0000000000000000000000000000000000000000') {
+          toast.error('EVM settlement failed: Crypto treasury wallet address is not configured.');
+          return;
+        }
+
+        const evmCurrencies = ['ETH', 'USDC', 'USDT'];
+        if (!evmCurrencies.includes(this.selectedCurrency)) {
+          toast.error(`Unsupported currency for EVM checkout: ${this.selectedCurrency}. Please select ETH, USDC, or USDT.`);
+          return;
+        }
+
         let txParams = {};
 
         if (this.selectedCurrency === 'ETH') {
@@ -114,7 +125,6 @@ class CryptoCheckout extends HTMLElement {
             value: hexAmount
           };
         } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
-          // Construct ERC20 transfer(address,uint256) calldata
           const tokenDecimals = 6;
           const rawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
           const cleanRecipient = recipient.toLowerCase().replace('0x', '').padStart(64, '0');
@@ -129,13 +139,6 @@ class CryptoCheckout extends HTMLElement {
             value: '0x0',
             data
           };
-        } else {
-          const hexAmount = '0x' + BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18)).toString(16);
-          txParams = {
-            from: this.activeWallet,
-            to: recipient,
-            value: hexAmount
-          };
         }
 
         txHash = await window.ethereum.request({
@@ -145,99 +148,94 @@ class CryptoCheckout extends HTMLElement {
 
         // Verify transaction receipt on-chain when possible
         if (txHash && window.ethereum.request) {
-          try {
-            let receipt = null;
-            let attempts = 0;
-            while (!receipt && attempts < 5) {
-              receipt = await window.ethereum.request({
-                method: 'eth_getTransactionReceipt',
-                params: [txHash]
-              });
-              if (!receipt) {
-                await new Promise(r => setTimeout(r, 1000));
-                attempts++;
-              }
-            }
+          let receipt = null;
+          let attempts = 0;
+          while (!receipt && attempts < 5) {
+            receipt = await window.ethereum.request({
+              method: 'eth_getTransactionReceipt',
+              params: [txHash]
+            });
             if (!receipt) {
-              toast.error('Transaction unconfirmed: On-chain receipt confirmation timed out. Settlement halted.');
-              return;
+              await new Promise(r => setTimeout(r, 1000));
+              attempts++;
             }
-            const statusStr = String(receipt.status);
-            if (statusStr === '0x0' || statusStr === '0' || statusStr === 'false') {
-              toast.error('Transaction failed: On-chain transaction reverted.');
-              return;
-            }
-
-            // Verify sender address matches active wallet
-            if (receipt.from && receipt.from.toLowerCase() !== this.activeWallet.toLowerCase()) {
-              toast.error('Transaction verification failed: Sender address on receipt does not match connected wallet.');
-              return;
-            }
-
-            // Verify recipient address and transfer execution
-            if (this.selectedCurrency === 'ETH') {
-              if (receipt.to && recipient && receipt.to.toLowerCase() !== recipient.toLowerCase()) {
-                toast.error('Transaction verification failed: Transaction recipient on receipt does not match treasury address.');
-                return;
-              }
-
-              // Verify on-chain ETH value transferred in transaction details
-              const txObj = await window.ethereum.request({
-                method: 'eth_getTransactionByHash',
-                params: [txHash]
-              });
-
-              if (!txObj || !txObj.value) {
-                toast.error('Transaction verification failed: Could not retrieve ETH transaction value from network.');
-                return;
-              }
-
-              const expectedWei = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18));
-              const transferredWei = BigInt(txObj.value);
-
-              if (transferredWei < expectedWei) {
-                toast.error(`Transaction verification failed: Transferred ETH (${(Number(transferredWei) / 1e18).toFixed(6)} ETH) is less than required amount (${this.cryptoEquivalent} ETH).`);
-                return;
-              }
-            } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
-              // Verify token contract address
-              const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
-              if (receipt.to && tokenContract && receipt.to.toLowerCase() !== tokenContract.toLowerCase()) {
-                toast.error('Transaction verification failed: Contract interaction on receipt does not match token contract.');
-                return;
-              }
-
-              // Require valid ERC20 Transfer log
-              if (!Array.isArray(receipt.logs) || receipt.logs.length === 0) {
-                toast.error('Transaction verification failed: No contract logs returned for ERC20 transfer.');
-                return;
-              }
-
-              const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; // Transfer(address,address,uint256)
-              const transferLog = receipt.logs.find(log => log.topics && log.topics[0] && log.topics[0].toLowerCase() === transferTopic);
-
-              if (!transferLog || !transferLog.topics || transferLog.topics.length < 3 || !transferLog.data || transferLog.data === '0x') {
-                toast.error('Transaction verification failed: Missing or invalid ERC20 Transfer event log on receipt.');
-                return;
-              }
-
-              const logRecipient = '0x' + transferLog.topics[2].slice(-40);
-              if (logRecipient.toLowerCase() !== recipient.toLowerCase()) {
-                toast.error('Transaction verification failed: ERC20 Transfer event recipient does not match treasury address.');
-                return;
-              }
-
-              const tokenDecimals = 6;
-              const expectedRawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
-              const transferredRawAmount = BigInt(transferLog.data);
-              if (transferredRawAmount < expectedRawAmount) {
-                toast.error('Transaction verification failed: Transferred token amount is less than required USD total.');
-                return;
-              }
-            }
-          } catch (receiptErr) {
-            toast.error(`Receipt verification failed: ${receiptErr.message || receiptErr}`);
+          }
+          if (!receipt) {
+            toast.error('Transaction unconfirmed: On-chain receipt confirmation timed out. Settlement halted.');
             return;
+          }
+          const statusStr = String(receipt.status);
+          if (statusStr === '0x0' || statusStr === '0' || statusStr === 'false') {
+            toast.error('Transaction failed: On-chain transaction reverted.');
+            return;
+          }
+
+          // Verify sender address matches active wallet
+          if (receipt.from && receipt.from.toLowerCase() !== this.activeWallet.toLowerCase()) {
+            toast.error('Transaction verification failed: Sender address on receipt does not match connected wallet.');
+            return;
+          }
+
+          // Verify recipient address and transfer execution
+          if (this.selectedCurrency === 'ETH') {
+            if (receipt.to && recipient && receipt.to.toLowerCase() !== recipient.toLowerCase()) {
+              toast.error('Transaction verification failed: Transaction recipient on receipt does not match treasury address.');
+              return;
+            }
+
+            // Verify on-chain ETH value transferred in transaction details
+            const txObj = await window.ethereum.request({
+              method: 'eth_getTransactionByHash',
+              params: [txHash]
+            });
+
+            if (!txObj || !txObj.value) {
+              toast.error('Transaction verification failed: Could not retrieve ETH transaction value from network.');
+              return;
+            }
+
+            const expectedWei = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * 1e18));
+            const transferredWei = BigInt(txObj.value);
+
+            if (transferredWei < expectedWei) {
+              toast.error(`Transaction verification failed: Transferred ETH (${(Number(transferredWei) / 1e18).toFixed(6)} ETH) is less than required amount (${this.cryptoEquivalent} ETH).`);
+              return;
+            }
+          } else if (this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') {
+            // Verify token contract address
+            const tokenContract = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}ContractAddress`] || recipient;
+            if (receipt.to && tokenContract && receipt.to.toLowerCase() !== tokenContract.toLowerCase()) {
+              toast.error('Transaction verification failed: Contract interaction on receipt does not match token contract.');
+              return;
+            }
+
+            // Require valid ERC20 Transfer log
+            if (!Array.isArray(receipt.logs) || receipt.logs.length === 0) {
+              toast.error('Transaction verification failed: No contract logs returned for ERC20 transfer.');
+              return;
+            }
+
+            const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; // Transfer(address,address,uint256)
+            const transferLog = receipt.logs.find(log => log.topics && log.topics[0] && log.topics[0].toLowerCase() === transferTopic);
+
+            if (!transferLog || !transferLog.topics || transferLog.topics.length < 3 || !transferLog.data || transferLog.data === '0x') {
+              toast.error('Transaction verification failed: Missing or invalid ERC20 Transfer event log on receipt.');
+              return;
+            }
+
+            const logRecipient = '0x' + transferLog.topics[2].slice(-40);
+            if (logRecipient.toLowerCase() !== recipient.toLowerCase()) {
+              toast.error('Transaction verification failed: ERC20 Transfer event recipient does not match treasury address.');
+              return;
+            }
+
+            const tokenDecimals = 6;
+            const expectedRawAmount = BigInt(Math.floor(parseFloat(this.cryptoEquivalent) * Math.pow(10, tokenDecimals)));
+            const transferredRawAmount = BigInt(transferLog.data);
+            if (transferredRawAmount < expectedRawAmount) {
+              toast.error('Transaction verification failed: Transferred token amount is less than required USD total.');
+              return;
+            }
           }
         }
       } else if (this.walletType === 'solana' && window.solana?.isPhantom) {
@@ -251,103 +249,109 @@ class CryptoCheckout extends HTMLElement {
           return;
         }
 
-        if (provider.connection) {
-          try {
-            let confirmed = false;
-            let attempts = 0;
-            while (!confirmed && attempts < 5) {
-              const status = await provider.connection.getSignatureStatus(txHash);
-              if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
-                if (status.value.err) {
-                  toast.error('Solana transaction failed: On-chain transaction error reported.');
-                  return;
-                }
-                confirmed = true;
-                break;
-              }
-              await new Promise(r => setTimeout(r, 1000));
-              attempts++;
-            }
-            if (!confirmed) {
-              toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
+        if (!provider.connection) {
+          toast.error('Solana settlement failed: Provider connection object missing for on-chain status verification.');
+          return;
+        }
+
+        let confirmed = false;
+        let attempts = 0;
+        while (!confirmed && attempts < 5) {
+          const status = await provider.connection.getSignatureStatus(txHash);
+          if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') {
+            if (status.value.err) {
+              toast.error('Solana transaction failed: On-chain transaction error reported.');
               return;
             }
+            confirmed = true;
+            break;
+          }
+          await new Promise(r => setTimeout(r, 1000));
+          attempts++;
+        }
+        if (!confirmed) {
+          toast.error('Solana settlement unconfirmed: On-chain signature status confirmation timed out.');
+          return;
+        }
 
-            // On-chain transaction details verification for Solana
-            const solTreasury = configManager.current.integrations?.cryptoTreasuryAddress || '';
-            if (!solTreasury) {
-              toast.error('Solana settlement failed: Treasury wallet address is not configured.');
-              return;
-            }
+        // On-chain transaction details verification for Solana
+        const solTreasury = configManager.current.integrations?.cryptoTreasuryAddress || '';
+        if (!solTreasury) {
+          toast.error('Solana settlement failed: Treasury wallet address is not configured.');
+          return;
+        }
 
-            if (!provider.connection || typeof provider.connection.getParsedTransaction !== 'function') {
-              toast.error('Solana settlement failed: On-chain transaction parser API unavailable on provider connection.');
-              return;
-            }
+        if (typeof provider.connection.getParsedTransaction !== 'function') {
+          toast.error('Solana settlement failed: On-chain transaction parser API unavailable on provider connection.');
+          return;
+        }
 
-            try {
-              const parsedTx = await provider.connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
-              if (!parsedTx) {
-                toast.error('Solana transaction verification failed: Could not retrieve parsed on-chain transaction details.');
-                return;
-              }
+        const parsedTx = await provider.connection.getParsedTransaction(txHash, { commitment: 'confirmed' });
+        if (!parsedTx) {
+          toast.error('Solana transaction verification failed: Could not retrieve parsed on-chain transaction details.');
+          return;
+        }
 
-              const accountKeys = parsedTx.transaction?.message?.accountKeys || [];
-              const keyStrings = accountKeys.map(k => (typeof k === 'string' ? k : k.pubkey?.toString() || ''));
+        const accountKeys = parsedTx.transaction?.message?.accountKeys || [];
+        const keyStrings = accountKeys.map(k => (typeof k === 'string' ? k : k.pubkey?.toString() || ''));
 
-              // Verify feePayer / sender is active wallet
-              if (keyStrings.length > 0 && keyStrings[0] !== this.activeWallet) {
-                toast.error('Solana transaction verification failed: Sender on transaction does not match active wallet.');
-                return;
-              }
+        // Verify feePayer / sender is active wallet
+        if (keyStrings.length > 0 && keyStrings[0] !== this.activeWallet) {
+          toast.error('Solana transaction verification failed: Sender on transaction does not match active wallet.');
+          return;
+        }
 
-              // Verify treasury address is present in account keys / recipient
-              const treasuryIndex = keyStrings.findIndex(k => k === solTreasury);
-              if (treasuryIndex === -1) {
-                toast.error('Solana transaction verification failed: Treasury recipient address not found in transaction accounts.');
-                return;
-              }
+        // Verify treasury address is present in account keys / recipient
+        const treasuryIndex = keyStrings.findIndex(k => k === solTreasury);
+        if (treasuryIndex === -1) {
+          toast.error('Solana transaction verification failed: Treasury recipient address not found in transaction accounts.');
+          return;
+        }
 
-              // Verify balance increase for treasury account in SOL lamports or SPL Token balance
-              const meta = parsedTx.meta;
-              if (!meta) {
-                toast.error('Solana transaction verification failed: Missing execution metadata on on-chain transaction.');
-                return;
-              }
+        // Verify balance increase for treasury account in SOL lamports or SPL Token balance delta
+        const meta = parsedTx.meta;
+        if (!meta) {
+          toast.error('Solana transaction verification failed: Missing execution metadata on on-chain transaction.');
+          return;
+        }
 
-              let transferredAmountUSD = 0;
-              if (this.selectedCurrency === 'SOL' && meta.preBalances && meta.postBalances) {
-                const preBal = meta.preBalances[treasuryIndex] || 0;
-                const postBal = meta.postBalances[treasuryIndex] || 0;
-                const diffLamports = postBal - preBal;
-                const diffSOL = diffLamports / 1e9;
-                const solRate = 0.006; // rate conversion matching get cryptoEquivalent
-                transferredAmountUSD = diffSOL / solRate;
-              } else if ((this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') && meta.postTokenBalances) {
-                const treasuryTokenBal = meta.postTokenBalances.find(tb => {
-                  const owner = tb.owner || keyStrings[tb.accountIndex];
-                  return owner === solTreasury;
-                });
-                if (treasuryTokenBal) {
-                  const tokenAmount = parseFloat(treasuryTokenBal.uiTokenAmount?.uiAmountString || treasuryTokenBal.uiTokenAmount?.amount || 0);
-                  transferredAmountUSD = tokenAmount;
-                }
-              }
+        let transferredAmountUSD = 0;
+        if (this.selectedCurrency === 'SOL' && meta.preBalances && meta.postBalances) {
+          const preBal = meta.preBalances[treasuryIndex] || 0;
+          const postBal = meta.postBalances[treasuryIndex] || 0;
+          const diffLamports = postBal - preBal;
+          const diffSOL = diffLamports / 1e9;
+          const solRate = 0.006; // rate conversion matching get cryptoEquivalent
+          transferredAmountUSD = diffSOL / solRate;
+        } else if ((this.selectedCurrency === 'USDC' || this.selectedCurrency === 'USDT') && meta.postTokenBalances) {
+          const expectedMint = configManager.current.integrations?.[`${this.selectedCurrency.toLowerCase()}MintAddress`]?.toLowerCase() || '';
 
-              if (transferredAmountUSD <= 0 || transferredAmountUSD < (this.amountUSD - 0.01)) {
-                toast.error(`Solana settlement rejected: Verified transferred amount ($${transferredAmountUSD.toFixed(2)}) is less than required USD price ($${this.amountUSD.toFixed(2)}).`);
-                return;
-              }
-            } catch (txParseErr) {
-              toast.error(`Solana transaction parsing error: ${txParseErr.message || txParseErr}`);
-              return;
-            }
-          } catch (solErr) {
-            toast.error(`Solana signature confirmation failed: ${solErr.message || solErr}`);
+          const preTokenBal = (meta.preTokenBalances || []).find(tb => {
+            const owner = tb.owner || keyStrings[tb.accountIndex];
+            const mint = (tb.mint || '').toLowerCase();
+            return owner === solTreasury && (!expectedMint || mint === expectedMint);
+          });
+
+          const postTokenBal = (meta.postTokenBalances || []).find(tb => {
+            const owner = tb.owner || keyStrings[tb.accountIndex];
+            const mint = (tb.mint || '').toLowerCase();
+            return owner === solTreasury && (!expectedMint || mint === expectedMint);
+          });
+
+          if (!postTokenBal) {
+            toast.error('Solana transaction verification failed: Treasury token balance not found or mint mismatch.');
             return;
           }
-        } else {
-          toast.error('Solana settlement failed: Provider connection object missing for on-chain status verification.');
+
+          const preAmount = parseFloat(preTokenBal?.uiTokenAmount?.uiAmountString || preTokenBal?.uiTokenAmount?.amount || 0);
+          const postAmount = parseFloat(postTokenBal.uiTokenAmount?.uiAmountString || postTokenBal.uiTokenAmount?.amount || 0);
+          const tokenDelta = postAmount - preAmount;
+
+          transferredAmountUSD = tokenDelta;
+        }
+
+        if (transferredAmountUSD <= 0 || transferredAmountUSD < (this.amountUSD - 0.01)) {
+          toast.error(`Solana settlement rejected: Verified transferred amount ($${transferredAmountUSD.toFixed(2)}) is less than required USD price ($${this.amountUSD.toFixed(2)}).`);
           return;
         }
       }
