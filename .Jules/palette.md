@@ -1,0 +1,3 @@
+## 2025-08-21 - Accessible Notification Center Keydown Dismissal and ARIA State Management
+**Learning:** Dropdown Web Components in top navigation utilities (`NotificationCenter`) often lack `aria-haspopup="true"`, dynamic `aria-expanded` attributes, and `Escape` key dismissal. Updating `aria-expanded` dynamically in the `updateDropdownVisibility()` method ensures both mouse clicks and keyboard actions stay in sync for screen readers.
+**Action:** Always map toggle state (`isOpen`) to `aria-expanded` and register a document-level `Escape` key listener that closes the popover and restores focus to the trigger element (`#utility-notification-bell`).
