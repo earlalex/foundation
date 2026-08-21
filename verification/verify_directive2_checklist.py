@@ -13,6 +13,7 @@ async def run_checklist_audit():
 
         console_errors = []
         page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+        page.on("pageerror", lambda err: console_errors.append(f"PAGE_ERROR: {err}"))
 
         print("\n--- Starting Directive 2 Checklist Audit ---")
         passed_all_checks = True
@@ -117,13 +118,14 @@ async def run_checklist_audit():
                     const { contentDB } = await import('/core/db.js');
                     const uniqueId = 'audit_user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
                     const testEmail = `${uniqueId}@example.com`;
-                    window.__AUDIT_TEST_USER_ID__ = uniqueId;
-                    window.__AUDIT_TEST_USER_EMAIL__ = testEmail;
 
                     const user = await contentDB.registerOrMergeUser({
                         email: testEmail,
                         purchasedProducts: ['prod_1', 'evt_1']
                     });
+                    if (user && user.id) {
+                        window.__AUDIT_TEST_USER_DOC_ID__ = user.id;
+                    }
                     return user && Array.isArray(user.purchasedProducts) && user.purchasedProducts.includes('prod_1');
                 }
             """)
@@ -207,30 +209,53 @@ async def run_checklist_audit():
         finally:
             # Safely clean up strictly the isolated test records generated during this audit run
             print("\nCleaning up unique test audit records from database collections...")
-            await page.evaluate("""
+            cleanup_errors = await page.evaluate("""
                 async () => {
-                    try {
-                        const { contentDB } = await import('/core/db.js');
-                        if (window.__AUDIT_TEST_USER_ID__) {
-                            await contentDB.deleteUser(window.__AUDIT_TEST_USER_ID__);
+                    const errors = [];
+                    const { contentDB } = await import('/core/db.js');
+                    if (window.__AUDIT_TEST_USER_DOC_ID__) {
+                        try {
+                            await contentDB.deleteUser(window.__AUDIT_TEST_USER_DOC_ID__);
+                        } catch (e) {
+                            errors.push('User cleanup failed: ' + e.message);
                         }
-                        if (window.__AUDIT_TEST_USER_EMAIL__) {
-                            await contentDB.deleteUser(window.__AUDIT_TEST_USER_EMAIL__);
-                        }
-                        if (window.__AUDIT_TEST_TASK_ID__) {
-                            await contentDB.deleteKanbanTask(window.__AUDIT_TEST_TASK_ID__);
-                        }
-                    } catch (e) {
-                        console.warn('[Audit Cleanup]: Error removing test records', e);
                     }
+                    if (window.__AUDIT_TEST_TASK_ID__) {
+                        try {
+                            await contentDB.deleteKanbanTask(window.__AUDIT_TEST_TASK_ID__);
+                        } catch (e) {
+                            errors.push('Task cleanup failed: ' + e.message);
+                        }
+                    }
+                    return errors;
                 }
             """)
 
             await context.close()
             await browser.close()
 
+            if cleanup_errors and len(cleanup_errors) > 0:
+                print(f"\n❌ Error: Database cleanup failed during audit teardown: {cleanup_errors}")
+                passed_all_checks = False
+
+        # Incorporate captured console errors
+        fatal_console_errors = []
+        for err in console_errors:
+            if ("Could not reach Cloud Firestore backend" in err or
+                "Failed to load resource: the server responded with a status of 404" in err or
+                "blocked by CORS policy" in err or
+                "net::ERR_FAILED" in err):
+                continue
+            fatal_console_errors.append(err)
+
+        if len(fatal_console_errors) > 0:
+            print(f"\n❌ Captured {len(fatal_console_errors)} fatal console/page error(s) during audit:")
+            for err in fatal_console_errors:
+                print(f"  - {err}")
+            passed_all_checks = False
+
         if not passed_all_checks:
-            print("\n❌ Error: One or more audit checks failed.")
+            print("\n❌ Error: One or more audit checks, cleanups, or console error guards failed.")
             sys.exit(1)
 
         print("\n✅ Directive 2 Checklist Audit Completed Successfully with 100% Pass Rate.")
