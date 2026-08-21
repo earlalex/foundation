@@ -3,6 +3,49 @@
 
 export const zapScanner = {
   /**
+   * Logs a security scan result to Firestore (/security_scans) and LocalStorage
+   * @param {string} scanType
+   * @param {string} targetUrl
+   * @param {string} status
+   * @param {Array} [findings=[]]
+   * @param {Object} [details={}]
+   * @returns {Promise<Object>} Saved scan log entry
+   */
+  async logSecurityScan(scanType, targetUrl, status, findings = [], details = {}) {
+    const scanEntry = {
+      id: `scan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      scanType,
+      targetUrl,
+      status,
+      findingsCount: Array.isArray(findings) ? findings.length : 0,
+      findings: Array.isArray(findings) ? findings : [],
+      details
+    };
+
+    try {
+      const localScans = JSON.parse(localStorage.getItem('foundation_local_security_scans') || '[]');
+      localScans.unshift(scanEntry);
+      localStorage.setItem('foundation_local_security_scans', JSON.stringify(localScans.slice(0, 100)));
+    } catch (e) {
+      console.warn('[ZAP Scanner]: Local storage write warning:', e);
+    }
+
+    try {
+      const { getFirestoreDB, doc, setDoc } = await import('../core/db-shared.js');
+      const db = getFirestoreDB();
+      if (db) {
+        const docRef = doc(db, 'security_scans', scanEntry.id);
+        await setDoc(docRef, scanEntry, { merge: true });
+      }
+    } catch (err) {
+      console.warn('[ZAP Scanner]: Firestore log skipped:', err.message);
+    }
+
+    return scanEntry;
+  },
+
+  /**
    * Starts a Spider scan on the target URL
    * @param {string} targetUrl
    * @returns {Promise<Object>} The API response containing the scan ID
@@ -16,7 +59,9 @@ export const zapScanner = {
     if (!response.ok) {
       throw new Error(`Failed to start ZAP Spider scan: ${response.statusText}`);
     }
-    return response.json();
+    const resData = await response.json();
+    await this.logSecurityScan('spider', targetUrl, 'STARTED', [], { scanId: resData.scanId });
+    return resData;
   },
 
   /**
@@ -33,7 +78,9 @@ export const zapScanner = {
     if (!response.ok) {
       throw new Error(`Failed to start ZAP Active scan: ${response.statusText}`);
     }
-    return response.json();
+    const resData = await response.json();
+    await this.logSecurityScan('active', targetUrl, 'STARTED', [], { scanId: resData.scanId });
+    return resData;
   },
 
   /**
@@ -86,7 +133,10 @@ export const zapScanner = {
     if (!response.ok) {
       throw new Error(`Failed to retrieve ZAP scan alerts: ${response.statusText}`);
     }
-    return response.json();
+    const resData = await response.json();
+    const alerts = resData.alerts || resData.findings || [];
+    await this.logSecurityScan('alerts_query', targetUrl, 'COMPLETED', alerts, { riskLevel });
+    return resData;
   },
 
   /**

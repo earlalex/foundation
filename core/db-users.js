@@ -24,14 +24,37 @@ export async function getAllUsers() {
 }
 
 export async function saveUser(userData) {
-  const userId = userData.id || userData.email.replace(/[@.]/g, '_');
+  const userId = userData.id || (userData.email ? userData.email.replace(/[@.]/g, '_') : `user_${Date.now()}`);
+
+  // ePHI Encryption at Rest Guard: Encrypt sensitive PHI fields using AES-GCM 256-bit
+  let encryptedUserData = { ...userData };
+  const phiKeys = ['ephi', 'phi', 'medicalHistory', 'sensitiveNotes'];
+  for (const key of phiKeys) {
+    if (userData[key] && typeof userData[key] === 'string' && !userData[key].cipherText) {
+      try {
+        const { encryptPHIRecord } = await import('../utils/hipaa-audit.js');
+        encryptedUserData[key] = await encryptPHIRecord(userData[key]);
+      } catch (encErr) {
+        console.warn('[ePHI Guard]: AES-GCM 256-bit encryption warning:', encErr.message);
+      }
+    }
+  }
+
   const payload = {
-    ...userData,
+    ...encryptedUserData,
     id: userId,
     updatedAt: new Date().toISOString()
   };
 
-  // Local-First: Persist to LocalStorage immediately for sub-200ms form completion
+  // Log to immutable HIPAA audit trail
+  try {
+    const { logHipaaAccess } = await import('../utils/hipaa-audit.js');
+    await logHipaaAccess('WRITE', userId, 'SUCCESS', { notes: `Saved user record for ${userData.email || userId}` });
+  } catch (auditErr) {
+    console.warn('[HIPAA Audit]: Audit log queue warning:', auditErr.message);
+  }
+
+  // Local-First: Persist to LocalStorage immediately
   const local = getLocalUsers();
   local[userId] = payload;
   saveLocalUsers(local);

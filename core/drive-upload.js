@@ -119,6 +119,16 @@ export async function pushToLastPass(metadata) {
     await contentDB.saveVaultCredential(record);
     console.log(`[LastPass Bridge]: Saved note for "${metadata.name}" to vault_credentials.`);
 
+    // Automatically sync corporate binder note to Google Workspace Password Vault
+    if (googleAccessToken) {
+      try {
+        const { syncCredentialToGoogleVault } = await import('../utils/backend-google.js');
+        await syncCredentialToGoogleVault(googleAccessToken, record);
+      } catch (vaultErr) {
+        console.warn('[Workspace Vault Sync]: Dynamic vault sync warning:', vaultErr.message);
+      }
+    }
+
     if (isLpConfigured) {
       const payload = {
         action: "add_note",
