@@ -213,8 +213,8 @@ export function getLocalContent() {
     let local = JSON.parse(localStorage.getItem('foundation_local_content') || '{}');
     let isSeeded = localStorage.getItem('foundation_content_seeded') === 'true';
 
-    // Auto-migrate: Force re-seeding if tags are missing on existing items
-    if (isSeeded && local['welcome-to-foundation-framework'] && !local['welcome-to-foundation-framework'].tags) {
+    // Auto-migrate: Force re-seeding if tags or new media seed items are missing on existing items
+    if (isSeeded && (!local['welcome-to-foundation-framework']?.tags || !local['ascension-avenue-keynote-2026'] || !local['gallery-img-1'])) {
       isSeeded = false;
       localStorage.removeItem('foundation_content_seeded');
       local = {};
@@ -392,7 +392,15 @@ export function getLocalContent() {
         id: 'episode-1-the-no-build-philosophy',
         title: 'Episode 1: The No-Build Philosophy',
         description: 'In this episode, we outline our design philosophy and how to break free from bundler fatigue.',
-        longFormText: ['Audio transcription available.'],
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+        audio: { src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+        cover: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=600&q=80',
+        preview: {
+          featuredImage: {
+            src: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=600&q=80'
+          }
+        },
+        longFormText: ['In this episode, we outline our design philosophy and how to break free from bundler fatigue.'],
         author: 'Jane Doe',
         date: '2026-08-01',
         tags: ["Sovereignty", "Live-Summit"],
@@ -472,9 +480,142 @@ export function getLocalContent() {
         }
       };
 
+      // 10. Featured Video
+      const sampleVideoFeatured = {
+        type: 'video',
+        id: 'ascension-avenue-keynote-2026',
+        title: 'Ascension Avenue Keynote 2026',
+        description: 'Learn why the world is moving away from complex Webpack and Vite bundling systems to native browser ESM execution.',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        poster: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
+        thumbnail: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
+        category: 'Keynote',
+        duration: '09:56',
+        views: 1245,
+        isLive: false,
+        author: 'EarlAlex',
+        date: '2026-08-01',
+        access: { visibility: 'public' }
+      };
+
+      // 11. Stream 1 Video
+      const sampleVideoStream1 = {
+        type: 'video',
+        id: 'zero-build-vanilla-architecture',
+        title: 'Zero-Build Vanilla Architecture',
+        description: 'Deep dive into zero-build native browser architectures with vanilla ES modules.',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        poster: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
+        thumbnail: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
+        category: 'Architecture',
+        duration: '10:53',
+        views: 930,
+        isLive: false,
+        author: 'Jane Doe',
+        date: '2026-08-02',
+        access: { visibility: 'public' }
+      };
+
+      // 12-17. Gallery Records
+      const sampleGalleryItems = [
+        {
+          type: 'gallery',
+          id: 'gallery-img-1',
+          title: 'Foundation Summit HQ',
+          caption: 'Inside the main conference hall as developers gather for the sovereign zero-build keynote speech.',
+          src: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
+          url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
+          author: 'EarlAlex',
+          authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+          date: '2026-08-01',
+          category: 'Keynote',
+          likes: 42,
+          views: 312,
+          access: { visibility: 'public' }
+        },
+        {
+          type: 'gallery',
+          id: 'gallery-img-2',
+          title: 'Visual Design Systems',
+          caption: 'An elegant display of custom bento design components running completely within native CSS grid frameworks.',
+          src: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80',
+          url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80',
+          author: 'Jane Doe',
+          authorAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80',
+          date: '2026-08-02',
+          category: 'Design',
+          likes: 128,
+          views: 945,
+          access: { visibility: 'public' }
+        },
+        {
+          type: 'gallery',
+          id: 'gallery-img-3',
+          title: 'Pristine ES Code',
+          caption: 'Clean, beautiful ESM syntax loaded directly inside Chrome and Safari dev tools with absolutely zero transpilers.',
+          src: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+          url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+          author: 'Alex Rivers',
+          authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          date: '2026-08-03',
+          category: 'Engineering',
+          likes: 84,
+          views: 520,
+          access: { visibility: 'public' }
+        },
+        {
+          type: 'gallery',
+          id: 'gallery-img-4',
+          title: 'Sovereign Workplace',
+          caption: 'Remote workspace configured entirely with localized edge synchronization servers for absolute sovereign data control.',
+          src: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
+          url: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
+          author: 'Jane Doe',
+          authorAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80',
+          date: '2026-08-04',
+          category: 'Lifestyle',
+          likes: 215,
+          views: 1120,
+          access: { visibility: 'public' }
+        },
+        {
+          type: 'gallery',
+          id: 'gallery-img-5',
+          title: 'SEO Telemetry Charts',
+          caption: 'Automatic organic ranking monitors retrieving Moz and Search Console updates in real-time.',
+          src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+          url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+          author: 'Alex Rivers',
+          authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          date: '2026-08-05',
+          category: 'Growth',
+          likes: 67,
+          views: 405,
+          access: { visibility: 'public' }
+        },
+        {
+          type: 'gallery',
+          id: 'gallery-img-6',
+          title: 'Developer Mastermind',
+          caption: 'Collaboration session between core architectural teams designing serverless Wise and LastPass vault integrations.',
+          src: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
+          url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
+          author: 'EarlAlex',
+          authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+          date: '2026-08-06',
+          category: 'Community',
+          likes: 93,
+          views: 630,
+          access: { visibility: 'public' }
+        }
+      ];
+
       const samples = [
         sampleBlog, sampleBook, sampleEducation, sampleEvent,
-        sampleHowto, samplePodcast, samplePortfolio, sampleSponsor, sampleProduct
+        sampleHowto, samplePodcast, samplePortfolio, sampleSponsor, sampleProduct,
+        sampleVideoFeatured, sampleVideoStream1, ...sampleGalleryItems
       ];
 
       let updated = false;

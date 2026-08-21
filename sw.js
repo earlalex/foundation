@@ -51,7 +51,9 @@ self.addEventListener('fetch', (event) => {
       url.hostname.includes('unsplash') ||
       url.hostname.includes('cloudflare') ||
       url.hostname.includes('securenetsystems') ||
-      url.hostname.includes('icecast')) {
+      url.hostname.includes('icecast') ||
+      url.hostname.includes('soundhelix') ||
+      url.hostname.includes('archive.org')) {
     return;
   }
 
