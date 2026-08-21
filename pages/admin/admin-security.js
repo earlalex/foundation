@@ -17,6 +17,72 @@ export function initSecurityTab() {
   setupLastPassConfig();
   setupZapScannerPanel();
   setupReportExporterPanel();
+  setupHipaaAuditExporterPanel();
+}
+
+function setupHipaaAuditExporterPanel() {
+  const securityPanel = document.getElementById('tab-security');
+  if (!securityPanel) return;
+
+  let container = document.getElementById('hipaa-exporter-card-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'hipaa-exporter-card-container';
+    container.style.marginTop = '1.5rem';
+    container.innerHTML = `
+      <div style="background: var(--theme-color-surface, #ffffff); border: 1px solid var(--theme-color-border, #e2e8f0); padding: 1.5rem; border-radius: var(--theme-layout-border-radius, 8px);">
+        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--theme-color-primary, #2b6cb0);">
+          🏥 Immutable HIPAA Audit Trail & ePHI Logs
+        </h3>
+        <p style="margin: 0 0 1.25rem 0; color: var(--theme-color-text-secondary, #718096); font-size: 0.85rem;">
+          Export immutable technical safeguard logs (/hipaa_logs) tracking ePHI accesses, reads, writes, and encryption events.
+        </p>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button type="button" id="btn-export-hipaa-csv" class="btn-primary" style="padding: 8px 16px; font-weight: bold; background: var(--theme-color-primary, #2b6cb0); color: white; border: none; border-radius: 6px; cursor: pointer;">
+            📄 Export HIPAA Audit Logs (CSV)
+          </button>
+          <button type="button" id="btn-export-hipaa-json" class="btn-primary" style="padding: 8px 16px; font-weight: bold; background: var(--theme-color-accent, #38a169); color: white; border: none; border-radius: 6px; cursor: pointer;">
+            📋 Export HIPAA Audit Logs (JSON)
+          </button>
+        </div>
+      </div>
+    `;
+    securityPanel.appendChild(container);
+
+    container.querySelector('#btn-export-hipaa-csv').addEventListener('click', async () => {
+      try {
+        const { exportHipaaLogsCsv } = await import('../../utils/hipaa-audit.js');
+        const csvStr = exportHipaaLogsCsv();
+        const blob = new Blob([csvStr], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `hipaa_logs_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('HIPAA Audit Logs CSV exported!');
+      } catch (err) {
+        toast.error('Failed to export HIPAA CSV logs: ' + err.message);
+      }
+    });
+
+    container.querySelector('#btn-export-hipaa-json').addEventListener('click', async () => {
+      try {
+        const { exportHipaaLogsJson } = await import('../../utils/hipaa-audit.js');
+        const jsonStr = exportHipaaLogsJson();
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `hipaa_logs_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('HIPAA Audit Logs JSON exported!');
+      } catch (err) {
+        toast.error('Failed to export HIPAA JSON logs: ' + err.message);
+      }
+    });
+  }
 }
 
 function setupReportExporterPanel() {

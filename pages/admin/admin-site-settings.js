@@ -1394,6 +1394,20 @@ function launchFactoryResetModal() {
             </div>
           `;
           try {
+            // Purge local caches (LocalStorage, SessionStorage, IndexedDB)
+            localStorage.clear();
+            sessionStorage.clear();
+            try {
+              if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+                const dbs = await indexedDB.databases();
+                for (const db of dbs) {
+                  if (db.name) indexedDB.deleteDatabase(db.name);
+                }
+              }
+            } catch (idbErr) {
+              console.warn('[Factory Reset]: IndexedDB purge warning:', idbErr);
+            }
+
             await configManager.resetPlatform();
             toast.success("Platform has been factory reset successfully.");
             modal.remove();

@@ -174,11 +174,11 @@ export function getHipaaLogs() {
  */
 export function exportHipaaLogsCsv() {
   const logs = getHipaaLogs();
+  const headers = ['ID', 'Timestamp', 'Agent ID', 'User ID', 'User Email', 'Role', 'Action', 'Record ID', 'Status', 'IP Address', 'Details'];
   if (logs.length === 0) {
-    return 'No logs';
+    return headers.join(',') + '\n';
   }
 
-  const headers = ['ID', 'Timestamp', 'Agent ID', 'User ID', 'User Email', 'Role', 'Action', 'Record ID', 'Status', 'IP Address', 'Details'];
   const csvRows = [headers.join(',')];
 
   logs.forEach(log => {

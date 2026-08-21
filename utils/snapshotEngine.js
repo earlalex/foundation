@@ -45,8 +45,9 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
     const expenses = await contentDB.getExpenses();
     const budgets = await contentDB.getBudgets();
 
-    // 5. Capture Theme
+    // 5. Capture Theme & Custom Brand Tokens
     const theme = JSON.parse(localStorage.getItem('foundation_theme_config') || '{}');
+    const customTheme = JSON.parse(localStorage.getItem('foundation_theme_custom') || '{}');
     const highContrast = localStorage.getItem('foundation_high_contrast') || 'false';
 
     const stateData = {
@@ -59,6 +60,7 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
       expenses,
       budgets,
       theme,
+      customTheme,
       highContrast
     };
 
@@ -79,12 +81,12 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
     existingSnapshots.unshift(snapshot);
     localStorage.setItem('foundation_snapshots', JSON.stringify(existingSnapshots));
 
-    // Upload to Google Drive (if token is available)
+    // Upload to Google Drive
     try {
       const { getGoogleAccessToken } = await import('../core/google-services.js');
       const token = await getGoogleAccessToken(false);
       if (token) {
-        const siteName = configManager.current.siteTitle || 'Foundation';
+        const siteName = configManager.current?.siteTitle || configManager.current?.site?.siteName || 'Foundation';
         const formattedDate = new Date().toISOString().split('T')[0];
         const fileName = `${formattedDate}_snapshot.json`;
         const { uploadBackupToDrive } = await import('./backend-google.js');
@@ -120,7 +122,7 @@ export async function restoreSiteSnapshot(snapshot) {
     console.log('[SnapshotEngine]: Creating temporary Pre-Rollback Backup safeguard snapshot...');
     await createSiteSnapshot('Pre-Rollback Backup');
 
-    const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, highContrast } = snapshot.data;
+    const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, customTheme, highContrast } = snapshot.data;
 
     // 2. Restore configManager
     if (config) {
@@ -170,9 +172,12 @@ export async function restoreSiteSnapshot(snapshot) {
       await contentDB.saveBudgetTargets(budgets);
     }
 
-    // 7. Restore Theme settings
+    // 7. Restore Theme settings & Custom Tokens
     if (theme && Object.keys(theme).length > 0) {
       localStorage.setItem('foundation_theme_config', JSON.stringify(theme));
+    }
+    if (customTheme && Object.keys(customTheme).length > 0) {
+      localStorage.setItem('foundation_theme_custom', JSON.stringify(customTheme));
     }
     if (highContrast !== undefined) {
       localStorage.setItem('foundation_high_contrast', String(highContrast));

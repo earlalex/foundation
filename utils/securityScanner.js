@@ -67,9 +67,30 @@ export function scanTextContent(content) {
 }
 
 /**
- * Scans a file locally for threats
+ * Queries VirusTotal edge endpoint /api/virustotal-scan with file hash
+ * @param {string} hash
+ * @returns {Promise<Object|null>} VirusTotal response or null if offline
+ */
+export async function queryVirusTotal(hash) {
+  if (!hash) return null;
+  try {
+    const response = await fetch('/api/virustotal-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hash })
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (err) {
+    console.warn('[VirusTotal Scan]: Query skipped or offline:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Scans a file locally and via VirusTotal edge API for threats
  * @param {File} file
- * @returns {Promise<{ isClean: boolean, hash: string, detectedSignatures: string[] }>}
+ * @returns {Promise<{ isClean: boolean, hash: string, detectedSignatures: string[], virustotalStats?: Object }>}
  */
 export async function scanFileLocally(file) {
   try {
@@ -94,10 +115,21 @@ export async function scanFileLocally(file) {
       detectedSignatures = scanTextContent(text);
     }
 
+    // Query VirusTotal Edge API for known malicious hashes
+    let virustotalStats = null;
+    const vtResult = await queryVirusTotal(hash);
+    if (vtResult && vtResult.success && vtResult.stats) {
+      virustotalStats = vtResult.stats;
+      if (vtResult.stats.malicious > 0) {
+        detectedSignatures.push(`VirusTotal Flagged: ${vtResult.stats.malicious} engine(s) marked file as malicious`);
+      }
+    }
+
     return {
       isClean: detectedSignatures.length === 0,
       hash,
-      detectedSignatures
+      detectedSignatures,
+      virustotalStats
     };
   } catch (err) {
     errorHandler.handleError(err, 'Local File Scan');
