@@ -12,8 +12,15 @@ async def run_checklist_audit():
         page = await context.new_page()
 
         console_errors = []
-        page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
-        page.on("pageerror", lambda err: console_errors.append(f"PAGE_ERROR: {err}"))
+        def capture_console_error(msg):
+            if msg.type == "error":
+                location = msg.location
+                console_errors.append({
+                    "text": msg.text,
+                    "url": location.get("url", "") if location else ""
+                })
+        page.on("console", capture_console_error)
+        page.on("pageerror", lambda err: console_errors.append({"text": f"PAGE_ERROR: {err}", "url": ""}))
 
         print("\n--- Starting Directive 2 Checklist Audit ---")
         passed_all_checks = True
@@ -241,17 +248,18 @@ async def run_checklist_audit():
         # Incorporate captured console errors
         fatal_console_errors = []
         for err in console_errors:
-            if ("Could not reach Cloud Firestore backend" in err or
-                "Failed to load resource: the server responded with a status of 404" in err or
-                "blocked by CORS policy" in err or
-                "net::ERR_FAILED" in err):
+            # Only suppress the specific, known Firestore backend error
+            if "Could not reach Cloud Firestore backend" in err["text"]:
                 continue
             fatal_console_errors.append(err)
 
         if len(fatal_console_errors) > 0:
             print(f"\n❌ Captured {len(fatal_console_errors)} fatal console/page error(s) during audit:")
             for err in fatal_console_errors:
-                print(f"  - {err}")
+                if err["url"]:
+                    print(f"  - {err['text']} (from {err['url']})")
+                else:
+                    print(f"  - {err['text']}")
             passed_all_checks = False
 
         if not passed_all_checks:
