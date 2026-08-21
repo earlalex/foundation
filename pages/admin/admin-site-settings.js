@@ -476,7 +476,14 @@ export function initSiteSettingsTab() {
 
       tbody.innerHTML = list.map((snap) => {
         const formattedDate = new Date(snap.timestamp).toLocaleString();
-        const driveBadge = snap.archivedToDrive ? `<span style="background: #e6fffa; color: #234e52; border: 1px solid #b2f5ea; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px; font-weight: bold;">☁️ Drive Archived</span>` : `<span style="background: #edf2f7; color: #4a5568; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px;">💻 Local Only</span>`;
+        let driveBadge;
+        if (snap.archivedToDrive === true) {
+          driveBadge = `<span style="background: #e6fffa; color: #234e52; border: 1px solid #b2f5ea; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px; font-weight: bold;">☁️ Drive Archived</span>`;
+        } else if (snap.archivedToDrive === false) {
+          driveBadge = `<span style="background: #edf2f7; color: #4a5568; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px;">💻 Local Only</span>`;
+        } else {
+          driveBadge = `<span style="background: #fff9e6; color: #997404; border: 1px solid #ffd666; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px;">⚠️ Legacy/Unknown</span>`;
+        }
         return `
           <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
             <td style="padding: 8px; font-weight: bold; color: var(--theme-color-text-primary);">${formattedDate}</td>

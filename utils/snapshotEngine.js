@@ -133,6 +133,9 @@ export async function restoreSiteSnapshot(snapshot) {
     const { getFirestoreDB, collection, getDocs, doc, deleteDoc } = await import('../core/db-shared.js');
     const db = getFirestoreDB();
 
+    // Track cleanup failures
+    const cleanupFailures = [];
+
     // Purge post-snapshot records created after snapshot was taken
     // 2. Purge and Restore Custom Pages
     const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
@@ -141,7 +144,12 @@ export async function restoreSiteSnapshot(snapshot) {
       for (const p of currentPages) {
         if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
           if (db) {
-            try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) {}
+            try {
+              await deleteDoc(doc(db, 'pages', p.id || p.slug));
+            } catch (e) {
+              cleanupFailures.push({ type: 'page', id: p.id || p.slug, error: e.message });
+              console.error('[SnapshotEngine]: Failed to delete page:', p.id || p.slug, e);
+            }
           }
         }
       }
@@ -152,6 +160,7 @@ export async function restoreSiteSnapshot(snapshot) {
       localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
     } catch (e) {
       console.warn('[SnapshotEngine]: Pages purge warning:', e.message);
+      cleanupFailures.push({ type: 'pages_purge', error: e.message });
     }
 
     if (Array.isArray(pages)) {
@@ -192,12 +201,18 @@ export async function restoreSiteSnapshot(snapshot) {
         const querySnapshot = await getDocs(collection(db, 'splits'));
         for (const docSnap of querySnapshot.docs) {
           if (!snapshotSplitKeys.has(docSnap.id)) {
-            try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) {}
+            try {
+              await deleteDoc(doc(db, 'splits', docSnap.id));
+            } catch (e) {
+              cleanupFailures.push({ type: 'split', id: docSnap.id, error: e.message });
+              console.error('[SnapshotEngine]: Failed to delete split:', docSnap.id, e);
+            }
           }
         }
       }
     } catch (e) {
       console.warn('[SnapshotEngine]: Splits purge warning:', e.message);
+      cleanupFailures.push({ type: 'splits_purge', error: e.message });
     }
 
     if (splits) {
@@ -240,12 +255,18 @@ export async function restoreSiteSnapshot(snapshot) {
         const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
         for (const docSnap of querySnapshot.docs) {
           if (!snapshotPayrollIds.has(docSnap.id)) {
-            try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) {}
+            try {
+              await deleteDoc(doc(db, 'finances_payroll', docSnap.id));
+            } catch (e) {
+              cleanupFailures.push({ type: 'payroll', id: docSnap.id, error: e.message });
+              console.error('[SnapshotEngine]: Failed to delete payroll record:', docSnap.id, e);
+            }
           }
         }
       }
     } catch (e) {
       console.warn('[SnapshotEngine]: Payroll purge warning:', e.message);
+      cleanupFailures.push({ type: 'payroll_purge', error: e.message });
     }
 
     if (Array.isArray(payroll)) {
@@ -267,12 +288,18 @@ export async function restoreSiteSnapshot(snapshot) {
         const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
         for (const docSnap of querySnapshot.docs) {
           if (!snapshotExpenseIds.has(docSnap.id)) {
-            try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) {}
+            try {
+              await deleteDoc(doc(db, 'finances_expenses', docSnap.id));
+            } catch (e) {
+              cleanupFailures.push({ type: 'expense', id: docSnap.id, error: e.message });
+              console.error('[SnapshotEngine]: Failed to delete expense record:', docSnap.id, e);
+            }
           }
         }
       }
     } catch (e) {
       console.warn('[SnapshotEngine]: Expense purge warning:', e.message);
+      cleanupFailures.push({ type: 'expense_purge', error: e.message });
     }
 
     if (Array.isArray(expenses)) {
@@ -301,8 +328,18 @@ export async function restoreSiteSnapshot(snapshot) {
       localStorage.setItem('foundation_high_contrast', String(highContrast));
     }
 
+    // Report cleanup status
+    if (cleanupFailures.length > 0) {
+      console.warn('[SnapshotEngine]: Site state restored with cleanup failures:', cleanupFailures);
+      return {
+        success: true,
+        partialRestore: true,
+        cleanupFailures: cleanupFailures
+      };
+    }
+
     console.log('[SnapshotEngine]: Site state fully restored to chosen snapshot.');
-    return true;
+    return { success: true, partialRestore: false };
   } catch (err) {
     errorHandler.handleError(err, 'Restore Snapshot');
     throw err;

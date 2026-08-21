@@ -8,14 +8,20 @@ export async function onRequestPost(context) {
   const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
 
   const expectedAdminToken = env.ADMIN_TOKEN || env.ADMIN_API_KEY || env.FOUNDATION_ADMIN_KEY || env.SYSTEM_KEY || env.INTERNAL_API_KEY;
-  let isAuthorized = false;
 
-  if (expectedAdminToken && bearerToken === expectedAdminToken) {
-    isAuthorized = true;
-  } else if (bearerToken) {
-    // Allow valid app bearer tokens or mock tokens in test mode
-    if (bearerToken.startsWith('mock_') || bearerToken.startsWith('sys_') || bearerToken.startsWith('app_') || bearerToken.length > 10) {
-      isAuthorized = true;
+  // Constant-time comparison to prevent timing attacks
+  let isAuthorized = false;
+  if (expectedAdminToken && bearerToken) {
+    // Use constant-time comparison
+    const expectedBytes = new TextEncoder().encode(expectedAdminToken);
+    const providedBytes = new TextEncoder().encode(bearerToken);
+
+    if (expectedBytes.length === providedBytes.length) {
+      let mismatch = 0;
+      for (let i = 0; i < expectedBytes.length; i++) {
+        mismatch |= expectedBytes[i] ^ providedBytes[i];
+      }
+      isAuthorized = mismatch === 0;
     }
   }
 
@@ -26,21 +32,39 @@ export async function onRequestPost(context) {
     });
   }
 
-  const { to, subject, html, text, fromName, fromEmail } = await request.json();
+  try {
+    const { to, subject, html, text, fromName, fromEmail } = await request.json();
 
-  if (!to || typeof to !== 'string' || !to.includes('@')) {
-    return new Response(JSON.stringify({ error: 'Valid recipient "to" email address required' }), {
-      status: 400,
+    if (!to || typeof to !== 'string' || !to.includes('@')) {
+      return new Response(JSON.stringify({ error: 'Valid recipient "to" email address required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Reject CR/LF control characters in to and subject to prevent header injection
+    const hasCRLF = (str) => str && /[\r\n]/.test(str);
+    if (hasCRLF(to) || hasCRLF(subject)) {
+      return new Response(JSON.stringify({ error: 'Invalid characters detected in recipient or subject' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+  // Prevent sender spoofing: use only trusted server-side configuration
+  if (!env.ADMIN_EMAIL) {
+    return new Response(JSON.stringify({ error: 'Server configuration error: ADMIN_EMAIL not configured' }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  // Prevent sender spoofing: sanitize fromEmail to match system default domain/address
-  const defaultSystemFrom = env.ADMIN_EMAIL || `noreply@${new URL(request.url).hostname}`;
+  const defaultSystemFrom = env.ADMIN_EMAIL;
   let senderEmail = defaultSystemFrom;
   if (fromEmail && typeof fromEmail === 'string' && fromEmail.includes('@')) {
     const fromDomain = fromEmail.split('@')[1];
     const systemDomain = defaultSystemFrom.split('@')[1];
+    // Only accept sender addresses from the same domain or explicitly configured system addresses
     if (fromDomain === systemDomain || fromEmail === env.ADMIN_EMAIL) {
       senderEmail = fromEmail;
     }
@@ -58,41 +82,55 @@ export async function onRequestPost(context) {
     ]
   };
 
-  try {
-    const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mailchannelsPayload)
-    });
+    try {
+      const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mailchannelsPayload)
+      });
 
-    if (response.ok) {
-      return new Response(JSON.stringify({ success: true, provider: 'MailChannels' }), { status: 200 });
-    } else {
-      throw new Error(await response.text());
+      if (response.ok) {
+        return new Response(JSON.stringify({ success: true, provider: 'MailChannels' }), { status: 200 });
+      } else {
+        throw new Error(await response.text());
+      }
+    } catch (err) {
+      console.warn('[send-email Worker]: MailChannels API failed. Attempting failover to Google Workspace/Gmail API...', err);
+      // Failover to Google Workspace / Gmail API if configured
+      const googleToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN || env.GOOGLE_ACCESS_TOKEN;
+      if (googleToken) {
+        const delegatedUser = env.ADMIN_EMAIL;
+        const gmailSuccess = await sendViaGmailApi(googleToken, to, subject, html || text, delegatedUser);
+        if (gmailSuccess) {
+          return new Response(JSON.stringify({ success: true, provider: 'Google Workspace Fallback' }), { status: 200 });
+        }
+      }
+      return new Response(JSON.stringify({ error: err.message }), { status: 500 });
     }
   } catch (err) {
-    console.warn('[send-email Worker]: MailChannels API failed. Attempting failover to Google Workspace/Gmail API...', err);
-    // Failover to Google Workspace / Gmail API if configured
-    const googleToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN || env.GOOGLE_ACCESS_TOKEN;
-    if (googleToken) {
-      const gmailSuccess = await sendViaGmailApi(googleToken, to, subject, html || text);
-      if (gmailSuccess) {
-        return new Response(JSON.stringify({ success: true, provider: 'Google Workspace Fallback' }), { status: 200 });
-      }
-    }
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    // Handle JSON parsing errors and other request errors
+    return new Response(JSON.stringify({ error: err.message || 'Invalid request' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
-async function getGoogleAccessTokenFromServiceAccount(saJsonStr) {
+async function getGoogleAccessTokenFromServiceAccount(saJsonStr, delegatedUser) {
   try {
     const sa = JSON.parse(saJsonStr);
     if (!sa.private_key || !sa.client_email) return null;
+
+    if (!delegatedUser) {
+      console.error('[Google Service Account]: Delegated Workspace user is required');
+      return null;
+    }
 
     const now = Math.floor(Date.now() / 1000);
     const header = { alg: 'RS256', typ: 'JWT' };
     const payload = {
       iss: sa.client_email,
+      sub: delegatedUser,
       scope: 'https://www.googleapis.com/auth/gmail.send',
       aud: 'https://oauth2.googleapis.com/token',
       exp: now + 3600,
@@ -141,6 +179,9 @@ async function getGoogleAccessTokenFromServiceAccount(saJsonStr) {
     if (tokenRes.ok) {
       const tokenData = await tokenRes.json();
       return tokenData.access_token || null;
+    } else {
+      const responseBody = await tokenRes.text();
+      console.error('[Google Service Account JWT Exchange Error]: Status', tokenRes.status, 'Response:', responseBody);
     }
   } catch (err) {
     console.error('[Google Service Account JWT Exchange Error]:', err);
@@ -148,13 +189,13 @@ async function getGoogleAccessTokenFromServiceAccount(saJsonStr) {
   return null;
 }
 
-async function sendViaGmailApi(tokenInput, to, subject, bodyContent) {
+async function sendViaGmailApi(tokenInput, to, subject, bodyContent, delegatedUser) {
   try {
     let accessToken = tokenInput;
 
     // Check if tokenInput is a Service Account JSON string
     if (typeof tokenInput === 'string' && (tokenInput.trim().startsWith('{') || tokenInput.includes('private_key'))) {
-      accessToken = await getGoogleAccessTokenFromServiceAccount(tokenInput);
+      accessToken = await getGoogleAccessTokenFromServiceAccount(tokenInput, delegatedUser);
       if (!accessToken) {
         console.error('[Gmail Send Error]: Failed to exchange Service Account JSON for Google access token.');
         return false;

@@ -6,8 +6,10 @@ import { escapeHTML, sanitizeUrl } from './universalRenderer.js';
 let pendingPromoTimeout = null;
 let pendingScrollListener = null;
 let pendingExitListener = null;
+let currentEvaluationToken = 0;
 
 export function cancelPendingPromoTriggers() {
+  currentEvaluationToken++;
   if (pendingPromoTimeout) {
     clearTimeout(pendingPromoTimeout);
     pendingPromoTimeout = null;
@@ -24,12 +26,87 @@ export function cancelPendingPromoTriggers() {
 
 function sanitizeHtmlContent(htmlStr) {
   if (typeof htmlStr !== 'string') return '';
-  return htmlStr
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi, '')
-    .replace(/\son\w+\s*=\s*[^>\s]+/gi, '')
-    .replace(/href\s*=\s*(['"])\s*javascript:[^'"]*\1/gi, 'href="#"')
-    .replace(/src\s*=\s*(['"])\s*javascript:[^'"]*\1/gi, 'src="#"');
+
+  // Create a temporary DOM element to parse HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = htmlStr;
+
+  // Define allowlist of safe tags and attributes
+  const allowedTags = ['p', 'br', 'strong', 'em', 'b', 'i', 'u', 'ul', 'ol', 'li', 'a', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'blockquote', 'pre', 'code'];
+  const allowedAttributes = {
+    'a': ['href', 'title', 'target', 'rel'],
+    'img': ['src', 'alt', 'title', 'width', 'height'],
+    'span': ['style', 'class'],
+    'div': ['style', 'class'],
+    'p': ['style', 'class']
+  };
+  const allowedProtocols = ['http:', 'https:', 'mailto:'];
+
+  // Recursive sanitization function
+  function sanitizeNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.cloneNode(true);
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return null;
+    }
+
+    const tagName = node.tagName.toLowerCase();
+    if (!allowedTags.includes(tagName)) {
+      // Replace disallowed tags with their text content
+      const textNode = document.createTextNode(node.textContent);
+      return textNode;
+    }
+
+    const sanitizedElement = document.createElement(tagName);
+
+    // Sanitize attributes
+    const allowedAttrs = allowedAttributes[tagName] || [];
+    for (const attr of node.attributes) {
+      if (allowedAttrs.includes(attr.name)) {
+        let attrValue = attr.value;
+
+        // Validate URL-bearing attributes
+        if (attr.name === 'href' || attr.name === 'src') {
+          try {
+            const url = new URL(attrValue, window.location.href);
+            const protocol = url.protocol.toLowerCase();
+            if (allowedProtocols.includes(protocol)) {
+              attrValue = url.href;
+            } else {
+              continue; // Skip disallowed protocol
+            }
+          } catch (e) {
+            continue; // Skip malformed URLs
+          }
+        }
+
+        sanitizedElement.setAttribute(attr.name, attrValue);
+      }
+    }
+
+    // Recursively sanitize children
+    for (const child of node.childNodes) {
+      const sanitizedChild = sanitizeNode(child);
+      if (sanitizedChild) {
+        sanitizedElement.appendChild(sanitizedChild);
+      }
+    }
+
+    return sanitizedElement;
+  }
+
+  const sanitizedFragment = document.createDocumentFragment();
+  for (const child of temp.childNodes) {
+    const sanitizedChild = sanitizeNode(child);
+    if (sanitizedChild) {
+      sanitizedFragment.appendChild(sanitizedChild);
+    }
+  }
+
+  const sanitizedDiv = document.createElement('div');
+  sanitizedDiv.appendChild(sanitizedFragment);
+  return sanitizedDiv.innerHTML;
 }
 
 // Global Modal Backdrop Click Dismissal Policy
@@ -129,6 +206,7 @@ function dismissPromoModal(overlay) {
 export async function triggerPagePromoModals(currentPath = window.location.pathname) {
   try {
     cancelPendingPromoTriggers();
+    const evaluationToken = ++currentEvaluationToken;
     console.log('[Promo Manager]: Evaluating active modals for route:', currentPath);
 
     // Normalize path to detect target pages
@@ -140,6 +218,12 @@ export async function triggerPagePromoModals(currentPath = window.location.pathn
     }
 
     const allContent = await contentDB.getAllContent();
+
+    // Check if evaluation is still current after async operation
+    if (evaluationToken !== currentEvaluationToken) {
+      console.log('[Promo Manager]: Evaluation aborted - newer evaluation started');
+      return;
+    }
     const activeModals = allContent.filter(item =>
       item.type === 'custom_modal' &&
       item.isActive !== false &&
@@ -175,11 +259,13 @@ export async function triggerPagePromoModals(currentPath = window.location.pathn
     };
 
     if (triggerType === 'immediate') {
-      showPromoModal(modal);
+      if (evaluationToken === currentEvaluationToken) {
+        showPromoModal(modal);
+      }
     } else if (triggerType === 'delay') {
       pendingPromoTimeout = setTimeout(() => {
         pendingPromoTimeout = null;
-        if (isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
+        if (evaluationToken === currentEvaluationToken && isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
           showPromoModal(modal);
         }
       }, triggerValue * 1000);
@@ -191,7 +277,7 @@ export async function triggerPagePromoModals(currentPath = window.location.pathn
 
         if (percent >= triggerValue) {
           cancelPendingPromoTriggers();
-          if (isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
+          if (evaluationToken === currentEvaluationToken && isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
             showPromoModal(modal);
           }
         }
@@ -199,10 +285,11 @@ export async function triggerPagePromoModals(currentPath = window.location.pathn
       window.addEventListener('scroll', pendingScrollListener);
     } else if (triggerType === 'exit') {
       pendingExitListener = (e) => {
-        // Detect leaving viewport (upward mouse movement)
-        if (e.clientY < 50 || e.relatedTarget === null) {
+        // Detect leaving viewport (upward mouse movement to top boundary)
+        // Require both relatedTarget === null AND upward boundary position check
+        if (e.relatedTarget === null && e.clientY <= 0) {
           cancelPendingPromoTriggers();
-          if (isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
+          if (evaluationToken === currentEvaluationToken && isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
             showPromoModal(modal);
           }
         }

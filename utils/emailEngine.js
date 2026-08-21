@@ -21,7 +21,11 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
     fromEmail: fromEmail || defaultFrom
   };
 
-  const authToken = store.state?.user?.uid || 'sys_email_token_default';
+  // Use real session credential or fail
+  const authToken = store.state?.user?.sessionToken || store.state?.user?.idToken;
+  if (!authToken) {
+    throw new Error('No valid session credential available for email dispatch');
+  }
 
   const sendViaMailChannels = async () => {
     const response = await fetch('/api/send-email', {
@@ -48,11 +52,10 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
       subject: subject,
       messageBody: text || html
     });
-    if (success) {
-      return { success: true, provider: 'Google Workspace / Gmail API' };
-    } else {
+    if (!success) {
       throw new Error('Gmail API dispatch returned failure.');
     }
+    return { success: true, provider: 'Google Workspace / Gmail API' };
   };
 
   const isGooglePrimary = primaryProvider.includes('Google') || primaryProvider.includes('Gmail');

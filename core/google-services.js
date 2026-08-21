@@ -337,12 +337,26 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
   const token = await getAccessToken(true);
   if (!token) return false;
 
+  // Detect if messageBody is HTML
+  const isHtml = messageBody.trim().startsWith('<') || messageBody.includes('<html') || messageBody.includes('<div') || messageBody.includes('<p>');
+
+  // Convert HTML to plain text if needed, or set appropriate content type
+  let contentType = 'text/plain; charset=utf-8';
+  let bodyContent = messageBody;
+
+  if (isHtml) {
+    // Option 1: Send as HTML
+    contentType = 'text/html; charset=utf-8';
+    // Option 2: Strip HTML tags for plain text (uncomment if preferred)
+    // bodyContent = messageBody.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+  }
+
   const rawEmail = [
     `To: ${toEmail}`,
     `Subject: ${subject}`,
-    'Content-Type: text/plain; charset=utf-8',
+    `Content-Type: ${contentType}`,
     '',
-    messageBody
+    bodyContent
   ].join('\r\n');
 
   const encodedEmail = btoa(unescape(encodeURIComponent(rawEmail)))
@@ -359,7 +373,7 @@ export async function sendGmailNotification({ toEmail, subject, messageBody }) {
       },
       body: JSON.stringify({ raw: encodedEmail })
     });
-    return true;
+    return response.ok;
   } catch (err) {
     errorHandler.handleError(new Error(`Failed to send Gmail: ${err.message}`));
     return false;
