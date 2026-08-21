@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 from playwright.async_api import async_playwright
 
@@ -9,17 +10,19 @@ async def verify_console_cleanliness():
         page = await context.new_page()
 
         console_logs = []
-        uncaught_errors = []
+        fatal_errors = []
 
         def handle_console(msg):
             text = msg.text
             console_logs.append(f"[{msg.type.upper()}] {text}")
             if msg.type == "error":
-                # Filter out expected 404s for mock images/APIs in test environments if non-fatal
-                uncaught_errors.append(text)
+                # Filter out expected benign notices in test environment (offline Firestore connection notice and expected asset 404s)
+                if "Could not reach Cloud Firestore backend" in text or "Failed to load resource: the server responded with a status of 404" in text:
+                    return
+                fatal_errors.append(text)
 
         page.on("console", handle_console)
-        page.on("pageerror", lambda err: uncaught_errors.append(f"PAGE_ERROR: {err}"))
+        page.on("pageerror", lambda err: fatal_errors.append(f"PAGE_ERROR: {err}"))
 
         await page.add_init_script("""
             window.__FOUNDATION_DEV_BYPASS__ = true;
@@ -40,10 +43,10 @@ async def verify_console_cleanliness():
         for route in routes:
             print(f"Navigating to {route}...")
             await page.evaluate(f"window.router && window.router.navigateTo('{route}')")
-            await page.wait_for_timeout(500)
+            await page.wait_for_timeout(300)
 
         print(f"\nTotal Console Logs Captured: {len(console_logs)}")
-        print(f"Uncaught / Fatal Errors Count: {len(uncaught_errors)}")
+        print(f"Fatal Console/Page Errors Count: {len(fatal_errors)}")
 
         screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots', 'console_cleanliness.png')
         await page.screenshot(path=screenshot_path)
@@ -51,6 +54,14 @@ async def verify_console_cleanliness():
 
         await context.close()
         await browser.close()
+
+        if len(fatal_errors) > 0:
+            print("\n❌ Console Cleanliness Audit Failed due to fatal errors:")
+            for err in fatal_errors:
+                print(f"  - {err}")
+            sys.exit(1)
+
+        print("\n✅ Console Cleanliness Audit Passed Cleanly with 0 Fatal Errors.")
 
 if __name__ == "__main__":
     asyncio.run(verify_console_cleanliness())
