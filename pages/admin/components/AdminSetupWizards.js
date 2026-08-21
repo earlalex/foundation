@@ -12,6 +12,26 @@ import { themeEngine } from '../../../core/theme.js';
 import { uploadFileToDrive } from '../../../core/drive-upload.js';
 import { generateHeroBackground, generateProductMockup } from '../../../utils/ai-imagen.js';
 
+function escapeHTML(str) {
+  if (typeof str !== 'string') return str == null ? '' : String(str);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function isRealCredential(val) {
+  if (!val || typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  if (!trimmed) return false;
+  if (/mock|demo|YOUR_|_key_992|_id_01|_secret_99|sk_test_123|pk_test_456|whsec_mock|price_abc/i.test(trimmed)) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Synthesize Design System from Purpose, Mission, Values, and KPIs
  */
@@ -572,34 +592,34 @@ export class MasterSetupWizard extends HTMLElement {
       siteDomain: window.location.origin,
       adminEmail: "admin@earlalex.com",
       supportEmail: "support@earlalex.com",
-      firebaseApiKey: "AIzaSy_fb_mock_key_992",
-      firebaseProjectId: "demo-proj-id",
-      googleClientId: "g_client_id_01",
-      googleClientSecret: "g_secret_99",
-      googleServiceAccountToken: '{"type": "service_account"}',
-      geminiApiKey: "gemini_api_key_101",
-      openaiApiKey: "openai_api_key_mock",
+      firebaseApiKey: "",
+      firebaseProjectId: "",
+      googleClientId: "",
+      googleClientSecret: "",
+      googleServiceAccountToken: "",
+      geminiApiKey: "",
+      openaiApiKey: "",
       preferredModel: "gemini",
       voiceModel: "alloy",
-      stripeSecretKey: "sk_test_123",
-      stripePublishableKey: "pk_test_456",
-      stripeWebhookSecret: "whsec_mock",
-      stripeMembershipPriceId: "price_abc",
-      wiseApiKey: "wise_api_key_mock",
-      wiseProfileId: "wise_profile_id_mock",
-      telnyxApiKey: "telnyx_api_key_mock",
-      telnyxPhoneNumber: "+18005550199",
-      twilioAccountSid: "AC_twilio_sid_mock",
-      twilioAuthToken: "twilio_token_mock",
-      twilioPhoneNumber: "+18005550100",
-      vtApiKey: "vt_api_mock_token",
-      zapEndpoint: "https://wwtesw.zaproxy.org/",
-      lastpassCid: "lp_cid_mock",
-      lastpassHash: "lp_hash_mock",
-      ga4Id: "G-987654321",
-      lookerUrl: "https://lookerstudio.google.com/embed/reporting/123",
-      googlePlaceId: "place_id_mock",
-      adsensePub: "ca-pub-123456789",
+      stripeSecretKey: "",
+      stripePublishableKey: "",
+      stripeWebhookSecret: "",
+      stripeMembershipPriceId: "",
+      wiseApiKey: "",
+      wiseProfileId: "",
+      telnyxApiKey: "",
+      telnyxPhoneNumber: "",
+      twilioAccountSid: "",
+      twilioAuthToken: "",
+      twilioPhoneNumber: "",
+      vtApiKey: "",
+      zapEndpoint: "",
+      lastpassCid: "",
+      lastpassHash: "",
+      ga4Id: "",
+      lookerUrl: "",
+      googlePlaceId: "",
+      adsensePub: "",
       features: {
         chatWidget: true,
         webRadioPlayer: true,
@@ -867,7 +887,7 @@ export class MasterSetupWizard extends HTMLElement {
 
           <!-- Footer Action Bar -->
           <div style="background: var(--theme-color-surface-alt, #f8fafc); border-top: 1px solid var(--theme-color-border, #e2e8f0); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-            <button id="cancel-wizard-btn" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem; border: 1px solid #cbd5e0;">
+            <button id="cancel-wizard-btn" class="btn-secondary btn-cancel-modal" style="padding: 8px 16px; font-size: 0.85rem; border: 1px solid #cbd5e0;">
               Cancel Installation
             </button>
             <button id="master-finish-btn" class="btn-primary" style="padding: 10px 24px; font-size: 0.9rem; font-weight: bold; background: #38a169; border-color: #2f855a; display: none;">
@@ -913,9 +933,9 @@ export class MasterSetupWizard extends HTMLElement {
 
     chatHistEl.innerHTML = this.chatHistory.map(msg => `
       <div style="display: flex; flex-direction: column; align-items: ${msg.isAI ? 'flex-start' : 'flex-end'}; max-width: 85%; align-self: ${msg.isAI ? 'flex-start' : 'flex-end'};">
-        <span style="font-size: 0.72rem; color: #718096; font-weight: bold; margin-bottom: 2px;">${msg.sender}</span>
+        <span style="font-size: 0.72rem; color: #718096; font-weight: bold; margin-bottom: 2px;">${escapeHTML(msg.sender)}</span>
         <div style="padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.4; background: ${msg.isAI ? '#ebf8ff' : 'var(--theme-color-primary, #2b6cb0)'}; color: ${msg.isAI ? '#2b6cb0' : 'white'}; border-top-${msg.isAI ? 'left' : 'right'}-radius: 2px; text-align: left;">
-          ${msg.text}
+          ${msg.isAI ? msg.text : escapeHTML(msg.text)}
         </div>
       </div>
     `).join('');
@@ -1002,9 +1022,9 @@ export class MasterSetupWizard extends HTMLElement {
     }
 
     // Turn 2 Checks (Utilities Connecting)
-    const isFirebaseSet = this.config.firebaseApiKey && this.config.firebaseProjectId;
-    const isStripeSet = this.config.stripeSecretKey && this.config.stripePublishableKey;
-    const isTelephonySet = this.config.telnyxApiKey || this.config.twilioAccountSid;
+    const isFirebaseSet = isRealCredential(this.config.firebaseApiKey) && isRealCredential(this.config.firebaseProjectId);
+    const isStripeSet = isRealCredential(this.config.stripeSecretKey) && isRealCredential(this.config.stripePublishableKey);
+    const isTelephonySet = isRealCredential(this.config.telnyxApiKey) || isRealCredential(this.config.twilioAccountSid);
 
     if (isFirebaseSet) {
       if (lineDb) lineDb.setAttribute('stroke', '#eab308'); // Neon Yellow
@@ -1134,7 +1154,7 @@ export class MasterSetupWizard extends HTMLElement {
       this.chatTurn = 2;
       this.addContractorMessage(
         "✨ Conversational AI Architect",
-        `Wonderful! Concrete is poured for <strong>"${this.config.siteTitle}"</strong> at domain <code>${this.config.siteDomain}</code>. We have autogenerated sovereign <strong>"${seoCategory}"</strong> local SEO schemas!<br><br>Let's install the utility lines. Paste your Stripe, Telnyx, Twilio, Firebase, or Google keys, or describe what cloud services you want enabled!`
+        `Wonderful! Concrete is poured for <strong>"${escapeHTML(this.config.siteTitle)}"</strong> at domain <code>${escapeHTML(this.config.siteDomain)}</code>. We have autogenerated sovereign <strong>"${escapeHTML(seoCategory)}"</strong> local SEO schemas!<br><br>Let's install the utility lines. Paste your Stripe, Telnyx, Twilio, Firebase, or Google keys, or describe what cloud services you want enabled!`
       );
 
     } else if (this.chatTurn === 2) {
@@ -1197,19 +1217,19 @@ export class MasterSetupWizard extends HTMLElement {
           <p style="font-size:0.8rem; color:#718096; margin-bottom:0.5rem;">"Configures core branding, metadata headers, and canonical URLs."</p>
           <div>
             <label for="m-site-title" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Website Title *</label>
-            <input type="text" id="m-site-title" value="${this.config.siteTitle}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-site-title" value="${escapeHTML(this.config.siteTitle)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-site-domain" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Base Domain *</label>
-            <input type="url" id="m-site-domain" value="${this.config.siteDomain}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="url" id="m-site-domain" value="${escapeHTML(this.config.siteDomain)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-admin-email" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Primary Admin Email *</label>
-            <input type="email" id="m-admin-email" value="${this.config.adminEmail}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="email" id="m-admin-email" value="${escapeHTML(this.config.adminEmail)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-support-email" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Support Email *</label>
-            <input type="email" id="m-support-email" value="${this.config.supportEmail}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="email" id="m-support-email" value="${escapeHTML(this.config.supportEmail)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
         </div>
       `;
@@ -1220,23 +1240,23 @@ export class MasterSetupWizard extends HTMLElement {
           <p style="font-size:0.8rem; color:#718096; margin-bottom:0.5rem;">"Connect firestore connections and SSO logins."</p>
           <div>
             <label for="m-fb-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Firebase API Key *</label>
-            <input type="text" id="m-fb-key" value="${this.config.firebaseApiKey}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-fb-key" value="${escapeHTML(this.config.firebaseApiKey)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-fb-project" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Firebase Project ID *</label>
-            <input type="text" id="m-fb-project" value="${this.config.firebaseProjectId}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-fb-project" value="${escapeHTML(this.config.firebaseProjectId)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-google-id" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Google Client ID *</label>
-            <input type="text" id="m-google-id" value="${this.config.googleClientId}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-google-id" value="${escapeHTML(this.config.googleClientId)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-google-secret" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Google Client Secret *</label>
-            <input type="password" id="m-google-secret" value="${this.config.googleClientSecret}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-google-secret" value="${escapeHTML(this.config.googleClientSecret)}" required style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-google-service-token" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Google Service Account Token *</label>
-            <textarea id="m-google-service-token" required style="width:100%; height:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box; font-family:monospace;">${this.config.googleServiceAccountToken}</textarea>
+            <textarea id="m-google-service-token" required style="width:100%; height:50px; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box; font-family:monospace;">${escapeHTML(this.config.googleServiceAccountToken)}</textarea>
           </div>
         </div>
       `;
@@ -1246,11 +1266,11 @@ export class MasterSetupWizard extends HTMLElement {
           <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">🧠 Step 3: AI Intelligence Models</h3>
           <div>
             <label for="m-gemini-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Gemini API Key</label>
-            <input type="password" id="m-gemini-key" value="${this.config.geminiApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-gemini-key" value="${escapeHTML(this.config.geminiApiKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-openai-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">OpenAI API Key</label>
-            <input type="password" id="m-openai-key" value="${this.config.openaiApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-openai-key" value="${escapeHTML(this.config.openaiApiKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-preferred-model" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Preferred Model</label>
@@ -1267,19 +1287,19 @@ export class MasterSetupWizard extends HTMLElement {
           <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">💳 Step 4: E-Commerce & Payouts</h3>
           <div>
             <label for="m-stripe-sec" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Secret Key</label>
-            <input type="password" id="m-stripe-sec" value="${this.config.stripeSecretKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-stripe-sec" value="${escapeHTML(this.config.stripeSecretKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-stripe-pub" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Publishable Key</label>
-            <input type="text" id="m-stripe-pub" value="${this.config.stripePublishableKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-stripe-pub" value="${escapeHTML(this.config.stripePublishableKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-stripe-webhook" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Webhook Secret</label>
-            <input type="password" id="m-stripe-webhook" value="${this.config.stripeWebhookSecret}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-stripe-webhook" value="${escapeHTML(this.config.stripeWebhookSecret)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-stripe-price" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Stripe Price ID</label>
-            <input type="text" id="m-stripe-price" value="${this.config.stripeMembershipPriceId}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-stripe-price" value="${escapeHTML(this.config.stripeMembershipPriceId)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
         </div>
       `;
@@ -1289,19 +1309,19 @@ export class MasterSetupWizard extends HTMLElement {
           <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">📞 Step 5: Comms & Telephony</h3>
           <div>
             <label for="m-telnyx-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Telnyx API Key</label>
-            <input type="password" id="m-telnyx-key" value="${this.config.telnyxApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-telnyx-key" value="${escapeHTML(this.config.telnyxApiKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-telnyx-phone" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Telnyx Phone Number</label>
-            <input type="text" id="m-telnyx-phone" value="${this.config.telnyxPhoneNumber}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-telnyx-phone" value="${escapeHTML(this.config.telnyxPhoneNumber)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-twilio-sid" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Twilio SID</label>
-            <input type="text" id="m-twilio-sid" value="${this.config.twilioAccountSid}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-twilio-sid" value="${escapeHTML(this.config.twilioAccountSid)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-twilio-token" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Twilio Auth Token</label>
-            <input type="password" id="m-twilio-token" value="${this.config.twilioAuthToken}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-twilio-token" value="${escapeHTML(this.config.twilioAuthToken)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
         </div>
       `;
@@ -1311,11 +1331,11 @@ export class MasterSetupWizard extends HTMLElement {
           <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">🛡️ Step 6: Cyber Security Vault</h3>
           <div>
             <label for="m-vt-key" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">VirusTotal API Key</label>
-            <input type="password" id="m-vt-key" value="${this.config.vtApiKey}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="password" id="m-vt-key" value="${escapeHTML(this.config.vtApiKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-zap-endpoint" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">OWASP ZAP Endpoint</label>
-            <input type="url" id="m-zap-endpoint" value="${this.config.zapEndpoint}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="url" id="m-zap-endpoint" value="${escapeHTML(this.config.zapEndpoint)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
         </div>
       `;
@@ -1325,11 +1345,11 @@ export class MasterSetupWizard extends HTMLElement {
           <h3 style="margin-top:0; color:var(--theme-color-primary, #2b6cb0);">📊 Step 7: Analytics & SEO Settings</h3>
           <div>
             <label for="m-ga4-id" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">GA4 Measurement ID</label>
-            <input type="text" id="m-ga4-id" value="${this.config.ga4Id}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="text" id="m-ga4-id" value="${escapeHTML(this.config.ga4Id)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
             <label for="m-looker-url" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Looker Studio Embed URL</label>
-            <input type="url" id="m-looker-url" value="${this.config.lookerUrl}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+            <input type="url" id="m-looker-url" value="${escapeHTML(this.config.lookerUrl)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
         </div>
       `;
@@ -1493,7 +1513,7 @@ export class MasterSetupWizard extends HTMLElement {
     // Cancel / Exit Onboarding
     this.querySelector('#cancel-wizard-btn').onclick = (e) => {
       e.preventDefault();
-      if (confirm('Are you sure you want to exit? All unsaved credentials might be lost.')) {
+      if (window.__FOUNDATION_DEV_BYPASS__ || confirm('Are you sure you want to exit? All unsaved credentials might be lost.')) {
         this.remove();
       }
     };
@@ -1530,15 +1550,15 @@ export class MasterSetupWizard extends HTMLElement {
       firebase: {
         apiKey: this.config.firebaseApiKey,
         projectId: this.config.firebaseProjectId,
-        authDomain: `${this.config.firebaseProjectId}.firebaseapp.com`,
-        databaseRulesInitialized: true
+        authDomain: this.config.firebaseProjectId ? `${this.config.firebaseProjectId}.firebaseapp.com` : '',
+        databaseRulesInitialized: isRealCredential(this.config.firebaseApiKey) && isRealCredential(this.config.firebaseProjectId)
       },
       google: {
         clientId: this.config.googleClientId,
         clientSecret: this.config.googleClientSecret,
         serviceAccountToken: this.config.googleServiceAccountToken,
         ownerEmail: this.config.adminEmail,
-        consentScreenCompleted: true
+        consentScreenCompleted: isRealCredential(this.config.googleClientId)
       },
       aiConfig: {
         geminiApiKey: this.config.geminiApiKey,
@@ -1546,7 +1566,7 @@ export class MasterSetupWizard extends HTMLElement {
         preferredProvider: this.config.preferredModel
       },
       chatbot: {
-        ...(configManager.current.chatbot || {}),
+        ...(configManager.current?.chatbot || {}),
         enabled: true,
         openaiApiKey: this.config.openaiApiKey,
         telnyxApiKey: this.config.telnyxApiKey,
@@ -1556,12 +1576,12 @@ export class MasterSetupWizard extends HTMLElement {
         twilioPhoneNumber: this.config.twilioPhoneNumber
       },
       stripe: {
-        ...(configManager.current.stripe || {}),
+        ...(configManager.current?.stripe || {}),
         secretKey: this.config.stripeSecretKey,
         publishableKey: this.config.stripePublishableKey,
         webhookSecret: this.config.stripeWebhookSecret,
         priceId: this.config.stripeMembershipPriceId,
-        isConfigured: true
+        isConfigured: isRealCredential(this.config.stripeSecretKey) && isRealCredential(this.config.stripePublishableKey)
       },
       wise: {
         apiKey: this.config.wiseApiKey,
@@ -1677,16 +1697,6 @@ if (!customElements.get('master-setup-wizard')) {
  * Custom Web Component <foundation-worksheet-wizard>
  * Pre-Onboarding Foundation Worksheet & Semantic Brand Synthesis Engine
  */
-function escapeHTML(str) {
-  if (typeof str !== 'string') return str == null ? '' : String(str);
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function sanitizeCssHex(hex, fallback = "#1E3A8A") {
   if (typeof hex !== 'string') return fallback;
   const clean = hex.trim();

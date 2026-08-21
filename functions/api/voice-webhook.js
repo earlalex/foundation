@@ -18,10 +18,37 @@ export async function onRequestPost(context) {
       isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
       
       if (isTelnyx) {
-        const eventType = body.data.event_type;
-        const callControlId = body.data.payload.call_control_id;
         const env = context.env || {};
         const telnyxApiKey = env.TELNYX_API_KEY;
+        const telnyxWebhookSecret = env.TELNYX_WEBHOOK_SECRET || env.TELNYX_PUBLIC_KEY;
+        const expectedToken = telnyxWebhookSecret || telnyxApiKey || env.ADMIN_TOKEN || env.ADMIN_API_KEY;
+
+        // Security: Validate Telnyx request against configured webhook secret/token
+        const telnyxSignatureHeader = context.request.headers.get("telnyx-signature-ed25519") || context.request.headers.get("x-telnyx-signature") || "";
+        const authHeader = context.request.headers.get("authorization") || context.request.headers.get("x-admin-token") || "";
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+        let isTelnyxAuthorized = true;
+        if (expectedToken) {
+          if (token && token === expectedToken) {
+            isTelnyxAuthorized = true;
+          } else if (telnyxSignatureHeader && telnyxWebhookSecret && telnyxSignatureHeader === telnyxWebhookSecret) {
+            isTelnyxAuthorized = true;
+          } else {
+            isTelnyxAuthorized = false;
+          }
+        }
+
+        if (!isTelnyxAuthorized) {
+          console.warn('[Telnyx Webhook]: Unauthorized Telnyx webhook request rejected.');
+          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        const eventType = body.data.event_type;
+        const callControlId = body.data.payload.call_control_id;
 
         const handleTelnyxBackground = async () => {
           try {
@@ -50,16 +77,17 @@ export async function onRequestPost(context) {
               });
             }
 
-            // Google Workspace Telephony Log Integration
+            // Google Workspace Telephony Log Integration:
+            // Persist session log strictly ONCE per call on call.hangup using deterministic per-call control filename
             const serviceToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
-            if (serviceToken && (eventType === 'call.hangup' || eventType === 'call.speak.ended' || eventType === 'call.answered')) {
+            if (serviceToken && eventType === 'call.hangup') {
               const { uploadCommunicationLogToDrive, syncGoogleContactCommunication } = await import('../../utils/backend-google-serverless.js');
 
               const callerPhone = body.data.payload.from || 'Unknown Caller';
               const duration = body.data.payload.duration_seconds || body.data.payload.duration || 0;
               const occurredAt = body.data.occurred_at || new Date().toISOString();
               const siteName = env.SITE_NAME || "Foundation Framework";
-              const fileName = `telnyx_voice_log_${Date.now()}.md`;
+              const fileName = `telnyx_voice_log_${callControlId || Date.now()}.md`;
 
               const mdTranscript = `## Telnyx Voice Session\n\n- **Date/Time**: ${new Date(occurredAt).toLocaleString()}\n- **Event**: ${eventType}\n- **Caller**: ${callerPhone}\n- **Duration**: ${duration} seconds\n- **Call Control ID**: ${callControlId}\n- **Hangup Reason**: ${body.data.payload.hangup_reason || 'N/A'}`;
 

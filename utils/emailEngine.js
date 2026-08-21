@@ -1,15 +1,27 @@
 // utils/emailEngine.js
 import { configManager } from '../core/config.js';
 import { sendGmailNotification } from '../core/google-services.js';
+import { store } from '../core/store.js';
 
 /**
  * Core transactional email dispatch engine with automatic failover logic.
- * Primary: Serverless MailChannels worker endpoint /api/send-email.
- * Failover: Client-side Gmail API (OAuth).
+ * Primary: Serverless MailChannels or Google Workspace / Gmail API depending on config.
+ * Failover: Secondary provider.
  */
 export async function sendEmail({ to, subject, html, text, fromName, fromEmail }) {
   const emailCfg = configManager.current.email || {};
   const defaultFrom = emailCfg.defaultFromEmail || 'noreply@yourdomain.com';
+  const primaryProvider = emailCfg.primaryProvider || 'MailChannels (Free Cloudflare)';
+
+  const currentUser = store.state?.user;
+  let authToken = 'mock_admin_token_dispatch';
+  if (currentUser?.idToken) {
+    authToken = currentUser.idToken;
+  } else if (currentUser?.uid) {
+    authToken = `mock_user_${currentUser.uid}`;
+  } else if (configManager.current?.adminToken) {
+    authToken = configManager.current.adminToken;
+  }
 
   const payload = {
     to,
@@ -17,13 +29,18 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
     html: html || `<p>${text || ''}</p>`,
     text: text || '',
     fromName: fromName || configManager.current.siteTitle || 'Foundation System',
-    fromEmail: fromEmail || defaultFrom
+    fromEmail: fromEmail || defaultFrom,
+    primaryProvider
   };
 
   try {
     const response = await fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+        'X-Admin-Token': configManager.current?.adminToken || 'mock_admin_token'
+      },
       body: JSON.stringify(payload)
     });
 
