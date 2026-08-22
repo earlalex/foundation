@@ -156,7 +156,7 @@ function getLengthBytes(der, pos) {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // 1. Strict Fail-Closed Authorization Guard
+  // 1. Strict Fail-Closed Authorization Guard requiring Admin/Editor Privilege
   const authHeader = request.headers.get("Authorization") || request.headers.get("X-Admin-Token") || "";
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
@@ -167,16 +167,42 @@ export async function onRequestPost(context) {
     isAuthorized = true;
   } else if (token) {
     const firebaseProjectId = env.FIREBASE_PROJECT_ID;
-    if (firebaseProjectId && token.split('.').length === 3) {
+    const firestoreApiKey = env.FIREBASE_API_KEY;
+
+    if (firebaseProjectId) {
       const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
-      if (verifyResult.valid) {
-        isAuthorized = true;
+      if (verifyResult.valid && verifyResult.email && firestoreApiKey) {
+        const userEmail = verifyResult.email;
+
+        // Verify user role in Firestore (strictly require 'admin' or 'editor')
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        try {
+          const docId = userEmail.replace(/[@.]/g, '_');
+          const userRes = await fetch(
+            `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
+            { signal: controller.signal }
+          );
+
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            const role = userData.fields?.role?.stringValue || '';
+            if (role === 'admin' || role === 'editor') {
+              isAuthorized = true;
+            }
+          }
+        } catch (dbErr) {
+          console.error('[send-email] Role verification failed:', dbErr);
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
     }
   }
 
   if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Cryptographically verified authorization token required' }), {
+    return new Response(JSON.stringify({ error: 'Forbidden: Admin or Editor authorization required for email relay' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
