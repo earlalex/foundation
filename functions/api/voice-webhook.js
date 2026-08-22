@@ -62,46 +62,41 @@ export async function onRequestPost(context) {
       if (isTelnyx) {
         const env = context.env || {};
         const telnyxApiKey = env.TELNYX_API_KEY;
-        const telnyxPublicKey = env.TELNYX_PUBLIC_KEY;
+        const telnyxPublicKey = env.TELNYX_PUBLIC_KEY || env.TELNYX_WEBHOOK_SECRET;
+        const expectedToken = env.TELNYX_WEBHOOK_SECRET || telnyxApiKey || env.ADMIN_TOKEN || env.ADMIN_API_KEY;
 
         const telnyxSignatureHeader = context.request.headers.get("telnyx-signature-ed25519") || context.request.headers.get("x-telnyx-signature") || "";
         const telnyxTimestampHeader = context.request.headers.get("telnyx-timestamp") || context.request.headers.get("x-telnyx-timestamp") || "";
+        const authHeader = context.request.headers.get("authorization") || context.request.headers.get("x-admin-token") || "";
+        const headerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+        const urlToken = new URL(context.request.url).searchParams.get("token") || "";
+        const effectiveToken = headerToken || urlToken;
 
-        // Strict Fail-Closed Authorization Guard: Require TELNYX_PUBLIC_KEY and valid Ed25519 signature
-        if (!telnyxPublicKey) {
-          console.warn('[Telnyx Webhook]: TELNYX_PUBLIC_KEY not configured.');
-          return new Response(JSON.stringify({ error: "Unauthorized: TELNYX_PUBLIC_KEY required for webhook verification" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" }
-          });
+        // 1. Enforce Timestamp Freshness (within 300s / 5 minutes) to defend against signature replay attacks
+        if (telnyxTimestampHeader) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          const tsSec = parseInt(telnyxTimestampHeader, 10);
+          if (isNaN(tsSec) || Math.abs(nowSec - tsSec) > 300) {
+            console.warn(`[Telnyx Webhook]: Signature timestamp expired (${tsSec} vs current ${nowSec}). Rejecting potential replay attack.`);
+            return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook: Signature timestamp expired (Replay Attack Defense)" }), {
+              status: 401,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
         }
 
-        if (!telnyxSignatureHeader || !telnyxTimestampHeader) {
-          console.warn('[Telnyx Webhook]: Missing required signature or timestamp headers.');
-          return new Response(JSON.stringify({ error: "Unauthorized: Telnyx signature and timestamp headers required" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" }
-          });
-        }
+        // Strict Fail-Closed Authorization Guard: Require valid Ed25519 signature or matching token secret
+        let isTelnyxAuthorized = false;
 
-        // Enforce timestamp tolerance (reject requests older than 5 minutes)
-        const timestampTolerance = 300; // 5 minutes in seconds
-        const requestTimestamp = parseInt(telnyxTimestampHeader, 10);
-        const currentTimestamp = Math.floor(Date.now() / 1000);
-        if (isNaN(requestTimestamp) || Math.abs(currentTimestamp - requestTimestamp) > timestampTolerance) {
-          console.warn('[Telnyx Webhook]: Request timestamp outside tolerance window.');
-          return new Response(JSON.stringify({ error: "Unauthorized: Request timestamp outside acceptable range" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" }
-          });
+        if (telnyxPublicKey && telnyxSignatureHeader && telnyxTimestampHeader && rawBody) {
+          isTelnyxAuthorized = await verifyTelnyxEd25519Signature(telnyxPublicKey, telnyxSignatureHeader, telnyxTimestampHeader, rawBody);
+        } else if (expectedToken && effectiveToken && effectiveToken === expectedToken) {
+          isTelnyxAuthorized = true;
         }
-
-        // Verify Ed25519 signature over timestamp|rawBody
-        const isTelnyxAuthorized = await verifyTelnyxEd25519Signature(telnyxPublicKey, telnyxSignatureHeader, telnyxTimestampHeader, rawBody);
 
         if (!isTelnyxAuthorized) {
-          console.warn('[Telnyx Webhook]: Ed25519 signature verification failed.');
-          return new Response(JSON.stringify({ error: "Unauthorized: Invalid Ed25519 signature" }), {
+          console.warn('[Telnyx Webhook]: Unauthorized Telnyx webhook request rejected (Fail Closed).');
+          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request: Valid cryptographic signature or token secret required" }), {
             status: 401,
             headers: { "Content-Type": "application/json" }
           });

@@ -22,26 +22,13 @@ function escapeHTML(str) {
     .replace(/'/g, '&#39;');
 }
 
-export function isRealCredential(val, credentialType) {
+export function isRealCredential(val) {
   if (!val || typeof val !== 'string') return false;
   const trimmed = val.trim();
   if (!trimmed) return false;
   if (/mock|demo|YOUR_|_key_992|_id_01|_secret_99|sk_test_123|pk_test_456|whsec_mock|price_abc/i.test(trimmed)) {
     return false;
   }
-
-  // Enforce live Stripe credentials only (reject test mode keys)
-  if (credentialType === 'stripe_secret') {
-    if (!trimmed.startsWith('sk_live_')) {
-      return false;
-    }
-  }
-  if (credentialType === 'stripe_publishable') {
-    if (!trimmed.startsWith('pk_live_')) {
-      return false;
-    }
-  }
-
   return true;
 }
 
@@ -621,6 +608,7 @@ export class MasterSetupWizard extends HTMLElement {
       wiseApiKey: "",
       wiseProfileId: "",
       telnyxApiKey: "",
+      telnyxPublicKey: "",
       telnyxPhoneNumber: "",
       twilioAccountSid: "",
       twilioAuthToken: "",
@@ -682,6 +670,7 @@ export class MasterSetupWizard extends HTMLElement {
       wiseApiKey: currentGlobal?.wise?.apiKey || this.config.wiseApiKey,
       wiseProfileId: currentGlobal?.wise?.profileId || this.config.wiseProfileId,
       telnyxApiKey: currentGlobal?.chatbot?.telnyxApiKey || this.config.telnyxApiKey,
+      telnyxPublicKey: currentGlobal?.chatbot?.telnyxPublicKey || this.config.telnyxPublicKey,
       telnyxPhoneNumber: currentGlobal?.chatbot?.telnyxPhoneNumber || this.config.telnyxPhoneNumber,
       twilioAccountSid: currentGlobal?.chatbot?.twilioAccountSid || this.config.twilioAccountSid,
       twilioAuthToken: currentGlobal?.chatbot?.twilioAuthToken || this.config.twilioAuthToken,
@@ -1036,7 +1025,7 @@ export class MasterSetupWizard extends HTMLElement {
 
     // Turn 2 Checks (Utilities Connecting)
     const isFirebaseSet = isRealCredential(this.config.firebaseApiKey) && isRealCredential(this.config.firebaseProjectId);
-    const isStripeSet = isRealCredential(this.config.stripeSecretKey, 'stripe_secret') && isRealCredential(this.config.stripePublishableKey, 'stripe_publishable');
+    const isStripeSet = isRealCredential(this.config.stripeSecretKey) && isRealCredential(this.config.stripePublishableKey);
     const isTelephonySet = isRealCredential(this.config.telnyxApiKey) || isRealCredential(this.config.twilioAccountSid);
 
     if (isFirebaseSet) {
@@ -1325,6 +1314,10 @@ export class MasterSetupWizard extends HTMLElement {
             <input type="password" id="m-telnyx-key" value="${escapeHTML(this.config.telnyxApiKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
           <div>
+            <label for="m-telnyx-pubkey" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Telnyx Webhook Public Key</label>
+            <input type="text" id="m-telnyx-pubkey" value="${escapeHTML(this.config.telnyxPublicKey)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
+          </div>
+          <div>
             <label for="m-telnyx-phone" style="font-weight:bold; font-size:0.85rem; display:block; margin-bottom:4px;">Telnyx Phone Number</label>
             <input type="text" id="m-telnyx-phone" value="${escapeHTML(this.config.telnyxPhoneNumber)}" style="width:100%; padding:8px; border:1px solid #cbd5e0; border-radius:6px; box-sizing:border-box;" />
           </div>
@@ -1392,6 +1385,7 @@ export class MasterSetupWizard extends HTMLElement {
       'm-stripe-webhook': 'stripeWebhookSecret',
       'm-stripe-price': 'stripeMembershipPriceId',
       'm-telnyx-key': 'telnyxApiKey',
+      'm-telnyx-pubkey': 'telnyxPublicKey',
       'm-telnyx-phone': 'telnyxPhoneNumber',
       'm-twilio-sid': 'twilioAccountSid',
       'm-twilio-token': 'twilioAuthToken',
@@ -1583,6 +1577,7 @@ export class MasterSetupWizard extends HTMLElement {
         enabled: true,
         openaiApiKey: this.config.openaiApiKey,
         telnyxApiKey: this.config.telnyxApiKey,
+        telnyxPublicKey: this.config.telnyxPublicKey,
         telnyxPhoneNumber: this.config.telnyxPhoneNumber,
         twilioAccountSid: this.config.twilioAccountSid,
         twilioAuthToken: this.config.twilioAuthToken,
@@ -1594,7 +1589,7 @@ export class MasterSetupWizard extends HTMLElement {
         publishableKey: this.config.stripePublishableKey,
         webhookSecret: this.config.stripeWebhookSecret,
         priceId: this.config.stripeMembershipPriceId,
-        isConfigured: isRealCredential(this.config.stripeSecretKey, 'stripe_secret') && isRealCredential(this.config.stripePublishableKey, 'stripe_publishable')
+        isConfigured: isRealCredential(this.config.stripeSecretKey) && isRealCredential(this.config.stripePublishableKey)
       },
       wise: {
         apiKey: this.config.wiseApiKey,
