@@ -153,10 +153,37 @@ export async function onRequestPost(context) {
     isAuthorized = true;
   } else if (token) {
     const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+    const firestoreApiKey = env.FIREBASE_API_KEY;
+
     if (firebaseProjectId) {
       const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
-      if (verifyResult.valid) {
-        isAuthorized = true;
+      if (verifyResult.valid && verifyResult.email) {
+        const userEmail = verifyResult.email;
+
+        if (env.ADMIN_EMAIL && userEmail === env.ADMIN_EMAIL) {
+          isAuthorized = true;
+        } else if (firestoreApiKey) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          try {
+            const docId = userEmail.replace(/[@.]/g, '_');
+            const userRes = await fetch(
+              `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
+              { signal: controller.signal }
+            );
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              const role = userData.fields?.role?.stringValue || '';
+              if (role === 'admin' || role === 'editor') {
+                isAuthorized = true;
+              }
+            }
+          } catch (dbErr) {
+            console.error('[send-email] Firestore role verification failed:', dbErr);
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        }
       }
     }
   }

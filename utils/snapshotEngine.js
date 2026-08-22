@@ -111,6 +111,177 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
   }
 }
 
+async function applySnapshotDataInternal(data) {
+  if (!data) throw new Error('[SnapshotEngine]: Missing snapshot data payload.');
+
+  const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, customTheme, highContrast } = data;
+
+  const { getFirestoreDB, collection, getDocs, doc, deleteDoc } = await import('../core/db-shared.js');
+  const db = getFirestoreDB();
+
+  // Step A: Restore all snapshot records FIRST
+  if (Array.isArray(pages)) {
+    for (const page of pages) {
+      await contentDB.saveCustomPage(page);
+    }
+  }
+
+  if (Array.isArray(content)) {
+    for (const c of content) {
+      await contentDB.saveContent(c);
+    }
+  }
+
+  if (splits) {
+    for (const [assetId, splitObj] of Object.entries(splits)) {
+      if (splitObj && splitObj.splits) {
+        await saveAssetSplits(assetId, splitObj.assetType || 'article', splitObj.splits);
+      }
+    }
+  }
+
+  if (Array.isArray(employees)) {
+    for (const emp of employees) {
+      await contentDB.saveEmployee(emp);
+    }
+  }
+
+  if (Array.isArray(payroll)) {
+    for (const pr of payroll) {
+      await contentDB.savePayrollRecord(pr);
+    }
+  }
+
+  if (Array.isArray(expenses)) {
+    for (const exp of expenses) {
+      await contentDB.saveExpense(exp);
+    }
+  }
+
+  if (budgets) {
+    await contentDB.saveBudgetTargets(budgets);
+  }
+
+  if (config) {
+    await configManager.saveToFirebase(config);
+  }
+
+  // Step B: Purge post-snapshot records created after snapshot
+  const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
+  try {
+    const currentPages = await contentDB.getAllCustomPages();
+    for (const p of currentPages) {
+      if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
+        if (db) {
+          try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) {}
+        }
+      }
+    }
+    const localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
+    Object.keys(localPages).forEach(k => {
+      if (!snapshotPageIds.has(k)) delete localPages[k];
+    });
+    localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
+  } catch (e) {
+    console.warn('[SnapshotEngine]: Pages purge warning:', e.message);
+  }
+
+  const snapshotContentIds = new Set((content || []).map(c => c.id));
+  try {
+    const currentContent = await contentDB.getAllContent();
+    for (const c of currentContent) {
+      if (c.id && !snapshotContentIds.has(c.id)) {
+        await contentDB.deleteContent(c.id);
+      }
+    }
+  } catch (e) {
+    console.warn('[SnapshotEngine]: Content purge warning:', e.message);
+  }
+
+  const snapshotSplitKeys = new Set(Object.keys(splits || {}));
+  try {
+    const localSplits = JSON.parse(localStorage.getItem('foundation_local_splits') || '{}');
+    Object.keys(localSplits).forEach(k => {
+      if (!snapshotSplitKeys.has(k)) delete localSplits[k];
+    });
+    localStorage.setItem('foundation_local_splits', JSON.stringify(localSplits));
+
+    if (db) {
+      const querySnapshot = await getDocs(collection(db, 'splits'));
+      for (const docSnap of querySnapshot.docs) {
+        if (!snapshotSplitKeys.has(docSnap.id)) {
+          try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[SnapshotEngine]: Splits purge warning:', e.message);
+  }
+
+  const snapshotEmpIds = new Set((employees || []).map(e => e.id));
+  try {
+    const currentEmployees = await contentDB.getEmployees();
+    for (const emp of currentEmployees) {
+      if (emp.id && !snapshotEmpIds.has(emp.id)) {
+        await contentDB.deleteEmployee(emp.id);
+      }
+    }
+  } catch (e) {
+    console.warn('[SnapshotEngine]: Employee purge warning:', e.message);
+  }
+
+  const snapshotPayrollIds = new Set((payroll || []).map(p => p.id));
+  try {
+    const localPayroll = JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
+    Object.keys(localPayroll).forEach(k => {
+      if (!snapshotPayrollIds.has(k)) delete localPayroll[k];
+    });
+    localStorage.setItem('foundation_local_payroll', JSON.stringify(localPayroll));
+
+    if (db) {
+      const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
+      for (const docSnap of querySnapshot.docs) {
+        if (!snapshotPayrollIds.has(docSnap.id)) {
+          try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[SnapshotEngine]: Payroll purge warning:', e.message);
+  }
+
+  const snapshotExpenseIds = new Set((expenses || []).map(e => e.id));
+  try {
+    const localExpenses = JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
+    Object.keys(localExpenses).forEach(k => {
+      if (!snapshotExpenseIds.has(k)) delete localExpenses[k];
+    });
+    localStorage.setItem('foundation_local_expenses', JSON.stringify(localExpenses));
+
+    if (db) {
+      const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
+      for (const docSnap of querySnapshot.docs) {
+        if (!snapshotExpenseIds.has(docSnap.id)) {
+          try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[SnapshotEngine]: Expense purge warning:', e.message);
+  }
+
+  // Restore Theme settings & Custom Tokens
+  if (theme && Object.keys(theme).length > 0) {
+    localStorage.setItem('foundation_theme_config', JSON.stringify(theme));
+  }
+  if (customTheme && Object.keys(customTheme).length > 0) {
+    localStorage.setItem('foundation_theme_custom', JSON.stringify(customTheme));
+  }
+  if (highContrast !== undefined) {
+    localStorage.setItem('foundation_high_contrast', String(highContrast));
+  }
+}
+
 /**
  * Restores the complete configuration and database state to a specific snapshot version
  * @param {Object} snapshot - Snapshot object to restore
@@ -123,188 +294,32 @@ export async function restoreSiteSnapshot(snapshot) {
 
   console.log(`[SnapshotEngine]: Restoring snapshot "${snapshot.label}" created on ${snapshot.timestamp}...`);
 
+  // Pre-validate snapshot data structures up front
+  const { pages, content, employees, payroll, expenses } = snapshot.data;
+  if (pages && !Array.isArray(pages)) throw new Error('[SnapshotEngine]: Invalid pages array in snapshot data.');
+  if (content && !Array.isArray(content)) throw new Error('[SnapshotEngine]: Invalid content array in snapshot data.');
+  if (employees && !Array.isArray(employees)) throw new Error('[SnapshotEngine]: Invalid employees array in snapshot data.');
+  if (payroll && !Array.isArray(payroll)) throw new Error('[SnapshotEngine]: Invalid payroll array in snapshot data.');
+  if (expenses && !Array.isArray(expenses)) throw new Error('[SnapshotEngine]: Invalid expenses array in snapshot data.');
+
+  // Non-Destructive Rollback Check: Auto-generate Pre-Rollback Backup snapshot first
+  console.log('[SnapshotEngine]: Creating temporary Pre-Rollback Backup safeguard snapshot...');
+  const preRollbackSafeguard = await createSiteSnapshot('Pre-Rollback Backup');
+
   try {
-    // 1. Non-Destructive Rollback Check: Auto-generate Pre-Rollback Backup snapshot first
-    console.log('[SnapshotEngine]: Creating temporary Pre-Rollback Backup safeguard snapshot...');
-    await createSiteSnapshot('Pre-Rollback Backup');
-
-    const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, customTheme, highContrast } = snapshot.data;
-
-    const { getFirestoreDB, collection, getDocs, doc, deleteDoc } = await import('../core/db-shared.js');
-    const db = getFirestoreDB();
-
-    // Step A: Restore all snapshot records FIRST to guarantee data integrity before deleting any obsolete records
-    // 2. Restore Custom Pages
-    if (Array.isArray(pages)) {
-      for (const page of pages) {
-        await contentDB.saveCustomPage(page);
-      }
-    }
-
-    // 3. Restore Content Entries
-    if (Array.isArray(content)) {
-      for (const c of content) {
-        await contentDB.saveContent(c);
-      }
-    }
-
-    // 4. Restore Royalty Splits
-    if (splits) {
-      for (const [assetId, splitObj] of Object.entries(splits)) {
-        if (splitObj && splitObj.splits) {
-          await saveAssetSplits(assetId, splitObj.assetType || 'article', splitObj.splits);
-        }
-      }
-    }
-
-    // 5. Restore Employee Ledgers
-    if (Array.isArray(employees)) {
-      for (const emp of employees) {
-        await contentDB.saveEmployee(emp);
-      }
-    }
-
-    // 6. Restore Payroll Records
-    if (Array.isArray(payroll)) {
-      for (const pr of payroll) {
-        await contentDB.savePayrollRecord(pr);
-      }
-    }
-
-    // 7. Restore Expense Records
-    if (Array.isArray(expenses)) {
-      for (const exp of expenses) {
-        await contentDB.saveExpense(exp);
-      }
-    }
-
-    if (budgets) {
-      await contentDB.saveBudgetTargets(budgets);
-    }
-
-    // 8. Restore configManager
-    if (config) {
-      await configManager.saveToFirebase(config);
-    }
-
-    // Step B: ONLY after all snapshot restorations succeed, purge post-snapshot records created after snapshot
-    const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
-    try {
-      const currentPages = await contentDB.getAllCustomPages();
-      for (const p of currentPages) {
-        if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
-          if (db) {
-            try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) {}
-          }
-        }
-      }
-      const localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
-      Object.keys(localPages).forEach(k => {
-        if (!snapshotPageIds.has(k)) delete localPages[k];
-      });
-      localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Pages purge warning:', e.message);
-    }
-
-    const snapshotContentIds = new Set((content || []).map(c => c.id));
-    try {
-      const currentContent = await contentDB.getAllContent();
-      for (const c of currentContent) {
-        if (c.id && !snapshotContentIds.has(c.id)) {
-          await contentDB.deleteContent(c.id);
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Content purge warning:', e.message);
-    }
-
-    const snapshotSplitKeys = new Set(Object.keys(splits || {}));
-    try {
-      const localSplits = JSON.parse(localStorage.getItem('foundation_local_splits') || '{}');
-      Object.keys(localSplits).forEach(k => {
-        if (!snapshotSplitKeys.has(k)) delete localSplits[k];
-      });
-      localStorage.setItem('foundation_local_splits', JSON.stringify(localSplits));
-
-      if (db) {
-        const querySnapshot = await getDocs(collection(db, 'splits'));
-        for (const docSnap of querySnapshot.docs) {
-          if (!snapshotSplitKeys.has(docSnap.id)) {
-            try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) {}
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Splits purge warning:', e.message);
-    }
-
-    const snapshotEmpIds = new Set((employees || []).map(e => e.id));
-    try {
-      const currentEmployees = await contentDB.getEmployees();
-      for (const emp of currentEmployees) {
-        if (emp.id && !snapshotEmpIds.has(emp.id)) {
-          await contentDB.deleteEmployee(emp.id);
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Employee purge warning:', e.message);
-    }
-
-    const snapshotPayrollIds = new Set((payroll || []).map(p => p.id));
-    try {
-      const localPayroll = JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
-      Object.keys(localPayroll).forEach(k => {
-        if (!snapshotPayrollIds.has(k)) delete localPayroll[k];
-      });
-      localStorage.setItem('foundation_local_payroll', JSON.stringify(localPayroll));
-
-      if (db) {
-        const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
-        for (const docSnap of querySnapshot.docs) {
-          if (!snapshotPayrollIds.has(docSnap.id)) {
-            try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) {}
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Payroll purge warning:', e.message);
-    }
-
-    const snapshotExpenseIds = new Set((expenses || []).map(e => e.id));
-    try {
-      const localExpenses = JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
-      Object.keys(localExpenses).forEach(k => {
-        if (!snapshotExpenseIds.has(k)) delete localExpenses[k];
-      });
-      localStorage.setItem('foundation_local_expenses', JSON.stringify(localExpenses));
-
-      if (db) {
-        const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
-        for (const docSnap of querySnapshot.docs) {
-          if (!snapshotExpenseIds.has(docSnap.id)) {
-            try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) {}
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[SnapshotEngine]: Expense purge warning:', e.message);
-    }
-
-    // 7. Restore Theme settings & Custom Tokens
-    if (theme && Object.keys(theme).length > 0) {
-      localStorage.setItem('foundation_theme_config', JSON.stringify(theme));
-    }
-    if (customTheme && Object.keys(customTheme).length > 0) {
-      localStorage.setItem('foundation_theme_custom', JSON.stringify(customTheme));
-    }
-    if (highContrast !== undefined) {
-      localStorage.setItem('foundation_high_contrast', String(highContrast));
-    }
-
+    await applySnapshotDataInternal(snapshot.data);
     console.log('[SnapshotEngine]: Site state fully restored to chosen snapshot.');
     return true;
   } catch (err) {
+    console.error('[SnapshotEngine]: Restoration failed mid-flight. Automatically re-applying Pre-Rollback Backup safeguard...', err);
+    try {
+      if (preRollbackSafeguard && preRollbackSafeguard.data) {
+        await applySnapshotDataInternal(preRollbackSafeguard.data);
+        console.log('[SnapshotEngine]: Successfully reverted state back to Pre-Rollback Backup safeguard.');
+      }
+    } catch (revertErr) {
+      console.error('[SnapshotEngine]: Automatic safeguard re-application failed:', revertErr);
+    }
     errorHandler.handleError(err, 'Restore Snapshot');
     throw err;
   }
