@@ -1,5 +1,65 @@
 // functions/api/send-email.js
 
+// Module-scoped certificate cache
+let certCache = null;
+let certCacheExpiry = 0;
+let certFetchPromise = null;
+
+/**
+ * Fetch and cache Firebase public certificates with timeout and cache reuse
+ * @returns {Promise<{valid: boolean, certs?: object}>}
+ */
+async function fetchFirebaseCerts() {
+  const now = Date.now();
+
+  // Return cached certificates if still valid
+  if (certCache && now < certCacheExpiry) {
+    return { valid: true, certs: certCache };
+  }
+
+  // Reuse in-flight fetch if one exists
+  if (certFetchPromise) {
+    return certFetchPromise;
+  }
+
+  // Start new fetch with timeout and cache the promise for concurrent requests
+  certFetchPromise = (async () => {
+    try {
+      const certsRes = await fetch(
+        'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com',
+        { signal: AbortSignal.timeout(5000) }
+      );
+
+      if (!certsRes.ok) {
+        return { valid: false };
+      }
+
+      const certs = await certsRes.json();
+
+      // Parse Cache-Control max-age, fallback to 5 minutes if absent/unparsable
+      let maxAge = 300; // 5 minutes default
+      const cacheControl = certsRes.headers.get('cache-control');
+      if (cacheControl) {
+        const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+        if (maxAgeMatch) {
+          maxAge = parseInt(maxAgeMatch[1], 10);
+        }
+      }
+
+      certCache = certs;
+      certCacheExpiry = Date.now() + (maxAge * 1000);
+
+      return { valid: true, certs };
+    } catch (err) {
+      return { valid: false };
+    } finally {
+      certFetchPromise = null;
+    }
+  })();
+
+  return certFetchPromise;
+}
+
 /**
  * Verify Firebase ID token signature and standard claims using Web Crypto API
  * @param {string} token - JWT token to verify
@@ -32,9 +92,9 @@ async function verifyFirebaseToken(token, projectId) {
     if (payload.iss !== expectedIssuer) return { valid: false };
     if (!payload.sub || !payload.email) return { valid: false };
 
-    const certsRes = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
-    if (!certsRes.ok) return { valid: false };
-    const certs = await certsRes.json();
+    const certResult = await fetchFirebaseCerts();
+    if (!certResult.valid) return { valid: false };
+    const certs = certResult.certs;
     const certPem = certs[kid];
     if (!certPem) return { valid: false };
 
