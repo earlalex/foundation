@@ -14,13 +14,14 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
   const primaryProvider = emailCfg.primaryProvider || 'MailChannels (Free Cloudflare)';
 
   const currentUser = store.state?.user;
-  let authToken = 'mock_admin_token_dispatch';
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
   if (currentUser?.idToken) {
-    authToken = currentUser.idToken;
-  } else if (currentUser?.uid) {
-    authToken = `mock_user_${currentUser.uid}`;
+    headers['Authorization'] = `Bearer ${currentUser.idToken}`;
   } else if (configManager.current?.adminToken) {
-    authToken = configManager.current.adminToken;
+    headers['X-Admin-Token'] = configManager.current.adminToken;
   }
 
   const payload = {
@@ -36,11 +37,7 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
   try {
     const response = await fetch('/api/send-email', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-        'X-Admin-Token': configManager.current?.adminToken || 'mock_admin_token'
-      },
+      headers,
       body: JSON.stringify(payload)
     });
 

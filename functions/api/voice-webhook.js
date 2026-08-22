@@ -1,5 +1,41 @@
 // functions/api/voice-webhook.js
 
+/**
+ * Verify Telnyx Webhook Ed25519 signature using Web Crypto API
+ * @param {string} publicKeyB64 - Telnyx Public Key (base64)
+ * @param {string} signatureB64 - Telnyx Signature header (base64)
+ * @param {string} timestamp - Telnyx Timestamp header
+ * @param {string} rawBody - Raw HTTP body text
+ * @returns {Promise<boolean>}
+ */
+async function verifyTelnyxEd25519Signature(publicKeyB64, signatureB64, timestamp, rawBody) {
+  try {
+    const pemOrB64 = publicKeyB64.replace(/-----BEGIN PUBLIC KEY-----/, '').replace(/-----END PUBLIC KEY-----/, '').replace(/\s/g, '');
+    const pubKeyBytes = Uint8Array.from(atob(pemOrB64), c => c.charCodeAt(0));
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      pubKeyBytes,
+      { name: 'Ed25519' },
+      false,
+      ['verify']
+    );
+
+    const sigBytes = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0));
+
+    // Check both timestamp delimiter formats (| and .) used by Telnyx event dispatchers
+    const dataBytes1 = new TextEncoder().encode(`${timestamp}|${rawBody}`);
+    const isValid1 = await crypto.subtle.verify('Ed25519', key, sigBytes, dataBytes1);
+    if (isValid1) return true;
+
+    const dataBytes2 = new TextEncoder().encode(`${timestamp}.${rawBody}`);
+    return await crypto.subtle.verify('Ed25519', key, sigBytes, dataBytes2);
+  } catch (err) {
+    console.error('[Telnyx Ed25519 Verify Exception]:', err);
+    return false;
+  }
+}
+
 export async function onRequestPost(context) {
   try {
     let callText = "";
@@ -8,11 +44,17 @@ export async function onRequestPost(context) {
     let isVapi = false;
     let fromNumber = "";
     let body = null;
+    let rawBody = "";
 
     // 1. Parse incoming Voice Webhook parameters (e.g. Vapi.ai payload or Telnyx/Twilio HTTP events)
     const contentType = context.request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
-      body = await context.request.json();
+      rawBody = await context.request.text();
+      try {
+        body = JSON.parse(rawBody);
+      } catch (e) {
+        body = {};
+      }
 
       // Check if it is a Telnyx Call Control Webhook Event
       isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
@@ -20,28 +62,28 @@ export async function onRequestPost(context) {
       if (isTelnyx) {
         const env = context.env || {};
         const telnyxApiKey = env.TELNYX_API_KEY;
-        const telnyxWebhookSecret = env.TELNYX_WEBHOOK_SECRET || env.TELNYX_PUBLIC_KEY;
-        const expectedToken = telnyxWebhookSecret || telnyxApiKey || env.ADMIN_TOKEN || env.ADMIN_API_KEY;
+        const telnyxPublicKey = env.TELNYX_PUBLIC_KEY || env.TELNYX_WEBHOOK_SECRET;
+        const expectedToken = env.TELNYX_WEBHOOK_SECRET || telnyxApiKey || env.ADMIN_TOKEN || env.ADMIN_API_KEY;
 
-        // Security: Validate Telnyx request against configured webhook secret/token
         const telnyxSignatureHeader = context.request.headers.get("telnyx-signature-ed25519") || context.request.headers.get("x-telnyx-signature") || "";
+        const telnyxTimestampHeader = context.request.headers.get("telnyx-timestamp") || context.request.headers.get("x-telnyx-timestamp") || "";
         const authHeader = context.request.headers.get("authorization") || context.request.headers.get("x-admin-token") || "";
         const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-        let isTelnyxAuthorized = true;
-        if (expectedToken) {
-          if (token && token === expectedToken) {
+        // Security: Fail-Closed Authorization Guard requiring cryptographic Ed25519 verification or exact token match
+        let isTelnyxAuthorized = false;
+
+        if (telnyxPublicKey && telnyxSignatureHeader && telnyxTimestampHeader && rawBody) {
+          isTelnyxAuthorized = await verifyTelnyxEd25519Signature(telnyxPublicKey, telnyxSignatureHeader, telnyxTimestampHeader, rawBody);
+        } else if (expectedToken && token) {
+          if (token === expectedToken) {
             isTelnyxAuthorized = true;
-          } else if (telnyxSignatureHeader && telnyxWebhookSecret && telnyxSignatureHeader === telnyxWebhookSecret) {
-            isTelnyxAuthorized = true;
-          } else {
-            isTelnyxAuthorized = false;
           }
         }
 
         if (!isTelnyxAuthorized) {
-          console.warn('[Telnyx Webhook]: Unauthorized Telnyx webhook request rejected.');
-          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request" }), {
+          console.warn('[Telnyx Webhook]: Unauthorized Telnyx webhook request rejected (Fail Closed).');
+          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request: Cryptographic verification required" }), {
             status: 401,
             headers: { "Content-Type": "application/json" }
           });

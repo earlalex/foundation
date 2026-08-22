@@ -2,27 +2,71 @@
 
 /**
  * Verify Firebase ID token signature and standard claims using Web Crypto API
+ * @param {string} token - JWT token to verify
+ * @param {string} projectId - Firebase project ID
+ * @returns {Promise<{valid: boolean, email?: string}>}
  */
 async function verifyFirebaseToken(token, projectId) {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return { valid: false };
+    if (parts.length !== 3) {
+      return { valid: false };
+    }
 
     const headerB64 = parts[0].replace(/-/g, '+').replace(/_/g, '/');
     const header = JSON.parse(atob(headerB64));
     const kid = header.kid;
-    if (!kid) return { valid: false };
+    if (!kid) {
+      return { valid: false };
+    }
 
     const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(payloadB64));
 
     const now = Math.floor(Date.now() / 1000);
     if (!payload.exp || payload.exp <= now) return { valid: false };
+    if (!payload.iat || payload.iat > now) return { valid: false };
     if (payload.aud !== projectId) return { valid: false };
 
     const expectedIssuer = `https://securetoken.google.com/${projectId}`;
     if (payload.iss !== expectedIssuer) return { valid: false };
     if (!payload.sub || !payload.email) return { valid: false };
+
+    const certsRes = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+    if (!certsRes.ok) return { valid: false };
+    const certs = await certsRes.json();
+    const certPem = certs[kid];
+    if (!certPem) return { valid: false };
+
+    const pemBody = certPem
+      .replace(/-----BEGIN CERTIFICATE-----/, '')
+      .replace(/-----END CERTIFICATE-----/, '')
+      .replace(/\s/g, '');
+    const certDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+
+    const spkiDer = extractSPKIFromCert(certDer);
+    if (!spkiDer) return { valid: false };
+
+    const publicKey = await crypto.subtle.importKey(
+      'spki',
+      spkiDer,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+
+    const signatureB64 = parts[2].replace(/-/g, '+').replace(/_/g, '/');
+    const signature = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0));
+    const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+
+    const isValid = await crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      publicKey,
+      signature,
+      data
+    );
+
+    if (!isValid) return { valid: false };
 
     return { valid: true, email: payload.email };
   } catch (err) {
@@ -30,10 +74,89 @@ async function verifyFirebaseToken(token, projectId) {
   }
 }
 
+function extractSPKIFromCert(certDer) {
+  try {
+    let pos = 0;
+    if (certDer[pos++] !== 0x30) return null;
+    pos += getLengthBytes(certDer, pos);
+
+    if (certDer[pos++] !== 0x30) return null;
+    const tbsLength = getLength(certDer, pos);
+    const tbsLengthBytes = getLengthBytes(certDer, pos);
+    pos += tbsLengthBytes;
+
+    if (certDer[pos] === 0xa0) {
+      pos++;
+      const versionLen = getLength(certDer, pos);
+      pos += getLengthBytes(certDer, pos) + versionLen;
+    }
+
+    if (certDer[pos] === 0x02) {
+      pos++;
+      const serialLen = getLength(certDer, pos);
+      pos += getLengthBytes(certDer, pos) + serialLen;
+    }
+
+    if (certDer[pos] === 0x30) {
+      pos++;
+      const sigLen = getLength(certDer, pos);
+      pos += getLengthBytes(certDer, pos) + sigLen;
+    }
+
+    if (certDer[pos] === 0x30) {
+      pos++;
+      const issuerLen = getLength(certDer, pos);
+      pos += getLengthBytes(certDer, pos) + issuerLen;
+    }
+
+    if (certDer[pos] === 0x30) {
+      pos++;
+      const validityLen = getLength(certDer, pos);
+      pos += getLengthBytes(certDer, pos) + validityLen;
+    }
+
+    if (certDer[pos] === 0x30) {
+      pos++;
+      const subjectLen = getLength(certDer, pos);
+      pos += getLengthBytes(certDer, pos) + subjectLen;
+    }
+
+    if (certDer[pos] === 0x30) {
+      const spkiStart = pos;
+      pos++;
+      const spkiLen = getLength(certDer, pos);
+      const spkiLenBytes = getLengthBytes(certDer, pos);
+      const spkiEnd = spkiStart + 1 + spkiLenBytes + spkiLen;
+      return certDer.slice(spkiStart, spkiEnd);
+    }
+
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function getLength(der, pos) {
+  const firstByte = der[pos];
+  if (firstByte < 0x80) return firstByte;
+  const numBytes = firstByte & 0x7f;
+  let length = 0;
+  for (let i = 0; i < numBytes; i++) {
+    length = (length << 8) | der[pos + 1 + i];
+  }
+  return length;
+}
+
+function getLengthBytes(der, pos) {
+  const firstByte = der[pos];
+  if (firstByte < 0x80) return 1;
+  return 1 + (firstByte & 0x7f);
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // 1. Strict Authorization Guard
+  // 1. Strict Fail-Closed Authorization Guard
   const authHeader = request.headers.get("Authorization") || request.headers.get("X-Admin-Token") || "";
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
@@ -43,21 +166,17 @@ export async function onRequestPost(context) {
   if (expectedAdminToken && token === expectedAdminToken) {
     isAuthorized = true;
   } else if (token) {
-    if (!expectedAdminToken) {
-      const firebaseProjectId = env.FIREBASE_PROJECT_ID;
-      if (firebaseProjectId && token.split('.').length === 3) {
-        const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
-        if (verifyResult.valid) {
-          isAuthorized = true;
-        }
-      } else if (token === 'mock_admin_token_dispatch' || token === 'mock_admin_token') {
+    const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+    if (firebaseProjectId && token.split('.').length === 3) {
+      const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
+      if (verifyResult.valid) {
         isAuthorized = true;
       }
     }
   }
 
   if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Unauthorized outbound email relay access denied' }), {
+    return new Response(JSON.stringify({ error: 'Forbidden: Cryptographically verified authorization token required' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
