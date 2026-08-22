@@ -476,10 +476,11 @@ export function initSiteSettingsTab() {
 
       tbody.innerHTML = list.map((snap) => {
         const formattedDate = new Date(snap.timestamp).toLocaleString();
+        const driveBadge = snap.archivedToDrive ? `<span style="background: #e6fffa; color: #234e52; border: 1px solid #b2f5ea; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px; font-weight: bold;">☁️ Drive Archived</span>` : `<span style="background: #edf2f7; color: #4a5568; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; margin-left: 6px;">💻 Local Only</span>`;
         return `
           <tr style="border-bottom: 1px solid var(--theme-color-border, #edf2f7);">
             <td style="padding: 8px; font-weight: bold; color: var(--theme-color-text-primary);">${formattedDate}</td>
-            <td style="padding: 8px; color: var(--theme-color-text-secondary);">${snap.label || 'Manual Backup'}</td>
+            <td style="padding: 8px; color: var(--theme-color-text-secondary);">${snap.label || 'Manual Backup'} ${driveBadge}</td>
             <td style="padding: 8px; color: var(--theme-color-text-secondary);">${snap.author || 'admin@earlalex.com'}</td>
             <td style="padding: 8px; color: var(--theme-color-text-secondary);"><span style="background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${snap.size}</span></td>
             <td style="padding: 8px; text-align: right;">
@@ -511,8 +512,12 @@ export function initSiteSettingsTab() {
         btnCreateManual.textContent = 'Generating Snapshot...';
         try {
           const { createSiteSnapshot } = await import('../../utils/snapshotEngine.js');
-          await createSiteSnapshot('Manual Backup');
-          toast.success('Site state snapshot saved and securely archived!');
+          const snap = await createSiteSnapshot('Manual Backup');
+          if (snap && snap.archivedToDrive) {
+            toast.success('Site state snapshot saved and securely archived to Google Drive!');
+          } else {
+            toast.success('Site state snapshot saved locally (Google Drive upload offline or skipped).');
+          }
           renderSnapshotsTable();
         } catch (err) {
           toast.error('Failed to create manual state snapshot.');

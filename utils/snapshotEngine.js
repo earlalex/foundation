@@ -76,12 +76,8 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
       data: stateData
     };
 
-    // Save locally
-    const existingSnapshots = JSON.parse(localStorage.getItem('foundation_snapshots') || '[]');
-    existingSnapshots.unshift(snapshot);
-    localStorage.setItem('foundation_snapshots', JSON.stringify(existingSnapshots));
-
     // Upload to Google Drive
+    let archivedToDrive = false;
     try {
       const { getGoogleAccessToken } = await import('../core/google-services.js');
       const token = await getGoogleAccessToken(false);
@@ -90,18 +86,213 @@ export async function createSiteSnapshot(label = 'Manual Backup') {
         const formattedDate = new Date().toISOString().split('T')[0];
         const fileName = `${formattedDate}_snapshot.json`;
         const { uploadBackupToDrive } = await import('./backend-google.js');
-        await uploadBackupToDrive(token, siteName, fileName, payloadStr);
-        console.log(`[SnapshotEngine]: Securely archived JSON backup to Google Drive folder: [Site Name] / Backups / ${fileName}`);
+        const driveRes = await uploadBackupToDrive(token, siteName, fileName, payloadStr);
+        if (driveRes && driveRes.id) {
+          archivedToDrive = true;
+          console.log(`[SnapshotEngine]: Securely archived JSON backup to Google Drive folder: [Site Name] / Backups / ${fileName}`);
+        }
       }
     } catch (driveErr) {
       console.warn('[SnapshotEngine]: Google Drive upload deferred or offline:', driveErr.message);
     }
 
-    console.log(`[SnapshotEngine]: Snapshot "${label}" created successfully (${snapshot.size}).`);
+    snapshot.archivedToDrive = archivedToDrive;
+
+    // Save locally
+    const existingSnapshots = JSON.parse(localStorage.getItem('foundation_snapshots') || '[]');
+    existingSnapshots.unshift(snapshot);
+    localStorage.setItem('foundation_snapshots', JSON.stringify(existingSnapshots));
+
+    console.log(`[SnapshotEngine]: Snapshot "${label}" created successfully (${snapshot.size}). Drive archived: ${archivedToDrive}`);
     return snapshot;
   } catch (err) {
     errorHandler.handleError(err, 'Create Snapshot');
     throw err;
+  }
+}
+
+async function applySnapshotDataInternal(data) {
+  if (!data) throw new Error('[SnapshotEngine]: Missing snapshot data payload.');
+
+  const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, customTheme, highContrast } = data;
+
+  const { getFirestoreDB, collection, getDocs, doc, deleteDoc } = await import('../core/db-shared.js');
+  const db = getFirestoreDB();
+
+  // Step A: Restore all snapshot records FIRST
+  if (Array.isArray(pages)) {
+    for (const page of pages) {
+      await contentDB.saveCustomPage(page);
+    }
+  }
+
+  if (Array.isArray(content)) {
+    for (const c of content) {
+      await contentDB.saveContent(c);
+    }
+  }
+
+  if (splits) {
+    for (const [assetId, splitObj] of Object.entries(splits)) {
+      if (splitObj && splitObj.splits) {
+        await saveAssetSplits(assetId, splitObj.assetType || 'article', splitObj.splits);
+      }
+    }
+  }
+
+  if (Array.isArray(employees)) {
+    for (const emp of employees) {
+      await contentDB.saveEmployee(emp);
+    }
+  }
+
+  if (Array.isArray(payroll)) {
+    for (const pr of payroll) {
+      await contentDB.savePayrollRecord(pr);
+    }
+  }
+
+  if (Array.isArray(expenses)) {
+    for (const exp of expenses) {
+      await contentDB.saveExpense(exp);
+    }
+  }
+
+  if (budgets) {
+    await contentDB.saveBudgetTargets(budgets);
+  }
+
+  if (config) {
+    await configManager.saveToFirebase(config);
+  }
+
+  // Step B: Purge post-snapshot records created after snapshot
+  const purgeErrors = [];
+
+  const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
+  try {
+    const currentPages = await contentDB.getAllCustomPages();
+    for (const p of currentPages) {
+      if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
+        if (db) {
+          try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) { purgeErrors.push(`Page delete failed (${p.id || p.slug}): ${e.message}`); }
+        }
+      }
+    }
+    const localPages = JSON.parse(localStorage.getItem('foundation_local_pages') || '{}');
+    Object.keys(localPages).forEach(k => {
+      if (!snapshotPageIds.has(k)) delete localPages[k];
+    });
+    localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
+  } catch (e) {
+    purgeErrors.push(`Pages purge error: ${e.message}`);
+  }
+
+  const snapshotContentIds = new Set((content || []).map(c => c.id));
+  try {
+    const currentContent = await contentDB.getAllContent();
+    for (const c of currentContent) {
+      if (c.id && !snapshotContentIds.has(c.id)) {
+        try {
+          await contentDB.deleteContent(c.id);
+        } catch (e) {
+          purgeErrors.push(`Content delete failed (${c.id}): ${e.message}`);
+        }
+      }
+    }
+  } catch (e) {
+    purgeErrors.push(`Content purge error: ${e.message}`);
+  }
+
+  const snapshotSplitKeys = new Set(Object.keys(splits || {}));
+  try {
+    const localSplits = JSON.parse(localStorage.getItem('foundation_local_splits') || '{}');
+    Object.keys(localSplits).forEach(k => {
+      if (!snapshotSplitKeys.has(k)) delete localSplits[k];
+    });
+    localStorage.setItem('foundation_local_splits', JSON.stringify(localSplits));
+
+    if (db) {
+      const querySnapshot = await getDocs(collection(db, 'splits'));
+      for (const docSnap of querySnapshot.docs) {
+        if (!snapshotSplitKeys.has(docSnap.id)) {
+          try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) { purgeErrors.push(`Splits delete failed (${docSnap.id}): ${e.message}`); }
+        }
+      }
+    }
+  } catch (e) {
+    purgeErrors.push(`Splits purge error: ${e.message}`);
+  }
+
+  const snapshotEmpIds = new Set((employees || []).map(e => e.id));
+  try {
+    const currentEmployees = await contentDB.getEmployees();
+    for (const emp of currentEmployees) {
+      if (emp.id && !snapshotEmpIds.has(emp.id)) {
+        try {
+          await contentDB.deleteEmployee(emp.id);
+        } catch (e) {
+          purgeErrors.push(`Employee delete failed (${emp.id}): ${e.message}`);
+        }
+      }
+    }
+  } catch (e) {
+    purgeErrors.push(`Employee purge error: ${e.message}`);
+  }
+
+  const snapshotPayrollIds = new Set((payroll || []).map(p => p.id));
+  try {
+    const localPayroll = JSON.parse(localStorage.getItem('foundation_local_payroll') || '{}');
+    Object.keys(localPayroll).forEach(k => {
+      if (!snapshotPayrollIds.has(k)) delete localPayroll[k];
+    });
+    localStorage.setItem('foundation_local_payroll', JSON.stringify(localPayroll));
+
+    if (db) {
+      const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
+      for (const docSnap of querySnapshot.docs) {
+        if (!snapshotPayrollIds.has(docSnap.id)) {
+          try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) { purgeErrors.push(`Payroll delete failed (${docSnap.id}): ${e.message}`); }
+        }
+      }
+    }
+  } catch (e) {
+    purgeErrors.push(`Payroll purge error: ${e.message}`);
+  }
+
+  const snapshotExpenseIds = new Set((expenses || []).map(e => e.id));
+  try {
+    const localExpenses = JSON.parse(localStorage.getItem('foundation_local_expenses') || '{}');
+    Object.keys(localExpenses).forEach(k => {
+      if (!snapshotExpenseIds.has(k)) delete localExpenses[k];
+    });
+    localStorage.setItem('foundation_local_expenses', JSON.stringify(localExpenses));
+
+    if (db) {
+      const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
+      for (const docSnap of querySnapshot.docs) {
+        if (!snapshotExpenseIds.has(docSnap.id)) {
+          try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) { purgeErrors.push(`Expense delete failed (${docSnap.id}): ${e.message}`); }
+        }
+      }
+    }
+  } catch (e) {
+    purgeErrors.push(`Expense purge error: ${e.message}`);
+  }
+
+  if (purgeErrors.length > 0) {
+    throw new Error(`[SnapshotEngine]: Snapshot application/purge encountered persistence errors: ${purgeErrors.join('; ')}`);
+  }
+
+  // Restore Theme settings & Custom Tokens
+  if (theme && Object.keys(theme).length > 0) {
+    localStorage.setItem('foundation_theme_config', JSON.stringify(theme));
+  }
+  if (customTheme && Object.keys(customTheme).length > 0) {
+    localStorage.setItem('foundation_theme_custom', JSON.stringify(customTheme));
+  }
+  if (highContrast !== undefined) {
+    localStorage.setItem('foundation_high_contrast', String(highContrast));
   }
 }
 
@@ -117,75 +308,43 @@ export async function restoreSiteSnapshot(snapshot) {
 
   console.log(`[SnapshotEngine]: Restoring snapshot "${snapshot.label}" created on ${snapshot.timestamp}...`);
 
+  // Pre-validate snapshot data structures up front
+  const { pages, content, employees, payroll, expenses } = snapshot.data;
+  if (pages && !Array.isArray(pages)) throw new Error('[SnapshotEngine]: Invalid pages array in snapshot data.');
+  if (content && !Array.isArray(content)) throw new Error('[SnapshotEngine]: Invalid content array in snapshot data.');
+  if (employees && !Array.isArray(employees)) throw new Error('[SnapshotEngine]: Invalid employees array in snapshot data.');
+  if (payroll && !Array.isArray(payroll)) throw new Error('[SnapshotEngine]: Invalid payroll array in snapshot data.');
+  if (expenses && !Array.isArray(expenses)) throw new Error('[SnapshotEngine]: Invalid expenses array in snapshot data.');
+
+  // Non-Destructive Rollback Check: Auto-generate Pre-Rollback Backup snapshot first
+  console.log('[SnapshotEngine]: Creating temporary Pre-Rollback Backup safeguard snapshot...');
+  const preRollbackSafeguard = await createSiteSnapshot('Pre-Rollback Backup');
+
   try {
-    // 1. Non-Destructive Rollback Check: Auto-generate Pre-Rollback Backup snapshot first
-    console.log('[SnapshotEngine]: Creating temporary Pre-Rollback Backup safeguard snapshot...');
-    await createSiteSnapshot('Pre-Rollback Backup');
-
-    const { config, pages, content, splits, employees, payroll, expenses, budgets, theme, customTheme, highContrast } = snapshot.data;
-
-    // 2. Restore configManager
-    if (config) {
-      await configManager.saveToFirebase(config);
-    }
-
-    // 3. Restore Custom Pages
-    if (Array.isArray(pages)) {
-      for (const page of pages) {
-        await contentDB.saveCustomPage(page);
-      }
-    }
-
-    // 4. Restore Content Entries
-    if (Array.isArray(content)) {
-      for (const c of content) {
-        await contentDB.saveContent(c);
-      }
-    }
-
-    // 5. Restore Royalty Splits
-    if (splits) {
-      for (const [assetId, splitObj] of Object.entries(splits)) {
-        if (splitObj && splitObj.splits) {
-          await saveAssetSplits(assetId, splitObj.assetType || 'article', splitObj.splits);
-        }
-      }
-    }
-
-    // 6. Restore Employee Ledgers
-    if (Array.isArray(employees)) {
-      for (const emp of employees) {
-        await contentDB.saveEmployee(emp);
-      }
-    }
-    if (Array.isArray(payroll)) {
-      for (const pr of payroll) {
-        await contentDB.savePayrollRecord(pr);
-      }
-    }
-    if (Array.isArray(expenses)) {
-      for (const exp of expenses) {
-        await contentDB.saveExpense(exp);
-      }
-    }
-    if (budgets) {
-      await contentDB.saveBudgetTargets(budgets);
-    }
-
-    // 7. Restore Theme settings & Custom Tokens
-    if (theme && Object.keys(theme).length > 0) {
-      localStorage.setItem('foundation_theme_config', JSON.stringify(theme));
-    }
-    if (customTheme && Object.keys(customTheme).length > 0) {
-      localStorage.setItem('foundation_theme_custom', JSON.stringify(customTheme));
-    }
-    if (highContrast !== undefined) {
-      localStorage.setItem('foundation_high_contrast', String(highContrast));
-    }
-
+    await applySnapshotDataInternal(snapshot.data);
     console.log('[SnapshotEngine]: Site state fully restored to chosen snapshot.');
     return true;
   } catch (err) {
+    console.error('[SnapshotEngine]: Restoration failed mid-flight. Automatically re-applying Pre-Rollback Backup safeguard...', err);
+    let revertFailed = false;
+    let revertErrorObj = null;
+    try {
+      if (preRollbackSafeguard && preRollbackSafeguard.data) {
+        await applySnapshotDataInternal(preRollbackSafeguard.data);
+        console.log('[SnapshotEngine]: Successfully reverted state back to Pre-Rollback Backup safeguard.');
+      }
+    } catch (revertErr) {
+      revertFailed = true;
+      revertErrorObj = revertErr;
+      console.error('[SnapshotEngine]: Automatic safeguard re-application failed:', revertErr);
+    }
+
+    if (revertFailed) {
+      const criticalErr = new Error(`[SnapshotEngine]: Critical restoration failure: state could not be restored and safeguard recovery failed (${revertErrorObj?.message || 'unknown error'}). State may be inconsistent.`);
+      errorHandler.handleError(criticalErr, 'Restore Snapshot Safeguard Failure');
+      throw criticalErr;
+    }
+
     errorHandler.handleError(err, 'Restore Snapshot');
     throw err;
   }
@@ -214,7 +373,7 @@ export async function checkAndTriggerMonthlySnapshot() {
     const daySetting = configManager.current?.monthlySnapshotDay || 1;
     const today = new Date().getDate();
 
-    if (Number(today) === Number(daySetting)) {
+    if (Number(today) >= Number(daySetting)) {
       // Check if a backup for the current month is already made
       const snapshots = JSON.parse(localStorage.getItem('foundation_snapshots') || '[]');
       const currentYearMonth = new Date().toISOString().substring(0, 7); // "YYYY-MM"
@@ -224,7 +383,7 @@ export async function checkAndTriggerMonthlySnapshot() {
       );
 
       if (!hasBackupThisMonth) {
-        console.log('[SnapshotEngine]: Automated monthly backup day matched and current month snapshot is missing. Creating silent background backup...');
+        console.log('[SnapshotEngine]: Automated monthly backup day reached or overdue and current month snapshot is missing. Creating silent background backup...');
         await createSiteSnapshot('Automated Monthly Backup');
       } else {
         console.log('[SnapshotEngine]: Automated monthly backup already exists for current month. Skipping.');

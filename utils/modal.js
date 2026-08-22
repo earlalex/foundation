@@ -1,6 +1,36 @@
 // utils/modal.js - Modal Backdrop Dismissal & Custom Promotional Pop-up Trigger System
 import { contentDB } from '../core/db.js';
 import { toast } from './toast.js';
+import { escapeHTML, sanitizeUrl } from './universalRenderer.js';
+
+let pendingPromoTimeout = null;
+let pendingScrollListener = null;
+let pendingExitListener = null;
+
+export function cancelPendingPromoTriggers() {
+  if (pendingPromoTimeout) {
+    clearTimeout(pendingPromoTimeout);
+    pendingPromoTimeout = null;
+  }
+  if (pendingScrollListener) {
+    window.removeEventListener('scroll', pendingScrollListener);
+    pendingScrollListener = null;
+  }
+  if (pendingExitListener) {
+    document.removeEventListener('mouseout', pendingExitListener);
+    pendingExitListener = null;
+  }
+}
+
+function sanitizeHtmlContent(htmlStr) {
+  if (typeof htmlStr !== 'string') return '';
+  return htmlStr
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*(['"])[^'"]*\1/gi, '')
+    .replace(/\son\w+\s*=\s*[^>\s]+/gi, '')
+    .replace(/href\s*=\s*(['"])\s*javascript:[^'"]*\1/gi, 'href="#"')
+    .replace(/src\s*=\s*(['"])\s*javascript:[^'"]*\1/gi, 'src="#"');
+}
 
 // Global Modal Backdrop Click Dismissal Policy
 export function initModalDismissal() {
@@ -98,6 +128,7 @@ function dismissPromoModal(overlay) {
 // Custom Promotional Pop-up Manager & Triggers
 export async function triggerPagePromoModals(currentPath = window.location.pathname) {
   try {
+    cancelPendingPromoTriggers();
     console.log('[Promo Manager]: Evaluating active modals for route:', currentPath);
 
     // Normalize path to detect target pages
@@ -132,39 +163,51 @@ export async function triggerPagePromoModals(currentPath = window.location.pathn
 
     console.log(`[Promo Manager]: Registering trigger [${triggerType}] for modal: "${modal.title}"`);
 
+    const isCurrentRouteValid = () => {
+      const activePath = window.location.pathname;
+      let activeFilter = 'all';
+      if (activePath === '/' || activePath === '/home' || activePath.endsWith('/index.html')) {
+        activeFilter = 'home';
+      } else if (activePath === '/shop' || activePath.startsWith('/shop/')) {
+        activeFilter = 'shop';
+      }
+      return modal.targetPages === 'all' || modal.targetPages === activeFilter;
+    };
+
     if (triggerType === 'immediate') {
       showPromoModal(modal);
     } else if (triggerType === 'delay') {
-      setTimeout(() => {
-        if (!sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
+      pendingPromoTimeout = setTimeout(() => {
+        pendingPromoTimeout = null;
+        if (isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
           showPromoModal(modal);
         }
       }, triggerValue * 1000);
     } else if (triggerType === 'scroll') {
-      const onScroll = () => {
+      pendingScrollListener = () => {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
         const percent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 100;
 
         if (percent >= triggerValue) {
-          window.removeEventListener('scroll', onScroll);
-          if (!sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
+          cancelPendingPromoTriggers();
+          if (isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
             showPromoModal(modal);
           }
         }
       };
-      window.addEventListener('scroll', onScroll);
+      window.addEventListener('scroll', pendingScrollListener);
     } else if (triggerType === 'exit') {
-      const onMouseOut = (e) => {
+      pendingExitListener = (e) => {
         // Detect leaving viewport (upward mouse movement)
         if (e.clientY < 50 || e.relatedTarget === null) {
-          document.removeEventListener('mouseout', onMouseOut);
-          if (!sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
+          cancelPendingPromoTriggers();
+          if (isCurrentRouteValid() && !sessionStorage.getItem(`promo_dismissed_${modal.id}`)) {
             showPromoModal(modal);
           }
         }
       };
-      document.addEventListener('mouseout', onMouseOut);
+      document.addEventListener('mouseout', pendingExitListener);
     }
 
   } catch (err) {
@@ -200,13 +243,21 @@ export function showPromoModal(modal) {
     transition: opacity 0.25s ease-out;
   `;
 
+  // Sanitize interpolated fields
+  const safeTitle = escapeHTML(modal.title || '');
+  const safeContentHtml = modal.contentHtml ? sanitizeHtmlContent(modal.contentHtml) : '';
+  const safeCtaText = escapeHTML(modal.ctaText || '');
+  const safeCtaUrl = escapeHTML(sanitizeUrl(modal.ctaUrl || ''));
+  const safeImageUrl = escapeHTML(sanitizeUrl(modal.imageUrl || ''));
+  const safeDiscountCode = escapeHTML(modal.discountCode || '');
+
   // Render modal content template based on modal type
   let specificBodyHtml = '';
 
   if (modal.modalType === 'newsletter') {
     specificBodyHtml = `
       <p style="margin-bottom: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
-        ${modal.contentHtml || 'Subscribe to our exclusive mailing list to receive premium publications, technical logs, and sovereign engineering guides.'}
+        ${safeContentHtml || 'Subscribe to our exclusive mailing list to receive premium publications, technical logs, and sovereign engineering guides.'}
       </p>
       <form id="promo-newsletter-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
         <label for="promo-newsletter-email" class="sr-only">Email Address</label>
@@ -216,31 +267,31 @@ export function showPromoModal(modal) {
     `;
   } else if (modal.modalType === 'product') {
     specificBodyHtml = `
-      ${modal.imageUrl ? `<img src="${modal.imageUrl}" alt="${modal.title}" class="aspect-ratio-16-9" style="border-radius: var(--theme-layout-border-radius, 6px); margin-bottom: 1rem; width: 100%; object-fit: cover;" />` : ''}
+      ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeTitle}" class="aspect-ratio-16-9" style="border-radius: var(--theme-layout-border-radius, 6px); margin-bottom: 1rem; width: 100%; object-fit: cover;" />` : ''}
       <p style="margin-bottom: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
-        ${modal.contentHtml || 'Check out our featured custom products and merchandise in the storefront.'}
+        ${safeContentHtml || 'Check out our featured custom products and merchandise in the storefront.'}
       </p>
-      ${modal.ctaText && modal.ctaUrl ? `<a href="${modal.ctaUrl}" id="promo-cta-btn" class="btn-primary" style="width: 100%; padding: 12px; text-decoration: none; text-align: center;">${modal.ctaText}</a>` : ''}
+      ${safeCtaText && safeCtaUrl ? `<a href="${safeCtaUrl}" id="promo-cta-btn" class="btn-primary" style="width: 100%; padding: 12px; text-decoration: none; text-align: center;">${safeCtaText}</a>` : ''}
     `;
   } else if (modal.modalType === 'announcement') {
     specificBodyHtml = `
-      ${modal.imageUrl ? `<img src="${modal.imageUrl}" alt="${modal.title}" class="aspect-ratio-16-9" style="border-radius: var(--theme-layout-border-radius, 6px); margin-bottom: 1rem; width: 100%; object-fit: cover;" />` : ''}
+      ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeTitle}" class="aspect-ratio-16-9" style="border-radius: var(--theme-layout-border-radius, 6px); margin-bottom: 1rem; width: 100%; object-fit: cover;" />` : ''}
       <p style="margin-bottom: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
-        ${modal.contentHtml || 'A new technical podcast episode and sovereign publication have just dropped! Stay ahead with the latest updates.'}
+        ${safeContentHtml || 'A new technical podcast episode and sovereign publication have just dropped! Stay ahead with the latest updates.'}
       </p>
-      ${modal.ctaText && modal.ctaUrl ? `<a href="${modal.ctaUrl}" id="promo-cta-btn" class="btn-primary" style="width: 100%; padding: 12px; text-decoration: none; text-align: center;">${modal.ctaText}</a>` : ''}
+      ${safeCtaText && safeCtaUrl ? `<a href="${safeCtaUrl}" id="promo-cta-btn" class="btn-primary" style="width: 100%; padding: 12px; text-decoration: none; text-align: center;">${safeCtaText}</a>` : ''}
     `;
   } else if (modal.modalType === 'discount') {
     specificBodyHtml = `
       <p style="margin-bottom: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
-        ${modal.contentHtml || 'Use this limited-time promotional voucher code at checkout to claim your wellness product discount!'}
+        ${safeContentHtml || 'Use this limited-time promotional voucher code at checkout to claim your wellness product discount!'}
       </p>
-      ${modal.discountCode ? `
+      ${safeDiscountCode ? `
         <div style="background: #edf2f7; border: 2px dashed var(--theme-color-primary, #2b6cb0); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 1.1rem; font-weight: bold; text-align: center; margin-bottom: 1.25rem; cursor: pointer; color: var(--theme-color-primary, #2b6cb0);" id="promo-discount-box" title="Click to copy coupon code">
-          ${modal.discountCode}
+          ${safeDiscountCode}
         </div>
       ` : ''}
-      ${modal.ctaText && modal.ctaUrl ? `<a href="${modal.ctaUrl}" id="promo-cta-btn" class="btn-primary" style="width: 100%; padding: 12px; text-decoration: none; text-align: center;">${modal.ctaText}</a>` : ''}
+      ${safeCtaText && safeCtaUrl ? `<a href="${safeCtaUrl}" id="promo-cta-btn" class="btn-primary" style="width: 100%; padding: 12px; text-decoration: none; text-align: center;">${safeCtaText}</a>` : ''}
     `;
   }
 
@@ -248,7 +299,7 @@ export function showPromoModal(modal) {
     <div class="modal-container" style="background: var(--theme-color-surface, #ffffff); border-radius: var(--theme-layout-border-radius, 8px); box-shadow: var(--shadow-elevation-high); width: 100%; position: relative; display: flex; flex-direction: column;">
       <!-- Header -->
       <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--theme-color-border, #e2e8f0); display: flex; align-items: center; justify-content: space-between;">
-        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0);">${modal.title}</h3>
+        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--theme-color-primary, #2b6cb0);">${safeTitle}</h3>
         <button id="promo-modal-close" style="background: none; border: none; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: #a0aec0; padding: 0 4px; line-height: 1;">&times;</button>
       </div>
 

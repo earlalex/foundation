@@ -10,10 +10,53 @@ export class NotificationCenter extends HTMLElement {
   connectedCallback() {
     this.loadNotifications();
     this.render();
-    this.setupEventListeners();
 
     // Ensure persistent presence in document body if not present
     this.ensurePersistentMount();
+
+    // Delegated click listener inspecting e.composedPath() for shadow-boundary retargeted clicks
+    this.onControlClick = (e) => {
+      const path = e.composedPath ? e.composedPath() : [e.target];
+
+      const findInPath = (selector) => {
+        for (const node of path) {
+          if (node && node.nodeType === Node.ELEMENT_NODE && node.matches && node.matches(selector)) {
+            return node;
+          }
+        }
+        return null;
+      };
+
+      const readAll = findInPath('#btn-notif-read-all');
+      if (readAll) {
+        e.stopPropagation();
+        this.markAllAsRead();
+        return;
+      }
+
+      const clear = findInPath('#btn-notif-clear');
+      if (clear) {
+        e.stopPropagation();
+        this.clearAll();
+        return;
+      }
+
+      const tabBtn = findInPath('.notif-tab-btn');
+      if (tabBtn && tabBtn.dataset.tab) {
+        e.stopPropagation();
+        this.activeTab = tabBtn.dataset.tab;
+        this.render();
+        return;
+      }
+
+      const item = findInPath('.notif-item');
+      if (item && item.dataset.id) {
+        e.stopPropagation();
+        this.markAsRead(item.dataset.id);
+        return;
+      }
+    };
+    this.addEventListener('click', this.onControlClick);
 
     // Listen for real-time notification received events
     this.onNotificationReceived = (e) => {
@@ -23,7 +66,6 @@ export class NotificationCenter extends HTMLElement {
       console.log('[NotificationCenter]: Real-time alert received:', e.detail);
       this.loadNotifications();
       this.render();
-      this.setupEventListeners();
     };
     window.addEventListener('notification-received', this.onNotificationReceived);
 
@@ -61,6 +103,7 @@ export class NotificationCenter extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.removeEventListener('click', this.onControlClick);
     window.removeEventListener('notification-received', this.onNotificationReceived);
     document.removeEventListener('click', this.onDocumentClick);
     document.removeEventListener('keydown', this.onDocumentKeyDown);
@@ -98,14 +141,12 @@ export class NotificationCenter extends HTMLElement {
     this.notifications.forEach(n => n.isRead = true);
     this.saveNotifications();
     this.render();
-    this.setupEventListeners();
   }
 
   clearAll() {
     this.notifications = [];
     this.saveNotifications();
     this.render();
-    this.setupEventListeners();
   }
 
   markAsRead(id) {
@@ -114,7 +155,6 @@ export class NotificationCenter extends HTMLElement {
       notif.isRead = true;
       this.saveNotifications();
       this.render();
-      this.setupEventListeners();
     }
   }
 

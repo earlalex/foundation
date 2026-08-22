@@ -1,15 +1,16 @@
 // utils/emailEngine.js
 import { configManager } from '../core/config.js';
 import { sendGmailNotification } from '../core/google-services.js';
+import { store } from '../core/store.js';
 
 /**
  * Core transactional email dispatch engine with automatic failover logic.
- * Primary: Serverless MailChannels worker endpoint /api/send-email.
- * Failover: Client-side Gmail API (OAuth).
+ * Respects configured primary provider (MailChannels vs Google Workspace).
  */
 export async function sendEmail({ to, subject, html, text, fromName, fromEmail }) {
   const emailCfg = configManager.current.email || {};
   const defaultFrom = emailCfg.defaultFromEmail || 'noreply@yourdomain.com';
+  const primaryProvider = emailCfg.primaryProvider || 'MailChannels (Free Cloudflare)';
 
   const payload = {
     to,
@@ -20,10 +21,26 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
     fromEmail: fromEmail || defaultFrom
   };
 
+  let authToken = '';
   try {
+    const { getFirebaseAuth } = await import('../core/auth.js');
+    const auth = getFirebaseAuth();
+    if (auth && auth.currentUser) {
+      authToken = await auth.currentUser.getIdToken();
+    }
+  } catch (e) {}
+
+  if (!authToken) {
+    authToken = configManager.current?.adminToken || configManager.current?.apiKeys?.adminToken || '';
+  }
+
+  const sendViaMailChannels = async () => {
     const response = await fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
       body: JSON.stringify(payload)
     });
 
@@ -34,23 +51,46 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
       const errText = await response.text();
       throw new Error(errText || 'Failed to send via server worker endpoint');
     }
-  } catch (err) {
-    console.warn('[emailEngine]: MailChannels worker dispatch failed. Attempting client-side Google Gmail fallback...', err);
+  };
+
+  const sendViaGmail = async () => {
+    const success = await sendGmailNotification({
+      toEmail: to,
+      subject: subject,
+      messageBody: text || html
+    });
+    if (success) {
+      return { success: true, provider: 'Google Workspace / Gmail API' };
+    } else {
+      throw new Error('Gmail API dispatch returned failure.');
+    }
+  };
+
+  const isGooglePrimary = primaryProvider.includes('Google') || primaryProvider.includes('Gmail');
+
+  if (isGooglePrimary) {
     try {
-      // client-side fallback using google-services OAuth flow
-      const success = await sendGmailNotification({
-        toEmail: to,
-        subject: subject,
-        messageBody: text || html
-      });
-      if (success) {
-        return { success: true, provider: 'Google Gmail (Client-side Fallback)' };
-      } else {
-        throw new Error('Gmail API fallback returned failure.');
+      return await sendViaGmail();
+    } catch (err) {
+      console.warn('[emailEngine]: Primary Google Workspace dispatch failed. Attempting MailChannels fallback...', err);
+      try {
+        return await sendViaMailChannels();
+      } catch (fallbackErr) {
+        console.error('[emailEngine]: All transactional email strategies failed:', fallbackErr);
+        return { success: false, error: fallbackErr.message };
       }
-    } catch (fallbackErr) {
-      console.error('[emailEngine]: All transactional email dispatch strategies failed:', fallbackErr);
-      return { success: false, error: fallbackErr.message };
+    }
+  } else {
+    try {
+      return await sendViaMailChannels();
+    } catch (err) {
+      console.warn('[emailEngine]: Primary MailChannels dispatch failed. Attempting Google Gmail fallback...', err);
+      try {
+        return await sendViaGmail();
+      } catch (fallbackErr) {
+        console.error('[emailEngine]: All transactional email strategies failed:', fallbackErr);
+        return { success: false, error: fallbackErr.message };
+      }
     }
   }
 }
