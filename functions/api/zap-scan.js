@@ -131,24 +131,51 @@ function getLengthBytes(der, pos) {
 }
 
 export async function onRequestPost(context) {
+  const { request, env } = context;
   try {
     // Security Guard: Validate authorization token before triggering security scanning operations
-    const authHeader = context.request.headers.get("Authorization") || context.request.headers.get("X-Admin-Token") || "";
+    const authHeader = request.headers.get("Authorization") || request.headers.get("X-Admin-Token") || "";
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-    const expectedAdminToken = context.env.ADMIN_TOKEN || context.env.ADMIN_API_KEY || context.env.FOUNDATION_ADMIN_KEY;
-    const zapKey = context.env.ZAP_API_KEY;
+    const expectedAdminToken = env.ADMIN_TOKEN || env.ADMIN_API_KEY || env.FOUNDATION_ADMIN_KEY;
+
+    const host = request.headers.get("host") || "";
+    const isLocalDev = host.includes("localhost") || host.includes("127.0.0.1") || env.ENVIRONMENT === "development";
 
     let isAuthorized = false;
     if (expectedAdminToken && token === expectedAdminToken) {
       isAuthorized = true;
-    } else if (token && (!zapKey || zapKey === 'dummy_zap_key') && (token.startsWith('mock_admin_') || token.startsWith('mock_editor_'))) {
-      // Simulation mode mock token check for local dev/testing
+    } else if (token && isLocalDev && (token.startsWith('mock_admin') || token.startsWith('mock_editor'))) {
+      // Restrict mock token bypass exclusively to local development environments
       isAuthorized = true;
-    } else if (token && context.env.FIREBASE_PROJECT_ID) {
-      // Cryptographically verify Firebase JWT bearer token
-      const verifyResult = await verifyFirebaseToken(token, context.env.FIREBASE_PROJECT_ID);
+    } else if (token && env.FIREBASE_PROJECT_ID) {
+      // Cryptographically verify Firebase JWT bearer token and enforce server-side role check
+      const verifyResult = await verifyFirebaseToken(token, env.FIREBASE_PROJECT_ID);
       if (verifyResult.valid && verifyResult.email) {
-        isAuthorized = true;
+        const firestoreApiKey = env.FIREBASE_API_KEY;
+        if (firestoreApiKey) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          try {
+            const docId = verifyResult.email.replace(/[@.]/g, '_');
+            const userRes = await fetch(
+              `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
+              { signal: controller.signal }
+            );
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              const role = userData.fields?.role?.stringValue || '';
+              if (role === 'admin' || role === 'editor') {
+                isAuthorized = true;
+              }
+            }
+          } catch (dbErr) {
+            console.error('[ZAP API] Firestore role verification failed:', dbErr);
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        } else {
+          isAuthorized = true;
+        }
       }
     }
 
