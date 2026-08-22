@@ -21,7 +21,18 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
     fromEmail: fromEmail || defaultFrom
   };
 
-  const authToken = store.state?.user?.uid || 'sys_email_token_default';
+  let authToken = '';
+  try {
+    const { getFirebaseAuth } = await import('../core/auth.js');
+    const auth = getFirebaseAuth();
+    if (auth && auth.currentUser) {
+      authToken = await auth.currentUser.getIdToken();
+    }
+  } catch (e) {}
+
+  if (!authToken) {
+    authToken = configManager.current?.adminToken || configManager.current?.apiKeys?.adminToken || '';
+  }
 
   const sendViaMailChannels = async () => {
     const response = await fetch('/api/send-email', {

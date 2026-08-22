@@ -152,15 +152,11 @@ export async function onRequestPost(context) {
   if (expectedAdminToken && token === expectedAdminToken) {
     isAuthorized = true;
   } else if (token) {
-    if (token.startsWith('mock_admin') || token.startsWith('mock_editor') || token === 'sys_email_token_default') {
-      isAuthorized = true;
-    } else {
-      const firebaseProjectId = env.FIREBASE_PROJECT_ID;
-      if (firebaseProjectId) {
-        const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
-        if (verifyResult.valid) {
-          isAuthorized = true;
-        }
+    const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+    if (firebaseProjectId) {
+      const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
+      if (verifyResult.valid) {
+        isAuthorized = true;
       }
     }
   }
