@@ -244,7 +244,8 @@ export async function onRequestPost(context) {
         // Verify token signature and standard claims
         const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
 
-        if (verifyResult.valid && verifyResult.email && firestoreApiKey) {
+        if (verifyResult.valid && firestoreApiKey) {
+          const uid = verifyResult.uid;
           const userEmail = verifyResult.email;
 
           // Token is valid, now check Firestore role with timeout
@@ -252,18 +253,40 @@ export async function onRequestPost(context) {
           const timeoutId = setTimeout(() => controller.abort(), 5000);
 
           try {
-            const docId = userEmail.replace(/[@.]/g, '_');
-            const userRes = await fetch(
-              `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
-              { signal: controller.signal }
-            );
-
-            if (userRes.ok) {
-              const userData = await userRes.json();
-              const role = userData.fields?.role?.stringValue || '';
-              if (role === 'admin' || role === 'editor') {
-                isAuthorized = true;
+            let role = '';
+            // 1. Query by UID first
+            if (uid) {
+              const uidRes = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${uid}?key=${firestoreApiKey}`,
+                {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  signal: controller.signal
+                }
+              );
+              if (uidRes.ok) {
+                const userData = await uidRes.json();
+                role = userData.fields?.role?.stringValue || '';
               }
+            }
+
+            // 2. Query by normalized email document ID if role was not found by UID
+            if (!role && userEmail) {
+              const docId = userEmail.replace(/[@.]/g, '_');
+              const emailRes = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
+                {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  signal: controller.signal
+                }
+              );
+              if (emailRes.ok) {
+                const userData = await emailRes.json();
+                role = userData.fields?.role?.stringValue || '';
+              }
+            }
+
+            if (role === 'admin' || role === 'editor') {
+              isAuthorized = true;
             }
           } catch (dbErr) {
             console.error('[Stripe Product Create] Auth DB check failed:', dbErr);

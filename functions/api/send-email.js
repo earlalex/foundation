@@ -1,70 +1,10 @@
 // functions/api/send-email.js
 
-// Module-scoped certificate cache
-let certCache = null;
-let certCacheExpiry = 0;
-let certFetchPromise = null;
-
-/**
- * Fetch and cache Firebase public certificates with timeout and cache reuse
- * @returns {Promise<{valid: boolean, certs?: object}>}
- */
-async function fetchFirebaseCerts() {
-  const now = Date.now();
-
-  // Return cached certificates if still valid
-  if (certCache && now < certCacheExpiry) {
-    return { valid: true, certs: certCache };
-  }
-
-  // Reuse in-flight fetch if one exists
-  if (certFetchPromise) {
-    return certFetchPromise;
-  }
-
-  // Start new fetch with timeout and cache the promise for concurrent requests
-  certFetchPromise = (async () => {
-    try {
-      const certsRes = await fetch(
-        'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com',
-        { signal: AbortSignal.timeout(5000) }
-      );
-
-      if (!certsRes.ok) {
-        return { valid: false };
-      }
-
-      const certs = await certsRes.json();
-
-      // Parse Cache-Control max-age, fallback to 5 minutes if absent/unparsable
-      let maxAge = 300; // 5 minutes default
-      const cacheControl = certsRes.headers.get('cache-control');
-      if (cacheControl) {
-        const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
-        if (maxAgeMatch) {
-          maxAge = parseInt(maxAgeMatch[1], 10);
-        }
-      }
-
-      certCache = certs;
-      certCacheExpiry = Date.now() + (maxAge * 1000);
-
-      return { valid: true, certs };
-    } catch (err) {
-      return { valid: false };
-    } finally {
-      certFetchPromise = null;
-    }
-  })();
-
-  return certFetchPromise;
-}
-
 /**
  * Verify Firebase ID token signature and standard claims using Web Crypto API
  * @param {string} token - JWT token to verify
  * @param {string} projectId - Firebase project ID
- * @returns {Promise<{valid: boolean, email?: string, uid?: string}>}
+ * @returns {Promise<{valid: boolean, email?: string, uid?: string, role?: string, admin?: boolean}>}
  */
 async function verifyFirebaseToken(token, projectId) {
   try {
@@ -92,9 +32,9 @@ async function verifyFirebaseToken(token, projectId) {
     if (payload.iss !== expectedIssuer) return { valid: false };
     if (!payload.sub || !payload.email) return { valid: false };
 
-    const certResult = await fetchFirebaseCerts();
-    if (!certResult.valid) return { valid: false };
-    const certs = certResult.certs;
+    const certsRes = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+    if (!certsRes.ok) return { valid: false };
+    const certs = await certsRes.json();
     const certPem = certs[kid];
     if (!certPem) return { valid: false };
 
@@ -128,7 +68,13 @@ async function verifyFirebaseToken(token, projectId) {
 
     if (!isValid) return { valid: false };
 
-    return { valid: true, email: payload.email, uid: payload.sub || payload.uid };
+    return {
+      valid: true,
+      email: payload.email,
+      uid: payload.sub || payload.uid,
+      role: payload.role || (payload.claims?.role),
+      admin: payload.admin === true || payload.role === 'admin'
+    };
   } catch (err) {
     return { valid: false };
   }
@@ -231,48 +177,58 @@ export async function onRequestPost(context) {
 
     if (firebaseProjectId) {
       const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
-      if (verifyResult.valid && (verifyResult.uid || verifyResult.email) && firestoreApiKey) {
-        const uid = verifyResult.uid;
-        const userEmail = verifyResult.email;
+      if (verifyResult.valid) {
+        if (verifyResult.role === 'admin' || verifyResult.role === 'editor' || verifyResult.admin === true) {
+          isAuthorized = true;
+        } else if ((verifyResult.uid || verifyResult.email) && firestoreApiKey) {
+          const uid = verifyResult.uid;
+          const userEmail = verifyResult.email;
 
-        // Verify user role in Firestore (strictly require 'admin' or 'editor')
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+          // Verify user role in Firestore with Bearer token authentication header
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        try {
-          let role = '';
-          // 1. Query by UID first (Firebase Auth UID key)
-          if (uid) {
-            const uidRes = await fetch(
-              `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${uid}?key=${firestoreApiKey}`,
-              { signal: controller.signal }
-            );
-            if (uidRes.ok) {
-              const userData = await uidRes.json();
-              role = userData.fields?.role?.stringValue || '';
+          try {
+            let role = '';
+            // 1. Query by UID first (Firebase Auth UID key) with Bearer token
+            if (uid) {
+              const uidRes = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${uid}?key=${firestoreApiKey}`,
+                {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  signal: controller.signal
+                }
+              );
+              if (uidRes.ok) {
+                const userData = await uidRes.json();
+                role = userData.fields?.role?.stringValue || '';
+              }
             }
-          }
 
-          // 2. Query by normalized email document ID if role was not found by UID
-          if (!role && userEmail) {
-            const docId = userEmail.replace(/[@.]/g, '_');
-            const emailRes = await fetch(
-              `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
-              { signal: controller.signal }
-            );
-            if (emailRes.ok) {
-              const userData = await emailRes.json();
-              role = userData.fields?.role?.stringValue || '';
+            // 2. Query by normalized email document ID if role was not found by UID
+            if (!role && userEmail) {
+              const docId = userEmail.replace(/[@.]/g, '_');
+              const emailRes = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
+                {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  signal: controller.signal
+                }
+              );
+              if (emailRes.ok) {
+                const userData = await emailRes.json();
+                role = userData.fields?.role?.stringValue || '';
+              }
             }
-          }
 
-          if (role === 'admin' || role === 'editor') {
-            isAuthorized = true;
+            if (role === 'admin' || role === 'editor') {
+              isAuthorized = true;
+            }
+          } catch (dbErr) {
+            console.error('[send-email] Role verification failed:', dbErr);
+          } finally {
+            clearTimeout(timeoutId);
           }
-        } catch (dbErr) {
-          console.error('[send-email] Role verification failed:', dbErr);
-        } finally {
-          clearTimeout(timeoutId);
         }
       }
     }
