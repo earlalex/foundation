@@ -120,7 +120,27 @@ export async function uploadCommunicationLogToDrive(token, siteName, fileName, c
       monthFolderId = monthFolderData.id;
     }
 
-    // 5. Upload the transcript file itself (Private by default)
+    // 5. Check if file already exists in monthFolderId with name fileName to deduplicate/overwrite
+    const existingFileUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(fileName)}' and '${monthFolderId}' in parents and trashed=false`;
+    const existingFileRes = await fetch(existingFileUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const existingFileData = await existingFileRes.json().catch(() => ({}));
+
+    if (existingFileData.files && existingFileData.files.length > 0) {
+      const existingFileId = existingFileData.files[0].id;
+      const patchRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': fileName.endsWith('.md') ? 'text/markdown' : 'application/json'
+        },
+        body: content
+      });
+      return await patchRes.json().catch(() => ({ id: existingFileId }));
+    }
+
+    // Upload new transcript file if not existing
     const metadata = {
       name: fileName,
       mimeType: fileName.endsWith('.md') ? 'text/markdown' : 'application/json',

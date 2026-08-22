@@ -13,13 +13,24 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
   const defaultFrom = emailCfg.defaultFromEmail || 'noreply@yourdomain.com';
   const primaryProvider = emailCfg.primaryProvider || 'MailChannels (Free Cloudflare)';
 
-  const currentUser = store.state?.user;
   const headers = {
     'Content-Type': 'application/json'
   };
 
-  if (currentUser?.idToken) {
-    headers['Authorization'] = `Bearer ${currentUser.idToken}`;
+  // Fetch real fresh Firebase Auth ID token if available
+  let authToken = '';
+  try {
+    const { getFirebaseAuth } = await import('../core/auth.js');
+    const auth = getFirebaseAuth();
+    if (auth && auth.currentUser) {
+      authToken = await auth.currentUser.getIdToken();
+    }
+  } catch (err) {
+    console.warn('[emailEngine]: Error retrieving Firebase ID token:', err);
+  }
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
   } else if (configManager.current?.adminToken) {
     headers['X-Admin-Token'] = configManager.current.adminToken;
   }
