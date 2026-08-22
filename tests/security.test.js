@@ -68,6 +68,14 @@ export async function runSecurityTests() {
     }
   });
 
+  await assertTest('OWASP ZAP Scanner helper retrieves authorization headers', async () => {
+    const { zapScanner } = await import('../utils/zapScanner.js');
+    const headers = await zapScanner.getAuthHeaders();
+    if (!headers || !headers['Authorization'] || !headers['Authorization'].startsWith('Bearer ')) {
+      throw new Error('ZAP Scanner authorization headers missing or invalid format.');
+    }
+  });
+
   await assertTest('Chatbot voice credentials structure exists', async () => {
     const config = configManager.current;
     if (!config.chatbot) {

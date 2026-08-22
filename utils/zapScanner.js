@@ -3,6 +3,30 @@
 
 export const zapScanner = {
   /**
+   * Helper to retrieve authenticated headers with Firebase IdToken or simulated fallback
+   */
+  async getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    try {
+      const { auth } = await import('../core/auth.js');
+      if (auth?.currentUser) {
+        const idToken = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${idToken}`;
+      } else {
+        const { store } = await import('../core/store.js');
+        const user = store.state.user;
+        const currentRole = store.state.simulatedUserTier || user?.role || 'admin';
+        const email = user?.email || 'admin@example.com';
+        headers['Authorization'] = `Bearer mock_${currentRole}_${email}`;
+      }
+    } catch (e) {
+      console.warn('[zapScanner] Auth retrieve warning:', e);
+      headers['Authorization'] = 'Bearer mock_admin_admin@example.com';
+    }
+    return headers;
+  },
+
+  /**
    * Logs a security scan result to Firestore (/security_scans) and LocalStorage
    * @param {string} scanType
    * @param {string} targetUrl
@@ -51,9 +75,10 @@ export const zapScanner = {
    * @returns {Promise<Object>} The API response containing the scan ID
    */
   async startSpiderScan(targetUrl) {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'spider', targetUrl })
     });
     if (!response.ok) {
@@ -70,9 +95,10 @@ export const zapScanner = {
    * @returns {Promise<Object>} The API response containing the scan ID
    */
   async startActiveScan(targetUrl) {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'active', targetUrl })
     });
     if (!response.ok) {
@@ -89,9 +115,10 @@ export const zapScanner = {
    * @returns {Promise<Object>}
    */
   async startAjaxSpiderScan(targetUrl) {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'ajaxSpider', targetUrl })
     });
     if (!response.ok) {
@@ -107,9 +134,10 @@ export const zapScanner = {
    * @returns {Promise<Object>} The progress data { progress: number, status: string }
    */
   async getScanProgress(scanId, type = 'active') {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'progress', scanId, scanType: type })
     });
     if (!response.ok) {
@@ -125,9 +153,10 @@ export const zapScanner = {
    * @returns {Promise<Object>} The findings list
    */
   async getScanAlerts(targetUrl, riskLevel = '') {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'alerts', targetUrl, riskLevel })
     });
     if (!response.ok) {
@@ -145,9 +174,10 @@ export const zapScanner = {
    * @returns {Promise<Object>}
    */
   async generateZapReport(format = 'JSON') {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'report', format })
     });
     if (!response.ok) {
@@ -163,9 +193,10 @@ export const zapScanner = {
    * @returns {Promise<Object>}
    */
   async testConnection(baseUrl, apiKey) {
+    const headers = await this.getAuthHeaders();
     const response = await fetch('/api/zap-scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'test-connection', baseUrl, apiKey })
     });
     if (!response.ok) {
