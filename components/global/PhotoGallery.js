@@ -377,7 +377,7 @@ export class PhotoGallery extends HTMLElement {
 
       <div class="masonry-grid">
         ${this.images.map((img) => `
-          <div class="masonry-item" data-id="${img.id}">
+          <div class="masonry-item" data-id="${img.id}" tabindex="0" role="button" aria-label="View photo: ${img.title}">
             <div class="masonry-img-wrapper">
               <img class="masonry-img" data-src="${img.src}" alt="${img.title}" loading="lazy" />
               <div class="masonry-overlay">
@@ -407,7 +407,7 @@ export class PhotoGallery extends HTMLElement {
       </div>
 
       <!-- Lightbox Modal -->
-      <div class="lightbox-modal" id="lightbox-modal">
+      <div class="lightbox-modal" id="lightbox-modal" role="dialog" aria-modal="true" aria-label="Image Preview Modal">
         <div class="lightbox-content" id="lightbox-content">
           <!-- Populated dynamically on click -->
         </div>
@@ -423,15 +423,22 @@ export class PhotoGallery extends HTMLElement {
 
   bindEvents() {
     this.querySelectorAll('.masonry-item').forEach((item) => {
-      item.addEventListener('click', () => {
+      const triggerImage = () => {
         const id = item.getAttribute('data-id');
         const img = this.images.find((x) => x.id === id);
-        if (img) this.openLightbox(img);
+        if (img) this.openLightbox(img, item);
+      };
+      item.addEventListener('click', triggerImage);
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          triggerImage();
+        }
       });
     });
   }
 
-  openLightbox(img) {
+  openLightbox(img, triggerEl = null) {
     const modal = this.querySelector('#lightbox-modal');
     const content = this.querySelector('#lightbox-content');
     if (!modal || !content) return;
@@ -491,16 +498,34 @@ export class PhotoGallery extends HTMLElement {
 
     modal.style.display = 'flex';
 
-    // Event listeners inside Lightbox
     const closeBtn = content.querySelector('#btn-close-lightbox');
-    closeBtn.addEventListener('click', () => {
+
+    const closeModal = () => {
       modal.style.display = 'none';
-    });
+      document.removeEventListener('keydown', handleKeydown);
+      if (triggerEl && typeof triggerEl.focus === 'function') {
+        triggerEl.focus();
+      }
+    };
+
+    const handleKeydown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+      closeBtn.focus();
+    }
 
     // Close on click outside content
     modal.onclick = (e) => {
       if (e.target === modal) {
-        modal.style.display = 'none';
+        closeModal();
       }
     };
 
