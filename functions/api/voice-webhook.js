@@ -63,34 +63,25 @@ export async function onRequestPost(context) {
         const env = context.env || {};
         const telnyxApiKey = env.TELNYX_API_KEY;
         const telnyxPublicKey = env.TELNYX_PUBLIC_KEY || env.TELNYX_WEBHOOK_SECRET;
-        const expectedToken = env.ADMIN_TOKEN || env.ADMIN_API_KEY || telnyxApiKey;
+        const expectedToken = env.TELNYX_WEBHOOK_SECRET || telnyxApiKey || env.ADMIN_TOKEN || env.ADMIN_API_KEY;
 
         const telnyxSignatureHeader = context.request.headers.get("telnyx-signature-ed25519") || context.request.headers.get("x-telnyx-signature") || "";
         const telnyxTimestampHeader = context.request.headers.get("telnyx-timestamp") || context.request.headers.get("x-telnyx-timestamp") || "";
         const authHeader = context.request.headers.get("authorization") || context.request.headers.get("x-admin-token") || "";
         const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-        // Security: Fail-Closed Authorization Guard
+        // Strict Fail-Closed Authorization Guard: Require valid Ed25519 signature or matching bearer/secret header
         let isTelnyxAuthorized = false;
 
         if (telnyxPublicKey && telnyxSignatureHeader && telnyxTimestampHeader && rawBody) {
-          // Cryptographic Ed25519 signature verification if public key / webhook secret is set
           isTelnyxAuthorized = await verifyTelnyxEd25519Signature(telnyxPublicKey, telnyxSignatureHeader, telnyxTimestampHeader, rawBody);
         } else if (expectedToken && token && token === expectedToken) {
-          // Admin or API bearer token match
           isTelnyxAuthorized = true;
-        } else if (telnyxApiKey && !telnyxPublicKey) {
-          // Standard Telnyx API Key deployment mode:
-          // Validate that request payload is a well-formed Telnyx Call Control event
-          const hasValidTelnyxEvent = body.data?.event_type && body.data?.payload?.call_control_id;
-          if (hasValidTelnyxEvent) {
-            isTelnyxAuthorized = true;
-          }
         }
 
         if (!isTelnyxAuthorized) {
           console.warn('[Telnyx Webhook]: Unauthorized Telnyx webhook request rejected (Fail Closed).');
-          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request: Authentication or valid event signature required" }), {
+          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request: Valid cryptographic signature or bearer secret required" }), {
             status: 401,
             headers: { "Content-Type": "application/json" }
           });
