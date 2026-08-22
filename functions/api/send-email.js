@@ -159,6 +159,80 @@ function getLengthBytes(der, pos) {
   return 1 + (firstByte & 0x7f);
 }
 
+/**
+ * Exchange Google Service Account credentials for OAuth 2.0 access token with domain-wide delegation
+ * @param {object} serviceAccount - Service account credentials object
+ * @param {string} impersonateEmail - Email to impersonate for domain-wide delegation
+ * @returns {Promise<string>} - OAuth 2.0 access token
+ */
+async function getGoogleAccessToken(serviceAccount, impersonateEmail) {
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = now + 3600;
+
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+    kid: serviceAccount.private_key_id
+  };
+
+  const claimSet = {
+    iss: serviceAccount.client_email,
+    sub: impersonateEmail,
+    scope: 'https://www.googleapis.com/auth/gmail.send',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: expiry
+  };
+
+  const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const claimSetB64 = btoa(JSON.stringify(claimSet)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const signatureInput = `${headerB64}.${claimSetB64}`;
+
+  // Import private key for signing
+  const privateKeyPem = serviceAccount.private_key;
+  const pemBody = privateKeyPem
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s/g, '');
+  const keyDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    keyDer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signatureBytes = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    new TextEncoder().encode(signatureInput)
+  );
+
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const jwt = `${signatureInput}.${signatureB64}`;
+
+  // Exchange JWT for access token
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text();
+    throw new Error(`Google OAuth token exchange failed: ${errorText}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  return tokenData.access_token;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -262,6 +336,37 @@ export async function onRequestPost(context) {
     });
   }
 
+  // Validate subject, html, and text are strings
+  if (subject !== undefined && typeof subject !== 'string') {
+    return new Response(JSON.stringify({ error: 'Invalid subject: must be a string' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  if (html !== undefined && typeof html !== 'string') {
+    return new Response(JSON.stringify({ error: 'Invalid html: must be a string' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  if (text !== undefined && typeof text !== 'string') {
+    return new Response(JSON.stringify({ error: 'Invalid text: must be a string' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Reject subject values containing CR or LF characters to prevent header injection
+  if (subject && /[\r\n]/.test(subject)) {
+    return new Response(JSON.stringify({ error: 'Invalid subject: carriage-return or line-feed characters not allowed' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Create sanitized subject for use in email dispatch
+  const safeSubject = subject || 'Notification';
+
   const defaultSender = env.ADMIN_EMAIL || `noreply@${new URL(request.url).hostname}`;
   const senderEmail = (fromEmail && emailRegex.test(fromEmail.trim())) ? fromEmail.trim() : defaultSender;
   const senderName = fromName || env.SITE_TITLE || 'Foundation System';
@@ -276,7 +381,7 @@ export async function onRequestPost(context) {
         { to: [{ email: to.trim() }] }
       ],
       from: { email: senderEmail, name: senderName },
-      subject: subject || 'Notification',
+      subject: safeSubject,
       content: [
         { type: 'text/html', value: html || `<p>${text || ''}</p>` }
       ]
@@ -285,8 +390,12 @@ export async function onRequestPost(context) {
     const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mailchannelsPayload)
+      body: JSON.stringify(mailchannelsPayload),
+      signal: AbortSignal.timeout(10000)
     });
+
+    const responseBody = await response.text();
+    console.log('[MailChannels Provider Response]:', responseBody);
 
     if (response.ok) {
       return new Response(JSON.stringify({ success: true, provider: 'MailChannels' }), {
@@ -294,14 +403,27 @@ export async function onRequestPost(context) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    throw new Error(await response.text());
+    throw new Error('MailChannels provider failed to send email');
   };
 
   const dispatchGmail = async () => {
     if (!env.GOOGLE_SERVICE_ACCOUNT_TOKEN) {
       throw new Error('GOOGLE_SERVICE_ACCOUNT_TOKEN unconfigured for Gmail API dispatch.');
     }
-    const gmailSuccess = await sendViaGmailApi(env.GOOGLE_SERVICE_ACCOUNT_TOKEN, to.trim(), subject || 'Notification', html || text || '');
+
+    // Obtain current OAuth 2.0 access token with JWT exchange if service account credentials are provided
+    let accessToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
+    try {
+      const tokenConfig = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_TOKEN);
+      if (tokenConfig.type === 'service_account' && tokenConfig.private_key && tokenConfig.client_email) {
+        // Implement JWT exchange for domain-wide delegation
+        accessToken = await getGoogleAccessToken(tokenConfig, env.ADMIN_EMAIL || tokenConfig.client_email);
+      }
+    } catch (parseErr) {
+      // Token is not JSON, assume it's already an access token
+    }
+
+    const gmailSuccess = await sendViaGmailApi(accessToken, to.trim(), safeSubject, html || text || '');
     if (gmailSuccess) {
       return new Response(JSON.stringify({ success: true, provider: 'Google Workspace / Gmail API' }), {
         status: 200,

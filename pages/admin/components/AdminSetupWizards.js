@@ -22,13 +22,26 @@ function escapeHTML(str) {
     .replace(/'/g, '&#39;');
 }
 
-export function isRealCredential(val) {
+export function isRealCredential(val, credentialType) {
   if (!val || typeof val !== 'string') return false;
   const trimmed = val.trim();
   if (!trimmed) return false;
   if (/mock|demo|YOUR_|_key_992|_id_01|_secret_99|sk_test_123|pk_test_456|whsec_mock|price_abc/i.test(trimmed)) {
     return false;
   }
+
+  // Enforce live Stripe credentials only (reject test mode keys)
+  if (credentialType === 'stripe_secret') {
+    if (!trimmed.startsWith('sk_live_')) {
+      return false;
+    }
+  }
+  if (credentialType === 'stripe_publishable') {
+    if (!trimmed.startsWith('pk_live_')) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -1023,7 +1036,7 @@ export class MasterSetupWizard extends HTMLElement {
 
     // Turn 2 Checks (Utilities Connecting)
     const isFirebaseSet = isRealCredential(this.config.firebaseApiKey) && isRealCredential(this.config.firebaseProjectId);
-    const isStripeSet = isRealCredential(this.config.stripeSecretKey) && isRealCredential(this.config.stripePublishableKey);
+    const isStripeSet = isRealCredential(this.config.stripeSecretKey, 'stripe_secret') && isRealCredential(this.config.stripePublishableKey, 'stripe_publishable');
     const isTelephonySet = isRealCredential(this.config.telnyxApiKey) || isRealCredential(this.config.twilioAccountSid);
 
     if (isFirebaseSet) {
@@ -1581,7 +1594,7 @@ export class MasterSetupWizard extends HTMLElement {
         publishableKey: this.config.stripePublishableKey,
         webhookSecret: this.config.stripeWebhookSecret,
         priceId: this.config.stripeMembershipPriceId,
-        isConfigured: isRealCredential(this.config.stripeSecretKey) && isRealCredential(this.config.stripePublishableKey)
+        isConfigured: isRealCredential(this.config.stripeSecretKey, 'stripe_secret') && isRealCredential(this.config.stripePublishableKey, 'stripe_publishable')
       },
       wise: {
         apiKey: this.config.wiseApiKey,
