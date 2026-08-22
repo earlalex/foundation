@@ -1,5 +1,41 @@
 // functions/api/voice-webhook.js
 
+/**
+ * Verify Telnyx Webhook Ed25519 signature using Web Crypto API
+ * @param {string} publicKeyB64 - Telnyx Public Key (base64)
+ * @param {string} signatureB64 - Telnyx Signature header (base64)
+ * @param {string} timestamp - Telnyx Timestamp header
+ * @param {string} rawBody - Raw HTTP body text
+ * @returns {Promise<boolean>}
+ */
+async function verifyTelnyxEd25519Signature(publicKeyB64, signatureB64, timestamp, rawBody) {
+  try {
+    const pemOrB64 = publicKeyB64.replace(/-----BEGIN PUBLIC KEY-----/, '').replace(/-----END PUBLIC KEY-----/, '').replace(/\s/g, '');
+    const pubKeyBytes = Uint8Array.from(atob(pemOrB64), c => c.charCodeAt(0));
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      pubKeyBytes,
+      { name: 'Ed25519' },
+      false,
+      ['verify']
+    );
+
+    const sigBytes = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0));
+
+    // Check both timestamp delimiter formats (| and .) used by Telnyx event dispatchers
+    const dataBytes1 = new TextEncoder().encode(`${timestamp}|${rawBody}`);
+    const isValid1 = await crypto.subtle.verify('Ed25519', key, sigBytes, dataBytes1);
+    if (isValid1) return true;
+
+    const dataBytes2 = new TextEncoder().encode(`${timestamp}.${rawBody}`);
+    return await crypto.subtle.verify('Ed25519', key, sigBytes, dataBytes2);
+  } catch (err) {
+    console.error('[Telnyx Ed25519 Verify Exception]:', err);
+    return false;
+  }
+}
+
 export async function onRequestPost(context) {
   try {
     let callText = "";
@@ -8,20 +44,66 @@ export async function onRequestPost(context) {
     let isVapi = false;
     let fromNumber = "";
     let body = null;
+    let rawBody = "";
 
     // 1. Parse incoming Voice Webhook parameters (e.g. Vapi.ai payload or Telnyx/Twilio HTTP events)
     const contentType = context.request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
-      body = await context.request.json();
+      rawBody = await context.request.text();
+      try {
+        body = JSON.parse(rawBody);
+      } catch (e) {
+        body = {};
+      }
 
       // Check if it is a Telnyx Call Control Webhook Event
       isTelnyx = !!(body.data?.event_type && body.data?.payload?.call_control_id);
       
       if (isTelnyx) {
-        const eventType = body.data.event_type;
-        const callControlId = body.data.payload.call_control_id;
         const env = context.env || {};
         const telnyxApiKey = env.TELNYX_API_KEY;
+        const telnyxPublicKey = env.TELNYX_PUBLIC_KEY || env.TELNYX_WEBHOOK_SECRET;
+        const expectedToken = env.TELNYX_WEBHOOK_SECRET || telnyxApiKey || env.ADMIN_TOKEN || env.ADMIN_API_KEY;
+
+        const telnyxSignatureHeader = context.request.headers.get("telnyx-signature-ed25519") || context.request.headers.get("x-telnyx-signature") || "";
+        const telnyxTimestampHeader = context.request.headers.get("telnyx-timestamp") || context.request.headers.get("x-telnyx-timestamp") || "";
+        const authHeader = context.request.headers.get("authorization") || context.request.headers.get("x-admin-token") || "";
+        const headerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+        const urlToken = new URL(context.request.url).searchParams.get("token") || "";
+        const effectiveToken = headerToken || urlToken;
+
+        // 1. Enforce Timestamp Freshness (within 300s / 5 minutes) to defend against signature replay attacks
+        if (telnyxTimestampHeader) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          const tsSec = parseInt(telnyxTimestampHeader, 10);
+          if (isNaN(tsSec) || Math.abs(nowSec - tsSec) > 300) {
+            console.warn(`[Telnyx Webhook]: Signature timestamp expired (${tsSec} vs current ${nowSec}). Rejecting potential replay attack.`);
+            return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook: Signature timestamp expired (Replay Attack Defense)" }), {
+              status: 401,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        }
+
+        // Strict Fail-Closed Authorization Guard: Require valid Ed25519 signature or matching token secret
+        let isTelnyxAuthorized = false;
+
+        if (telnyxPublicKey && telnyxSignatureHeader && telnyxTimestampHeader && rawBody) {
+          isTelnyxAuthorized = await verifyTelnyxEd25519Signature(telnyxPublicKey, telnyxSignatureHeader, telnyxTimestampHeader, rawBody);
+        } else if (expectedToken && effectiveToken && effectiveToken === expectedToken) {
+          isTelnyxAuthorized = true;
+        }
+
+        if (!isTelnyxAuthorized) {
+          console.warn('[Telnyx Webhook]: Unauthorized Telnyx webhook request rejected (Fail Closed).');
+          return new Response(JSON.stringify({ error: "Unauthorized Telnyx Webhook Request: Valid cryptographic signature or token secret required" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+
+        const eventType = body.data.event_type;
+        const callControlId = body.data.payload.call_control_id;
 
         const handleTelnyxBackground = async () => {
           try {
@@ -50,16 +132,17 @@ export async function onRequestPost(context) {
               });
             }
 
-            // Google Workspace Telephony Log Integration
+            // Google Workspace Telephony Log Integration:
+            // Persist session log strictly ONCE per call on call.hangup using deterministic per-call control filename
             const serviceToken = env.GOOGLE_SERVICE_ACCOUNT_TOKEN;
-            if (serviceToken && (eventType === 'call.hangup' || eventType === 'call.speak.ended' || eventType === 'call.answered')) {
+            if (serviceToken && eventType === 'call.hangup') {
               const { uploadCommunicationLogToDrive, syncGoogleContactCommunication } = await import('../../utils/backend-google-serverless.js');
 
               const callerPhone = body.data.payload.from || 'Unknown Caller';
               const duration = body.data.payload.duration_seconds || body.data.payload.duration || 0;
               const occurredAt = body.data.occurred_at || new Date().toISOString();
               const siteName = env.SITE_NAME || "Foundation Framework";
-              const fileName = `telnyx_voice_log_${Date.now()}.md`;
+              const fileName = `telnyx_voice_log_${callControlId || Date.now()}.md`;
 
               const mdTranscript = `## Telnyx Voice Session\n\n- **Date/Time**: ${new Date(occurredAt).toLocaleString()}\n- **Event**: ${eventType}\n- **Caller**: ${callerPhone}\n- **Duration**: ${duration} seconds\n- **Call Control ID**: ${callControlId}\n- **Hangup Reason**: ${body.data.payload.hangup_reason || 'N/A'}`;
 

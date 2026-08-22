@@ -1,15 +1,39 @@
 // utils/emailEngine.js
 import { configManager } from '../core/config.js';
 import { sendGmailNotification } from '../core/google-services.js';
+import { store } from '../core/store.js';
 
 /**
  * Core transactional email dispatch engine with automatic failover logic.
- * Primary: Serverless MailChannels worker endpoint /api/send-email.
- * Failover: Client-side Gmail API (OAuth).
+ * Primary: Serverless MailChannels or Google Workspace / Gmail API depending on config.
+ * Failover: Secondary provider.
  */
 export async function sendEmail({ to, subject, html, text, fromName, fromEmail }) {
   const emailCfg = configManager.current.email || {};
   const defaultFrom = emailCfg.defaultFromEmail || 'noreply@yourdomain.com';
+  const primaryProvider = emailCfg.primaryProvider || 'MailChannels (Free Cloudflare)';
+
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
+  // Fetch real fresh Firebase Auth ID token if available
+  let authToken = '';
+  try {
+    const { getFirebaseAuth } = await import('../core/auth.js');
+    const auth = getFirebaseAuth();
+    if (auth && auth.currentUser) {
+      authToken = await auth.currentUser.getIdToken();
+    }
+  } catch (err) {
+    console.warn('[emailEngine]: Error retrieving Firebase ID token:', err);
+  }
+
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  } else if (configManager.current?.adminToken) {
+    headers['X-Admin-Token'] = configManager.current.adminToken;
+  }
 
   const payload = {
     to,
@@ -17,13 +41,14 @@ export async function sendEmail({ to, subject, html, text, fromName, fromEmail }
     html: html || `<p>${text || ''}</p>`,
     text: text || '',
     fromName: fromName || configManager.current.siteTitle || 'Foundation System',
-    fromEmail: fromEmail || defaultFrom
+    fromEmail: fromEmail || defaultFrom,
+    primaryProvider
   };
 
   try {
     const response = await fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload)
     });
 
