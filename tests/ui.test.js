@@ -86,6 +86,53 @@ export async function runUiTests() {
     notifCenter.remove();
   });
 
+  await assertTest('UI Component: "<notification-center>" marks notification as read when clicking nested element inside .notif-item (composedPath fallback)', async () => {
+    await import('../components/global/NotificationCenter.js');
+    const notifCenter = document.createElement('notification-center');
+    sandbox.appendChild(notifCenter);
+
+    // Inject a test notification into localStorage
+    const testNotification = {
+      id: 'test-notif-123',
+      category: 'System Alerts',
+      message: 'Test notification message',
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    localStorage.setItem('foundation_notification_history', JSON.stringify([testNotification]));
+    notifCenter.loadNotifications();
+    notifCenter.render();
+
+    // Open the dropdown
+    const bell = notifCenter.querySelector('#utility-notification-bell');
+    bell.click();
+
+    // Find the notification item
+    const notifItem = notifCenter.querySelector('.notif-item[data-id="test-notif-123"]');
+    if (!notifItem) throw new Error('Test notification item not rendered.');
+
+    // Find a nested child element inside the notification item (e.g., the timestamp span)
+    const nestedElement = notifItem.querySelector('span[style*="font-size: 0.7rem"]');
+    if (!nestedElement) throw new Error('Nested timestamp element not found inside .notif-item.');
+
+    // Simulate click on the nested element WITHOUT composedPath support
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    // Remove composedPath to force fallback to closest()
+    Object.defineProperty(clickEvent, 'composedPath', { value: undefined });
+    nestedElement.dispatchEvent(clickEvent);
+
+    // Verify the notification was marked as read
+    notifCenter.loadNotifications();
+    const updatedNotif = notifCenter.notifications.find(n => n.id === 'test-notif-123');
+    if (!updatedNotif || !updatedNotif.isRead) {
+      throw new Error('Notification was not marked as read when clicking nested element (composedPath fallback failed).');
+    }
+
+    // Clean up
+    localStorage.removeItem('foundation_notification_history');
+    notifCenter.remove();
+  });
+
   await assertTest('UI Button: "Checkout" initiates checkout state update', async () => {
     const btn = document.createElement('button');
     btn.id = 'btn-checkout';

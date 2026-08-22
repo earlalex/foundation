@@ -16,15 +16,18 @@ export class NotificationCenter extends HTMLElement {
 
     // Delegated click listener inspecting e.composedPath() for shadow-boundary retargeted clicks
     this.onControlClick = (e) => {
-      const path = e.composedPath ? e.composedPath() : [e.target];
+      const path = e.composedPath ? e.composedPath() : null;
 
       const findInPath = (selector) => {
-        for (const node of path) {
-          if (node && node.nodeType === Node.ELEMENT_NODE && node.matches && node.matches(selector)) {
-            return node;
+        if (path) {
+          for (const node of path) {
+            if (node && node.nodeType === Node.ELEMENT_NODE && node.matches && node.matches(selector)) {
+              return node;
+            }
           }
+          return null;
         }
-        return null;
+        return (e.target && e.target.closest) ? e.target.closest(selector) : null;
       };
 
       const readAll = findInPath('#btn-notif-read-all');
