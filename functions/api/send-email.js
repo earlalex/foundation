@@ -1,17 +1,23 @@
 // functions/api/send-email.js
 
+function b64urlDecode(str) {
+  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4 !== 0) {
+    b64 += '=';
+  }
+  return atob(b64);
+}
+
 async function verifyFirebaseToken(token, projectId) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return { valid: false };
 
-    const headerB64 = parts[0].replace(/-/g, '+').replace(/_/g, '/');
-    const header = JSON.parse(atob(headerB64));
+    const header = JSON.parse(b64urlDecode(parts[0]));
     const kid = header.kid;
     if (!kid) return { valid: false };
 
-    const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(payloadB64));
+    const payload = JSON.parse(b64urlDecode(parts[1]));
 
     const now = Math.floor(Date.now() / 1000);
     if (!payload.exp || payload.exp <= now) return { valid: false };
@@ -31,7 +37,7 @@ async function verifyFirebaseToken(token, projectId) {
       .replace(/-----BEGIN CERTIFICATE-----/, '')
       .replace(/-----END CERTIFICATE-----/, '')
       .replace(/\s/g, '');
-    const certDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+    const certDer = Uint8Array.from(b64urlDecode(pemBody), c => c.charCodeAt(0));
 
     const spkiDer = extractSPKIFromCert(certDer);
     if (!spkiDer) return { valid: false };
@@ -44,8 +50,7 @@ async function verifyFirebaseToken(token, projectId) {
       ['verify']
     );
 
-    const signatureB64 = parts[2].replace(/-/g, '+').replace(/_/g, '/');
-    const signature = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0));
+    const signature = Uint8Array.from(b64urlDecode(parts[2]), c => c.charCodeAt(0));
     const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
 
     const isValid = await crypto.subtle.verify(
@@ -55,7 +60,7 @@ async function verifyFirebaseToken(token, projectId) {
       data
     );
 
-    return { valid: isValid, email: payload.email };
+    return { valid: isValid, email: payload.email, uid: payload.sub };
   } catch (err) {
     return { valid: false };
   }
@@ -159,6 +164,7 @@ export async function onRequestPost(context) {
       const verifyResult = await verifyFirebaseToken(token, firebaseProjectId);
       if (verifyResult.valid && verifyResult.email) {
         const userEmail = verifyResult.email;
+        const userUid = verifyResult.uid;
 
         if (env.ADMIN_EMAIL && userEmail === env.ADMIN_EMAIL) {
           isAuthorized = true;
@@ -166,16 +172,36 @@ export async function onRequestPost(context) {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           try {
-            const docId = userEmail.replace(/[@.]/g, '_');
-            const userRes = await fetch(
-              `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
-              { signal: controller.signal }
-            );
-            if (userRes.ok) {
-              const userData = await userRes.json();
-              const role = userData.fields?.role?.stringValue || '';
-              if (role === 'admin' || role === 'editor') {
-                isAuthorized = true;
+            // 1. Try UID-keyed profile document first (standard Firebase Auth UID key)
+            if (userUid) {
+              const uidRes = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${userUid}?key=${firestoreApiKey}`,
+                { signal: controller.signal }
+              );
+              if (uidRes.ok) {
+                const userData = await uidRes.json();
+                const role = userData.fields?.role?.stringValue || '';
+                const isAdmin = userData.fields?.isAdmin?.booleanValue || userData.fields?.isAdmin?.stringValue === 'true';
+                if (role === 'admin' || role === 'editor' || isAdmin) {
+                  isAuthorized = true;
+                }
+              }
+            }
+
+            // 2. Fallback to email-derived doc ID if UID doc was not found or did not grant authorization
+            if (!isAuthorized && userEmail) {
+              const docId = userEmail.replace(/[@.]/g, '_');
+              const userRes = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${docId}?key=${firestoreApiKey}`,
+                { signal: controller.signal }
+              );
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                const role = userData.fields?.role?.stringValue || '';
+                const isAdmin = userData.fields?.isAdmin?.booleanValue || userData.fields?.isAdmin?.stringValue === 'true';
+                if (role === 'admin' || role === 'editor' || isAdmin) {
+                  isAuthorized = true;
+                }
               }
             }
           } catch (dbErr) {

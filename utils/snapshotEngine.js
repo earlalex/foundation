@@ -167,13 +167,15 @@ async function applySnapshotDataInternal(data) {
   }
 
   // Step B: Purge post-snapshot records created after snapshot
+  const purgeErrors = [];
+
   const snapshotPageIds = new Set((pages || []).map(p => p.id || p.slug));
   try {
     const currentPages = await contentDB.getAllCustomPages();
     for (const p of currentPages) {
       if (!snapshotPageIds.has(p.id) && !snapshotPageIds.has(p.slug)) {
         if (db) {
-          try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) {}
+          try { await deleteDoc(doc(db, 'pages', p.id || p.slug)); } catch (e) { purgeErrors.push(`Page delete failed (${p.id || p.slug}): ${e.message}`); }
         }
       }
     }
@@ -183,7 +185,7 @@ async function applySnapshotDataInternal(data) {
     });
     localStorage.setItem('foundation_local_pages', JSON.stringify(localPages));
   } catch (e) {
-    console.warn('[SnapshotEngine]: Pages purge warning:', e.message);
+    purgeErrors.push(`Pages purge error: ${e.message}`);
   }
 
   const snapshotContentIds = new Set((content || []).map(c => c.id));
@@ -191,11 +193,15 @@ async function applySnapshotDataInternal(data) {
     const currentContent = await contentDB.getAllContent();
     for (const c of currentContent) {
       if (c.id && !snapshotContentIds.has(c.id)) {
-        await contentDB.deleteContent(c.id);
+        try {
+          await contentDB.deleteContent(c.id);
+        } catch (e) {
+          purgeErrors.push(`Content delete failed (${c.id}): ${e.message}`);
+        }
       }
     }
   } catch (e) {
-    console.warn('[SnapshotEngine]: Content purge warning:', e.message);
+    purgeErrors.push(`Content purge error: ${e.message}`);
   }
 
   const snapshotSplitKeys = new Set(Object.keys(splits || {}));
@@ -210,12 +216,12 @@ async function applySnapshotDataInternal(data) {
       const querySnapshot = await getDocs(collection(db, 'splits'));
       for (const docSnap of querySnapshot.docs) {
         if (!snapshotSplitKeys.has(docSnap.id)) {
-          try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) {}
+          try { await deleteDoc(doc(db, 'splits', docSnap.id)); } catch (e) { purgeErrors.push(`Splits delete failed (${docSnap.id}): ${e.message}`); }
         }
       }
     }
   } catch (e) {
-    console.warn('[SnapshotEngine]: Splits purge warning:', e.message);
+    purgeErrors.push(`Splits purge error: ${e.message}`);
   }
 
   const snapshotEmpIds = new Set((employees || []).map(e => e.id));
@@ -223,11 +229,15 @@ async function applySnapshotDataInternal(data) {
     const currentEmployees = await contentDB.getEmployees();
     for (const emp of currentEmployees) {
       if (emp.id && !snapshotEmpIds.has(emp.id)) {
-        await contentDB.deleteEmployee(emp.id);
+        try {
+          await contentDB.deleteEmployee(emp.id);
+        } catch (e) {
+          purgeErrors.push(`Employee delete failed (${emp.id}): ${e.message}`);
+        }
       }
     }
   } catch (e) {
-    console.warn('[SnapshotEngine]: Employee purge warning:', e.message);
+    purgeErrors.push(`Employee purge error: ${e.message}`);
   }
 
   const snapshotPayrollIds = new Set((payroll || []).map(p => p.id));
@@ -242,12 +252,12 @@ async function applySnapshotDataInternal(data) {
       const querySnapshot = await getDocs(collection(db, 'finances_payroll'));
       for (const docSnap of querySnapshot.docs) {
         if (!snapshotPayrollIds.has(docSnap.id)) {
-          try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) {}
+          try { await deleteDoc(doc(db, 'finances_payroll', docSnap.id)); } catch (e) { purgeErrors.push(`Payroll delete failed (${docSnap.id}): ${e.message}`); }
         }
       }
     }
   } catch (e) {
-    console.warn('[SnapshotEngine]: Payroll purge warning:', e.message);
+    purgeErrors.push(`Payroll purge error: ${e.message}`);
   }
 
   const snapshotExpenseIds = new Set((expenses || []).map(e => e.id));
@@ -262,12 +272,16 @@ async function applySnapshotDataInternal(data) {
       const querySnapshot = await getDocs(collection(db, 'finances_expenses'));
       for (const docSnap of querySnapshot.docs) {
         if (!snapshotExpenseIds.has(docSnap.id)) {
-          try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) {}
+          try { await deleteDoc(doc(db, 'finances_expenses', docSnap.id)); } catch (e) { purgeErrors.push(`Expense delete failed (${docSnap.id}): ${e.message}`); }
         }
       }
     }
   } catch (e) {
-    console.warn('[SnapshotEngine]: Expense purge warning:', e.message);
+    purgeErrors.push(`Expense purge error: ${e.message}`);
+  }
+
+  if (purgeErrors.length > 0) {
+    throw new Error(`[SnapshotEngine]: Snapshot application/purge encountered persistence errors: ${purgeErrors.join('; ')}`);
   }
 
   // Restore Theme settings & Custom Tokens
@@ -312,14 +326,25 @@ export async function restoreSiteSnapshot(snapshot) {
     return true;
   } catch (err) {
     console.error('[SnapshotEngine]: Restoration failed mid-flight. Automatically re-applying Pre-Rollback Backup safeguard...', err);
+    let revertFailed = false;
+    let revertErrorObj = null;
     try {
       if (preRollbackSafeguard && preRollbackSafeguard.data) {
         await applySnapshotDataInternal(preRollbackSafeguard.data);
         console.log('[SnapshotEngine]: Successfully reverted state back to Pre-Rollback Backup safeguard.');
       }
     } catch (revertErr) {
+      revertFailed = true;
+      revertErrorObj = revertErr;
       console.error('[SnapshotEngine]: Automatic safeguard re-application failed:', revertErr);
     }
+
+    if (revertFailed) {
+      const criticalErr = new Error(`[SnapshotEngine]: Critical restoration failure: state could not be restored and safeguard recovery failed (${revertErrorObj?.message || 'unknown error'}). State may be inconsistent.`);
+      errorHandler.handleError(criticalErr, 'Restore Snapshot Safeguard Failure');
+      throw criticalErr;
+    }
+
     errorHandler.handleError(err, 'Restore Snapshot');
     throw err;
   }
